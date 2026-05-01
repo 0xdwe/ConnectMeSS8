@@ -1,0 +1,73 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../models/social_models.dart';
+import '../../state/app_state.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/crm_widgets.dart';
+
+class PeopleTab extends ConsumerStatefulWidget {
+  const PeopleTab({super.key});
+
+  @override
+  ConsumerState<PeopleTab> createState() => _PeopleTabState();
+}
+
+class _PeopleTabState extends ConsumerState<PeopleTab> {
+  String query = '';
+  String category = 'All';
+  ContactSort sort = ContactSort.name;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(appControllerProvider);
+    final categories = ['All', ...state.categories];
+    final people = state.connections.where((c) {
+      final matchesQuery = '${c.name} ${c.email} ${c.category}'.toLowerCase().contains(query.toLowerCase());
+      final matchesCategory = category == 'All' || c.category == category;
+      return matchesQuery && matchesCategory;
+    }).toList()
+      ..sort((a, b) => switch (sort) {
+            ContactSort.name => a.name.compareTo(b.name),
+            ContactSort.lastContact => b.lastContact.compareTo(a.lastContact),
+            ContactSort.bondScore => b.bondScore.compareTo(a.bondScore),
+          });
+    return ListView(
+      key: const Key('people-tab'),
+      padding: const EdgeInsets.fromLTRB(26, 26, 26, 126),
+      children: [
+        TextField(decoration: const InputDecoration(prefixIcon: Icon(Icons.search, size: 34), hintText: 'Search contacts...', hintStyle: TextStyle(fontSize: 26)), style: const TextStyle(fontSize: 22), onChanged: (value) => setState(() => query = value)),
+        const SizedBox(height: 22),
+        SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [const Icon(Icons.filter_alt_outlined, color: Color(0xFF667085), size: 32), const SizedBox(width: 12), ...categories.map((item) => _FilterChip(label: item, selected: item == category, onTap: () => setState(() => category = item)))])),
+        const SizedBox(height: 20),
+        const Text('Sort by:', style: TextStyle(fontSize: 22, color: Colors.black54, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 12),
+        SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: ContactSort.values.map((item) => _FilterChip(label: item.label, selected: item == sort, onTap: () => setState(() => sort = item))).toList())),
+        const SizedBox(height: 20),
+        for (final person in people) ContactListCard(connection: person, onTap: () => context.push('/contact/${person.id}')),
+      ],
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({required this.label, required this.selected, required this.onTap});
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(right: 12),
+        child: ChoiceChip(
+          label: Text(label, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: selected ? Colors.white : Colors.black54)),
+          selected: selected,
+          showCheckmark: false,
+          selectedColor: AppTheme.moss,
+          backgroundColor: const Color(0xFFF1F2F4),
+          side: BorderSide.none,
+          onSelected: (_) => onTap(),
+        ),
+      );
+}
