@@ -35,48 +35,28 @@ class ContactProfileScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      InkWell(
-                        onTap: Navigator.of(context).pop,
-                        borderRadius: BorderRadius.circular(16),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 2,
+                      _HeaderBackButton(onTap: Navigator.of(context).pop),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton.filledTonal(
+                            onPressed: () =>
+                                showEditConnectionModal(context, person),
+                            icon: const Icon(Icons.edit),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.arrow_back,
-                                color: Colors.white,
-                                size: 32,
-                              ),
-                              SizedBox(width: 10),
-                              Text(
-                                'Back',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(width: 8),
+                          IconButton.filled(
+                            onPressed: () =>
+                                context.push('/ai-update/${person.id}'),
+                            icon: const Icon(Icons.auto_awesome),
                           ),
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton.filledTonal(
-                        onPressed: () =>
-                            showEditConnectionModal(context, person),
-                        icon: const Icon(Icons.edit),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton.filled(
-                        onPressed: () =>
-                            context.push('/ai-update/${person.id}'),
-                        icon: const Icon(Icons.auto_awesome),
+                        ],
                       ),
                     ],
                   ),
@@ -180,6 +160,40 @@ class ContactProfileScreen extends ConsumerWidget {
   }
 }
 
+class _HeaderBackButton extends StatelessWidget {
+  const _HeaderBackButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.arrow_back, color: Colors.white, size: 32),
+            SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                'Back',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _BondScorePanel extends StatelessWidget {
   const _BondScorePanel({required this.score});
   final int score;
@@ -207,12 +221,16 @@ class _BondScorePanel extends StatelessWidget {
             children: [
               Icon(Icons.trending_up, color: Colors.white),
               SizedBox(width: 8),
-              Text(
-                'Bond Score',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
+              Flexible(
+                child: Text(
+                  'Bond Score',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ],

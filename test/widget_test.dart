@@ -1,10 +1,28 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
+import 'package:connect_me/src/features/contact_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> pumpConnectMe(WidgetTester tester) async {
   await tester.pumpWidget(const ProviderScope(child: ConnectMeApp()));
+}
+
+Future<void> openJessicaProfile(WidgetTester tester) async {
+  await tester.tap(find.text('People').last);
+  await tester.pumpAndSettle();
+  await tester.scrollUntilVisible(
+    find.text('Jessica Taylor'),
+    120,
+    scrollable: find
+        .descendant(
+          of: find.byKey(const Key('people-tab')),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
+  await tester.tap(find.text('Jessica Taylor'));
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -94,20 +112,7 @@ void main() {
     await tester.tap(find.byKey(const Key('sign-in-button')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('People').last);
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Jessica Taylor'),
-      120,
-      scrollable: find
-          .descendant(
-            of: find.byKey(const Key('people-tab')),
-            matching: find.byType(Scrollable),
-          )
-          .first,
-    );
-    await tester.tap(find.text('Jessica Taylor'));
-    await tester.pumpAndSettle();
+    await openJessicaProfile(tester);
 
     expect(find.text('Recommended Action!'), findsOneWidget);
     expect(find.text('AI Insight'), findsOneWidget);
@@ -120,24 +125,46 @@ void main() {
     await tester.tap(find.byKey(const Key('sign-in-button')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('People').last);
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Jessica Taylor'),
-      120,
-      scrollable: find
-          .descendant(
-            of: find.byKey(const Key('people-tab')),
-            matching: find.byType(Scrollable),
-          )
-          .first,
-    );
-    await tester.tap(find.text('Jessica Taylor'));
-    await tester.pumpAndSettle();
+    await openJessicaProfile(tester);
 
     expect(find.byKey(const Key('ai-insight-why')), findsNothing);
     await tester.tap(find.byKey(const Key('ai-insight-card')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('ai-insight-why')), findsOneWidget);
+  });
+
+  testWidgets('contact profile avoids overflow at narrow large text scale', (
+    tester,
+  ) async {
+    final flutterErrors = <FlutterErrorDetails>[];
+    final previousOnError = FlutterError.onError;
+    FlutterError.onError = flutterErrors.add;
+    tester.view.physicalSize = const Size(320, 844);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+    void restoreTestWindow() {
+      FlutterError.onError = previousOnError;
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      tester.platformDispatcher.clearTextScaleFactorTestValue();
+    }
+
+    addTearDown(restoreTestWindow);
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: ContactProfileScreen(contactId: 'jessica')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    restoreTestWindow();
+
+    expect(
+      flutterErrors
+          .map((error) => error.exceptionAsString())
+          .where((message) => message.contains('RenderFlex overflowed')),
+      isEmpty,
+    );
   });
 }
