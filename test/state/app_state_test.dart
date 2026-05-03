@@ -9,7 +9,12 @@ void main() {
     addTearDown(container.dispose);
 
     final controller = container.read(appControllerProvider.notifier);
-    controller.addConnection(name: 'Sam Lee', email: 'sam@email.com', category: 'Work', notes: 'Met at demo day');
+    controller.addConnection(
+      name: 'Sam Lee',
+      email: 'sam@email.com',
+      category: 'Work',
+      notes: 'Met at demo day',
+    );
     controller.addCategory('Workshop');
 
     final state = container.read(appControllerProvider);
@@ -34,5 +39,23 @@ void main() {
     expect(state.interactions.first.type, InteractionType.reminder);
     expect(state.interactions.first.attachments.first.name, 'note.png');
     expect(state.lastAiSummary, contains('Reminder'));
+  });
+
+  test('contactInsightFor returns future-AI-shaped insight data', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final state = container.read(appControllerProvider);
+    final insight = state.contactInsightFor('jessica');
+
+    expect(insight.contactId, 'jessica');
+    expect(insight.summary, isNotEmpty);
+    expect(insight.why, isNotEmpty);
+    expect(insight.recommendedAction, isNotEmpty);
+    expect(insight.potentialScoreGain, greaterThan(0));
+    expect(insight.relationshipLabel, 'College');
+    expect(insight.knownSinceYears, greaterThanOrEqualTo(1));
+    expect(insight.preferredChannels, contains('FaceTime'));
+    expect(insight.frequencyByMonth, hasLength(12));
   });
 }
