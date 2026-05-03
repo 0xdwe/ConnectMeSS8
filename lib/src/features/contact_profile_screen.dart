@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../models/social_models.dart';
 import '../state/app_state.dart';
+import '../theme/app_theme.dart';
 import '../widgets/crm_widgets.dart';
 import 'modals/edit_connection_modal.dart';
 
@@ -14,18 +15,227 @@ class ContactProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appControllerProvider);
-    final person = state.connections.firstWhere((c) => c.id == contactId);
-    final history = state.interactions.where((i) => i.contactId == contactId).toList();
+    final person = state.connections.firstWhere(
+      (connection) => connection.id == contactId,
+    );
+    final insight = state.contactInsightFor(contactId);
+    final history = state.interactions
+        .where((interaction) => interaction.contactId == contactId)
+        .toList();
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6F7),
-      body: ListView(padding: const EdgeInsets.all(26), children: [
-        SafeArea(child: Row(children: [IconButton.filledTonal(onPressed: Navigator.of(context).pop, icon: const Icon(Icons.arrow_back)), const Spacer(), IconButton.filledTonal(onPressed: () => showEditConnectionModal(context, person), icon: const Icon(Icons.edit)), IconButton.filled(onPressed: () => context.push('/ai-update/${person.id}'), icon: const Icon(Icons.auto_awesome))])),
-        CardBox(child: Column(children: [CircleAvatar(radius: 54, backgroundColor: const Color(0xFFE0F0F0), child: Text(person.avatar, style: const TextStyle(fontSize: 46))), const SizedBox(height: 12), Text(person.name, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900)), Text(person.email, style: const TextStyle(fontSize: 21, color: Colors.black54)), const SizedBox(height: 18), ScoreRing(score: person.bondScore, size: 118, stroke: 12), const SizedBox(height: 14), Chip(label: Text(person.category)), Text(person.notes, textAlign: TextAlign.center)])),
-        SectionTitle('Next Step'),
-        CardBox(child: Text(person.nextStep, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700))),
-        SectionTitle('History'),
-        for (final item in history) CardBox(child: ListTile(leading: Icon(item.type.icon), title: Text(item.title), subtitle: Text(item.note))),
-      ]),
+      body: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          Container(
+            color: AppTheme.moss,
+            padding: const EdgeInsets.fromLTRB(28, 28, 28, 30),
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: Navigator.of(context).pop,
+                        borderRadius: BorderRadius.circular(16),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 2,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.arrow_back,
+                                color: Colors.white,
+                                size: 32,
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Back',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton.filledTonal(
+                        onPressed: () =>
+                            showEditConnectionModal(context, person),
+                        icon: const Icon(Icons.edit),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        onPressed: () =>
+                            context.push('/ai-update/${person.id}'),
+                        icon: const Icon(Icons.auto_awesome),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 52,
+                        backgroundColor: Colors.white,
+                        child: Text(
+                          person.avatar,
+                          style: const TextStyle(fontSize: 44),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              person.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 30,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              person.email,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 21,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final narrow = constraints.maxWidth < 430;
+                    if (narrow) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _BondScorePanel(score: person.bondScore),
+                          RecommendedActionCard(insight: insight),
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _BondScorePanel(score: person.bondScore),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: RecommendedActionCard(insight: insight),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                InsightCard(insight: insight),
+                RelationshipFactsCard(connection: person, insight: insight),
+                CommunicationChannelsCard(channels: insight.preferredChannels),
+                InteractionFrequencyCard(
+                  frequencyByMonth: insight.frequencyByMonth,
+                ),
+                if (history.isNotEmpty) ...[
+                  SectionTitle('History'),
+                  for (final item in history)
+                    CardBox(
+                      child: ListTile(
+                        leading: Icon(item.type.icon),
+                        title: Text(item.title),
+                        subtitle: Text(item.note),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BondScorePanel extends StatelessWidget {
+  const _BondScorePanel({required this.score});
+  final int score;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: AppTheme.moss,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F000000),
+            blurRadius: 7,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.trending_up, color: Colors.white),
+              SizedBox(width: 8),
+              Text(
+                'Bond Score',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Text(
+            '$score',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 48,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const Text(
+            'Strong connection!',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
