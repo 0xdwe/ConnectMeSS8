@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_state.dart';
+import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 
@@ -42,10 +43,10 @@ class _ManageEventTypesModalState extends ConsumerState<ManageEventTypesModal> {
     final controller = ref.read(appControllerProvider.notifier);
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        20,
-        18,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 20,
+        AppSpacing.space5,
+        AppSpacing.space4,
+        AppSpacing.space5,
+        MediaQuery.of(context).viewInsets.bottom + AppSpacing.space5,
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -66,19 +67,19 @@ class _ManageEventTypesModalState extends ConsumerState<ManageEventTypesModal> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: AppSpacing.space2),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(AppSpacing.space3),
               decoration: BoxDecoration(
                 color: tokens.primaryTint,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(color: tokens.border),
               ),
               child: const Text(
                 'Default event types cannot be deleted. Custom types can be edited or removed.',
               ),
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: AppSpacing.space3),
             Row(
               children: [
                 Expanded(
@@ -98,7 +99,7 @@ class _ManageEventTypesModalState extends ConsumerState<ManageEventTypesModal> {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: AppSpacing.space3),
             for (final type in types)
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -130,7 +131,7 @@ class _ManageEventTypesModalState extends ConsumerState<ManageEventTypesModal> {
                         children: [
                           if (AppController.defaultEventTypes.contains(type))
                             Padding(
-                              padding: const EdgeInsets.only(top: 12, right: 8),
+                              padding: EdgeInsets.only(top: AppSpacing.space3, right: AppSpacing.space2),
                               child: Text(
                                 'Default',
                                 style: AppTypography.caption(
