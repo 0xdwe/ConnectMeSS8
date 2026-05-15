@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
+import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
@@ -22,7 +23,7 @@ class RecommendationsScreen extends ConsumerWidget {
         backgroundColor: tokens.surface,
         foregroundColor: tokens.ink,
       ),
-      body: ListView(padding: const EdgeInsets.all(26), children: [
+      body: ListView(padding: EdgeInsets.all(AppSpacing.space6), children: [
         for (var i = 0; i < state.recommendations.length; i++) RecommendationCard(key: Key('recommendation-card-${state.recommendations[i].contactId}'), connection: state.connections.firstWhere((c) => c.id == state.recommendations[i].contactId), recommendation: state.recommendations[i], onTap: () => context.push('/contact/${state.recommendations[i].contactId}')),
       ]),
     );

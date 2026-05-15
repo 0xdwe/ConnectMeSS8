@@ -9,15 +9,17 @@ In Progress - Issue #025: UI Consistency Audit
 - [ ] Phase 2: Migrate 20+ files to use tokens
   - [x] crm_widgets.dart
   - [x] auth_screen.dart
-  - [ ] profile_screen.dart
-  - [ ] contact_profile_screen.dart
+  - [x] profile_screen.dart
+  - [x] contact_profile_screen.dart
+  - [x] home_tab.dart
+  - [x] people_tab.dart
+  - [x] planner_tab.dart
+  - [x] theme_modal.dart
+  - [x] plus_sheet.dart
   - [ ] ai_update_screen.dart
   - [ ] shell_screen.dart
-  - [ ] home_tab.dart
-  - [ ] people_tab.dart
-  - [ ] planner_tab.dart
   - [ ] settings_tab.dart
-  - [ ] All modals (10 files)
+  - [ ] Remaining modals (~7 files)
 - [ ] Phase 3: Verification (regex checks, flutter analyze)
 
 ## Files Changed

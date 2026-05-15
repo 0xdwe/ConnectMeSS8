@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../models/social_models.dart';
 import '../state/app_state.dart';
+import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
@@ -187,16 +188,16 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
   }
 
   Widget _buildInputView(AppTokens tokens, Connection person) {
-    return ListView(padding: const EdgeInsets.all(26), children: [
+    return ListView(padding: EdgeInsets.all(AppSpacing.space6), children: [
       CardBox(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Update ${person.name}', style: AppTypography.h1()),
-        const SizedBox(height: 10),
+        SizedBox(height: AppSpacing.space2),
         Text('Tell AI anything', style: AppTypography.h2()),
-        const SizedBox(height: 8),
+        SizedBox(height: AppSpacing.space2),
         Text('Text, images, files. Mock AI categorizes info into correct basket and updates history/dashboard.', style: AppTypography.body(color: tokens.inkMuted)),
-        const SizedBox(height: 16),
+        SizedBox(height: AppSpacing.space4),
         TextField(key: const Key('ai-input-field'), controller: input, minLines: 4, maxLines: 12, decoration: const InputDecoration(hintText: 'Example: Sam said today is first day at job. Ask how it went tomorrow.')),
-        const SizedBox(height: 14),
+        SizedBox(height: AppSpacing.space3),
         Wrap(spacing: 8, runSpacing: 8, children: [
           ActionChip(avatar: const Icon(Icons.attach_file), label: const Text('Attach'), onPressed: pick),
           ActionChip(key: const Key('add-image-chip'), avatar: const Icon(Icons.image), label: const Text('Add image'), onPressed: pickImage),
@@ -204,7 +205,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
             if (_isImage(file.name))
               ClipRRect(
                 key: Key('attachment-preview-${file.name}'),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
                 child: file.path != null
                     ? Image.file(
                         File(file.path!),
@@ -228,7 +229,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
             else
               Chip(label: Text(file.name)),
         ]),
-        const SizedBox(height: 20),
+        SizedBox(height: AppSpacing.space5),
         FilledButton.icon(
           key: const Key('run-ai-button'),
           onPressed: currentState == AiUpdateState.generating ? null : submit,
@@ -242,12 +243,12 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
   Widget _buildPreviewView(AppTokens tokens, Connection person) {
     if (previewResult == null) return const SizedBox.shrink();
     
-    return ListView(padding: const EdgeInsets.all(26), children: [
+    return ListView(padding: EdgeInsets.all(AppSpacing.space6), children: [
       Text('Here\'s what I found', style: AppTypography.h2()),
-      const SizedBox(height: 16),
+      SizedBox(height: AppSpacing.space4),
       for (int i = 0; i < previewResult!.interactions.length; i++)
         _buildPreviewCard(tokens, person, i),
-      const SizedBox(height: 24),
+      SizedBox(height: AppSpacing.space5),
       Row(
         children: [
           Expanded(
@@ -257,7 +258,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
               child: Text('Save these (${previewResult!.interactions.length})'),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: AppSpacing.space3),
           TextButton(
             key: const Key('cancel-button'),
             onPressed: currentState == AiUpdateState.saving ? null : cancel,
@@ -280,22 +281,22 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
           Row(
             children: [
               Text(person.avatar, style: const TextStyle(fontSize: 32)),
-              const SizedBox(width: 12),
+              SizedBox(width: AppSpacing.space3),
               Expanded(
                 child: Text(person.name, style: AppTypography.bodyLg()),
               ),
               // AI suggested tag
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.space2, vertical: AppSpacing.space1),
                 decoration: BoxDecoration(
                   color: tokens.primaryTint,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.auto_awesome, size: 14, color: tokens.primary),
-                    const SizedBox(width: 4),
+                    SizedBox(width: AppSpacing.space1),
                     Text(
                       'AI suggested',
                       style: AppTypography.caption(color: tokens.primary),
@@ -305,14 +306,14 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: AppSpacing.space3),
           // Type chip
           Chip(
             avatar: Icon(interaction.type.icon, size: 16),
             label: Text(interaction.type.label),
             visualDensity: VisualDensity.compact,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: AppSpacing.space3),
           // Editable title
           TextField(
             key: Key('preview-title-$index'),
@@ -322,7 +323,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
               border: OutlineInputBorder(),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: AppSpacing.space3),
           // Editable note
           TextField(
             key: Key('preview-note-$index'),
@@ -334,12 +335,12 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
             minLines: 2,
             maxLines: 6,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: AppSpacing.space3),
           // Date row
           Row(
             children: [
               Icon(Icons.calendar_today, size: 16, color: tokens.inkMuted),
-              const SizedBox(width: 8),
+              SizedBox(width: AppSpacing.space2),
               Text(
                 DateFormat.yMMMd().format(interaction.date),
                 style: AppTypography.caption(color: tokens.inkMuted),
