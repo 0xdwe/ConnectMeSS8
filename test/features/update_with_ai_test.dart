@@ -1,4 +1,6 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
+import 'package:connect_me/src/features/ai_update_screen.dart';
+import 'package:connect_me/src/models/social_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,6 +48,28 @@ void main() {
 
       expect(find.text('Update with AI'), findsOneWidget);
       expect(find.text('Update Mike Chen'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'image attachments render as previews, non-image attachments render as chips',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ProviderScope(
+            child: AiUpdateScreen(
+              contactId: 'mike',
+              initialAttachments: [
+                AttachmentRef(name: 'photo.jpg', path: '/tmp/missing.jpg'),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('attachment-preview-photo.jpg')), findsOneWidget);
+      expect(find.widgetWithText(Chip, 'photo.jpg'), findsNothing);
     },
   );
 }
