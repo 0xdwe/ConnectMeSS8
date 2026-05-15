@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
+import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 
@@ -100,7 +101,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
               controller: title,
               decoration: const InputDecoration(labelText: 'Event Title'),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: AppSpacing.space2),
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(_formatDate(date)),
@@ -137,7 +138,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                       label: Text('Start ${startTime.format(context)}'),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: AppSpacing.space2),
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () async {
@@ -153,7 +154,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: AppSpacing.space2),
             ],
             DropdownButtonFormField<String>(
               initialValue: eventType,
@@ -166,7 +167,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
               onChanged: (value) =>
                   setState(() => eventType = value ?? eventType),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: AppSpacing.space2),
             DropdownButtonFormField<String?>(
               initialValue: contactId,
               decoration: const InputDecoration(
@@ -193,7 +194,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                 if (contact != null) category = contact.category;
               }),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: AppSpacing.space2),
             DropdownButtonFormField<String>(
               initialValue: category,
               decoration: const InputDecoration(labelText: 'Category'),
@@ -226,13 +227,13 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                   setState(() => recurrencePattern = value.first);
                 },
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: AppSpacing.space2),
             ],
             TextField(
               controller: note,
               decoration: const InputDecoration(labelText: 'Note'),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: AppSpacing.space4),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: tokens.primary),
               onPressed: () {
@@ -266,7 +267,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
               child: const Text('Save Event'),
             ),
             if (widget.event != null) ...[
-              const SizedBox(height: 8),
+              SizedBox(height: AppSpacing.space2),
               TextButton.icon(
                 onPressed: () {
                   final deleted = ref
