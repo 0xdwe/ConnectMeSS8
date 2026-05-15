@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 import 'add_connection_modal.dart';
@@ -23,11 +24,11 @@ class _PlusSheet extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: tokens.surfaceRaised,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(16), // radius-lg
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.lg),
         ),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 24), // space-6
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.space5),
       child: SafeArea(
         top: false,
         child: Column(
@@ -93,7 +94,7 @@ class _PlusSheetAction extends StatelessWidget {
       onTap: onTap,
       child: Container(
         height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.space5),
         child: Row(
           children: [
             Container(
@@ -101,7 +102,7 @@ class _PlusSheetAction extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 color: backgroundColor,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Icon(
                 icon,
@@ -109,7 +110,7 @@ class _PlusSheetAction extends StatelessWidget {
                 size: 24,
               ),
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: AppSpacing.space4),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

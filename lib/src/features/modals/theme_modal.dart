@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_state.dart';
+import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 
@@ -23,7 +24,12 @@ class ThemeModal extends ConsumerWidget {
     );
     final controller = ref.read(appControllerProvider.notifier);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.space5,
+        AppSpacing.space5,
+        AppSpacing.space5,
+        AppSpacing.space6,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,12 +38,12 @@ class ThemeModal extends ConsumerWidget {
             'Theme',
             style: AppTypography.h1(),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: AppSpacing.space1),
           Text(
             'Match system follows your device. Light and dark are explicit.',
             style: AppTypography.caption(color: tokens.inkMuted),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.space4),
           RadioGroup<AppThemeMode>(
             groupValue: mode,
             onChanged: (value) {
