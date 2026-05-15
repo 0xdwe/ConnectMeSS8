@@ -231,16 +231,12 @@ void main() {
         ),
       );
 
-      // Find the SizedBox that enforces minimum touch target
-      final sizedBox = tester.widget<SizedBox>(
-        find.ancestor(
-          of: find.byType(Stack),
-          matching: find.byType(SizedBox),
-        ).first,
-      );
+      // Find the outermost SizedBox that enforces minimum touch target
+      final sizedBoxes = tester.widgetList<SizedBox>(find.byType(SizedBox));
+      final outerBox = sizedBoxes.first;
 
-      expect(sizedBox.width, 44);
-      expect(sizedBox.height, 44);
+      expect(outerBox.width, 44);
+      expect(outerBox.height, 44);
     });
   });
 
