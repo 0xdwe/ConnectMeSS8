@@ -554,7 +554,7 @@ class AppController extends Notifier<AppState> {
     );
   }
 
-  Future<void> runAiUpdate(
+  Future<AiUpdateResult> previewAiUpdate(
     String contactId,
     String input,
     List<AttachmentRef> attachments,
@@ -566,6 +566,28 @@ class AppController extends Notifier<AppState> {
           fallbackContactId: contactId,
           attachments: attachments,
         );
+    // Mark all interactions as AI-suggested
+    final aiMarkedInteractions = result.interactions
+        .map((interaction) => CrmInteraction(
+              id: interaction.id,
+              contactId: interaction.contactId,
+              type: interaction.type,
+              title: interaction.title,
+              note: interaction.note,
+              date: interaction.date,
+              attachments: interaction.attachments,
+              source: InteractionSource.aiSuggested,
+            ))
+        .toList();
+    return AiUpdateResult(
+      summary: result.summary,
+      contactId: result.contactId,
+      interactions: aiMarkedInteractions,
+      nextStep: result.nextStep,
+    );
+  }
+
+  void commitAiUpdate(AiUpdateResult result) {
     final updatedConnections = state.connections.map((connection) {
       if (connection.id != result.contactId) return connection;
       final nextScore = (connection.bondScore + 3).clamp(0, 100);
@@ -580,5 +602,14 @@ class AppController extends Notifier<AppState> {
       connections: updatedConnections,
       lastAiSummary: result.summary,
     );
+  }
+
+  Future<void> runAiUpdate(
+    String contactId,
+    String input,
+    List<AttachmentRef> attachments,
+  ) async {
+    final result = await previewAiUpdate(contactId, input, attachments);
+    commitAiUpdate(result);
   }
 }

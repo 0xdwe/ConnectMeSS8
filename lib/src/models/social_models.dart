@@ -11,6 +11,11 @@ enum InteractionType {
   relationshipNote,
 }
 
+enum InteractionSource {
+  manual,
+  aiSuggested,
+}
+
 enum ContactSort { name, lastContact, bondScore }
 
 enum AvatarKind { emoji, image }
@@ -97,6 +102,7 @@ class CrmInteraction {
     required this.note,
     required this.date,
     this.attachments = const [],
+    this.source = InteractionSource.manual,
   });
 
   final String id;
@@ -106,6 +112,29 @@ class CrmInteraction {
   final String note;
   final DateTime date;
   final List<AttachmentRef> attachments;
+  final InteractionSource source;
+
+  CrmInteraction copyWith({
+    String? id,
+    String? contactId,
+    InteractionType? type,
+    String? title,
+    String? note,
+    DateTime? date,
+    List<AttachmentRef>? attachments,
+    InteractionSource? source,
+  }) {
+    return CrmInteraction(
+      id: id ?? this.id,
+      contactId: contactId ?? this.contactId,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      note: note ?? this.note,
+      date: date ?? this.date,
+      attachments: attachments ?? this.attachments,
+      source: source ?? this.source,
+    );
+  }
 }
 
 class Connection {
