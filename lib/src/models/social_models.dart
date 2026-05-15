@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/bond_ring.dart';
+
 enum InteractionType {
   interaction,
   personalDetail,
@@ -138,6 +140,10 @@ class Connection {
   String get avatarSeed => avatar;
   int get closeness => bondScore;
   List<String> get tags => [category];
+
+  /// Bond trend stub: score ≥70 → up, else flat.
+  /// Wave 4 will replace with real history-based logic.
+  BondTrend get bondTrend => bondScore >= 70 ? BondTrend.up : BondTrend.flat;
 
   Connection copyWith({
     String? name,

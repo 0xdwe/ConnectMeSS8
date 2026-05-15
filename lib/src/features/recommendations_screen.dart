@@ -15,11 +15,14 @@ class RecommendationsScreen extends ConsumerWidget {
     final state = ref.watch(appControllerProvider);
     return Scaffold(
       backgroundColor: tokens.surface,
-      body: Column(children: [
-        const TealPageHeader(title: 'Outreach Recommendations', subtitle: 'AI-suggested contacts to reconnect with', backLabel: 'Back to Home'),
-        Expanded(child: ListView(padding: const EdgeInsets.all(26), children: [
-          for (var i = 0; i < state.recommendations.length; i++) RecommendationCard(key: Key('recommendation-card-${state.recommendations[i].contactId}'), connection: state.connections.firstWhere((c) => c.id == state.recommendations[i].contactId), recommendation: state.recommendations[i], highlight: i == 1, onTap: () => context.push('/contact/${state.recommendations[i].contactId}')),
-        ])),
+      appBar: AppBar(
+        title: Text('Outreach Recommendations', style: AppTypography.h2()),
+        elevation: 0,
+        backgroundColor: tokens.surface,
+        foregroundColor: tokens.ink,
+      ),
+      body: ListView(padding: const EdgeInsets.all(26), children: [
+        for (var i = 0; i < state.recommendations.length; i++) RecommendationCard(key: Key('recommendation-card-${state.recommendations[i].contactId}'), connection: state.connections.firstWhere((c) => c.id == state.recommendations[i].contactId), recommendation: state.recommendations[i], highlight: i == 1, onTap: () => context.push('/contact/${state.recommendations[i].contactId}')),
       ]),
     );
   }

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/social_models.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
+import 'bond_ring.dart';
 
 class AppSurface extends StatelessWidget {
   const AppSurface({super.key, required this.child});
@@ -133,6 +134,7 @@ class TealPageHeader extends StatelessWidget {
   }
 }
 
+@Deprecated('Use BondRing instead. ScoreRing will be removed in a future release.')
 class ScoreRing extends StatelessWidget {
   const ScoreRing({
     super.key,
@@ -176,33 +178,6 @@ class ScoreRing extends StatelessWidget {
               fontSize: size * .28,
               fontWeight: FontWeight.w700,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class BigScoreCircle extends StatelessWidget {
-  const BigScoreCircle({super.key, required this.score});
-  final int score;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    return CardBox(
-      child: Column(
-        children: [
-          Text(
-            'Connection Score',
-            style: AppTypography.h2(),
-          ),
-          const SizedBox(height: 20),
-          ScoreRing(score: score, size: 150, stroke: 14),
-          const SizedBox(height: 10),
-          Text(
-            'Average personal bond score',
-            style: AppTypography.body(color: tokens.inkMuted),
           ),
         ],
       ),
@@ -312,7 +287,7 @@ class ContactListCard extends StatelessWidget {
                 ],
               ),
             ),
-            ScoreRing(score: connection.bondScore, size: 72, stroke: 7),
+            BondRing(connection: connection, size: 72),
           ],
         ),
       ),
@@ -411,16 +386,7 @@ class RecommendationCard extends StatelessWidget {
               ],
             ),
           ),
-          Column(
-            children: [
-              ScoreRing(score: connection.bondScore),
-              const SizedBox(height: 8),
-              Text(
-                'Score',
-                style: AppTypography.caption(color: tokens.inkMuted),
-              ),
-            ],
-          ),
+          BondRing(connection: connection, size: 64),
           if (onTap != null) ...[
             const SizedBox(width: 8),
             Icon(Icons.chevron_right, color: tokens.inkSubtle, size: 32),

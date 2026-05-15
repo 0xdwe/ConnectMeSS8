@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../state/app_state.dart';
+import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/crm_widgets.dart';
 
@@ -18,13 +19,20 @@ class _HomeTabState extends ConsumerState<HomeTab> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final state = ref.watch(appControllerProvider);
     final recs = showAll ? state.recommendations : state.recommendations.take(2).toList();
     return ListView(
       key: const Key('home-tab'),
       padding: const EdgeInsets.fromLTRB(26, 26, 26, 126),
       children: [
-        BigScoreCircle(score: state.averageConnectionScore),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Text(
+            'Hi, ${state.currentUser.name.split(' ').first}.',
+            style: AppTypography.bodyLg(color: tokens.ink),
+          ),
+        ),
         SectionTitle('Today\'s Recommendation', action: TextButton(onPressed: () => context.push('/recommendations'), child: Text('View All ->', style: AppTypography.bodyLg().copyWith(fontWeight: FontWeight.w600)))),
         for (var i = 0; i < recs.length; i++)
           RecommendationCard(

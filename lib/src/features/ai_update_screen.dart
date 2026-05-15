@@ -70,13 +70,19 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
     final person = ref.watch(appControllerProvider).connections.firstWhere((c) => c.id == widget.contactId);
     return Scaffold(
       backgroundColor: tokens.surface,
-      body: Column(children: [
-        TealPageHeader(title: 'Update with AI', subtitle: 'Update ${person.name}', backLabel: 'Back'),
-        Expanded(child: ListView(padding: const EdgeInsets.all(26), children: [
-          CardBox(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Tell AI anything', style: AppTypography.h1()),
-            const SizedBox(height: 10),
-            Text('Text, images, files. Mock AI categorizes info into correct basket and updates history/dashboard.', style: AppTypography.body(color: tokens.inkMuted)),
+      appBar: AppBar(
+        title: Text('Update with AI', style: AppTypography.h2()),
+        elevation: 0,
+        backgroundColor: tokens.surface,
+        foregroundColor: tokens.ink,
+      ),
+      body: ListView(padding: const EdgeInsets.all(26), children: [
+        CardBox(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Update ${person.name}', style: AppTypography.h1()),
+          const SizedBox(height: 10),
+          Text('Tell AI anything', style: AppTypography.h2()),
+          const SizedBox(height: 8),
+          Text('Text, images, files. Mock AI categorizes info into correct basket and updates history/dashboard.', style: AppTypography.body(color: tokens.inkMuted)),
             const SizedBox(height: 16),
             TextField(key: const Key('ai-input-field'), controller: input, minLines: 4, maxLines: 12, decoration: const InputDecoration(hintText: 'Example: Sam said today is first day at job. Ask how it went tomorrow.')),
             const SizedBox(height: 14),
@@ -114,8 +120,8 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
             const SizedBox(height: 20),
             FilledButton.icon(key: const Key('run-ai-button'), onPressed: loading ? null : submit, icon: const Icon(Icons.auto_awesome), label: const Text('Update Connection')),
           ])),
-        ])),
-      ]),
+        ]),
+      ),
     );
   }
 }

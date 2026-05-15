@@ -117,6 +117,19 @@ void main() {
     expect(find.text('Update Mike Chen'), findsOneWidget);
   });
 
+  testWidgets('plus sheet shows all three actions', (tester) async {
+    await pumpConnectMe(tester);
+    await signInAsDemo(tester);
+
+    await tester.tap(find.byKey(const Key('plus-action-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add Connection'), findsOneWidget);
+    expect(find.text('Update Connection'), findsOneWidget);
+    expect(find.text('Plan Event'), findsOneWidget);
+    expect(find.text('Paste a chat, AI will categorize.'), findsOneWidget);
+  });
+
   testWidgets('contact profile renders AI insight dashboard cards', (
     tester,
   ) async {

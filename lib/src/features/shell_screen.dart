@@ -6,8 +6,7 @@ import '../state/app_state.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
-import 'modals/add_connection_modal.dart';
-import 'modals/update_person_picker_modal.dart';
+import 'modals/plus_sheet.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/people_tab.dart';
 import 'tabs/planner_tab.dart';
@@ -21,7 +20,6 @@ class ShellScreen extends ConsumerStatefulWidget {
 }
 
 class _ShellScreenState extends ConsumerState<ShellScreen> {
-  bool actionsOpen = false;
   static const _tabs = [HomeTab(), PeopleTab(), PlannerTab(), SettingsTab()];
 
   @override
@@ -30,103 +28,40 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     final selectedTab = ref.watch(
       appControllerProvider.select((state) => state.selectedTab),
     );
+    final userAvatar = ref.watch(
+      appControllerProvider.select((state) => state.user.avatar),
+    );
     return Scaffold(
       backgroundColor: tokens.surface,
-      body: Stack(
-        children: [
-          AppSurface(
-            child: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  AppHeader(
-                    userName: ref.watch(
-                      appControllerProvider.select((state) => state.user.name),
-                    ),
-                    userAvatar: ref.watch(
-                      appControllerProvider.select(
-                        (state) => state.user.avatar,
-                      ),
-                    ),
-                    onProfileTap: () => context.push('/me'),
-                  ),
-                  Expanded(child: _tabs[selectedTab]),
-                ],
-              ),
-            ),
+      appBar: AppBar(
+        title: const Text('Connect Me'),
+        backgroundColor: tokens.surfaceRaised,
+        surfaceTintColor: Colors.transparent,
+        actions: [
+          IconButton(
+            key: const Key('plus-action-button'),
+            icon: const Icon(Icons.add),
+            onPressed: () => showPlusSheet(context),
           ),
-          if (actionsOpen)
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () => setState(() => actionsOpen = false),
-                child: ColoredBox(
-                  color: tokens.ink.withValues(alpha: .05),
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 114),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _ActionPill(
-                            label: 'Update Connection',
-                            onTap: () {
-                              setState(() => actionsOpen = false);
-                              showUpdatePersonPickerModal(context);
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          _ActionPill(
-                            label: 'Add Connection',
-                            onTap: () {
-                              setState(() => actionsOpen = false);
-                              showAddConnectionModal(context);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+          IconButton(
+            icon: CircleAvatar(
+              radius: 16,
+              child: Text(userAvatar),
             ),
+            onPressed: () => context.push('/me'),
+          ),
         ],
+      ),
+      body: AppSurface(
+        child: SafeArea(
+          top: false,
+          bottom: false,
+          child: _tabs[selectedTab],
+        ),
       ),
       bottomNavigationBar: _BottomNav(
         selectedTab: selectedTab,
-        actionsOpen: actionsOpen,
         onTab: ref.read(appControllerProvider.notifier).setTab,
-        onPlus: () => setState(() => actionsOpen = !actionsOpen),
-      ),
-    );
-  }
-}
-
-class _ActionPill extends StatelessWidget {
-  const _ActionPill({required this.label, required this.onTap});
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    return Material(
-      color: tokens.surfaceRaised,
-      elevation: 10,
-      borderRadius: BorderRadius.circular(44),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(44),
-        onTap: onTap,
-        child: SizedBox(
-          width: 430,
-          height: 72,
-          child: Center(
-            child: Text(
-              label,
-              style: AppTypography.h2(color: tokens.primary),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -135,92 +70,53 @@ class _ActionPill extends StatelessWidget {
 class _BottomNav extends StatelessWidget {
   const _BottomNav({
     required this.selectedTab,
-    required this.actionsOpen,
     required this.onTab,
-    required this.onPlus,
   });
   final int selectedTab;
-  final bool actionsOpen;
   final ValueChanged<int> onTab;
-  final VoidCallback onPlus;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return SizedBox(
-      height: 104,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
+    return Container(
+      height: 92,
+      decoration: BoxDecoration(
+        color: tokens.surfaceRaised,
+        border: Border(top: BorderSide(color: tokens.border)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x12000000), blurRadius: 6),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          Container(
-            height: 92,
-            decoration: BoxDecoration(
-              color: tokens.surfaceRaised,
-              border: Border(top: BorderSide(color: tokens.border)),
-              boxShadow: const [
-                BoxShadow(color: Color(0x12000000), blurRadius: 6),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(
-                  index: 0,
-                  selectedTab: selectedTab,
-                  icon: Icons.home_outlined,
-                  label: 'Home',
-                  onTap: onTab,
-                ),
-                _NavItem(
-                  index: 1,
-                  selectedTab: selectedTab,
-                  icon: Icons.people_outline,
-                  label: 'People',
-                  onTap: onTab,
-                ),
-                const SizedBox(width: 86),
-                _NavItem(
-                  index: 2,
-                  selectedTab: selectedTab,
-                  icon: Icons.calendar_today_outlined,
-                  label: 'Planner',
-                  onTap: onTab,
-                ),
-                _NavItem(
-                  index: 3,
-                  selectedTab: selectedTab,
-                  icon: Icons.settings_outlined,
-                  label: 'Setting',
-                  onTap: onTab,
-                ),
-              ],
-            ),
+          _NavItem(
+            index: 0,
+            selectedTab: selectedTab,
+            icon: Icons.home_outlined,
+            label: 'Home',
+            onTap: onTab,
           ),
-          Positioned(
-            top: -35,
-            child: InkWell(
-              key: const Key('plus-action-button'),
-              onTap: onPlus,
-              customBorder: const CircleBorder(),
-              child: Container(
-                width: 94,
-                height: 94,
-                decoration: BoxDecoration(
-                  color: tokens.primary,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: tokens.surfaceRaised, width: 8),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x33000000), blurRadius: 18),
-                  ],
-                ),
-                child: Icon(
-                  actionsOpen ? Icons.close : Icons.add,
-                  color: tokens.primaryOn,
-                  size: 48,
-                ),
-              ),
-            ),
+          _NavItem(
+            index: 1,
+            selectedTab: selectedTab,
+            icon: Icons.people_outline,
+            label: 'People',
+            onTap: onTab,
+          ),
+          _NavItem(
+            index: 2,
+            selectedTab: selectedTab,
+            icon: Icons.calendar_today_outlined,
+            label: 'Planner',
+            onTap: onTab,
+          ),
+          _NavItem(
+            index: 3,
+            selectedTab: selectedTab,
+            icon: Icons.settings_outlined,
+            label: 'Setting',
+            onTap: onTab,
           ),
         ],
       ),

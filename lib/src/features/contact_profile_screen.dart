@@ -27,137 +27,116 @@ class ContactProfileScreen extends ConsumerWidget {
         .toList();
     return Scaffold(
       backgroundColor: tokens.surface,
+      appBar: AppBar(
+        title: Text(person.name, style: AppTypography.h2()),
+        elevation: 0,
+        backgroundColor: tokens.surface,
+        foregroundColor: tokens.ink,
+        actions: [
+          IconButton(
+            tooltip: 'Edit',
+            onPressed: () => showEditConnectionModal(context, person),
+            icon: const Icon(Icons.edit),
+          ),
+        ],
+      ),
       body: ListView(
-        padding: EdgeInsets.zero,
+        padding: const EdgeInsets.all(22),
         children: [
           Container(
-            color: tokens.primary,
-            padding: const EdgeInsets.fromLTRB(28, 28, 28, 30),
-            child: SafeArea(
-              bottom: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    alignment: WrapAlignment.spaceBetween,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      _HeaderBackButton(onTap: Navigator.of(context).pop),
-                      IconButton.filledTonal(
-                        tooltip: 'Edit',
-                        onPressed: () =>
-                            showEditConnectionModal(context, person),
-                        icon: const Icon(Icons.edit),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 52,
-                        backgroundColor: tokens.surfaceRaised,
-                        child: Text(
-                          person.avatar,
-                          style: AppTypography.glyph(44),
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              person.name,
-                              style: AppTypography.display(
-                                color: tokens.primaryOn,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              person.email,
-                              style: AppTypography.h2(
-                                color: tokens.primaryOn,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
             padding: const EdgeInsets.all(22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            decoration: BoxDecoration(
+              color: tokens.surfaceRaised,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      key: const Key('update-with-ai-button'),
-                      onPressed: () =>
-                          context.push('/ai-update/${person.id}'),
-                      icon: const Icon(Icons.auto_awesome),
-                      label: const Text('Update with AI'),
-                    ),
+                CircleAvatar(
+                  radius: 52,
+                  backgroundColor: tokens.primaryTint,
+                  child: Text(
+                    person.avatar,
+                    style: AppTypography.glyph(44),
                   ),
                 ),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final narrow = constraints.maxWidth < 430;
-                    if (narrow) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _BondScorePanel(score: person.bondScore),
-                          RecommendedActionCard(insight: insight),
-                        ],
-                      );
-                    }
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: _BondScorePanel(score: person.bondScore),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: RecommendedActionCard(insight: insight),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                InsightCard(insight: insight),
-                RelationshipFactsCard(connection: person, insight: insight),
-                CommunicationChannelsCard(channels: insight.preferredChannels),
-                InteractionFrequencyCard(
-                  frequencyByMonth: insight.frequencyByMonth,
-                ),
-                if (history.isNotEmpty) ...[
-                  SectionTitle('History'),
-                  for (final item in history)
-                    CardBox(
-                      child: ListTile(
-                        leading: Icon(item.type.icon),
-                        title: Text(item.title),
-                        subtitle: Text(
-                          '${DateFormat.yMMMd().format(item.date)} • ${item.note}',
-                        ),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        person.name,
+                        style: AppTypography.display(),
                       ),
-                    ),
-                ],
+                      const SizedBox(height: 8),
+                      Text(
+                        person.email,
+                        style: AppTypography.h2(color: tokens.inkMuted),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              key: const Key('update-with-ai-button'),
+              onPressed: () =>
+                  context.push('/ai-update/${person.id}'),
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Update with AI'),
+            ),
+          ),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final narrow = constraints.maxWidth < 430;
+              if (narrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _BondScorePanel(score: person.bondScore),
+                    RecommendedActionCard(insight: insight),
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _BondScorePanel(score: person.bondScore),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: RecommendedActionCard(insight: insight),
+                  ),
+                ],
+              );
+            },
+          ),
+          InsightCard(insight: insight),
+          RelationshipFactsCard(connection: person, insight: insight),
+          CommunicationChannelsCard(channels: insight.preferredChannels),
+          InteractionFrequencyCard(
+            frequencyByMonth: insight.frequencyByMonth,
+          ),
+          if (history.isNotEmpty) ...[
+            SectionTitle('History'),
+            for (final item in history)
+              CardBox(
+                child: ListTile(
+                  leading: Icon(item.type.icon),
+                  title: Text(item.title),
+                  subtitle: Text(
+                    '${DateFormat.yMMMd().format(item.date)} • ${item.note}',
+                  ),
+                ),
+              ),
+          ],
         ],
       ),
     );
