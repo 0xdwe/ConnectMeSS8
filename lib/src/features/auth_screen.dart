@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
+import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
@@ -118,15 +119,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       body: GradientScaffold(
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(AppSpacing.space5),
             child: ListView(
               children: [
-                const SizedBox(height: 24),
+                SizedBox(height: AppSpacing.space5),
                 Container(
-                  padding: const EdgeInsets.all(22),
+                  padding: EdgeInsets.all(AppSpacing.space5),
                   decoration: BoxDecoration(
                     color: tokens.primary,
-                    borderRadius: BorderRadius.circular(34),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
                   child: Icon(
                     Icons.hub_outlined,
@@ -134,12 +135,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     size: 54,
                   ),
                 ),
-                const SizedBox(height: 22),
+                SizedBox(height: AppSpacing.space5),
                 Text(
                   _mode == _AuthMode.login ? 'Welcome back.' : 'Join Connect Me.',
                   style: AppTypography.display(),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: AppSpacing.space2),
                 Text(
                   _mode == _AuthMode.login
                       ? 'Log in to keep your connections close.'
@@ -148,9 +149,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 22),
+                SizedBox(height: AppSpacing.space5),
                 _ModeSelector(mode: _mode, onChanged: _switchMode),
-                const SizedBox(height: 24),
+                SizedBox(height: AppSpacing.space5),
                 if (_mode == _AuthMode.login)
                   _LoginForm(
                     emailController: _loginEmail,
@@ -173,7 +174,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     onSubmit: _submitSignup,
                     onSwitch: () => _switchMode(_AuthMode.login),
                   ),
-                const SizedBox(height: 16),
+                SizedBox(height: AppSpacing.space4),
                 Text(
                   'Prototype demo. No real backend or saved accounts.',
                   textAlign: TextAlign.center,
@@ -199,9 +200,9 @@ class _ModeSelector extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: tokens.surfaceSunken,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
       ),
-      padding: const EdgeInsets.all(4),
+      padding: EdgeInsets.all(AppSpacing.space1),
       child: Row(
         children: [
           Expanded(
@@ -240,24 +241,17 @@ class _ModeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(AppRadius.xl),
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.space3),
         decoration: BoxDecoration(
           color: selected ? tokens.surfaceRaised : Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: selected
-              ? const [
-                  BoxShadow(
-                    color: Color(0x14000000),
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
-                  ),
-                ]
-              : null,
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          boxShadow: selected ? AppTokens.elevation1(dark) : null,
         ),
         alignment: Alignment.center,
         child: Text(
@@ -303,7 +297,7 @@ class _LoginForm extends StatelessWidget {
             errorText: emailError,
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: AppSpacing.space4),
         TextField(
           key: const Key('login-password-field'),
           controller: passwordController,
@@ -313,14 +307,14 @@ class _LoginForm extends StatelessWidget {
             errorText: passwordError,
           ),
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: AppSpacing.space5),
         FilledButton.icon(
           key: const Key('sign-in-button'),
           onPressed: onSubmit,
           icon: const Icon(Icons.arrow_forward),
           label: const Text('Log in'),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: AppSpacing.space3),
         TextButton(
           onPressed: onSwitch,
           child: const Text("Don't have an account? Sign up"),
@@ -368,7 +362,7 @@ class _SignupForm extends StatelessWidget {
             errorText: nameError,
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: AppSpacing.space4),
         TextField(
           key: const Key('signup-email-field'),
           controller: emailController,
@@ -380,7 +374,7 @@ class _SignupForm extends StatelessWidget {
             errorText: emailError,
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: AppSpacing.space4),
         TextField(
           key: const Key('signup-password-field'),
           controller: passwordController,
@@ -390,7 +384,7 @@ class _SignupForm extends StatelessWidget {
             errorText: passwordError,
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: AppSpacing.space4),
         TextField(
           key: const Key('signup-confirm-field'),
           controller: confirmController,
@@ -400,14 +394,14 @@ class _SignupForm extends StatelessWidget {
             errorText: confirmError,
           ),
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: AppSpacing.space5),
         FilledButton.icon(
           key: const Key('sign-up-button'),
           onPressed: onSubmit,
           icon: const Icon(Icons.check),
           label: const Text('Create account'),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: AppSpacing.space3),
         TextButton(
           onPressed: onSwitch,
           child: const Text('Already have an account? Log in'),
