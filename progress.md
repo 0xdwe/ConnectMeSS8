@@ -4,28 +4,36 @@
 Completed
 
 ## Tasks
-- [x] Create lib/src/features/modals/plus_sheet.dart with showPlusSheet()
-- [x] Implement three sheet actions: Add Connection, Update Connection, Plan Event
-- [x] Update Connection has AI caption and primary-tinted icon
-- [x] Replace shell_screen.dart FAB with AppBar + IconButton
-- [x] Remove Positioned FAB (top: -35) and actionsOpen overlay
-- [x] Remove SizedBox(width: 86) FAB cutout from _BottomNav
-- [x] Preserve Key('plus-action-button') for test compatibility
-- [x] Keep 4 tabs (issue #016 will reduce to 3)
-- [x] Add test: 'plus sheet shows all three actions'
+- [x] Create lib/src/widgets/bond_ring.dart with BondRing component, BondTier enum, BondTrend enum
+- [x] Implement CustomPaint arc with tier-colored stroke (3px)
+- [x] Add trend arrow at 4 o'clock when trend != flat
+- [x] Enforce minimum 44×44 touch target
+- [x] Add semantic label: "name, tier, trend"
+- [x] Add Connection.bondTrend getter (stub: score ≥70 → up, else flat)
+- [x] Replace ScoreRing with BondRing in ContactListCard and RecommendationCard
+- [x] Delete BigScoreCircle from crm_widgets.dart
+- [x] Mark ScoreRing as @Deprecated
+- [x] Update home_tab.dart: remove BigScoreCircle, add greeting "Hi, Alex."
+- [x] Create test/widgets/bond_ring_test.dart with tier/trend/touch-target tests
+- [x] Verify flutter analyze clean (no new errors)
 - [x] Commit changes
 
 ## Files Changed
-- lib/src/features/modals/plus_sheet.dart (new)
-- lib/src/features/shell_screen.dart (modified)
-- test/widget_test.dart (modified)
+- lib/src/widgets/bond_ring.dart (new)
+- lib/src/models/social_models.dart (modified: added bondTrend getter)
+- lib/src/widgets/crm_widgets.dart (modified: deprecated ScoreRing, deleted BigScoreCircle, replaced with BondRing)
+- lib/src/features/tabs/home_tab.dart (modified: removed BigScoreCircle, added greeting)
+- test/widgets/bond_ring_test.dart (new)
 
 ## Notes
-- Pre-existing compilation errors in contact_profile_screen.dart, ai_update_screen.dart, recommendations_screen.dart, and home_tab.dart prevent full test suite from running
-- My changes introduce no new errors (verified with flutter analyze)
-- FAB removal complete: removed actionsOpen state, _ActionPill widget, overlay logic
-- Bottom nav now clean 4-item strip without gap
-- AppBar uses Material design with surfaceRaised background
-- Plus sheet follows DESIGN.md spec: radius-lg corners, 56pt rows, space-6 padding
-- Did NOT remove AppHeader widget from crm_widgets.dart (housekeeping for later)
-- Did NOT change tab count (kept 4 tabs as instructed)
+- BondRing uses CustomPaint for arc rendering (3px stroke, starts at 12 o'clock, clockwise)
+- Tier mapping: close ≥80 → primary, steady 50-79 → inkMuted, drifting <50 → secondary
+- Trend stub: score ≥70 → up arrow (success color), else flat (no arrow)
+- Touch target: sizes <44 wrapped in 44×44 SizedBox
+- ScoreRing kept as @Deprecated for backward compatibility (no current callers after migration)
+- BigScoreCircle fully removed (was only used in home_tab.dart)
+- Home tab now shows "Hi, [FirstName]." in bodyLg instead of score hero
+- All BondRing tests pass (10/10)
+- Pre-existing errors in ai_update_screen.dart and recommendations_screen.dart unrelated to this PR
+- Did NOT add fill animation (that's issue #021)
+- Did NOT change contact_profile_screen layout (that's issue #017)
