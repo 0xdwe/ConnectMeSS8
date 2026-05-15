@@ -3,33 +3,36 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:connect_me/src/app/connect_me_app.dart';
-import 'package:connect_me/src/features/tabs/planner_tab.dart';
-import 'package:connect_me/src/models/social_models.dart';
-import 'package:connect_me/src/state/app_state.dart';
+
+/// Helper to authenticate and navigate to Planner tab
+Future<void> authenticateAndNavigateToPlanner(WidgetTester tester) async {
+  await tester.pumpWidget(
+    const ProviderScope(
+      child: ConnectMeApp(),
+    ),
+  );
+  await tester.pumpAndSettle();
+
+  // Authenticate: fill in email and password, then tap login
+  await tester.enterText(
+      find.byKey(const Key('login-email-field')), 'test@example.com');
+  await tester.enterText(
+      find.byKey(const Key('login-password-field')), 'password123');
+  await tester.tap(find.byKey(const Key('sign-in-button')));
+  await tester.pumpAndSettle();
+
+  // Navigate to Planner tab
+  final planTab = find.text('Planner');
+  expect(planTab, findsOneWidget);
+  await tester.tap(planTab);
+  await tester.pumpAndSettle();
+}
 
 void main() {
   group('Calendar accessibility', () {
     testWidgets('day cells have minimum 44pt touch target', (tester) async {
-      // Arrange: pump app and authenticate
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: ConnectMeApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Authenticate (tap Sign In button on auth screen)
-      final signInButton = find.byType(ElevatedButton);
-      if (signInButton.evaluate().isNotEmpty) {
-        await tester.tap(signInButton);
-        await tester.pumpAndSettle();
-      }
-
-      // Navigate to Planner tab
-      final planTab = find.text('Planner');
-      expect(planTab, findsOneWidget);
-      await tester.tap(planTab);
-      await tester.pumpAndSettle();
+      // Arrange: authenticate and navigate to Planner
+      await authenticateAndNavigateToPlanner(tester);
 
       // Act: find calendar day cells (InkWell widgets in the grid)
       // The calendar grid renders 42 cells (6 weeks × 7 days)
@@ -60,24 +63,8 @@ void main() {
 
   group('Calendar visual states', () {
     testWidgets('today indicator shows filled primary circle', (tester) async {
-      // Arrange: pump app and authenticate
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: ConnectMeApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Authenticate
-      final signInButton = find.byType(ElevatedButton);
-      if (signInButton.evaluate().isNotEmpty) {
-        await tester.tap(signInButton);
-        await tester.pumpAndSettle();
-      }
-
-      // Navigate to Planner tab
-      await tester.tap(find.text('Planner'));
-      await tester.pumpAndSettle();
+      // Arrange: authenticate and navigate to Planner
+      await authenticateAndNavigateToPlanner(tester);
 
       // Act: find today's date cell
       final now = DateTime.now();
@@ -111,24 +98,8 @@ void main() {
 
     testWidgets('selected day (not today) shows primaryTint bg with primary ring',
         (tester) async {
-      // Arrange: pump app and authenticate
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: ConnectMeApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Authenticate
-      final signInButton = find.byType(ElevatedButton);
-      if (signInButton.evaluate().isNotEmpty) {
-        await tester.tap(signInButton);
-        await tester.pumpAndSettle();
-      }
-
-      // Navigate to Planner tab
-      await tester.tap(find.text('Planner'));
-      await tester.pumpAndSettle();
+      // Arrange: authenticate and navigate to Planner
+      await authenticateAndNavigateToPlanner(tester);
 
       // Act: tap a day that's not today
       final now = DateTime.now();
@@ -161,29 +132,13 @@ void main() {
     });
 
     testWidgets('days with events show up to 3 dots', (tester) async {
-      // Arrange: pump app with events and authenticate
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: ConnectMeApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
+      // Arrange: authenticate and navigate to Planner
+      await authenticateAndNavigateToPlanner(tester);
 
-      // Authenticate
-      final signInButton = find.byType(ElevatedButton);
-      if (signInButton.evaluate().isNotEmpty) {
-        await tester.tap(signInButton);
-        await tester.pumpAndSettle();
-      }
-
-      // Navigate to Planner tab
-      await tester.tap(find.text('Planner'));
-      await tester.pumpAndSettle();
-
-      // Act: find a day with events (April 27, 2026 has events in seeded data)
+      // Act: find a day with events (April 28, 2026 has events in seeded data)
       final dayWithEvent = find.descendant(
         of: find.byType(GridView),
-        matching: find.widgetWithText(InkWell, '27'),
+        matching: find.widgetWithText(InkWell, '28'),
       );
 
       expect(dayWithEvent, findsWidgets);
@@ -204,24 +159,8 @@ void main() {
   group('Calendar typography', () {
     testWidgets('day-of-week header uses caption style with inkMuted',
         (tester) async {
-      // Arrange: pump app and authenticate
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: ConnectMeApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Authenticate
-      final signInButton = find.byType(ElevatedButton);
-      if (signInButton.evaluate().isNotEmpty) {
-        await tester.tap(signInButton);
-        await tester.pumpAndSettle();
-      }
-
-      // Navigate to Planner tab
-      await tester.tap(find.text('Planner'));
-      await tester.pumpAndSettle();
+      // Arrange: authenticate and navigate to Planner
+      await authenticateAndNavigateToPlanner(tester);
 
       // Act: find day-of-week headers (Sun, Mon, etc.)
       final sunHeader = find.text('Sun');

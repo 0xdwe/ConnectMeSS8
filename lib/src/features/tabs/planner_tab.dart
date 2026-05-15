@@ -198,18 +198,44 @@ class _CalendarGrid extends StatelessWidget {
               return const SizedBox.shrink();
             }
             final day = DateTime(month.year, month.month, dayNumber);
-            final hasEvent = events.any(
-              (event) => DateUtils.isSameDay(event.date, day),
-            );
+            final eventsOnDay = events
+                .where((event) => DateUtils.isSameDay(event.date, day))
+                .toList();
+            final hasEvent = eventsOnDay.isNotEmpty;
             final isSelected = DateUtils.isSameDay(day, selected);
+            final isToday = DateUtils.isSameDay(day, DateTime.now());
+            
+            // Determine styling based on state
+            Color? backgroundColor;
+            Color? borderColor;
+            Color textColor;
+            
+            if (isToday) {
+              // Today: filled primary circle with primaryOn text
+              backgroundColor = tokens.primary;
+              textColor = tokens.primaryOn;
+            } else if (isSelected) {
+              // Selected (not today): primaryTint background + 2px primary ring
+              backgroundColor = tokens.primaryTint;
+              borderColor = tokens.primary;
+              textColor = tokens.ink;
+            } else {
+              // Default: transparent background, ink text
+              backgroundColor = Colors.transparent;
+              textColor = tokens.ink;
+            }
+            
             return InkWell(
               onTap: () => onSelect(day),
               borderRadius: BorderRadius.circular(14),
               child: Container(
                 margin: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: isSelected ? tokens.primary : Colors.transparent,
+                  color: backgroundColor,
                   borderRadius: BorderRadius.circular(14),
+                  border: borderColor != null
+                      ? Border.all(color: borderColor, width: 2)
+                      : null,
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -217,17 +243,27 @@ class _CalendarGrid extends StatelessWidget {
                     Text(
                       '$dayNumber',
                       style: AppTypography.bodyLg(
-                        color: isSelected ? tokens.primaryOn : tokens.ink,
+                        color: textColor,
                       ),
                     ),
                     if (hasEvent)
                       Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: CircleAvatar(
-                          radius: 3,
-                          backgroundColor: isSelected
-                              ? tokens.primaryOn
-                              : tokens.primary,
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Show up to 3 dots for events
+                            for (int i = 0; i < eventsOnDay.length && i < 3; i++)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                                child: CircleAvatar(
+                                  radius: 2,
+                                  backgroundColor: isToday
+                                      ? tokens.primaryOn
+                                      : tokens.primary,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                   ],
