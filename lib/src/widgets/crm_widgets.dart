@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/social_models.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
 
 class AppSurface extends StatelessWidget {
   const AppSurface({super.key, required this.child});
@@ -10,7 +10,7 @@ class AppSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      ColoredBox(color: const Color(0xFFF5F6F7), child: child);
+      ColoredBox(color: context.tokens.surface, child: child);
 }
 
 class AppHeader extends StatelessWidget {
@@ -26,12 +26,13 @@ class AppHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
       height: 108,
       padding: const EdgeInsets.fromLTRB(32, 22, 22, 16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
+      decoration: BoxDecoration(
+        color: tokens.surfaceRaised,
+        boxShadow: const [
           BoxShadow(
             color: Color(0x22000000),
             blurRadius: 5,
@@ -48,10 +49,10 @@ class AppHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
+                Text(
                   'Connect Me',
                   style: TextStyle(
-                    color: AppTheme.moss,
+                    color: tokens.primary,
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
                   ),
@@ -59,8 +60,8 @@ class AppHeader extends StatelessWidget {
                 Text(
                   userName,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.black54,
+                  style: TextStyle(
+                    color: tokens.inkMuted,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
@@ -74,7 +75,7 @@ class AppHeader extends StatelessWidget {
             onTap: onProfileTap,
             child: CircleAvatar(
               radius: 34,
-              backgroundColor: const Color(0xFFE0F0F0),
+              backgroundColor: tokens.primaryTint,
               child: Text(userAvatar, style: const TextStyle(fontSize: 32)),
             ),
           ),
@@ -97,8 +98,9 @@ class TealPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
-      color: AppTheme.moss,
+      color: tokens.primary,
       padding: const EdgeInsets.fromLTRB(28, 34, 28, 34),
       child: SafeArea(
         bottom: false,
@@ -110,12 +112,12 @@ class TealPageHeader extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 34),
+                  Icon(Icons.arrow_back, color: tokens.primaryOn, size: 34),
                   const SizedBox(width: 12),
                   Text(
                     backLabel,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: tokens.primaryOn,
                       fontSize: 26,
                       fontWeight: FontWeight.w800,
                     ),
@@ -126,8 +128,8 @@ class TealPageHeader extends StatelessWidget {
             const SizedBox(height: 32),
             Text(
               title,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: tokens.primaryOn,
                 fontSize: 34,
                 fontWeight: FontWeight.w900,
               ),
@@ -136,8 +138,8 @@ class TealPageHeader extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 subtitle!,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: tokens.primaryOn,
                   fontSize: 23,
                   fontWeight: FontWeight.w700,
                 ),
@@ -163,6 +165,7 @@ class ScoreRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return SizedBox.square(
       dimension: size,
       child: Stack(
@@ -173,7 +176,7 @@ class ScoreRing extends StatelessWidget {
             child: CircularProgressIndicator(
               value: 1,
               strokeWidth: stroke,
-              color: const Color(0xFFE6E9ED),
+              color: tokens.border,
             ),
           ),
           SizedBox.square(
@@ -181,7 +184,7 @@ class ScoreRing extends StatelessWidget {
             child: CircularProgressIndicator(
               value: score / 100,
               strokeWidth: stroke,
-              color: AppTheme.moss,
+              color: tokens.primary,
               strokeCap: StrokeCap.round,
             ),
           ),
@@ -201,6 +204,7 @@ class BigScoreCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return CardBox(
       child: Column(
         children: [
@@ -211,9 +215,9 @@ class BigScoreCircle extends StatelessWidget {
           const SizedBox(height: 20),
           ScoreRing(score: score, size: 150, stroke: 14),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Average personal bond score',
-            style: TextStyle(color: Colors.black54),
+            style: TextStyle(color: tokens.inkMuted),
           ),
         ],
       ),
@@ -236,8 +240,9 @@ class CardBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final decoration = BoxDecoration(
-      color: Colors.white,
+      color: tokens.surfaceRaised,
       borderRadius: BorderRadius.circular(22),
       border: border,
       boxShadow: const [
@@ -282,6 +287,7 @@ class ContactListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return CardBox(
       padding: const EdgeInsets.all(24),
       child: InkWell(
@@ -290,7 +296,7 @@ class ContactListCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 40,
-              backgroundColor: const Color(0xFFE0F0F0),
+              backgroundColor: tokens.primaryTint,
               child: Text(
                 connection.avatar,
                 style: const TextStyle(fontSize: 30),
@@ -310,9 +316,9 @@ class ContactListCard extends StatelessWidget {
                   ),
                   Text(
                     connection.email,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 21,
-                      color: Color(0xFF4B5563),
+                      color: tokens.inkMuted,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -325,7 +331,7 @@ class ContactListCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    backgroundColor: const Color(0xFFF1F1F1),
+                    backgroundColor: tokens.surfaceSunken,
                     side: BorderSide.none,
                   ),
                 ],
@@ -354,22 +360,23 @@ class RecommendationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final high = recommendation.priority.startsWith('high');
     final low = recommendation.priority.startsWith('low');
-    final color = high
-        ? AppTheme.clay
+    final priorityColor = high
+        ? tokens.secondary
         : low
-        ? AppTheme.moss
-        : const Color(0xFFB26B42);
+            ? tokens.success
+            : tokens.inkMuted;
     return CardBox(
-      border: highlight ? Border.all(color: AppTheme.moss, width: 1.5) : null,
+      border: highlight ? Border.all(color: tokens.primary, width: 1.5) : null,
       onTap: onTap,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
             radius: 40,
-            backgroundColor: const Color(0xFFE0F0F0),
+            backgroundColor: tokens.primaryTint,
             child: Text(
               connection.avatar,
               style: const TextStyle(fontSize: 30),
@@ -390,14 +397,14 @@ class RecommendationCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(Icons.error_outline, color: color),
+                    Icon(Icons.error_outline, color: priorityColor),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         recommendation.reason,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
-                          color: Color(0xFF374151),
+                          color: tokens.inkMuted,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -411,13 +418,13 @@ class RecommendationCard extends StatelessWidget {
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEFFBF8),
+                    color: tokens.primaryTint,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Text(
                     '💬  "${recommendation.insight}"',
-                    style: const TextStyle(
-                      color: AppTheme.moss,
+                    style: TextStyle(
+                      color: tokens.primary,
                       fontSize: 19,
                       fontWeight: FontWeight.w800,
                       fontStyle: FontStyle.italic,
@@ -431,9 +438,9 @@ class RecommendationCard extends StatelessWidget {
                     Chip(label: Text(connection.category)),
                     Chip(
                       label: Text(recommendation.priority),
-                      backgroundColor: color,
-                      labelStyle: const TextStyle(
-                        color: Colors.white,
+                      backgroundColor: priorityColor,
+                      labelStyle: TextStyle(
+                        color: tokens.primaryOn,
                         fontWeight: FontWeight.w800,
                       ),
                       side: BorderSide.none,
@@ -447,10 +454,10 @@ class RecommendationCard extends StatelessWidget {
             children: [
               ScoreRing(score: connection.bondScore),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Score',
                 style: TextStyle(
-                  color: Colors.black54,
+                  color: tokens.inkMuted,
                   fontSize: 19,
                   fontWeight: FontWeight.w800,
                 ),
@@ -459,11 +466,7 @@ class RecommendationCard extends StatelessWidget {
           ),
           if (onTap != null) ...[
             const SizedBox(width: 8),
-            const Icon(
-              Icons.chevron_right,
-              color: Colors.black38,
-              size: 32,
-            ),
+            Icon(Icons.chevron_right, color: tokens.inkSubtle, size: 32),
           ],
         ],
       ),
@@ -471,30 +474,41 @@ class RecommendationCard extends StatelessWidget {
   }
 }
 
+/// Returns the category-color mapping per DESIGN.md.
+Color categoryColor(String category, AppTokens tokens) {
+  switch (category) {
+    case 'Family':
+      return tokens.tertiary;
+    case 'Friends':
+      return tokens.primary;
+    case 'College':
+      return tokens.success;
+    case 'High School':
+      return tokens.secondary;
+    case 'Work':
+      return tokens.categoryWork;
+    default:
+      return tokens.inkMuted;
+  }
+}
+
 class HeatmapCard extends StatelessWidget {
   const HeatmapCard({super.key, required this.connections});
   final List<Connection> connections;
 
-  static const colors = {
-    'Family': Color(0xFFA855F7),
-    'Friends': Color(0xFF22C55E),
-    'High School': Color(0xFFF97316),
-    'College': Color(0xFF3B82F6),
-    'Work': AppTheme.moss,
-  };
-
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final categories = ['Family', 'Friends', 'High School', 'College', 'Work'];
     return CardBox(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.trending_up, color: AppTheme.moss),
-              SizedBox(width: 12),
-              Expanded(
+              Icon(Icons.trending_up, color: tokens.primary),
+              const SizedBox(width: 12),
+              const Expanded(
                 child: Text(
                   'Connection Heatmap by Category',
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
@@ -503,11 +517,11 @@ class HeatmapCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'Your social activity patterns over months',
             style: TextStyle(
               fontSize: 22,
-              color: Colors.black54,
+              color: tokens.inkMuted,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -516,7 +530,7 @@ class HeatmapCard extends StatelessWidget {
             _HeatmapRow(
               category: category,
               count: connections.where((c) => c.category == category).length,
-              color: colors[category]!,
+              color: categoryColor(category, tokens),
             ),
         ],
       ),
@@ -536,6 +550,7 @@ class _HeatmapRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Column(
@@ -554,7 +569,7 @@ class _HeatmapRow extends StatelessWidget {
               ),
               Text(
                 '  ($count contact)',
-                style: const TextStyle(fontSize: 20, color: Color(0xFF667085)),
+                style: TextStyle(fontSize: 20, color: tokens.inkMuted),
               ),
             ],
           ),
@@ -587,19 +602,22 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(2, 18, 2, 10),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w900),
-          ),
+        padding: const EdgeInsets.fromLTRB(2, 18, 2, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 27,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            ?action,
+          ],
         ),
-        ?action,
-      ],
-    ),
-  );
+      );
 }
 
 class EventTile extends StatelessWidget {
@@ -616,51 +634,54 @@ class EventTile extends StatelessWidget {
   final VoidCallback? onDelete;
 
   @override
-  Widget build(BuildContext context) => CardBox(
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-    child: ListTile(
-      onTap: onTap,
-      contentPadding: EdgeInsets.zero,
-      title: Text(
-        event.title,
-        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            DateFormat('yyyy-MM-dd').format(event.date),
-            style: const TextStyle(
-              fontSize: 22,
-              color: Color(0xFF4B5563),
-              fontWeight: FontWeight.w700,
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return CardBox(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: EdgeInsets.zero,
+        title: Text(
+          event.title,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              DateFormat('yyyy-MM-dd').format(event.date),
+              style: TextStyle(
+                fontSize: 22,
+                color: tokens.inkMuted,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
-          Text(
-            event.isAllDay
-                ? '${event.eventType}${event.isRecurring ? ' • ${event.recurrencePattern?.label ?? 'Repeats'}' : ''}'
-                : '${event.eventType} • ${_formatMinutes(event.startTimeMinutes)}-${_formatMinutes(event.endTimeMinutes)}',
-            style: const TextStyle(
-              color: Colors.black54,
-              fontWeight: FontWeight.w700,
+            Text(
+              event.isAllDay
+                  ? '${event.eventType}${event.isRecurring ? ' • ${event.recurrencePattern?.label ?? 'Repeats'}' : ''}'
+                  : '${event.eventType} • ${_formatMinutes(event.startTimeMinutes)}-${_formatMinutes(event.endTimeMinutes)}',
+              style: TextStyle(
+                color: tokens.inkMuted,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (contact != null)
+              Text(contact!.avatar, style: const TextStyle(fontSize: 28)),
+            if (onDelete != null)
+              IconButton(
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline),
+              ),
+          ],
+        ),
       ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (contact != null)
-            Text(contact!.avatar, style: const TextStyle(fontSize: 28)),
-          if (onDelete != null)
-            IconButton(
-              onPressed: onDelete,
-              icon: const Icon(Icons.delete_outline),
-            ),
-        ],
-      ),
-    ),
-  );
+    );
+  }
 
   static String _formatMinutes(int? minutes) {
     if (minutes == null) return '';
@@ -676,23 +697,24 @@ class RecommendedActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return CardBox(
-      padding: const EdgeInsets.all(0),
+      padding: EdgeInsets.zero,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          color: const Color(0xFFFF9583),
+          color: tokens.secondary,
           borderRadius: BorderRadius.circular(22),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Text(
+            Text(
               'Recommended Action!',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white,
+                color: tokens.primaryOn,
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
               ),
@@ -701,8 +723,8 @@ class RecommendedActionCard extends StatelessWidget {
             Text(
               'You can gain ${insight.potentialScoreGain}% Connection Score',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: tokens.primaryOn,
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
               ),
@@ -711,8 +733,8 @@ class RecommendedActionCard extends StatelessWidget {
             Text(
               insight.recommendedAction,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: tokens.primaryOn,
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
               ),
@@ -737,8 +759,9 @@ class _InsightCardState extends State<InsightCard> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return CardBox(
-      border: Border.all(color: const Color(0xFFFFE45C), width: 1.5),
+      border: Border.all(color: tokens.border, width: 1.5),
       child: InkWell(
         key: const Key('ai-insight-card'),
         onTap: () => setState(() => expanded = !expanded),
@@ -746,28 +769,28 @@ class _InsightCardState extends State<InsightCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.lightbulb_outline, color: Color(0xFF9A5A00)),
-                SizedBox(width: 12),
+                Icon(Icons.lightbulb_outline, color: tokens.primary),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'AI Insight',
                     style: TextStyle(
-                      color: Color(0xFF7A3F00),
+                      color: tokens.ink,
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                 ),
-                Icon(Icons.expand_more, color: Color(0xFF9A5A00)),
+                Icon(Icons.expand_more, color: tokens.inkMuted),
               ],
             ),
             const SizedBox(height: 12),
             Text(
               widget.insight.summary,
-              style: const TextStyle(
-                color: Color(0xFF8A4B00),
+              style: TextStyle(
+                color: tokens.ink,
                 fontSize: 20,
                 height: 1.35,
                 fontWeight: FontWeight.w700,
@@ -778,8 +801,8 @@ class _InsightCardState extends State<InsightCard> {
               Text(
                 widget.insight.why,
                 key: const Key('ai-insight-why'),
-                style: const TextStyle(
-                  color: Color(0xFF6B3A00),
+                style: TextStyle(
+                  color: tokens.inkMuted,
                   fontSize: 16,
                   height: 1.35,
                 ),
@@ -803,6 +826,7 @@ class RelationshipFactsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return CardBox(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -829,17 +853,14 @@ class RelationshipFactsCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.calendar_today_outlined,
-                color: Color(0xFF4B5563),
-              ),
+              Icon(Icons.calendar_today_outlined, color: tokens.inkMuted),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Last contact: ${DateFormat('yyyy-MM-dd').format(connection.lastContact)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 19,
-                    color: Color(0xFF4B5563),
+                    color: tokens.inkMuted,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -858,28 +879,31 @@ class _Fact extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        label,
-        style: const TextStyle(
-          fontSize: 18,
-          color: Color(0xFF4B5563),
-          fontWeight: FontWeight.w700,
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 18,
+            color: tokens.inkMuted,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        value,
-        style: const TextStyle(
-          fontSize: 23,
-          color: Colors.black,
-          fontWeight: FontWeight.w900,
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 23,
+            color: tokens.ink,
+            fontWeight: FontWeight.w900,
+          ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 class CommunicationChannelsCard extends StatelessWidget {
@@ -888,15 +912,16 @@ class CommunicationChannelsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return CardBox(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.chat_bubble_outline, color: AppTheme.moss),
-              SizedBox(width: 12),
-              Expanded(
+              Icon(Icons.chat_bubble_outline, color: tokens.primary),
+              const SizedBox(width: 12),
+              const Expanded(
                 child: Text(
                   'Top Communication Channels',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
@@ -913,13 +938,13 @@ class CommunicationChannelsCard extends StatelessWidget {
                 Chip(
                   label: Text(
                     channel,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: tokens.primaryOn,
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  backgroundColor: AppTheme.moss,
+                  backgroundColor: tokens.primary,
                   side: BorderSide.none,
                 ),
             ],
@@ -936,6 +961,7 @@ class InteractionFrequencyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final values = frequencyByMonth.length >= 12
         ? frequencyByMonth.take(12).toList()
         : [
@@ -966,15 +992,15 @@ class InteractionFrequencyCard extends StatelessWidget {
                       height: 32,
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
-                        color: AppTheme.moss.withValues(alpha: alpha),
+                        color: tokens.primary.withValues(alpha: alpha),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       '${index + 1}',
-                      style: const TextStyle(
-                        color: Color(0xFF667085),
+                      style: TextStyle(
+                        color: tokens.inkMuted,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -995,15 +1021,18 @@ class EmptyState extends StatelessWidget {
   final String message;
 
   @override
-  Widget build(BuildContext context) => CardBox(
-    child: Column(
-      children: [
-        const Icon(Icons.inbox_outlined, size: 42, color: AppTheme.moss),
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-        Text(message, textAlign: TextAlign.center),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return CardBox(
+      child: Column(
+        children: [
+          Icon(Icons.inbox_outlined, size: 42, color: tokens.primary),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+          Text(message, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
 }
 
 class GradientScaffold extends AppSurface {

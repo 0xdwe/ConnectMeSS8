@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
-import '../../theme/app_theme.dart';
+import '../../theme/app_tokens.dart';
 
 Future<void> showEditUserProfileModal(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -43,6 +43,7 @@ class _EditUserProfileModalState extends ConsumerState<EditUserProfileModal> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Padding(
       padding: EdgeInsets.fromLTRB(
         22,
@@ -73,7 +74,7 @@ class _EditUserProfileModalState extends ConsumerState<EditUserProfileModal> {
             Center(
               child: CircleAvatar(
                 radius: 48,
-                backgroundColor: const Color(0xFFE0F0F0),
+                backgroundColor: tokens.primaryTint,
                 child: Text(
                   avatar.text.isEmpty ? '👤' : avatar.text,
                   style: const TextStyle(fontSize: 42),
@@ -132,7 +133,7 @@ class _EditUserProfileModalState extends ConsumerState<EditUserProfileModal> {
                 Expanded(
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.moss,
+                      backgroundColor: tokens.primary,
                     ),
                     onPressed: () {
                       ref

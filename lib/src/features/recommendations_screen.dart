@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/crm_widgets.dart';
 
 class RecommendationsScreen extends ConsumerWidget {
@@ -10,9 +11,10 @@ class RecommendationsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tokens = context.tokens;
     final state = ref.watch(appControllerProvider);
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F7),
+      backgroundColor: tokens.surface,
       body: Column(children: [
         const TealPageHeader(title: 'Outreach Recommendations', subtitle: 'AI-suggested contacts to reconnect with', backLabel: 'Back to Home'),
         Expanded(child: ListView(padding: const EdgeInsets.all(26), children: [

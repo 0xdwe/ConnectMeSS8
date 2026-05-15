@@ -11,10 +11,14 @@ final appControllerProvider = NotifierProvider<AppController, AppState>(
   AppController.new,
 );
 
+/// Tri-state theme preference. Stored on [AppState.themeMode]; resolved
+/// by [ConnectMeApp] into Flutter's [ThemeMode]. Default = [system].
+enum AppThemeMode { system, light, dark }
+
 class AppState {
   const AppState({
     required this.isAuthed,
-    required this.darkMode,
+    required this.themeMode,
     required this.selectedTab,
     required this.user,
     required this.connections,
@@ -27,7 +31,7 @@ class AppState {
   });
 
   final bool isAuthed;
-  final bool darkMode;
+  final AppThemeMode themeMode;
   final int selectedTab;
   final AppUser user;
   final List<Connection> connections;
@@ -136,7 +140,7 @@ class AppState {
     ];
     return AppState(
       isAuthed: false,
-      darkMode: false,
+      themeMode: AppThemeMode.system,
       selectedTab: 0,
       user: const AppUser(
         name: 'Alex Martinez',
@@ -235,7 +239,7 @@ class AppState {
 
   AppState copyWith({
     bool? isAuthed,
-    bool? darkMode,
+    AppThemeMode? themeMode,
     int? selectedTab,
     AppUser? user,
     List<Connection>? connections,
@@ -248,7 +252,7 @@ class AppState {
   }) {
     return AppState(
       isAuthed: isAuthed ?? this.isAuthed,
-      darkMode: darkMode ?? this.darkMode,
+      themeMode: themeMode ?? this.themeMode,
       selectedTab: selectedTab ?? this.selectedTab,
       user: user ?? this.user,
       connections: connections ?? this.connections,
@@ -356,7 +360,16 @@ class AppController extends Notifier<AppState> {
   }
   void signOut() => state = AppState.seeded();
   void setTab(int index) => state = state.copyWith(selectedTab: index);
-  void setDarkMode(bool value) => state = state.copyWith(darkMode: value);
+
+  void setThemeMode(AppThemeMode mode) =>
+      state = state.copyWith(themeMode: mode);
+
+  /// Deprecated shim for the old binary toggle. Maps `true` → dark,
+  /// `false` → light. Prefer [setThemeMode]; this exists so any callers
+  /// that haven't migrated yet keep compiling. Remove when wave 1 is done.
+  @Deprecated('Use setThemeMode(AppThemeMode) instead')
+  void setDarkMode(bool value) =>
+      setThemeMode(value ? AppThemeMode.dark : AppThemeMode.light);
   void toggleGoogleCalendar(bool value) =>
       state = state.copyWith(googleCalendarLinked: value);
 

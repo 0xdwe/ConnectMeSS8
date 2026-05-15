@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/app_state.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/crm_widgets.dart';
 import 'modals/edit_user_profile_modal.dart';
 
@@ -10,15 +11,16 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tokens = context.tokens;
     final state = ref.watch(appControllerProvider);
     final user = state.user;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F7),
+      backgroundColor: tokens.surface,
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
           Container(
-            color: const Color(0xFF008B83),
+            color: tokens.primary,
             padding: const EdgeInsets.fromLTRB(30, 38, 30, 34),
             child: SafeArea(
               bottom: false,
@@ -31,19 +33,19 @@ class ProfileScreen extends ConsumerWidget {
                           alignment: Alignment.centerLeft,
                           child: InkWell(
                             onTap: Navigator.of(context).pop,
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
                                   Icons.arrow_back,
-                                  color: Colors.white,
+                                  color: tokens.primaryOn,
                                   size: 34,
                                 ),
-                                SizedBox(width: 12),
+                                const SizedBox(width: 12),
                                 Text(
                                   'Back',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: tokens.primaryOn,
                                     fontSize: 27,
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -62,7 +64,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 34),
                   CircleAvatar(
                     radius: 66,
-                    backgroundColor: Colors.white,
+                    backgroundColor: tokens.surfaceRaised,
                     child: Text(
                       user.avatar,
                       style: const TextStyle(fontSize: 54),
@@ -71,8 +73,8 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   Text(
                     user.name,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: tokens.primaryOn,
                       fontSize: 34,
                       fontWeight: FontWeight.w900,
                     ),
@@ -80,8 +82,8 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   Text(
                     user.email,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: tokens.primaryOn,
                       fontSize: 23,
                       fontWeight: FontWeight.w700,
                     ),
@@ -102,17 +104,17 @@ class ProfileScreen extends ConsumerWidget {
                           children: [
                             Text(
                               '${state.averageConnectionScore}',
-                              style: const TextStyle(
-                                color: Color(0xFF008B83),
+                              style: TextStyle(
+                                color: tokens.primary,
                                 fontSize: 46,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            const Text(
+                            Text(
                               'Connection Score',
                               style: TextStyle(
                                 fontSize: 21,
-                                color: Colors.black54,
+                                color: tokens.inkMuted,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -127,17 +129,17 @@ class ProfileScreen extends ConsumerWidget {
                           children: [
                             Text(
                               '${state.connections.length}',
-                              style: const TextStyle(
-                                color: Color(0xFFFF784E),
+                              style: TextStyle(
+                                color: tokens.secondary,
                                 fontSize: 46,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            const Text(
+                            Text(
                               'Total Connections',
                               style: TextStyle(
                                 fontSize: 21,
-                                color: Colors.black54,
+                                color: tokens.inkMuted,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),

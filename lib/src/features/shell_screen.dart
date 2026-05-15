@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/crm_widgets.dart';
 import 'modals/add_connection_modal.dart';
 import 'modals/update_person_picker_modal.dart';
@@ -25,11 +25,12 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final selectedTab = ref.watch(
       appControllerProvider.select((state) => state.selectedTab),
     );
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F7),
+      backgroundColor: tokens.surface,
       body: Stack(
         children: [
           AppSurface(
@@ -58,7 +59,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
               child: GestureDetector(
                 onTap: () => setState(() => actionsOpen = false),
                 child: ColoredBox(
-                  color: Colors.black.withValues(alpha: .05),
+                  color: tokens.ink.withValues(alpha: .05),
                   child: Align(
                     alignment: Alignment.bottomCenter,
                     child: Padding(
@@ -106,29 +107,32 @@ class _ActionPill extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.white,
-    elevation: 10,
-    borderRadius: BorderRadius.circular(44),
-    child: InkWell(
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Material(
+      color: tokens.surfaceRaised,
+      elevation: 10,
       borderRadius: BorderRadius.circular(44),
-      onTap: onTap,
-      child: SizedBox(
-        width: 430,
-        height: 72,
-        child: Center(
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: AppTheme.moss,
-              fontSize: 23,
-              fontWeight: FontWeight.w900,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(44),
+        onTap: onTap,
+        child: SizedBox(
+          width: 430,
+          height: 72,
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: tokens.primary,
+                fontSize: 23,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _BottomNav extends StatelessWidget {
@@ -145,6 +149,7 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return SizedBox(
       height: 104,
       child: Stack(
@@ -153,10 +158,12 @@ class _BottomNav extends StatelessWidget {
         children: [
           Container(
             height: 92,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
-              boxShadow: [BoxShadow(color: Color(0x12000000), blurRadius: 6)],
+            decoration: BoxDecoration(
+              color: tokens.surfaceRaised,
+              border: Border(top: BorderSide(color: tokens.border)),
+              boxShadow: const [
+                BoxShadow(color: Color(0x12000000), blurRadius: 6),
+              ],
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -203,16 +210,16 @@ class _BottomNav extends StatelessWidget {
                 width: 94,
                 height: 94,
                 decoration: BoxDecoration(
-                  color: AppTheme.moss,
+                  color: tokens.primary,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 8),
+                  border: Border.all(color: tokens.surfaceRaised, width: 8),
                   boxShadow: const [
                     BoxShadow(color: Color(0x33000000), blurRadius: 18),
                   ],
                 ),
                 child: Icon(
                   actionsOpen ? Icons.close : Icons.add,
-                  color: Colors.white,
+                  color: tokens.primaryOn,
                   size: 48,
                 ),
               ),
@@ -240,6 +247,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final selected = selectedTab == index;
     return InkWell(
       onTap: () => onTap(index),
@@ -250,13 +258,13 @@ class _NavItem extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: selected ? AppTheme.moss : Colors.black54,
+              color: selected ? tokens.primary : tokens.inkMuted,
               size: 32,
             ),
             Text(
               label,
               style: TextStyle(
-                color: selected ? AppTheme.moss : Colors.black54,
+                color: selected ? tokens.primary : tokens.inkMuted,
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
               ),

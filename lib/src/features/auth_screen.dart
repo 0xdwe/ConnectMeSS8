@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/crm_widgets.dart';
 
 enum _AuthMode { login, signup }
@@ -112,6 +112,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Scaffold(
       body: GradientScaffold(
         child: SafeArea(
@@ -123,12 +124,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                    color: AppTheme.moss,
+                    color: tokens.primary,
                     borderRadius: BorderRadius.circular(34),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.hub_outlined,
-                    color: Colors.white,
+                    color: tokens.primaryOn,
                     size: 54,
                   ),
                 ),
@@ -177,10 +178,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     onSwitch: () => _switchMode(_AuthMode.login),
                   ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Prototype demo. No real backend or saved accounts.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: Colors.black54),
+                  style: TextStyle(fontSize: 13, color: tokens.inkMuted),
                 ),
               ],
             ),
@@ -198,9 +199,10 @@ class _ModeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFEFEFEF),
+        color: tokens.surfaceSunken,
         borderRadius: BorderRadius.circular(28),
       ),
       padding: const EdgeInsets.all(4),
@@ -241,6 +243,7 @@ class _ModeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return InkWell(
       borderRadius: BorderRadius.circular(24),
       onTap: onTap,
@@ -248,7 +251,7 @@ class _ModeChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
+          color: selected ? tokens.surfaceRaised : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
           boxShadow: selected
               ? const [
@@ -266,7 +269,7 @@ class _ModeChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
-            color: selected ? AppTheme.moss : Colors.black54,
+            color: selected ? tokens.primary : tokens.inkMuted,
           ),
         ),
       ),

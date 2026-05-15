@@ -4,7 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
-import '../../theme/app_theme.dart';
+import '../../theme/app_tokens.dart';
 
 Future<PlannerEvent?> showAddEventModal(
   BuildContext context, {
@@ -67,6 +67,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final state = ref.watch(appControllerProvider);
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -235,7 +236,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
             ),
             const SizedBox(height: 16),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: AppTheme.moss),
+              style: FilledButton.styleFrom(backgroundColor: tokens.primary),
               onPressed: () {
                 final cleanTitle = title.text.trim();
                 ref

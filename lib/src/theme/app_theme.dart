@@ -1,43 +1,50 @@
 import 'package:flutter/material.dart';
 
-class AppTheme {
-  static const ink = Color(0xFF17201C);
-  static const moss = Color(0xFF008B83);
-  static const sage = Color(0xFF7EA88C);
-  static const mint = Color(0xFFDDF2E5);
-  static const sand = Color(0xFFFBF6EA);
-  static const clay = Color(0xFFD88D67);
-  static const blush = Color(0xFFF7D9CF);
-  static const sky = Color(0xFFDCEBFA);
+import 'app_tokens.dart';
 
+class AppTheme {
   static ThemeData data(bool dark) {
+    final tokens = dark ? AppTokens.dark() : AppTokens.light();
     final scheme = ColorScheme.fromSeed(
-      seedColor: sage,
+      seedColor: tokens.primary,
       brightness: dark ? Brightness.dark : Brightness.light,
-      primary: moss,
-      secondary: clay,
-      surface: dark ? const Color(0xFF111815) : sand,
+      primary: tokens.primary,
+      onPrimary: tokens.primaryOn,
+      secondary: tokens.secondary,
+      surface: tokens.surface,
     );
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: dark ? const Color(0xFF0D1311) : sand,
+      scaffoldBackgroundColor: tokens.surface,
+      // Note: `Avenir` is set but not bundled. Issue 010 replaces this with
+      // Inter via google_fonts. Keep declaration so existing visual contract
+      // is preserved across the wave 1 migration.
       fontFamily: 'Avenir',
-      appBarTheme: const AppBarTheme(centerTitle: false, elevation: 0),
+      extensions: <ThemeExtension<dynamic>>[tokens],
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
+        elevation: 0,
+        backgroundColor: tokens.surface,
+        foregroundColor: tokens.ink,
+      ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: dark ? const Color(0xFF18231F) : Colors.white,
+        color: tokens.surfaceRaised,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: dark ? const Color(0xFF1B2622) : Colors.white,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
+        fillColor: tokens.surfaceRaised,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(22),
+          borderSide: BorderSide.none,
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: moss,
-          foregroundColor: Colors.white,
+          backgroundColor: tokens.primary,
+          foregroundColor: tokens.primaryOn,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         ),

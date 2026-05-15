@@ -36,7 +36,11 @@ class ConnectMeApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.data(false),
       darkTheme: AppTheme.data(true),
-      themeMode: appState.darkMode ? ThemeMode.dark : ThemeMode.light,
+      themeMode: switch (appState.themeMode) {
+        AppThemeMode.system => ThemeMode.system,
+        AppThemeMode.light => ThemeMode.light,
+        AppThemeMode.dark => ThemeMode.dark,
+      },
       routerConfig: ref.watch(routerProvider),
     );
   }

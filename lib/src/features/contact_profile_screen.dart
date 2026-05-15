@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../models/social_models.dart';
 import '../state/app_state.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
 import '../widgets/crm_widgets.dart';
 import 'modals/edit_connection_modal.dart';
 
@@ -15,6 +15,7 @@ class ContactProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tokens = context.tokens;
     final state = ref.watch(appControllerProvider);
     final person = state.connections.firstWhere(
       (connection) => connection.id == contactId,
@@ -24,12 +25,12 @@ class ContactProfileScreen extends ConsumerWidget {
         .where((interaction) => interaction.contactId == contactId)
         .toList();
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F7),
+      backgroundColor: tokens.surface,
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
           Container(
-            color: AppTheme.moss,
+            color: tokens.primary,
             padding: const EdgeInsets.fromLTRB(28, 28, 28, 30),
             child: SafeArea(
               bottom: false,
@@ -57,7 +58,7 @@ class ContactProfileScreen extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         radius: 52,
-                        backgroundColor: Colors.white,
+                        backgroundColor: tokens.surfaceRaised,
                         child: Text(
                           person.avatar,
                           style: const TextStyle(fontSize: 44),
@@ -70,8 +71,8 @@ class ContactProfileScreen extends ConsumerWidget {
                           children: [
                             Text(
                               person.name,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: tokens.primaryOn,
                                 fontSize: 30,
                                 fontWeight: FontWeight.w900,
                               ),
@@ -79,8 +80,8 @@ class ContactProfileScreen extends ConsumerWidget {
                             const SizedBox(height: 8),
                             Text(
                               person.email,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: tokens.primaryOn,
                                 fontSize: 21,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -172,22 +173,23 @@ class _HeaderBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.arrow_back, color: Colors.white, size: 32),
-            SizedBox(width: 10),
+            Icon(Icons.arrow_back, color: tokens.primaryOn, size: 32),
+            const SizedBox(width: 10),
             Flexible(
               child: Text(
                 'Back',
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: tokens.primaryOn,
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                 ),
@@ -206,11 +208,12 @@ class _BondScorePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: AppTheme.moss,
+        color: tokens.primary,
         borderRadius: BorderRadius.circular(22),
         boxShadow: const [
           BoxShadow(
@@ -223,17 +226,17 @@ class _BondScorePanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.trending_up, color: Colors.white),
-              SizedBox(width: 8),
+              Icon(Icons.trending_up, color: tokens.primaryOn),
+              const SizedBox(width: 8),
               Flexible(
                 child: Text(
                   'Bond Score',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: tokens.primaryOn,
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
                   ),
@@ -244,16 +247,16 @@ class _BondScorePanel extends StatelessWidget {
           const SizedBox(height: 18),
           Text(
             '$score',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: tokens.primaryOn,
               fontSize: 48,
               fontWeight: FontWeight.w900,
             ),
           ),
-          const Text(
+          Text(
             'Strong connection!',
             style: TextStyle(
-              color: Colors.white,
+              color: tokens.primaryOn,
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),

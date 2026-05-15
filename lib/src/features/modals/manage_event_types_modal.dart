@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_state.dart';
+import '../../theme/app_tokens.dart';
 
 Future<void> showManageEventTypesModal(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -33,6 +34,7 @@ class _ManageEventTypesModalState extends ConsumerState<ManageEventTypesModal> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final types = ref.watch(
       appControllerProvider.select((state) => state.eventTypes),
     );
@@ -67,9 +69,9 @@ class _ManageEventTypesModalState extends ConsumerState<ManageEventTypesModal> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFEAF4FF),
+                color: tokens.primaryTint,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFB7D7FF)),
+                border: Border.all(color: tokens.border),
               ),
               child: const Text(
                 'Default event types cannot be deleted. Custom types can be edited or removed.',
@@ -126,13 +128,13 @@ class _ManageEventTypesModalState extends ConsumerState<ManageEventTypesModal> {
                     : Wrap(
                         children: [
                           if (AppController.defaultEventTypes.contains(type))
-                            const Padding(
-                              padding: EdgeInsets.only(top: 12, right: 8),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 12, right: 8),
                               child: Text(
                                 'Default',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.black54,
+                                  color: tokens.inkMuted,
                                 ),
                               ),
                             ),

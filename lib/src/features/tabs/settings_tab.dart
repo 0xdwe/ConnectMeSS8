@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../state/app_state.dart';
+import '../../theme/app_tokens.dart';
 import '../../widgets/crm_widgets.dart';
 import '../modals/edit_user_profile_modal.dart';
 import '../modals/manage_categories_modal.dart';
@@ -14,18 +15,17 @@ class SettingsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tokens = context.tokens;
+    final headerStyle = TextStyle(
+      fontSize: 22,
+      color: tokens.inkMuted,
+      fontWeight: FontWeight.w900,
+    );
     return ListView(
       key: const Key('settings-tab'),
       padding: const EdgeInsets.fromLTRB(26, 30, 26, 126),
       children: [
-        const Text(
-          'Account',
-          style: TextStyle(
-            fontSize: 22,
-            color: Color(0xFF667085),
-            fontWeight: FontWeight.w900,
-          ),
-        ),
+        Text('Account', style: headerStyle),
         const SizedBox(height: 14),
         CardBox(
           padding: EdgeInsets.zero,
@@ -50,14 +50,7 @@ class SettingsTab extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 22),
-        const Text(
-          'Customization',
-          style: TextStyle(
-            fontSize: 22,
-            color: Color(0xFF667085),
-            fontWeight: FontWeight.w900,
-          ),
-        ),
+        Text('Customization', style: headerStyle),
         const SizedBox(height: 14),
         CardBox(
           padding: EdgeInsets.zero,
@@ -82,14 +75,7 @@ class SettingsTab extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 22),
-        const Text(
-          'About',
-          style: TextStyle(
-            fontSize: 22,
-            color: Color(0xFF667085),
-            fontWeight: FontWeight.w900,
-          ),
-        ),
+        Text('About', style: headerStyle),
         const SizedBox(height: 14),
         CardBox(
           padding: EdgeInsets.zero,
@@ -101,13 +87,13 @@ class SettingsTab extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 48),
-        const Center(
+        Center(
           child: Text(
             'Connect Me v3.0\nMaking relationships matter',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 21,
-              color: Color(0xFF667085),
+              color: tokens.inkMuted,
               fontWeight: FontWeight.w700,
             ),
           ),

@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
-import '../../theme/app_theme.dart';
+import '../../theme/app_tokens.dart';
 import '../../widgets/crm_widgets.dart';
 import '../modals/add_event_modal.dart';
 
@@ -138,6 +138,7 @@ class _CalendarGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final first = DateTime(month.year, month.month);
     final days = DateUtils.getDaysInMonth(month.year, month.month);
     final offset = first.weekday % 7;
@@ -169,14 +170,14 @@ class _CalendarGrid extends StatelessWidget {
         const SizedBox(height: 22),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: const ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+          children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
               .map(
                 (d) => Expanded(
                   child: Center(
                     child: Text(
                       d,
                       style: TextStyle(
-                        color: Color(0xFF667085),
+                        color: tokens.inkMuted,
                         fontSize: 19,
                         fontWeight: FontWeight.w800,
                       ),
@@ -210,7 +211,7 @@ class _CalendarGrid extends StatelessWidget {
               child: Container(
                 margin: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.moss : Colors.transparent,
+                  color: isSelected ? tokens.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Column(
@@ -219,7 +220,7 @@ class _CalendarGrid extends StatelessWidget {
                     Text(
                       '$dayNumber',
                       style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black,
+                        color: isSelected ? tokens.primaryOn : tokens.ink,
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                       ),
@@ -230,8 +231,8 @@ class _CalendarGrid extends StatelessWidget {
                         child: CircleAvatar(
                           radius: 3,
                           backgroundColor: isSelected
-                              ? Colors.white
-                              : AppTheme.moss,
+                              ? tokens.primaryOn
+                              : tokens.primary,
                         ),
                       ),
                   ],
