@@ -49,6 +49,11 @@ class SettingsTab extends ConsumerWidget {
                 label: 'Privacy & Security',
                 onTap: () => _info(context, 'Privacy controls placeholder'),
               ),
+              _Row(
+                icon: Icons.delete_outline,
+                label: 'Remove sample friends',
+                onTap: () => _confirmRemoveSamples(context, ref),
+              ),
             ],
           ),
         ),
@@ -121,6 +126,39 @@ class SettingsTab extends ConsumerWidget {
       ],
     ),
   );
+
+  void _confirmRemoveSamples(BuildContext context, WidgetRef ref) {
+    final tokens = context.tokens;
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Remove sample friends?', style: AppTypography.h1()),
+        content: Text(
+          'Remove the 5 sample friends and their interactions?',
+          style: AppTypography.body(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: Navigator.of(context).pop,
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              ref.read(appControllerProvider.notifier).removeSampleConnections();
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Sample friends removed')),
+              );
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: tokens.danger,
+            ),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Row extends StatelessWidget {

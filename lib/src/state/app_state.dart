@@ -84,6 +84,7 @@ class AppState {
         notes: 'Family anchor. Likes weekend updates.',
         knownSince: DateTime(1998, 5, 1),
         preferredChannels: const ['Text', 'Phone', 'FaceTime'],
+        isSample: true,
       ),
       Connection(
         id: 'emily',
@@ -97,6 +98,7 @@ class AppState {
         notes: 'First week at new role. Keep momentum going.',
         knownSince: DateTime(2023, 9, 1),
         preferredChannels: const ['Slack', 'Email', 'Text'],
+        isSample: true,
       ),
       Connection(
         id: 'jessica',
@@ -110,6 +112,7 @@ class AppState {
         notes: 'Mentioned planning a Europe trip.',
         knownSince: DateTime(2012, 9, 1),
         preferredChannels: const ['Instagram', 'Text', 'FaceTime'],
+        isSample: true,
       ),
       Connection(
         id: 'mike',
@@ -123,6 +126,7 @@ class AppState {
         notes: 'Talked about his job application last time.',
         knownSince: DateTime(2010, 9, 1),
         preferredChannels: const ['Text', 'Instagram', 'Phone'],
+        isSample: true,
       ),
       Connection(
         id: 'sarah',
@@ -136,6 +140,7 @@ class AppState {
         notes: 'Coffee with Sarah scheduled.',
         knownSince: DateTime(2020, 6, 1),
         preferredChannels: const ['Text', 'Instagram', 'Coffee'],
+        isSample: true,
       ),
     ];
     return AppState(
@@ -433,6 +438,28 @@ class AppController extends Notifier<AppState> {
       interactions: [
         for (final interaction in state.interactions)
           if (interaction.contactId != contactId) interaction,
+      ],
+    );
+  }
+
+  void removeSampleConnections() {
+    final sampleIds = state.connections
+        .where((c) => c.isSample)
+        .map((c) => c.id)
+        .toSet();
+    
+    state = state.copyWith(
+      connections: [
+        for (final connection in state.connections)
+          if (!connection.isSample) connection,
+      ],
+      events: [
+        for (final event in state.events)
+          if (!sampleIds.contains(event.contactId)) event,
+      ],
+      interactions: [
+        for (final interaction in state.interactions)
+          if (!sampleIds.contains(interaction.contactId)) interaction,
       ],
     );
   }

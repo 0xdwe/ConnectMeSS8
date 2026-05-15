@@ -69,6 +69,18 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
             child: const Text('Create'),
           ),
         ),
+        if (state.events.isEmpty)
+          Center(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.space8),
+              child: Text(
+                'Quiet week ahead.',
+                style: AppTypography.bodyLg(color: context.tokens.inkMuted),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
+        else ...[
         if (selectedEvents.isNotEmpty) ...[
           Text(
             'Selected day: ${DateFormat.yMMMd().format(selected)}',
@@ -83,15 +95,16 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
               onDelete: () => _deleteWithUndo(context, event.id),
             ),
         ],
-        for (final event in [
-          ...state.events,
-        ]..sort((a, b) => a.date.compareTo(b.date)))
-          EventTile(
-            event: event,
-            contact: _contactFor(state, event.contactId),
-            onTap: () => _editEvent(context, event),
-            onDelete: () => _deleteWithUndo(context, event.id),
-          ),
+          for (final event in [
+            ...state.events,
+          ]..sort((a, b) => a.date.compareTo(b.date)))
+            EventTile(
+              event: event,
+              contact: _contactFor(state, event.contactId),
+              onTap: () => _editEvent(context, event),
+              onDelete: () => _deleteWithUndo(context, event.id),
+            ),
+        ],
       ],
     );
   }

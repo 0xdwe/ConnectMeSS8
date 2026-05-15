@@ -203,9 +203,30 @@ class ContactListCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    connection.name,
-                    style: AppTypography.h2(),
+                  Row(
+                    children: [
+                      Text(
+                        connection.name,
+                        style: AppTypography.h2(),
+                      ),
+                      if (connection.isSample) ...[
+                        SizedBox(width: AppSpacing.space2),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.space2,
+                            vertical: AppSpacing.space1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: tokens.surfaceSunken,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: Text(
+                            'Sample',
+                            style: AppTypography.caption(color: tokens.inkSubtle),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   Text(
                     connection.email,

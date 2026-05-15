@@ -53,7 +53,30 @@ class _PeopleTabState extends ConsumerState<PeopleTab> {
         SizedBox(height: AppSpacing.space3),
         SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: ContactSort.values.map((item) => _FilterChip(label: item.label, selected: item == sort, onTap: () => setState(() => sort = item))).toList())),
         SizedBox(height: AppSpacing.space5),
-        for (final person in people) ContactListCard(connection: person, onTap: () => context.push('/contact/${person.id}')),
+        if (people.isEmpty && state.connections.isEmpty)
+          Center(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.space8),
+              child: Text(
+                'No connections yet. Tap + to add someone.',
+                style: AppTypography.bodyLg(color: tokens.inkMuted),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
+        else if (people.isEmpty && query.isNotEmpty)
+          Center(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.space8),
+              child: Text(
+                'Nothing matches "$query". Try a different word.',
+                style: AppTypography.bodyLg(color: tokens.inkMuted),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
+        else
+          for (final person in people) ContactListCard(connection: person, onTap: () => context.push('/contact/${person.id}')),
       ],
     );
   }
