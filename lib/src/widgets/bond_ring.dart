@@ -46,9 +46,14 @@ enum BondTrend {
 /// - Foreground arc (bondScore/100 fraction, tier color, 3px stroke)
 /// - Optional trend arrow at 4 o'clock when trend != flat
 ///
+/// Animation:
+/// - Animates arc from old to new score over 600ms with Curves.easeOutQuart
+/// - Only animates on score changes, not on first mount
+/// - Respects MediaQuery.disableAnimations
+///
 /// Touch target: minimum 44×44 regardless of size.
 /// Semantic label: "name, tier, trend" for screen readers.
-class BondRing extends StatelessWidget {
+class BondRing extends StatefulWidget {
   const BondRing({
     super.key,
     required Connection connection,
@@ -83,10 +88,88 @@ class BondRing extends StatelessWidget {
   BondTrend? get trend => _connection?.bondTrend;
 
   @override
+  State<BondRing> createState() => _BondRingState();
+}
+
+class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  bool _isFirstBuild = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _animation = Tween<double>(
+      begin: widget.score / 100,
+      end: widget.score / 100,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutQuart,
+    ));
+  }
+
+  @override
+  void didUpdateWidget(BondRing oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    final oldScore = oldWidget.score;
+    final newScore = widget.score;
+    
+    // Only animate if score changed and not first build
+    if (oldScore != newScore) {
+      if (_isFirstBuild) {
+        // First build: render immediately at target value
+        setState(() {
+          _animation = Tween<double>(
+            begin: newScore / 100,
+            end: newScore / 100,
+          ).animate(_controller);
+          _isFirstBuild = false;
+        });
+      } else {
+        final disableAnimations = MediaQuery.of(context).disableAnimations;
+        
+        if (disableAnimations) {
+          // Skip animation, render immediately
+          setState(() {
+            _animation = Tween<double>(
+              begin: newScore / 100,
+              end: newScore / 100,
+            ).animate(_controller);
+          });
+        } else {
+          // Animate from old to new score
+          _controller.reset();
+          setState(() {
+            _animation = Tween<double>(
+              begin: oldScore / 100,
+              end: newScore / 100,
+            ).animate(CurvedAnimation(
+              parent: _controller,
+              curve: Curves.easeOutQuart,
+            ));
+          });
+          _controller.forward();
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final tier = BondTier.from(score);
-    final currentTrend = trend;
+    final tier = BondTier.from(widget.score);
+    final currentTrend = widget.trend;
 
     // Tier color mapping per DESIGN.md
     final tierColor = switch (tier) {
@@ -103,68 +186,73 @@ class BondRing extends StatelessWidget {
     };
 
     final semanticLabel = currentTrend != null && currentTrend != BondTrend.flat
-        ? '$label, ${tier.label}, trending ${currentTrend.name}'
-        : '$label, ${tier.label}';
+        ? '${widget.label}, ${tier.label}, trending ${currentTrend.name}'
+        : '${widget.label}, ${tier.label}';
 
     final ringWidget = SizedBox.square(
-      dimension: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Background ring (full circle)
-          CustomPaint(
-            size: Size.square(size),
-            painter: _RingPainter(
-              progress: 1.0,
-              color: tokens.border.withValues(alpha: 0.4),
-              strokeWidth: 3,
-            ),
-          ),
-          // Foreground arc (bond score fraction)
-          CustomPaint(
-            size: Size.square(size),
-            painter: _RingPainter(
-              progress: score / 100,
-              color: tierColor,
-              strokeWidth: 3,
-            ),
-          ),
-          // Avatar (only for Connection-based rings)
-          if (avatar != null)
-            CircleAvatar(
-              radius: (size - 8) / 2,
-              backgroundColor: tokens.primaryTint,
-              child: Text(
-                avatar!,
-                style: TextStyle(fontSize: size * 0.4),
+      dimension: widget.size,
+      child: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, child) {
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              // Background ring (full circle)
+              CustomPaint(
+                size: Size.square(widget.size),
+                painter: _RingPainter(
+                  progress: 1.0,
+                  color: tokens.border.withValues(alpha: 0.4),
+                  strokeWidth: 3,
+                ),
               ),
-            ),
-          // Score number for fromScore constructor
-          if (avatar == null)
-            Text(
-              '$score',
-              style: TextStyle(
-                fontSize: size * 0.28,
-                fontWeight: FontWeight.w700,
+              // Foreground arc (bond score fraction, animated)
+              CustomPaint(
+                size: Size.square(widget.size),
+                painter: _RingPainter(
+                  progress: _animation.value,
+                  color: tierColor,
+                  strokeWidth: 3,
+                ),
               ),
-            ),
-          // Trend arrow at 4 o'clock
-          if (currentTrend != null && currentTrend != BondTrend.flat)
-            Positioned(
-              right: size * 0.05,
-              bottom: size * 0.15,
-              child: Icon(
-                currentTrend.icon,
-                size: 12,
-                color: trendColor,
-              ),
-            ),
-        ],
+              // Avatar (only for Connection-based rings)
+              if (widget.avatar != null)
+                CircleAvatar(
+                  radius: (widget.size - 8) / 2,
+                  backgroundColor: tokens.primaryTint,
+                  child: Text(
+                    widget.avatar!,
+                    style: TextStyle(fontSize: widget.size * 0.4),
+                  ),
+                ),
+              // Score number for fromScore constructor
+              if (widget.avatar == null)
+                Text(
+                  '${widget.score}',
+                  style: TextStyle(
+                    fontSize: widget.size * 0.28,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              // Trend arrow at 4 o'clock
+              if (currentTrend != null && currentTrend != BondTrend.flat)
+                Positioned(
+                  right: widget.size * 0.05,
+                  bottom: widget.size * 0.15,
+                  child: Icon(
+                    currentTrend.icon,
+                    size: 12,
+                    color: trendColor,
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
 
     // Wrap in minimum touch target if needed
-    final touchTargetWidget = size < 44
+    final touchTargetWidget = widget.size < 44
         ? SizedBox(
             width: 44,
             height: 44,
@@ -175,10 +263,10 @@ class BondRing extends StatelessWidget {
     // Wrap in Semantics and optional GestureDetector
     return Semantics(
       label: semanticLabel,
-      button: onTap != null,
-      child: onTap != null
+      button: widget.onTap != null,
+      child: widget.onTap != null
           ? GestureDetector(
-              onTap: onTap,
+              onTap: widget.onTap,
               child: touchTargetWidget,
             )
           : touchTargetWidget,

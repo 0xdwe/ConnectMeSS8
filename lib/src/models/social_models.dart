@@ -150,6 +150,7 @@ class Connection {
     required this.notes,
     required this.knownSince,
     required this.preferredChannels,
+    this.isSample = false,
   });
 
   final String id;
@@ -163,6 +164,7 @@ class Connection {
   final String notes;
   final DateTime knownSince;
   final List<String> preferredChannels;
+  final bool isSample;
 
   String get role => category;
   String get company => email;
@@ -185,6 +187,7 @@ class Connection {
     String? notes,
     DateTime? knownSince,
     List<String>? preferredChannels,
+    bool? isSample,
   }) {
     return Connection(
       id: id,
@@ -198,6 +201,7 @@ class Connection {
       notes: notes ?? this.notes,
       knownSince: knownSince ?? this.knownSince,
       preferredChannels: preferredChannels ?? this.preferredChannels,
+      isSample: isSample ?? this.isSample,
     );
   }
 }

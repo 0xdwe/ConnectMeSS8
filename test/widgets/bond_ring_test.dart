@@ -264,4 +264,208 @@ void main() {
       expect(BondTrend.flat.icon, Icons.remove);
     });
   });
+
+  group('BondRing Animation', () {
+    testWidgets('animates arc when score changes', (tester) async {
+      // Start with score 50
+      var connection = Connection(
+        id: 'test',
+        name: 'Test User',
+        email: 'test@example.com',
+        category: 'Friends',
+        avatar: '👤',
+        bondScore: 50,
+        nextStep: '',
+        lastContact: DateTime(2026, 5, 1),
+        notes: '',
+        knownSince: DateTime(2020, 1, 1),
+        preferredChannels: [],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.data(false),
+          home: Scaffold(
+            body: Center(
+              child: BondRing(connection: connection),
+            ),
+          ),
+        ),
+      );
+
+      // Initial render at score 50
+      await tester.pumpAndSettle();
+
+      // Update to score 80
+      connection = Connection(
+        id: 'test',
+        name: 'Test User',
+        email: 'test@example.com',
+        category: 'Friends',
+        avatar: '👤',
+        bondScore: 80,
+        nextStep: '',
+        lastContact: DateTime(2026, 5, 1),
+        notes: '',
+        knownSince: DateTime(2020, 1, 1),
+        preferredChannels: [],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.data(false),
+          home: Scaffold(
+            body: Center(
+              child: BondRing(connection: connection),
+            ),
+          ),
+        ),
+      );
+
+      // Pump a frame to start animation
+      await tester.pump();
+
+      // Check that animation is in progress (not at final value yet)
+      // We'll verify the CustomPainter is being rebuilt during animation
+      var painter = tester.widget<CustomPaint>(
+        find.byType(CustomPaint).last,
+      ).painter as dynamic;
+      
+      // At t=0, should still be at old value (50/100 = 0.5)
+      expect(painter.progress, closeTo(0.5, 0.01));
+
+      // Pump 300ms (halfway through 600ms animation)
+      await tester.pump(const Duration(milliseconds: 300));
+      painter = tester.widget<CustomPaint>(
+        find.byType(CustomPaint).last,
+      ).painter as dynamic;
+      
+      // Should be between 0.5 and 0.8
+      expect(painter.progress, greaterThan(0.5));
+      expect(painter.progress, lessThan(0.8));
+
+      // Pump to completion
+      await tester.pumpAndSettle();
+      painter = tester.widget<CustomPaint>(
+        find.byType(CustomPaint).last,
+      ).painter as dynamic;
+      
+      // Should be at final value (80/100 = 0.8)
+      expect(painter.progress, closeTo(0.8, 0.01));
+    });
+
+    testWidgets('skips animation when MediaQuery.disableAnimations is true', (tester) async {
+      // Start with score 50
+      var connection = Connection(
+        id: 'test',
+        name: 'Test User',
+        email: 'test@example.com',
+        category: 'Friends',
+        avatar: '👤',
+        bondScore: 50,
+        nextStep: '',
+        lastContact: DateTime(2026, 5, 1),
+        notes: '',
+        knownSince: DateTime(2020, 1, 1),
+        preferredChannels: [],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.data(false),
+          home: MediaQuery(
+            data: const MediaQueryData(disableAnimations: true),
+            child: Scaffold(
+              body: Center(
+                child: BondRing(connection: connection),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Update to score 80
+      connection = Connection(
+        id: 'test',
+        name: 'Test User',
+        email: 'test@example.com',
+        category: 'Friends',
+        avatar: '👤',
+        bondScore: 80,
+        nextStep: '',
+        lastContact: DateTime(2026, 5, 1),
+        notes: '',
+        knownSince: DateTime(2020, 1, 1),
+        preferredChannels: [],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.data(false),
+          home: MediaQuery(
+            data: const MediaQueryData(disableAnimations: true),
+            child: Scaffold(
+              body: Center(
+                child: BondRing(connection: connection),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Pump one frame
+      await tester.pump();
+
+      // Should immediately be at final value (no animation)
+      final painter = tester.widget<CustomPaint>(
+        find.byType(CustomPaint).last,
+      ).painter as dynamic;
+      expect(painter.progress, closeTo(0.8, 0.01));
+    });
+
+    testWidgets('does not animate on first mount', (tester) async {
+      final connection = Connection(
+        id: 'test',
+        name: 'Test User',
+        email: 'test@example.com',
+        category: 'Friends',
+        avatar: '👤',
+        bondScore: 80,
+        nextStep: '',
+        lastContact: DateTime(2026, 5, 1),
+        notes: '',
+        knownSince: DateTime(2020, 1, 1),
+        preferredChannels: [],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.data(false),
+          home: Scaffold(
+            body: Center(
+              child: BondRing(connection: connection),
+            ),
+          ),
+        ),
+      );
+
+      // Pump one frame
+      await tester.pump();
+
+      // Should immediately be at target value (no animation on first mount)
+      final painter = tester.widget<CustomPaint>(
+        find.byType(CustomPaint).last,
+      ).painter as dynamic;
+      expect(painter.progress, closeTo(0.8, 0.01));
+
+      // Verify no animation is running
+      await tester.pump(const Duration(milliseconds: 100));
+      final painterAfter = tester.widget<CustomPaint>(
+        find.byType(CustomPaint).last,
+      ).painter as dynamic;
+      expect(painterAfter.progress, closeTo(0.8, 0.01));
+    });
+  });
 }
