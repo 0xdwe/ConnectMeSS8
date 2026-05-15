@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
+import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/crm_widgets.dart';
@@ -28,7 +29,12 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
         .toList();
     return ListView(
       key: const Key('planner-tab'),
-      padding: const EdgeInsets.fromLTRB(26, 26, 26, 126),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.space6,
+        AppSpacing.space6,
+        AppSpacing.space6,
+        AppSpacing.pageBottomPadding,
+      ),
       children: [
         SwitchListTile(
           value: state.googleCalendarLinked,
@@ -68,7 +74,7 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
             'Selected day: ${DateFormat.yMMMd().format(selected)}',
             style: AppTypography.bodyLg(),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: AppSpacing.space2),
           for (final event in selectedEvents)
             EventTile(
               event: event,
@@ -168,7 +174,7 @@ class _CalendarGrid extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 22),
+        SizedBox(height: AppSpacing.space5),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -227,12 +233,12 @@ class _CalendarGrid extends StatelessWidget {
             
             return InkWell(
               onTap: () => onSelect(day),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               child: Container(
-                margin: const EdgeInsets.all(6),
+                margin: EdgeInsets.all(AppSpacing.space1),
                 decoration: BoxDecoration(
                   color: backgroundColor,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: borderColor != null
                       ? Border.all(color: borderColor, width: 2)
                       : null,

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
+import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/crm_widgets.dart';
@@ -37,16 +38,21 @@ class _PeopleTabState extends ConsumerState<PeopleTab> {
           });
     return ListView(
       key: const Key('people-tab'),
-      padding: const EdgeInsets.fromLTRB(26, 26, 26, 126),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.space6,
+        AppSpacing.space6,
+        AppSpacing.space6,
+        AppSpacing.pageBottomPadding,
+      ),
       children: [
         TextField(decoration: InputDecoration(prefixIcon: const Icon(Icons.search, size: 34), hintText: 'Search contacts...', hintStyle: AppTypography.h1(color: tokens.inkSubtle)), style: AppTypography.bodyLg(), onChanged: (value) => setState(() => query = value)),
-        const SizedBox(height: 22),
-        SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [Icon(Icons.filter_alt_outlined, color: tokens.inkMuted, size: 32), const SizedBox(width: 12), ...categories.map((item) => _FilterChip(label: item, selected: item == category, onTap: () => setState(() => category = item)))])),
-        const SizedBox(height: 20),
+        SizedBox(height: AppSpacing.space5),
+        SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [Icon(Icons.filter_alt_outlined, color: tokens.inkMuted, size: 32), SizedBox(width: AppSpacing.space3), ...categories.map((item) => _FilterChip(label: item, selected: item == category, onTap: () => setState(() => category = item)))])),
+        SizedBox(height: AppSpacing.space5),
         Text('Sort by:', style: AppTypography.h2(color: tokens.inkMuted)),
-        const SizedBox(height: 12),
+        SizedBox(height: AppSpacing.space3),
         SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: ContactSort.values.map((item) => _FilterChip(label: item.label, selected: item == sort, onTap: () => setState(() => sort = item))).toList())),
-        const SizedBox(height: 20),
+        SizedBox(height: AppSpacing.space5),
         for (final person in people) ContactListCard(connection: person, onTap: () => context.push('/contact/${person.id}')),
       ],
     );
@@ -63,7 +69,7 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     return Padding(
-        padding: const EdgeInsets.only(right: 12),
+        padding: EdgeInsets.only(right: AppSpacing.space3),
         child: ChoiceChip(
           label: Text(label, style: AppTypography.body(color: selected ? tokens.primaryOn : tokens.inkMuted)),
           selected: selected,
