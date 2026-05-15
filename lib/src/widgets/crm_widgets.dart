@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/social_models.dart';
+import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import 'bond_ring.dart';
@@ -29,23 +30,18 @@ class AppHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 108,
       padding: const EdgeInsets.fromLTRB(32, 22, 22, 16),
       decoration: BoxDecoration(
         color: tokens.surfaceRaised,
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            blurRadius: 5,
-            offset: Offset(0, 2),
-          ),
-        ],
+        boxShadow: AppTokens.elevation1(dark),
       ),
       child: Row(
         children: [
           Text('🔗', style: AppTypography.glyph(38)),
-          const SizedBox(width: 14),
+          SizedBox(width: AppSpacing.space3),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,7 +61,7 @@ class AppHeader extends StatelessWidget {
           ),
           InkWell(
             key: const Key('profile-button'),
-            borderRadius: BorderRadius.circular(40),
+            borderRadius: BorderRadius.circular(AppRadius.pill),
             onTap: onProfileTap,
             child: CircleAvatar(
               radius: 34,
@@ -146,28 +142,23 @@ class CardBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final decoration = BoxDecoration(
       color: tokens.surfaceRaised,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       border: border,
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x1F000000),
-          blurRadius: 7,
-          offset: Offset(0, 2),
-        ),
-      ],
+      boxShadow: AppTokens.elevation1(dark),
     );
     if (onTap == null) {
       return Container(
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: EdgeInsets.only(bottom: AppSpacing.space4),
         padding: padding,
         decoration: decoration,
         child: child,
       );
     }
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: AppSpacing.space4),
       decoration: decoration,
       clipBehavior: Clip.antiAlias,
       child: Material(
@@ -194,7 +185,7 @@ class ContactListCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     return CardBox(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(AppSpacing.space5),
       child: InkWell(
         onTap: onTap,
         child: Row(
@@ -207,7 +198,7 @@ class ContactListCard extends StatelessWidget {
                 style: AppTypography.glyph(30),
               ),
             ),
-            const SizedBox(width: 22),
+            SizedBox(width: AppSpacing.space5),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,7 +211,7 @@ class ContactListCard extends StatelessWidget {
                     connection.email,
                     style: AppTypography.bodyLg(color: tokens.inkMuted),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: AppSpacing.space2),
                   Chip(
                     label: Text(
                       connection.category,
@@ -257,7 +248,7 @@ class RecommendationCard extends StatelessWidget {
     
     return CardBox(
       onTap: onTap,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(AppSpacing.space5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -265,7 +256,7 @@ class RecommendationCard extends StatelessWidget {
           Row(
             children: [
               BondRing(connection: connection, size: 56),
-              const SizedBox(width: 16),
+              SizedBox(width: AppSpacing.space4),
               Expanded(
                 child: Text(
                   connection.name,
@@ -278,19 +269,19 @@ class RecommendationCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.space4),
           // Row 2: Conversational headline
           Text(
             recommendation.reason,
             style: AppTypography.bodyLg(color: tokens.ink),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: AppSpacing.space3),
           // Row 3: Insight text
           Text(
             recommendation.insight,
             style: AppTypography.body(color: tokens.inkMuted),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.space4),
           // Row 4: Action buttons
           Row(
             children: [
@@ -306,7 +297,7 @@ class RecommendationCard extends StatelessWidget {
                   child: const Text('Update Connection'),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: AppSpacing.space3),
               Expanded(
                 child: TextButton(
                   onPressed: onTap,
@@ -354,7 +345,7 @@ class HeatmapCard extends StatelessWidget {
           Row(
             children: [
               Icon(Icons.trending_up, color: tokens.primary),
-              const SizedBox(width: 12),
+              SizedBox(width: AppSpacing.space3),
               Expanded(
                 child: Text(
                   'Connection Heatmap by Category',
@@ -363,12 +354,12 @@ class HeatmapCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: AppSpacing.space5),
           Text(
             'Your social activity patterns over months',
             style: AppTypography.bodyLg(color: tokens.inkMuted),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: AppSpacing.space5),
           for (final category in categories)
             _HeatmapRow(
               category: category,
@@ -395,14 +386,14 @@ class _HeatmapRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: EdgeInsets.only(bottom: AppSpacing.space5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               CircleAvatar(radius: 9, backgroundColor: color),
-              const SizedBox(width: 14),
+              SizedBox(width: AppSpacing.space3),
               Text(
                 category,
                 style: AppTypography.h2(),
@@ -413,17 +404,17 @@ class _HeatmapRow extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: AppSpacing.space3),
           Row(
             children: List.generate(12, (i) {
               final active = (i * 19 + category.length * 7) % 100;
               return Expanded(
                 child: Container(
                   height: 56,
-                  margin: const EdgeInsets.only(right: 8),
+                  margin: EdgeInsets.only(right: AppSpacing.space2),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: .35 + (active % 60) / 100),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                 ),
               );
@@ -442,7 +433,7 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(2, 18, 2, 10),
+        padding: EdgeInsets.fromLTRB(2, AppSpacing.space4, 2, AppSpacing.space2),
         child: Row(
           children: [
             Expanded(
@@ -474,7 +465,7 @@ class EventTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     return CardBox(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.space5, vertical: AppSpacing.space4),
       child: ListTile(
         onTap: onTap,
         contentPadding: EdgeInsets.zero,
@@ -532,10 +523,10 @@ class RecommendedActionCard extends StatelessWidget {
       padding: EdgeInsets.zero,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(22),
+        padding: EdgeInsets.all(AppSpacing.space5),
         decoration: BoxDecoration(
           color: tokens.secondary,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -545,13 +536,13 @@ class RecommendedActionCard extends StatelessWidget {
               textAlign: TextAlign.center,
               style: AppTypography.h2(color: tokens.primaryOn),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: AppSpacing.space3),
             Text(
               'You can gain ${insight.potentialScoreGain}% Connection Score',
               textAlign: TextAlign.center,
               style: AppTypography.bodyLg(color: tokens.primaryOn),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: AppSpacing.space2),
             Text(
               insight.recommendedAction,
               textAlign: TextAlign.center,
@@ -583,14 +574,14 @@ class _InsightCardState extends State<InsightCard> {
       child: InkWell(
         key: const Key('ai-insight-card'),
         onTap: () => setState(() => expanded = !expanded),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Icon(Icons.lightbulb_outline, color: tokens.primary),
-                const SizedBox(width: 12),
+                SizedBox(width: AppSpacing.space3),
                 Expanded(
                   child: Text(
                     'AI Insight',
@@ -600,13 +591,13 @@ class _InsightCardState extends State<InsightCard> {
                 Icon(Icons.expand_more, color: tokens.inkMuted),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: AppSpacing.space3),
             Text(
               widget.insight.summary,
               style: AppTypography.bodyLg(color: tokens.ink),
             ),
             if (expanded) ...[
-              const SizedBox(height: 14),
+              SizedBox(height: AppSpacing.space3),
               Text(
                 widget.insight.why,
                 key: const Key('ai-insight-why'),
@@ -645,7 +636,7 @@ class RelationshipFactsCard extends StatelessWidget {
                   value: insight.relationshipLabel,
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: AppSpacing.space4),
               Expanded(
                 child: _Fact(
                   label: 'Known Since',
@@ -654,12 +645,12 @@ class RelationshipFactsCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: AppSpacing.space4),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(Icons.calendar_today_outlined, color: tokens.inkMuted),
-              const SizedBox(width: 12),
+              SizedBox(width: AppSpacing.space3),
               Expanded(
                 child: Text(
                   'Last contact: ${DateFormat('yyyy-MM-dd').format(connection.lastContact)}',
@@ -689,7 +680,7 @@ class _Fact extends StatelessWidget {
           label,
           style: AppTypography.caption(color: tokens.inkMuted),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: AppSpacing.space2),
         Text(
           value,
           style: AppTypography.h2(color: tokens.ink),
@@ -713,7 +704,7 @@ class CommunicationChannelsCard extends StatelessWidget {
           Row(
             children: [
               Icon(Icons.chat_bubble_outline, color: tokens.primary),
-              const SizedBox(width: 12),
+              SizedBox(width: AppSpacing.space3),
               Expanded(
                 child: Text(
                   'Top Communication Channels',
@@ -722,7 +713,7 @@ class CommunicationChannelsCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: AppSpacing.space3),
           Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -769,7 +760,7 @@ class InteractionFrequencyCard extends StatelessWidget {
             'Interaction Frequency (12 months)',
             style: AppTypography.h2(),
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: AppSpacing.space4),
           Row(
             children: List.generate(12, (index) {
               final alpha = 0.35 + (values[index] / maxValue) * 0.55;
@@ -779,13 +770,13 @@ class InteractionFrequencyCard extends StatelessWidget {
                     Container(
                       key: Key('frequency-bar-$index'),
                       height: 32,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      margin: EdgeInsets.symmetric(horizontal: AppSpacing.space1),
                       decoration: BoxDecoration(
                         color: tokens.primary.withValues(alpha: alpha),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: AppSpacing.space2),
                     Text(
                       '${index + 1}',
                       style: AppTypography.caption(color: tokens.inkMuted),
@@ -853,12 +844,12 @@ class ConnectionScoreHero extends StatelessWidget {
               label: 'Overall connection health',
               size: 120,
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: AppSpacing.space5),
             Text(
               'Connection Score',
               style: AppTypography.h2(),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: AppSpacing.space2),
             Text(
               'Average across all connections',
               style: AppTypography.caption(color: tokens.inkMuted),

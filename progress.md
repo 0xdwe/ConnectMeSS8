@@ -5,8 +5,19 @@ In Progress - Issue #025: UI Consistency Audit
 
 ## Tasks
 - [x] Read context and issue spec
-- [ ] Phase 1: Add token systems (AppSpacing, AppRadius, AppTokens.elevation)
+- [x] Phase 1: Add token systems (AppSpacing, AppRadius, AppTokens.elevation)
 - [ ] Phase 2: Migrate 20+ files to use tokens
+  - [ ] crm_widgets.dart
+  - [ ] auth_screen.dart
+  - [ ] profile_screen.dart
+  - [ ] contact_profile_screen.dart
+  - [ ] ai_update_screen.dart
+  - [ ] shell_screen.dart
+  - [ ] home_tab.dart
+  - [ ] people_tab.dart
+  - [ ] planner_tab.dart
+  - [ ] settings_tab.dart
+  - [ ] All modals (10 files)
 - [ ] Phase 3: Verification (regex checks, flutter analyze)
 
 ## Files Changed
