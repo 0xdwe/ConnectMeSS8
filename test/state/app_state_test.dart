@@ -157,26 +157,6 @@ void main() {
     expect(eventTypes, isNot(contains('Demo Day')));
   });
 
-  test('shared activity creates interaction and bumps contact momentum', () {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-
-    final before = container.read(appControllerProvider).interactions.length;
-    container
-        .read(appControllerProvider.notifier)
-        .logSharedActivity(
-          contactId: 'sarah',
-          type: SharedActivityType.note,
-          content: 'Walked by the river and talked about summer plans.',
-        );
-
-    final state = container.read(appControllerProvider);
-    expect(state.interactions.length, before + 1);
-    expect(state.interactions.first.contactId, 'sarah');
-    expect(state.interactions.first.type, InteractionType.sharedActivity);
-    expect(state.interactions.first.note, contains('summer plans'));
-  });
-
   test('deleting connection removes related events and interactions', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);

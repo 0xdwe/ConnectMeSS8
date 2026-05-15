@@ -15,8 +15,6 @@ enum AvatarKind { emoji, image }
 
 enum RecurrencePattern { daily, weekly, monthly, yearly }
 
-enum SharedActivityType { note, photo }
-
 extension RecurrencePatternLabel on RecurrencePattern {
   String get label => switch (this) {
     RecurrencePattern.daily => 'Daily',

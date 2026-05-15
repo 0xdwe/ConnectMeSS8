@@ -544,41 +544,6 @@ class AppController extends Notifier<AppState> {
     );
   }
 
-  void logSharedActivity({
-    required String contactId,
-    required SharedActivityType type,
-    required String content,
-  }) {
-    final clean = content.trim();
-    if (clean.isEmpty) return;
-    final interaction = CrmInteraction(
-      id: _uuid.v4(),
-      contactId: contactId,
-      type: InteractionType.sharedActivity,
-      title: type == SharedActivityType.photo ? 'Shared photo' : 'Shared note',
-      note: clean,
-      date: DateTime.now(),
-      attachments: type == SharedActivityType.photo
-          ? [AttachmentRef(name: 'Shared photo', path: clean)]
-          : const [],
-    );
-    final updatedConnections = [
-      for (final connection in state.connections)
-        if (connection.id == contactId)
-          connection.copyWith(
-            lastContact: DateTime.now(),
-            bondScore: (connection.bondScore + 3).clamp(0, 100),
-            nextStep: 'Plan a follow-up activity within the next week',
-          )
-        else
-          connection,
-    ];
-    state = state.copyWith(
-      interactions: [interaction, ...state.interactions],
-      connections: updatedConnections,
-    );
-  }
-
   Future<void> runAiUpdate(
     String contactId,
     String input,
