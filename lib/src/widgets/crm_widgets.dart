@@ -205,9 +205,12 @@ class ContactListCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        connection.name,
-                        style: AppTypography.h2(),
+                      Flexible(
+                        child: Text(
+                          connection.name,
+                          style: AppTypography.h2(),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       if (connection.isSample) ...[
                         SizedBox(width: AppSpacing.space2),
