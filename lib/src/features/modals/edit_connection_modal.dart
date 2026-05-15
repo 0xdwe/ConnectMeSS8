@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
+import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
 Future<void> showEditConnectionModal(
@@ -34,10 +35,10 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
     final categories = ref.watch(appControllerProvider).categories;
     return Padding(
       padding: EdgeInsets.only(
-        left: 22,
-        right: 22,
-        top: 22,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 22,
+        left: AppSpacing.space5,
+        right: AppSpacing.space5,
+        top: AppSpacing.space5,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.space5,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -50,12 +51,12 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
             controller: name,
             decoration: const InputDecoration(labelText: 'Name'),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: AppSpacing.space2),
           TextField(
             controller: email,
             decoration: const InputDecoration(labelText: 'Email'),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: AppSpacing.space2),
           DropdownButtonFormField<String>(
             initialValue: category,
             decoration: const InputDecoration(labelText: 'Category'),
@@ -64,12 +65,12 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
                 .toList(),
             onChanged: (v) => setState(() => category = v ?? category),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: AppSpacing.space2),
           TextField(
             controller: notes,
             decoration: const InputDecoration(labelText: 'Starter detail'),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.space4),
           FilledButton(
             onPressed: () {
               ref
@@ -86,7 +87,7 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
             },
             child: const Text('Save'),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: AppSpacing.space2),
           TextButton.icon(
             onPressed: () async {
               final confirmed = await showDialog<bool>(
