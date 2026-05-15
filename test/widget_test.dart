@@ -249,27 +249,4 @@ void main() {
     expect(find.text('Delete Event'), findsOneWidget);
   });
 
-  testWidgets('contact screen can share activity note', (tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(home: ContactProfileScreen(contactId: 'sarah')),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Share Activity'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Share Activity'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Notes'),
-      'Walked by the river',
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('AI Suggestion'), findsOneWidget);
-    await tester.tap(find.text('Share Activity').last);
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('Walked by the river'), findsOneWidget);
-  });
 }

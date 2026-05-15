@@ -6,7 +6,6 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/crm_widgets.dart';
 import 'modals/add_connection_modal.dart';
-import 'modals/shared_activity_modal.dart';
 import 'modals/update_person_picker_modal.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/people_tab.dart';
@@ -67,14 +66,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _ActionPill(
-                            label: 'Share Activity',
-                            onTap: () {
-                              setState(() => actionsOpen = false);
-                              showSharedActivityModal(context);
-                            },
-                          ),
-                          const SizedBox(height: 16),
                           _ActionPill(
                             label: 'Update Connection',
                             onTap: () {

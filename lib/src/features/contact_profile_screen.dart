@@ -8,7 +8,6 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/crm_widgets.dart';
 import 'modals/edit_connection_modal.dart';
-import 'modals/shared_activity_modal.dart';
 
 class ContactProfileScreen extends ConsumerWidget {
   const ContactProfileScreen({super.key, required this.contactId});
@@ -52,15 +51,6 @@ class ContactProfileScreen extends ConsumerWidget {
                             onPressed: () =>
                                 showEditConnectionModal(context, person),
                             icon: const Icon(Icons.edit),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton.filledTonal(
-                            tooltip: 'Share Activity',
-                            onPressed: () => showSharedActivityModal(
-                              context,
-                              initialContactId: person.id,
-                            ),
-                            icon: const Icon(Icons.ios_share),
                           ),
                           const SizedBox(width: 8),
                           IconButton.filled(
@@ -148,15 +138,6 @@ class ContactProfileScreen extends ConsumerWidget {
                   },
                 ),
                 InsightCard(insight: insight),
-                FilledButton.icon(
-                  onPressed: () => showSharedActivityModal(
-                    context,
-                    initialContactId: person.id,
-                  ),
-                  icon: const Icon(Icons.ios_share),
-                  label: const Text('Share Activity'),
-                ),
-                const SizedBox(height: 16),
                 RelationshipFactsCard(connection: person, insight: insight),
                 CommunicationChannelsCard(channels: insight.preferredChannels),
                 InteractionFrequencyCard(
