@@ -2,6 +2,7 @@ import 'package:connect_me/src/app/connect_me_app.dart';
 import 'package:connect_me/src/features/contact_profile_screen.dart';
 import 'package:connect_me/src/features/tabs/planner_tab.dart';
 import 'package:connect_me/src/features/tabs/settings_tab.dart';
+import 'package:connect_me/src/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,7 +55,7 @@ void main() {
     await tester.tap(find.text('People'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('people-tab')), findsOneWidget);
-    await tester.tap(find.text('Planner'));
+    await tester.tap(find.text('Plan'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('planner-tab')), findsOneWidget);
   });
@@ -195,8 +196,11 @@ void main() {
 
   testWidgets('profile can be edited from settings', (tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(home: Scaffold(body: SettingsTab())),
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.data(false),
+          home: const Scaffold(body: SettingsTab()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -221,8 +225,11 @@ void main() {
 
   testWidgets('settings can add custom event type', (tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(home: Scaffold(body: SettingsTab())),
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.data(false),
+          home: const Scaffold(body: SettingsTab()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -240,8 +247,11 @@ void main() {
 
   testWidgets('planner opens existing event in edit mode', (tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(home: Scaffold(body: PlannerTab())),
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.data(false),
+          home: const Scaffold(body: PlannerTab()),
+        ),
       ),
     );
     await tester.pumpAndSettle();

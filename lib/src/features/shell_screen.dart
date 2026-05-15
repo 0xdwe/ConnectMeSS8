@@ -10,7 +10,6 @@ import 'modals/plus_sheet.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/people_tab.dart';
 import 'tabs/planner_tab.dart';
-import 'tabs/settings_tab.dart';
 
 class ShellScreen extends ConsumerStatefulWidget {
   const ShellScreen({super.key});
@@ -20,7 +19,7 @@ class ShellScreen extends ConsumerStatefulWidget {
 }
 
 class _ShellScreenState extends ConsumerState<ShellScreen> {
-  static const _tabs = [HomeTab(), PeopleTab(), PlannerTab(), SettingsTab()];
+  static const _tabs = [HomeTab(), PeopleTab(), PlannerTab()];
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +47,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
               radius: 16,
               child: Text(userAvatar),
             ),
-            onPressed: () => context.push('/me'),
+            onPressed: () => context.push('/settings'),
           ),
         ],
       ),
@@ -108,14 +107,7 @@ class _BottomNav extends StatelessWidget {
             index: 2,
             selectedTab: selectedTab,
             icon: Icons.calendar_today_outlined,
-            label: 'Planner',
-            onTap: onTab,
-          ),
-          _NavItem(
-            index: 3,
-            selectedTab: selectedTab,
-            icon: Icons.settings_outlined,
-            label: 'Setting',
+            label: 'Plan',
             onTap: onTab,
           ),
         ],

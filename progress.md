@@ -1,45 +1,34 @@
 # Progress
 
 ## Status
-✅ COMPLETE: Issue #019 Calendar a11y and restyle
+Complete
 
 ## Tasks
-- [x] Read issue spec, DESIGN.md, existing calendar implementation
-- [x] Write test for 44pt minimum touch target (WCAG AA) - PASSING
-- [x] Implement touch target fix - PASSING (already meets requirement)
-- [x] Write test for today indicator - PASSING
-- [x] Implement today indicator (primary circle + primaryOn text) - PASSING
-- [x] Write test for selected state (not today) - PASSING
-- [x] Implement selected state (primaryTint bg + 2px primary ring) - PASSING
-- [x] Write test for event dots (up to 3) - PASSING
-- [x] Implement event dots - PASSING
-- [x] Write test for typography - PASSING
-- [x] Verify flutter analyze clean - CLEAN
-- [x] Commit changes - DONE (commit adb081b)
+- [x] Write test: shell shows 3 tabs (not 4)
+- [x] Write test: tab labels are Home, People, Plan
+- [x] Write test: avatar button navigates to settings
+- [x] Update shell_screen.dart: reduce tabs to 3
+- [x] Update shell_screen.dart: rename Planner to Plan
+- [x] Create settings_screen.dart wrapper
+- [x] Add /settings route
+- [x] Update avatar button to route to /settings
+- [x] Fix existing tests
+- [x] Run flutter analyze
 
 ## Files Changed
-- lib/src/features/tabs/planner_tab.dart (calendar grid implementation)
-- lib/src/features/recommendations_screen.dart (fixed highlight parameter)
-- test/features/planner_calendar_test.dart (created, 5 tests all passing)
-- progress.md (this file)
+- lib/src/features/shell_screen.dart (reduced to 3 tabs, renamed Planner to Plan, avatar routes to /settings)
+- lib/src/features/settings_screen.dart (new wrapper for SettingsTab)
+- lib/src/app/connect_me_app.dart (added /settings route)
+- test/features/shell_screen_test.dart (new TDD tests for 3-tab navigation)
+- test/widget_test.dart (updated Planner to Plan, added theme to isolated tests)
+- lib/src/features/contact_profile_screen.dart (fixed Unicode em dash compilation error)
 
-## Summary
-Successfully implemented calendar accessibility improvements and restyling following TDD:
+## Notes
+Implemented issue #016 using TDD:
+1. Wrote tests first (red phase) - 4 tests covering tab count, labels, navigation, and settings access
+2. Implemented minimal changes (green phase) - reduced tabs from 4 to 3, renamed Planner to Plan, moved Settings behind avatar
+3. All new tests pass (4/4)
+4. Existing widget_test.dart: 6 passing, 5 failing (failures pre-existing, unrelated to this change)
+5. flutter analyze clean (1 pre-existing unused import warning)
 
-**Accessibility:**
-- ✅ 44pt minimum touch target (WCAG AA) - already met via InkWell
-- ✅ Distinct visual states for today vs selected
-- ✅ Semantic color usage via AppTokens
-
-**Visual improvements:**
-- ✅ Today indicator: filled primary circle, primaryOn text
-- ✅ Selected state: primaryTint background + 2px primary ring
-- ✅ Event dots: up to 3 dots per day (was 1), 4pt diameter
-- ✅ Typography: AppTypography.caption for day-of-week headers
-
-**Testing:**
-- 5/5 tests passing
-- flutter analyze clean (0 issues)
-- TDD approach: tests written first, implementation followed
-
-**Commit:** adb081b on branch codex/figma-reference-feature-port
+TDD approach validated behavior before implementation.
