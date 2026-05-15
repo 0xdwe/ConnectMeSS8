@@ -77,14 +77,13 @@ class _BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 92,
       decoration: BoxDecoration(
         color: tokens.surfaceRaised,
         border: Border(top: BorderSide(color: tokens.border)),
-        boxShadow: const [
-          BoxShadow(color: Color(0x12000000), blurRadius: 6),
-        ],
+        boxShadow: AppTokens.elevation1(dark),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,

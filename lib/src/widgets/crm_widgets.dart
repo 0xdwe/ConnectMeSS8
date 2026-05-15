@@ -33,7 +33,7 @@ class AppHeader extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 108,
-      padding: const EdgeInsets.fromLTRB(32, 22, 22, 16),
+      padding: EdgeInsets.fromLTRB(AppSpacing.space6, AppSpacing.space5, AppSpacing.space5, AppSpacing.space4),
       decoration: BoxDecoration(
         color: tokens.surfaceRaised,
         boxShadow: AppTokens.elevation1(dark),
@@ -130,7 +130,7 @@ class CardBox extends StatelessWidget {
   const CardBox({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(24),
+    this.padding = const EdgeInsets.all(AppSpacing.space5),
     this.border,
     this.onTap,
   });
@@ -433,7 +433,7 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(2, AppSpacing.space4, 2, AppSpacing.space2),
+        padding: EdgeInsets.fromLTRB(AppSpacing.space1, AppSpacing.space4, AppSpacing.space1, AppSpacing.space2),
         child: Row(
           children: [
             Expanded(
