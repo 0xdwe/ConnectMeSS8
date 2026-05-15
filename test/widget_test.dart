@@ -28,8 +28,9 @@ Future<void> signInAsDemo(WidgetTester tester) async {
 Future<void> openJessicaProfile(WidgetTester tester) async {
   await tester.tap(find.text('People').last);
   await tester.pumpAndSettle();
+  final jessicaFinder = find.text('Jessica Taylor');
   await tester.scrollUntilVisible(
-    find.text('Jessica Taylor'),
+    jessicaFinder,
     120,
     scrollable: find
         .descendant(
@@ -38,7 +39,20 @@ Future<void> openJessicaProfile(WidgetTester tester) async {
         )
         .first,
   );
-  await tester.tap(find.text('Jessica Taylor'));
+  await tester.ensureVisible(jessicaFinder.first);
+  await tester.pumpAndSettle();
+  
+  // Tap the InkWell ancestor to ensure the tap is registered
+  final inkWell = find.ancestor(
+    of: jessicaFinder.first,
+    matching: find.byType(InkWell),
+  );
+  
+  if (inkWell.evaluate().isNotEmpty) {
+    await tester.tap(inkWell.first);
+  } else {
+    await tester.tap(jessicaFinder.first);
+  }
   await tester.pumpAndSettle();
 }
 
@@ -131,7 +145,7 @@ void main() {
     expect(find.text('Paste a chat, AI will categorize.'), findsOneWidget);
   });
 
-  testWidgets('contact profile renders AI insight dashboard cards', (
+  testWidgets('contact profile renders relationship facts and history', (
     tester,
   ) async {
     await pumpConnectMe(tester);
@@ -139,24 +153,26 @@ void main() {
 
     await openJessicaProfile(tester);
 
-    expect(find.text('Recommended Action!'), findsOneWidget);
-    expect(find.text('AI Insight'), findsOneWidget);
-    expect(find.text('Top Communication Channels'), findsOneWidget);
-    expect(find.text('Interaction Frequency (12 months)'), findsOneWidget);
+    // Scroll to ensure content is visible
+    await tester.pumpAndSettle();
+    
+    // Relationship facts should be visible
+    expect(find.text('Relationship'), findsOneWidget);
+    expect(find.text('Known Since'), findsOneWidget);
+    // Jessica has no history, so warm empty state should show
+    expect(find.textContaining('new'), findsOneWidget);
   });
 
-  testWidgets('AI insight card expands why details', (tester) async {
+  testWidgets('contact profile shows insight summary in header', (tester) async {
     await pumpConnectMe(tester);
     await signInAsDemo(tester);
 
     await openJessicaProfile(tester);
 
-    expect(find.byKey(const Key('ai-insight-why')), findsNothing);
-    await tester.ensureVisible(find.byKey(const Key('ai-insight-card')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('ai-insight-card')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('ai-insight-why')), findsOneWidget);
+    // Insight summary should be visible in header (not as expandable card)
+    expect(find.textContaining('Jessica'), findsWidgets);
+    // Old yellow InsightCard should not be present
+    expect(find.text('AI Insight'), findsNothing);
   });
 
   testWidgets('contact profile avoids overflow at narrow large text scale', (

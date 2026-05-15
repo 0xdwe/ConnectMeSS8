@@ -1,5 +1,4 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
-import 'package:connect_me/src/features/contact_profile_screen.dart';
 import 'package:connect_me/src/widgets/bond_ring.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
