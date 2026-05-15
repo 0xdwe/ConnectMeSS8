@@ -51,20 +51,20 @@ class AppState {
   List<Recommendation> get recommendations => [
     const Recommendation(
       contactId: 'mike',
-      reason: 'Over 1 month since last contact',
-      insight: 'You talked about his job application last time',
+      reason: "Mike's been quiet for a while.",
+      insight: "It's been about 5 weeks since you talked.",
       priority: 'high priority',
     ),
     const Recommendation(
       contactId: 'jessica',
-      reason: '3 weeks without interaction',
-      insight: 'She mentioned planning a trip to Europe',
+      reason: 'Jessica is starting to drift.',
+      insight: 'She mentioned planning a trip to Europe.',
       priority: 'medium priority',
     ),
     const Recommendation(
       contactId: 'emily',
-      reason: 'Great momentum - keep it going!',
-      insight: 'This is her first week at the new role',
+      reason: 'You and Emily have been close lately.',
+      insight: 'This is her first week at the new role.',
       priority: 'low priority',
     ),
   ];

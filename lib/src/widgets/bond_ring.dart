@@ -51,20 +51,42 @@ enum BondTrend {
 class BondRing extends StatelessWidget {
   const BondRing({
     super.key,
-    required this.connection,
+    required Connection connection,
     this.size = 64,
     this.onTap,
-  });
+  }) : _connection = connection,
+       _score = null,
+       _label = null;
 
-  final Connection connection;
+  /// Named constructor for displaying a raw score without a Connection object.
+  const BondRing.fromScore({
+    super.key,
+    required int score,
+    required String label,
+    this.size = 64,
+    this.onTap,
+  }) : _connection = null,
+       _score = score,
+       _label = label;
+
+  final Connection? _connection;
+  final int? _score;
+  final String? _label;
   final double size;
   final VoidCallback? onTap;
+
+  // Convenience getters
+  Connection? get connection => _connection;
+  int get score => _connection?.bondScore ?? _score ?? 0;
+  String get label => _connection?.name ?? _label ?? '';
+  String? get avatar => _connection?.avatar;
+  BondTrend? get trend => _connection?.bondTrend;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final tier = BondTier.from(connection.bondScore);
-    final trend = connection.bondTrend;
+    final tier = BondTier.from(score);
+    final currentTrend = trend;
 
     // Tier color mapping per DESIGN.md
     final tierColor = switch (tier) {
@@ -74,14 +96,15 @@ class BondRing extends StatelessWidget {
     };
 
     // Trend color mapping
-    final trendColor = switch (trend) {
+    final trendColor = currentTrend == null ? tokens.inkMuted : switch (currentTrend) {
       BondTrend.up => tokens.success,
       BondTrend.down => tokens.secondary,
       BondTrend.flat => tokens.inkMuted,
     };
 
-    final semanticLabel =
-        '${connection.name}, ${tier.label}${trend != BondTrend.flat ? ', trending ${trend.name}' : ''}';
+    final semanticLabel = currentTrend != null && currentTrend != BondTrend.flat
+        ? '$label, ${tier.label}, trending ${currentTrend.name}'
+        : '$label, ${tier.label}';
 
     final ringWidget = SizedBox.square(
       dimension: size,
@@ -101,27 +124,37 @@ class BondRing extends StatelessWidget {
           CustomPaint(
             size: Size.square(size),
             painter: _RingPainter(
-              progress: connection.bondScore / 100,
+              progress: score / 100,
               color: tierColor,
               strokeWidth: 3,
             ),
           ),
-          // Avatar
-          CircleAvatar(
-            radius: (size - 8) / 2,
-            backgroundColor: tokens.primaryTint,
-            child: Text(
-              connection.avatar,
-              style: TextStyle(fontSize: size * 0.4),
+          // Avatar (only for Connection-based rings)
+          if (avatar != null)
+            CircleAvatar(
+              radius: (size - 8) / 2,
+              backgroundColor: tokens.primaryTint,
+              child: Text(
+                avatar!,
+                style: TextStyle(fontSize: size * 0.4),
+              ),
             ),
-          ),
+          // Score number for fromScore constructor
+          if (avatar == null)
+            Text(
+              '$score',
+              style: TextStyle(
+                fontSize: size * 0.28,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           // Trend arrow at 4 o'clock
-          if (trend != BondTrend.flat)
+          if (currentTrend != null && currentTrend != BondTrend.flat)
             Positioned(
               right: size * 0.05,
               bottom: size * 0.15,
               child: Icon(
-                trend.icon,
+                currentTrend.icon,
                 size: 12,
                 color: trendColor,
               ),

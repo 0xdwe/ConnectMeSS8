@@ -23,7 +23,7 @@ class RecommendationsScreen extends ConsumerWidget {
         foregroundColor: tokens.ink,
       ),
       body: ListView(padding: const EdgeInsets.all(26), children: [
-        for (var i = 0; i < state.recommendations.length; i++) RecommendationCard(key: Key('recommendation-card-${state.recommendations[i].contactId}'), connection: state.connections.firstWhere((c) => c.id == state.recommendations[i].contactId), recommendation: state.recommendations[i], highlight: i == 1, onTap: () => context.push('/contact/${state.recommendations[i].contactId}')),
+        for (var i = 0; i < state.recommendations.length; i++) RecommendationCard(key: Key('recommendation-card-${state.recommendations[i].contactId}'), connection: state.connections.firstWhere((c) => c.id == state.recommendations[i].contactId), recommendation: state.recommendations[i], onTap: () => context.push('/contact/${state.recommendations[i].contactId}')),
       ]),
     );
   }

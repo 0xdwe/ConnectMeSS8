@@ -1,39 +1,41 @@
 # Progress
 
 ## Status
-Completed
+Complete - Issue #024: Home Connection Score Hero
 
 ## Tasks
-- [x] Create lib/src/widgets/bond_ring.dart with BondRing component, BondTier enum, BondTrend enum
-- [x] Implement CustomPaint arc with tier-colored stroke (3px)
-- [x] Add trend arrow at 4 o'clock when trend != flat
-- [x] Enforce minimum 44×44 touch target
-- [x] Add semantic label: "name, tier, trend"
-- [x] Add Connection.bondTrend getter (stub: score ≥70 → up, else flat)
-- [x] Replace ScoreRing with BondRing in ContactListCard and RecommendationCard
-- [x] Delete BigScoreCircle from crm_widgets.dart
-- [x] Mark ScoreRing as @Deprecated
-- [x] Update home_tab.dart: remove BigScoreCircle, add greeting "Hi, Alex."
-- [x] Create test/widgets/bond_ring_test.dart with tier/trend/touch-target tests
-- [x] Verify flutter analyze clean (no new errors)
-- [x] Commit changes
+- [x] Add BondRing.fromScore named constructor
+- [x] Create ConnectionScoreHero widget
+- [x] Update home_tab.dart to use ConnectionScoreHero
+- [x] Write tests using TDD approach
+- [x] All tests passing
+- [x] flutter analyze clean (lib/ only)
 
 ## Files Changed
-- lib/src/widgets/bond_ring.dart (new)
-- lib/src/models/social_models.dart (modified: added bondTrend getter)
-- lib/src/widgets/crm_widgets.dart (modified: deprecated ScoreRing, deleted BigScoreCircle, replaced with BondRing)
-- lib/src/features/tabs/home_tab.dart (modified: removed BigScoreCircle, added greeting)
-- test/widgets/bond_ring_test.dart (new)
+- lib/src/widgets/bond_ring.dart - Added BondRing.fromScore named constructor
+- lib/src/widgets/crm_widgets.dart - Added ConnectionScoreHero widget
+- lib/src/features/tabs/home_tab.dart - Replaced greeting with ConnectionScoreHero
+- lib/src/features/recommendations_screen.dart - Removed deprecated highlight parameter
+- test/widgets/connection_score_hero_test.dart - New test file with 11 tests
 
 ## Notes
-- BondRing uses CustomPaint for arc rendering (3px stroke, starts at 12 o'clock, clockwise)
-- Tier mapping: close ≥80 → primary, steady 50-79 → inkMuted, drifting <50 → secondary
-- Trend stub: score ≥70 → up arrow (success color), else flat (no arrow)
-- Touch target: sizes <44 wrapped in 44×44 SizedBox
-- ScoreRing kept as @Deprecated for backward compatibility (no current callers after migration)
-- BigScoreCircle fully removed (was only used in home_tab.dart)
-- Home tab now shows "Hi, [FirstName]." in bodyLg instead of score hero
-- All BondRing tests pass (10/10)
-- Pre-existing errors in ai_update_screen.dart and recommendations_screen.dart unrelated to this PR
-- Did NOT add fill animation (that's issue #021)
-- Did NOT change contact_profile_screen layout (that's issue #017)
+Implemented using strict TDD workflow:
+1. Wrote tests first (red phase) - 11 tests covering all behaviors
+2. Implemented minimal code to pass tests (green phase)
+3. Verified with flutter analyze
+4. All 11 new tests passing, all existing tests still passing
+
+TDD Test Coverage:
+- ConnectionScoreHero renders with correct labels
+- Tier colors work correctly (90=close, 60=steady, 30=drifting)
+- Wrapped in CardBox for visual consistency
+- Semantic label includes score, tier, and trend
+- BondRing.fromScore constructor works with raw scores
+- BondRing.fromScore displays score number instead of avatar
+
+Implementation Details:
+- BondRing.fromScore uses private fields (_connection, _score, _label) to support both constructors
+- ConnectionScoreHero displays 120pt BondRing with average score
+- Labels: "Connection Score" (h2), "Average across all connections" (caption, inkMuted)
+- Semantic label format: "Connection score: <score>, <tier>, <trend>"
+- Home tab now shows hero card instead of "Hi, Alex." greeting

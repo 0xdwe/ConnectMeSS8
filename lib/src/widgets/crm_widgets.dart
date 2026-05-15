@@ -245,97 +245,76 @@ class RecommendationCard extends StatelessWidget {
     super.key,
     required this.connection,
     required this.recommendation,
-    this.highlight = false,
     this.onTap,
   });
   final Connection connection;
   final Recommendation recommendation;
-  final bool highlight;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final high = recommendation.priority.startsWith('high');
-    final low = recommendation.priority.startsWith('low');
-    final priorityColor = high
-        ? tokens.secondary
-        : low
-            ? tokens.success
-            : tokens.inkMuted;
+    
     return CardBox(
-      border: highlight ? Border.all(color: tokens.primary, width: 1.5) : null,
       onTap: onTap,
-      child: Row(
+      padding: const EdgeInsets.all(20),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundColor: tokens.primaryTint,
-            child: Text(
-              connection.avatar,
-              style: AppTypography.glyph(30),
-            ),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          // Row 1: BondRing + name + category dot
+          Row(
+            children: [
+              BondRing(connection: connection, size: 56),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
                   connection.name,
-                  style: AppTypography.h1(),
+                  style: AppTypography.h2(color: tokens.ink),
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Icon(Icons.error_outline, color: priorityColor),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        recommendation.reason,
-                        style: AppTypography.bodyLg(color: tokens.inkMuted),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tokens.primaryTint,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Text(
-                    '💬  "${recommendation.insight}"',
-                    style: AppTypography.bodyLg(color: tokens.primary)
-                        .copyWith(fontStyle: FontStyle.italic),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 10,
-                  children: [
-                    Chip(label: Text(connection.category)),
-                    Chip(
-                      label: Text(recommendation.priority),
-                      backgroundColor: priorityColor,
-                      labelStyle: AppTypography.caption(color: tokens.primaryOn),
-                      side: BorderSide.none,
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+              CircleAvatar(
+                radius: 4,
+                backgroundColor: categoryColor(connection.category, tokens),
+              ),
+            ],
           ),
-          BondRing(connection: connection, size: 64),
-          if (onTap != null) ...[
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right, color: tokens.inkSubtle, size: 32),
-          ],
+          const SizedBox(height: 16),
+          // Row 2: Conversational headline
+          Text(
+            recommendation.reason,
+            style: AppTypography.bodyLg(color: tokens.ink),
+          ),
+          const SizedBox(height: 12),
+          // Row 3: Insight text
+          Text(
+            recommendation.insight,
+            style: AppTypography.body(color: tokens.inkMuted),
+          ),
+          const SizedBox(height: 16),
+          // Row 4: Action buttons
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: () {
+                    // TODO: Navigate to Update Connection flow
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: tokens.primary,
+                    foregroundColor: tokens.primaryOn,
+                  ),
+                  child: const Text('Update Connection'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextButton(
+                  onPressed: onTap,
+                  child: const Text('Open profile'),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -848,4 +827,45 @@ class EmptyState extends StatelessWidget {
 
 class GradientScaffold extends AppSurface {
   const GradientScaffold({super.key, required super.child});
+}
+
+/// ConnectionScoreHero: displays the user's average connection score
+/// as a large BondRing with label and caption.
+class ConnectionScoreHero extends StatelessWidget {
+  const ConnectionScoreHero({super.key, required this.score});
+  
+  final int score;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final tier = BondTier.from(score);
+    final trendLabel = score >= 70 ? 'trending up' : '';
+    final semanticLabel = 'Connection score: $score, ${tier.label}${trendLabel.isNotEmpty ? ', $trendLabel' : ''}';
+    
+    return Semantics(
+      label: semanticLabel,
+      child: CardBox(
+        child: Column(
+          children: [
+            BondRing.fromScore(
+              score: score,
+              label: 'Overall connection health',
+              size: 120,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Connection Score',
+              style: AppTypography.h2(),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Average across all connections',
+              style: AppTypography.caption(color: tokens.inkMuted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
