@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
+import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 
@@ -47,10 +48,10 @@ class _EditUserProfileModalState extends ConsumerState<EditUserProfileModal> {
     final tokens = context.tokens;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        22,
-        18,
-        22,
-        MediaQuery.of(context).viewInsets.bottom + 22,
+        AppSpacing.space5,
+        AppSpacing.space4,
+        AppSpacing.space5,
+        MediaQuery.of(context).viewInsets.bottom + AppSpacing.space5,
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -71,7 +72,7 @@ class _EditUserProfileModalState extends ConsumerState<EditUserProfileModal> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: AppSpacing.space3),
             Center(
               child: CircleAvatar(
                 radius: 48,
@@ -82,7 +83,7 @@ class _EditUserProfileModalState extends ConsumerState<EditUserProfileModal> {
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: AppSpacing.space3),
             SegmentedButton<AvatarKind>(
               segments: const [
                 ButtonSegment(
@@ -101,7 +102,7 @@ class _EditUserProfileModalState extends ConsumerState<EditUserProfileModal> {
                 setState(() => avatarKind = value.first);
               },
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: AppSpacing.space3),
             TextField(
               controller: avatar,
               decoration: InputDecoration(
@@ -111,17 +112,17 @@ class _EditUserProfileModalState extends ConsumerState<EditUserProfileModal> {
               ),
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: AppSpacing.space2),
             TextField(
               controller: name,
               decoration: const InputDecoration(labelText: 'Name'),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: AppSpacing.space2),
             TextField(
               controller: email,
               decoration: const InputDecoration(labelText: 'Email'),
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: AppSpacing.space4),
             Row(
               children: [
                 Expanded(
@@ -130,7 +131,7 @@ class _EditUserProfileModalState extends ConsumerState<EditUserProfileModal> {
                     child: const Text('Cancel'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: AppSpacing.space3),
                 Expanded(
                   child: FilledButton(
                     style: FilledButton.styleFrom(
