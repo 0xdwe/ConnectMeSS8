@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_state.dart';
+import '../../theme/app_typography.dart';
 
 Future<void> showAddConnectionModal(BuildContext context) => showModalBottomSheet<void>(context: context, isScrollControlled: true, builder: (_) => const AddConnectionModal());
 
@@ -25,7 +26,7 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
     return Padding(
       padding: EdgeInsets.only(left: 22, right: 22, top: 22, bottom: MediaQuery.of(context).viewInsets.bottom + 22),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Add Connection', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+        Text('Add Connection', style: AppTypography.h1()),
         const SizedBox(height: 14),
         TextField(key: const Key('add-name-field'), controller: name, decoration: const InputDecoration(labelText: 'Name')),
         const SizedBox(height: 10),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../state/app_state.dart';
 import '../../theme/app_tokens.dart';
+import '../../theme/app_typography.dart';
 import '../../widgets/crm_widgets.dart';
 import '../modals/edit_user_profile_modal.dart';
 import '../modals/manage_categories_modal.dart';
@@ -16,11 +17,7 @@ class SettingsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
-    final headerStyle = TextStyle(
-      fontSize: 22,
-      color: tokens.inkMuted,
-      fontWeight: FontWeight.w900,
-    );
+    final headerStyle = AppTypography.h2(color: tokens.inkMuted);
     return ListView(
       key: const Key('settings-tab'),
       padding: const EdgeInsets.fromLTRB(26, 30, 26, 126),
@@ -91,11 +88,7 @@ class SettingsTab extends ConsumerWidget {
           child: Text(
             'Connect Me v3.0\nMaking relationships matter',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 21,
-              color: tokens.inkMuted,
-              fontWeight: FontWeight.w700,
-            ),
+            style: AppTypography.bodyLg(color: tokens.inkMuted),
           ),
         ),
         const SizedBox(height: 20),
@@ -135,7 +128,7 @@ class _Row extends StatelessWidget {
     leading: Icon(icon, size: 32),
     title: Text(
       label,
-      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+      style: AppTypography.h2(),
     ),
     trailing: const Icon(Icons.chevron_right, size: 32),
     minVerticalPadding: 22,

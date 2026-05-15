@@ -13,14 +13,21 @@ class AppTheme {
       secondary: tokens.secondary,
       surface: tokens.surface,
     );
-    return ThemeData(
+    final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      brightness: scheme.brightness,
+    );
+    return base.copyWith(
       scaffoldBackgroundColor: tokens.surface,
-      // Note: `Avenir` is set but not bundled. Issue 010 replaces this with
-      // Inter via google_fonts. Keep declaration so existing visual contract
-      // is preserved across the wave 1 migration.
-      fontFamily: 'Avenir',
+      // Typography note: Inter is applied at the widget call site via
+      // AppTypography.X(...). We deliberately do NOT call
+      // GoogleFonts.interTextTheme here because it triggers async font
+      // asset loading during theme construction, which breaks unit tests
+      // that build a theme outside a widget binding (no
+      // TestWidgetsFlutterBinding.ensureInitialized). Material defaults
+      // (AppBar titles, Dialog text, etc.) keep the system family; every
+      // widget we own already routes through AppTypography.
       extensions: <ThemeExtension<dynamic>>[tokens],
       appBarTheme: AppBarTheme(
         centerTitle: false,

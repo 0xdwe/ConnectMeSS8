@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_state.dart';
 import '../../theme/app_tokens.dart';
+import '../../theme/app_typography.dart';
 
 Future<void> showManageEventTypesModal(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -53,10 +54,10 @@ class _ManageEventTypesModalState extends ConsumerState<ManageEventTypesModal> {
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Manage Event Types',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+                    style: AppTypography.h1(),
                   ),
                 ),
                 IconButton(
@@ -132,8 +133,7 @@ class _ManageEventTypesModalState extends ConsumerState<ManageEventTypesModal> {
                               padding: const EdgeInsets.only(top: 12, right: 8),
                               child: Text(
                                 'Default',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
+                                style: AppTypography.caption(
                                   color: tokens.inkMuted,
                                 ),
                               ),

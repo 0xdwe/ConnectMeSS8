@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/app_state.dart';
 import '../theme/app_tokens.dart';
+import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
 import 'modals/edit_user_profile_modal.dart';
 
@@ -44,10 +45,8 @@ class ProfileScreen extends ConsumerWidget {
                                 const SizedBox(width: 12),
                                 Text(
                                   'Back',
-                                  style: TextStyle(
+                                  style: AppTypography.h1(
                                     color: tokens.primaryOn,
-                                    fontSize: 27,
-                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ],
@@ -67,26 +66,18 @@ class ProfileScreen extends ConsumerWidget {
                     backgroundColor: tokens.surfaceRaised,
                     child: Text(
                       user.avatar,
-                      style: const TextStyle(fontSize: 54),
+                      style: AppTypography.glyph(54),
                     ),
                   ),
                   const SizedBox(height: 24),
                   Text(
                     user.name,
-                    style: TextStyle(
-                      color: tokens.primaryOn,
-                      fontSize: 34,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: AppTypography.display(color: tokens.primaryOn),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     user.email,
-                    style: TextStyle(
-                      color: tokens.primaryOn,
-                      fontSize: 23,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: AppTypography.h2(color: tokens.primaryOn),
                   ),
                 ],
               ),
@@ -104,19 +95,15 @@ class ProfileScreen extends ConsumerWidget {
                           children: [
                             Text(
                               '${state.averageConnectionScore}',
-                              style: TextStyle(
+                              style: AppTypography.glyph(
+                                46,
                                 color: tokens.primary,
-                                fontSize: 46,
-                                fontWeight: FontWeight.w900,
+                                weight: FontWeight.w700,
                               ),
                             ),
                             Text(
                               'Connection Score',
-                              style: TextStyle(
-                                fontSize: 21,
-                                color: tokens.inkMuted,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: AppTypography.h2(color: tokens.inkMuted),
                             ),
                           ],
                         ),
@@ -129,19 +116,15 @@ class ProfileScreen extends ConsumerWidget {
                           children: [
                             Text(
                               '${state.connections.length}',
-                              style: TextStyle(
+                              style: AppTypography.glyph(
+                                46,
                                 color: tokens.secondary,
-                                fontSize: 46,
-                                fontWeight: FontWeight.w900,
+                                weight: FontWeight.w700,
                               ),
                             ),
                             Text(
                               'Total Connections',
-                              style: TextStyle(
-                                fontSize: 21,
-                                color: tokens.inkMuted,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: AppTypography.h2(color: tokens.inkMuted),
                             ),
                           ],
                         ),

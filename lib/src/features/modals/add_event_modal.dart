@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_tokens.dart';
+import '../../theme/app_typography.dart';
 
 Future<PlannerEvent?> showAddEventModal(
   BuildContext context, {
@@ -86,10 +87,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                 Expanded(
                   child: Text(
                     widget.event == null ? 'Add Event' : 'Edit Event',
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: AppTypography.h1(),
                   ),
                 ),
                 IconButton(

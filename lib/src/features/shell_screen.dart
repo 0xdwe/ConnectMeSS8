@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
 import '../theme/app_tokens.dart';
+import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
 import 'modals/add_connection_modal.dart';
 import 'modals/update_person_picker_modal.dart';
@@ -122,11 +123,7 @@ class _ActionPill extends StatelessWidget {
           child: Center(
             child: Text(
               label,
-              style: TextStyle(
-                color: tokens.primary,
-                fontSize: 23,
-                fontWeight: FontWeight.w900,
-              ),
+              style: AppTypography.h2(color: tokens.primary),
             ),
           ),
         ),
@@ -263,10 +260,8 @@ class _NavItem extends StatelessWidget {
             ),
             Text(
               label,
-              style: TextStyle(
+              style: AppTypography.caption(
                 color: selected ? tokens.primary : tokens.inkMuted,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
               ),
             ),
           ],

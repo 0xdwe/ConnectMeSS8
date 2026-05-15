@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../state/app_state.dart';
+import '../../theme/app_typography.dart';
 import '../../widgets/crm_widgets.dart';
 
 class HomeTab extends ConsumerStatefulWidget {
@@ -24,7 +25,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
       padding: const EdgeInsets.fromLTRB(26, 26, 26, 126),
       children: [
         BigScoreCircle(score: state.averageConnectionScore),
-        SectionTitle('Today\'s Recommendation', action: TextButton(onPressed: () => context.push('/recommendations'), child: const Text('View All ->', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)))),
+        SectionTitle('Today\'s Recommendation', action: TextButton(onPressed: () => context.push('/recommendations'), child: Text('View All ->', style: AppTypography.bodyLg().copyWith(fontWeight: FontWeight.w600)))),
         for (var i = 0; i < recs.length; i++)
           RecommendationCard(
             key: Key('recommendation-card-${recs[i].contactId}'),

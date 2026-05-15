@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_tokens.dart';
+import '../../theme/app_typography.dart';
 
 Future<void> showEditUserProfileModal(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -58,10 +59,10 @@ class _EditUserProfileModalState extends ConsumerState<EditUserProfileModal> {
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Edit Profile',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+                    style: AppTypography.h1(),
                   ),
                 ),
                 IconButton(
@@ -77,7 +78,7 @@ class _EditUserProfileModalState extends ConsumerState<EditUserProfileModal> {
                 backgroundColor: tokens.primaryTint,
                 child: Text(
                   avatar.text.isEmpty ? '👤' : avatar.text,
-                  style: const TextStyle(fontSize: 42),
+                  style: AppTypography.glyph(42),
                 ),
               ),
             ),

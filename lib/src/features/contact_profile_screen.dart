@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../models/social_models.dart';
 import '../state/app_state.dart';
 import '../theme/app_tokens.dart';
+import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
 import 'modals/edit_connection_modal.dart';
 
@@ -61,7 +62,7 @@ class ContactProfileScreen extends ConsumerWidget {
                         backgroundColor: tokens.surfaceRaised,
                         child: Text(
                           person.avatar,
-                          style: const TextStyle(fontSize: 44),
+                          style: AppTypography.glyph(44),
                         ),
                       ),
                       const SizedBox(width: 24),
@@ -71,19 +72,15 @@ class ContactProfileScreen extends ConsumerWidget {
                           children: [
                             Text(
                               person.name,
-                              style: TextStyle(
+                              style: AppTypography.display(
                                 color: tokens.primaryOn,
-                                fontSize: 30,
-                                fontWeight: FontWeight.w900,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               person.email,
-                              style: TextStyle(
+                              style: AppTypography.h2(
                                 color: tokens.primaryOn,
-                                fontSize: 21,
-                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
@@ -188,11 +185,7 @@ class _HeaderBackButton extends StatelessWidget {
               child: Text(
                 'Back',
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: tokens.primaryOn,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: AppTypography.h1(color: tokens.primaryOn),
               ),
             ),
           ],
@@ -235,11 +228,7 @@ class _BondScorePanel extends StatelessWidget {
                   'Bond Score',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: tokens.primaryOn,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: AppTypography.h2(color: tokens.primaryOn),
                 ),
               ),
             ],
@@ -247,19 +236,15 @@ class _BondScorePanel extends StatelessWidget {
           const SizedBox(height: 18),
           Text(
             '$score',
-            style: TextStyle(
+            style: AppTypography.glyph(
+              48,
               color: tokens.primaryOn,
-              fontSize: 48,
-              fontWeight: FontWeight.w900,
+              weight: FontWeight.w700,
             ),
           ),
           Text(
             'Strong connection!',
-            style: TextStyle(
-              color: tokens.primaryOn,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
+            style: AppTypography.h2(color: tokens.primaryOn),
           ),
         ],
       ),

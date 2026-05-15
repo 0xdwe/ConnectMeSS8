@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
+import '../../theme/app_typography.dart';
 
 Future<void> showUpdateConnectionModal(BuildContext context, Connection connection) {
   return showModalBottomSheet<void>(context: context, isScrollControlled: true, builder: (_) => UpdateConnectionModal(connection: connection));
@@ -26,7 +27,7 @@ class _UpdateConnectionModalState extends ConsumerState<UpdateConnectionModal> {
     return Padding(
       padding: EdgeInsets.only(left: 20, right: 20, top: 18, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Update ${widget.connection.name}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+        Text('Update ${widget.connection.name}', style: AppTypography.h1()),
         const SizedBox(height: 10),
         DropdownButtonFormField<InteractionType>(
           initialValue: type,

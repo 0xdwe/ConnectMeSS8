@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
 import '../theme/app_tokens.dart';
+import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
 
 enum _AuthMode { login, signup }
@@ -136,19 +137,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 const SizedBox(height: 22),
                 Text(
                   _mode == _AuthMode.login ? 'Welcome back.' : 'Join Connect Me.',
-                  style: const TextStyle(
-                    fontSize: 36,
-                    height: 1.04,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: AppTypography.display(),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   _mode == _AuthMode.login
                       ? 'Log in to keep your connections close.'
                       : 'Create an account to start tracking what matters.',
-                  style: TextStyle(
-                    fontSize: 16,
+                  style: AppTypography.body(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -181,7 +177,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 Text(
                   'Prototype demo. No real backend or saved accounts.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: tokens.inkMuted),
+                  style: AppTypography.caption(color: tokens.inkMuted),
                 ),
               ],
             ),
@@ -266,11 +262,9 @@ class _ModeChip extends StatelessWidget {
         alignment: Alignment.center,
         child: Text(
           label,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
+          style: AppTypography.body(
             color: selected ? tokens.primary : tokens.inkMuted,
-          ),
+          ).copyWith(fontWeight: FontWeight.w600),
         ),
       ),
     );

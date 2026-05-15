@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../models/social_models.dart';
 import '../theme/app_tokens.dart';
+import '../theme/app_typography.dart';
 
 class AppSurface extends StatelessWidget {
   const AppSurface({super.key, required this.child});
@@ -42,7 +43,7 @@ class AppHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Text('🔗', style: TextStyle(fontSize: 38)),
+          Text('🔗', style: AppTypography.glyph(38)),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -51,20 +52,12 @@ class AppHeader extends StatelessWidget {
               children: [
                 Text(
                   'Connect Me',
-                  style: TextStyle(
-                    color: tokens.primary,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: AppTypography.h1(color: tokens.primary),
                 ),
                 Text(
                   userName,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: tokens.inkMuted,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTypography.caption(color: tokens.inkMuted),
                 ),
               ],
             ),
@@ -76,7 +69,7 @@ class AppHeader extends StatelessWidget {
             child: CircleAvatar(
               radius: 34,
               backgroundColor: tokens.primaryTint,
-              child: Text(userAvatar, style: const TextStyle(fontSize: 32)),
+              child: Text(userAvatar, style: AppTypography.glyph(32)),
             ),
           ),
         ],
@@ -116,11 +109,7 @@ class TealPageHeader extends StatelessWidget {
                   const SizedBox(width: 12),
                   Text(
                     backLabel,
-                    style: TextStyle(
-                      color: tokens.primaryOn,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: AppTypography.h1(color: tokens.primaryOn),
                   ),
                 ],
               ),
@@ -128,21 +117,13 @@ class TealPageHeader extends StatelessWidget {
             const SizedBox(height: 32),
             Text(
               title,
-              style: TextStyle(
-                color: tokens.primaryOn,
-                fontSize: 34,
-                fontWeight: FontWeight.w900,
-              ),
+              style: AppTypography.display(color: tokens.primaryOn),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 12),
               Text(
                 subtitle!,
-                style: TextStyle(
-                  color: tokens.primaryOn,
-                  fontSize: 23,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AppTypography.h2(color: tokens.primaryOn),
               ),
             ],
           ],
@@ -188,9 +169,13 @@ class ScoreRing extends StatelessWidget {
               strokeCap: StrokeCap.round,
             ),
           ),
+          // Score number uses tabular figures for consistent width across 0-100 range.
           Text(
             '$score',
-            style: TextStyle(fontSize: size * .28, fontWeight: FontWeight.w900),
+            style: AppTypography.monoTabular().copyWith(
+              fontSize: size * .28,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -208,16 +193,16 @@ class BigScoreCircle extends StatelessWidget {
     return CardBox(
       child: Column(
         children: [
-          const Text(
+          Text(
             'Connection Score',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+            style: AppTypography.h2(),
           ),
           const SizedBox(height: 20),
           ScoreRing(score: score, size: 150, stroke: 14),
           const SizedBox(height: 10),
           Text(
             'Average personal bond score',
-            style: TextStyle(color: tokens.inkMuted),
+            style: AppTypography.body(color: tokens.inkMuted),
           ),
         ],
       ),
@@ -299,7 +284,7 @@ class ContactListCard extends StatelessWidget {
               backgroundColor: tokens.primaryTint,
               child: Text(
                 connection.avatar,
-                style: const TextStyle(fontSize: 30),
+                style: AppTypography.glyph(30),
               ),
             ),
             const SizedBox(width: 22),
@@ -309,27 +294,17 @@ class ContactListCard extends StatelessWidget {
                 children: [
                   Text(
                     connection.name,
-                    style: const TextStyle(
-                      fontSize: 25,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: AppTypography.h2(),
                   ),
                   Text(
                     connection.email,
-                    style: TextStyle(
-                      fontSize: 21,
-                      color: tokens.inkMuted,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTypography.bodyLg(color: tokens.inkMuted),
                   ),
                   const SizedBox(height: 8),
                   Chip(
                     label: Text(
                       connection.category,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: AppTypography.body(),
                     ),
                     backgroundColor: tokens.surfaceSunken,
                     side: BorderSide.none,
@@ -379,7 +354,7 @@ class RecommendationCard extends StatelessWidget {
             backgroundColor: tokens.primaryTint,
             child: Text(
               connection.avatar,
-              style: const TextStyle(fontSize: 30),
+              style: AppTypography.glyph(30),
             ),
           ),
           const SizedBox(width: 20),
@@ -389,10 +364,7 @@ class RecommendationCard extends StatelessWidget {
               children: [
                 Text(
                   connection.name,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: AppTypography.h1(),
                 ),
                 const SizedBox(height: 10),
                 Row(
@@ -402,11 +374,7 @@ class RecommendationCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         recommendation.reason,
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: tokens.inkMuted,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: AppTypography.bodyLg(color: tokens.inkMuted),
                       ),
                     ),
                   ],
@@ -423,12 +391,8 @@ class RecommendationCard extends StatelessWidget {
                   ),
                   child: Text(
                     '💬  "${recommendation.insight}"',
-                    style: TextStyle(
-                      color: tokens.primary,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                      fontStyle: FontStyle.italic,
-                    ),
+                    style: AppTypography.bodyLg(color: tokens.primary)
+                        .copyWith(fontStyle: FontStyle.italic),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -439,10 +403,7 @@ class RecommendationCard extends StatelessWidget {
                     Chip(
                       label: Text(recommendation.priority),
                       backgroundColor: priorityColor,
-                      labelStyle: TextStyle(
-                        color: tokens.primaryOn,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      labelStyle: AppTypography.caption(color: tokens.primaryOn),
                       side: BorderSide.none,
                     ),
                   ],
@@ -456,11 +417,7 @@ class RecommendationCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Score',
-                style: TextStyle(
-                  color: tokens.inkMuted,
-                  fontSize: 19,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: AppTypography.caption(color: tokens.inkMuted),
               ),
             ],
           ),
@@ -478,13 +435,13 @@ class RecommendationCard extends StatelessWidget {
 Color categoryColor(String category, AppTokens tokens) {
   switch (category) {
     case 'Family':
-      return tokens.tertiary;
+      return tokens.categoryFamily;
     case 'Friends':
-      return tokens.primary;
+      return tokens.categoryFriends;
     case 'College':
-      return tokens.success;
+      return tokens.categoryCollege;
     case 'High School':
-      return tokens.secondary;
+      return tokens.categoryHighSchool;
     case 'Work':
       return tokens.categoryWork;
     default:
@@ -508,10 +465,10 @@ class HeatmapCard extends StatelessWidget {
             children: [
               Icon(Icons.trending_up, color: tokens.primary),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Connection Heatmap by Category',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+                  style: AppTypography.h1(),
                 ),
               ),
             ],
@@ -519,11 +476,7 @@ class HeatmapCard extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             'Your social activity patterns over months',
-            style: TextStyle(
-              fontSize: 22,
-              color: tokens.inkMuted,
-              fontWeight: FontWeight.w700,
-            ),
+            style: AppTypography.bodyLg(color: tokens.inkMuted),
           ),
           const SizedBox(height: 24),
           for (final category in categories)
@@ -562,14 +515,11 @@ class _HeatmapRow extends StatelessWidget {
               const SizedBox(width: 14),
               Text(
                 category,
-                style: const TextStyle(
-                  fontSize: 23,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: AppTypography.h2(),
               ),
               Text(
                 '  ($count contact)',
-                style: TextStyle(fontSize: 20, color: tokens.inkMuted),
+                style: AppTypography.bodyLg(color: tokens.inkMuted),
               ),
             ],
           ),
@@ -608,10 +558,7 @@ class SectionTitle extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 27,
-                  fontWeight: FontWeight.w900,
-                ),
+                style: AppTypography.h1(),
               ),
             ),
             ?action,
@@ -643,27 +590,20 @@ class EventTile extends StatelessWidget {
         contentPadding: EdgeInsets.zero,
         title: Text(
           event.title,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+          style: AppTypography.h2(),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               DateFormat('yyyy-MM-dd').format(event.date),
-              style: TextStyle(
-                fontSize: 22,
-                color: tokens.inkMuted,
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppTypography.bodyLg(color: tokens.inkMuted),
             ),
             Text(
               event.isAllDay
                   ? '${event.eventType}${event.isRecurring ? ' • ${event.recurrencePattern?.label ?? 'Repeats'}' : ''}'
                   : '${event.eventType} • ${_formatMinutes(event.startTimeMinutes)}-${_formatMinutes(event.endTimeMinutes)}',
-              style: TextStyle(
-                color: tokens.inkMuted,
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppTypography.caption(color: tokens.inkMuted),
             ),
           ],
         ),
@@ -671,7 +611,7 @@ class EventTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (contact != null)
-              Text(contact!.avatar, style: const TextStyle(fontSize: 28)),
+              Text(contact!.avatar, style: AppTypography.glyph(28)),
             if (onDelete != null)
               IconButton(
                 onPressed: onDelete,
@@ -713,31 +653,19 @@ class RecommendedActionCard extends StatelessWidget {
             Text(
               'Recommended Action!',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: tokens.primaryOn,
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-              ),
+              style: AppTypography.h2(color: tokens.primaryOn),
             ),
             const SizedBox(height: 12),
             Text(
               'You can gain ${insight.potentialScoreGain}% Connection Score',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: tokens.primaryOn,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
+              style: AppTypography.bodyLg(color: tokens.primaryOn),
             ),
             const SizedBox(height: 8),
             Text(
               insight.recommendedAction,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: tokens.primaryOn,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppTypography.bodyLg(color: tokens.primaryOn),
             ),
           ],
         ),
@@ -776,11 +704,7 @@ class _InsightCardState extends State<InsightCard> {
                 Expanded(
                   child: Text(
                     'AI Insight',
-                    style: TextStyle(
-                      color: tokens.ink,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: AppTypography.h2(color: tokens.ink),
                   ),
                 ),
                 Icon(Icons.expand_more, color: tokens.inkMuted),
@@ -789,23 +713,14 @@ class _InsightCardState extends State<InsightCard> {
             const SizedBox(height: 12),
             Text(
               widget.insight.summary,
-              style: TextStyle(
-                color: tokens.ink,
-                fontSize: 20,
-                height: 1.35,
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppTypography.bodyLg(color: tokens.ink),
             ),
             if (expanded) ...[
               const SizedBox(height: 14),
               Text(
                 widget.insight.why,
                 key: const Key('ai-insight-why'),
-                style: TextStyle(
-                  color: tokens.inkMuted,
-                  fontSize: 16,
-                  height: 1.35,
-                ),
+                style: AppTypography.body(color: tokens.inkMuted),
               ),
             ],
           ],
@@ -858,11 +773,7 @@ class RelationshipFactsCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Last contact: ${DateFormat('yyyy-MM-dd').format(connection.lastContact)}',
-                  style: TextStyle(
-                    fontSize: 19,
-                    color: tokens.inkMuted,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTypography.bodyLg(color: tokens.inkMuted),
                 ),
               ),
             ],
@@ -886,20 +797,12 @@ class _Fact extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 18,
-            color: tokens.inkMuted,
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTypography.caption(color: tokens.inkMuted),
         ),
         const SizedBox(height: 8),
         Text(
           value,
-          style: TextStyle(
-            fontSize: 23,
-            color: tokens.ink,
-            fontWeight: FontWeight.w900,
-          ),
+          style: AppTypography.h2(color: tokens.ink),
         ),
       ],
     );
@@ -921,10 +824,10 @@ class CommunicationChannelsCard extends StatelessWidget {
             children: [
               Icon(Icons.chat_bubble_outline, color: tokens.primary),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Top Communication Channels',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+                  style: AppTypography.h2(),
                 ),
               ),
             ],
@@ -938,11 +841,7 @@ class CommunicationChannelsCard extends StatelessWidget {
                 Chip(
                   label: Text(
                     channel,
-                    style: TextStyle(
-                      color: tokens.primaryOn,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: AppTypography.body(color: tokens.primaryOn),
                   ),
                   backgroundColor: tokens.primary,
                   side: BorderSide.none,
@@ -976,9 +875,9 @@ class InteractionFrequencyCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Interaction Frequency (12 months)',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+            style: AppTypography.h2(),
           ),
           const SizedBox(height: 18),
           Row(
@@ -999,10 +898,7 @@ class InteractionFrequencyCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       '${index + 1}',
-                      style: TextStyle(
-                        color: tokens.inkMuted,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: AppTypography.caption(color: tokens.inkMuted),
                     ),
                   ],
                 ),
@@ -1027,8 +923,12 @@ class EmptyState extends StatelessWidget {
       child: Column(
         children: [
           Icon(Icons.inbox_outlined, size: 42, color: tokens.primary),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-          Text(message, textAlign: TextAlign.center),
+          Text(title, style: AppTypography.h2()),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: AppTypography.body(color: tokens.inkMuted),
+          ),
         ],
       ),
     );

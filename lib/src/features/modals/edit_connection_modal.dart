@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
+import '../../theme/app_typography.dart';
 
 Future<void> showEditConnectionModal(
   BuildContext context,
@@ -41,9 +42,9 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
+          Text(
             'Edit Connection',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+            style: AppTypography.h1(),
           ),
           TextField(
             controller: name,

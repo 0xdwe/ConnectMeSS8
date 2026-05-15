@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_tokens.dart';
+import '../../theme/app_typography.dart';
 import '../../widgets/crm_widgets.dart';
 import '../modals/add_event_modal.dart';
 
@@ -34,11 +35,14 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
           onChanged: ref
               .read(appControllerProvider.notifier)
               .toggleGoogleCalendar,
-          title: const Text(
+          title: Text(
             'Google Calendar connected',
-            style: TextStyle(fontWeight: FontWeight.w900),
+            style: AppTypography.bodyLg(),
           ),
-          subtitle: const Text('Mock sync boundary. OAuth later.'),
+          subtitle: Text(
+            'Mock sync boundary. OAuth later.',
+            style: AppTypography.body(),
+          ),
         ),
         CardBox(
           child: _CalendarGrid(
@@ -62,7 +66,7 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
         if (selectedEvents.isNotEmpty) ...[
           Text(
             'Selected day: ${DateFormat.yMMMd().format(selected)}',
-            style: const TextStyle(fontWeight: FontWeight.w800),
+            style: AppTypography.bodyLg(),
           ),
           const SizedBox(height: 8),
           for (final event in selectedEvents)
@@ -154,10 +158,7 @@ class _CalendarGrid extends StatelessWidget {
               child: Center(
                 child: Text(
                   DateFormat.yMMMM().format(month),
-                  style: const TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: AppTypography.h1(),
                 ),
               ),
             ),
@@ -176,11 +177,7 @@ class _CalendarGrid extends StatelessWidget {
                   child: Center(
                     child: Text(
                       d,
-                      style: TextStyle(
-                        color: tokens.inkMuted,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: AppTypography.caption(color: tokens.inkMuted),
                     ),
                   ),
                 ),
@@ -219,10 +216,8 @@ class _CalendarGrid extends StatelessWidget {
                   children: [
                     Text(
                       '$dayNumber',
-                      style: TextStyle(
+                      style: AppTypography.bodyLg(
                         color: isSelected ? tokens.primaryOn : tokens.ink,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
                       ),
                     ),
                     if (hasEvent)

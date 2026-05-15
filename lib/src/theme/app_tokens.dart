@@ -24,6 +24,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
     required this.success,
     required this.danger,
     required this.categoryWork,
+    required this.categoryFamily,
+    required this.categoryFriends,
+    required this.categoryCollege,
+    required this.categoryHighSchool,
   });
 
   /// Light-mode token palette per DESIGN.md.
@@ -47,6 +51,12 @@ class AppTokens extends ThemeExtension<AppTokens> {
         // DESIGN.md → Category colors: Work uses oklch(0.580 0.080 230) ≈ #5283A8.
         // It's the one off-palette accent in the system.
         categoryWork: Color(0xFF5283A8),
+        // Category identity colors map to semantic tokens per DESIGN.md:
+        // Family→tertiary/pink, Friends→primary/purple, College→success/green, HighSchool→secondary/orange.
+        categoryFamily: Color(0xFFFF71CF),
+        categoryFriends: Color(0xFF7C3AED),
+        categoryCollege: Color(0xFF3B9D6E),
+        categoryHighSchool: Color(0xFFFF8C00),
       );
 
   /// Dark-mode token palette per DESIGN.md. The two `*Tint` values for
@@ -71,6 +81,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
         danger: Color(0xFFE25555),
         // Slightly lighter for dark surfaces.
         categoryWork: Color(0xFF7BA8C9),
+        categoryFamily: Color(0xFFFF94D8),
+        categoryFriends: Color(0xFF9B6BF0),
+        categoryCollege: Color(0xFF5BC094),
+        categoryHighSchool: Color(0xFFFFA240),
       );
 
   final Color surface;
@@ -90,6 +104,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final Color success;
   final Color danger;
   final Color categoryWork;
+  final Color categoryFamily;
+  final Color categoryFriends;
+  final Color categoryCollege;
+  final Color categoryHighSchool;
 
   @override
   AppTokens copyWith({
@@ -110,6 +128,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
     Color? success,
     Color? danger,
     Color? categoryWork,
+    Color? categoryFamily,
+    Color? categoryFriends,
+    Color? categoryCollege,
+    Color? categoryHighSchool,
   }) {
     return AppTokens(
       surface: surface ?? this.surface,
@@ -129,6 +151,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
       success: success ?? this.success,
       danger: danger ?? this.danger,
       categoryWork: categoryWork ?? this.categoryWork,
+      categoryFamily: categoryFamily ?? this.categoryFamily,
+      categoryFriends: categoryFriends ?? this.categoryFriends,
+      categoryCollege: categoryCollege ?? this.categoryCollege,
+      categoryHighSchool: categoryHighSchool ?? this.categoryHighSchool,
     );
   }
 
@@ -153,6 +179,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
       success: Color.lerp(success, other.success, t)!,
       danger: Color.lerp(danger, other.danger, t)!,
       categoryWork: Color.lerp(categoryWork, other.categoryWork, t)!,
+      categoryFamily: Color.lerp(categoryFamily, other.categoryFamily, t)!,
+      categoryFriends: Color.lerp(categoryFriends, other.categoryFriends, t)!,
+      categoryCollege: Color.lerp(categoryCollege, other.categoryCollege, t)!,
+      categoryHighSchool: Color.lerp(categoryHighSchool, other.categoryHighSchool, t)!,
     );
   }
 }

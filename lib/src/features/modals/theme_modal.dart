@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_state.dart';
 import '../../theme/app_tokens.dart';
+import '../../theme/app_typography.dart';
 
 Future<void> showThemeModal(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -27,14 +28,14 @@ class ThemeModal extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Theme',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+            style: AppTypography.h1(),
           ),
           const SizedBox(height: 4),
           Text(
             'Match system follows your device. Light and dark are explicit.',
-            style: TextStyle(fontSize: 14, color: tokens.inkMuted),
+            style: AppTypography.caption(color: tokens.inkMuted),
           ),
           const SizedBox(height: 16),
           RadioGroup<AppThemeMode>(
