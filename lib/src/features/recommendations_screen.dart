@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
 import '../theme/app_tokens.dart';
+import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
 
 class RecommendationsScreen extends ConsumerWidget {

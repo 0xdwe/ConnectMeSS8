@@ -23,7 +23,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.light(),
+          theme: AppTheme.data(false),
           home: Scaffold(
             body: Center(
               child: BondRing(connection: connection),
@@ -57,7 +57,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.light(),
+          theme: AppTheme.data(false),
           home: Scaffold(
             body: Center(
               child: BondRing(connection: connection),
@@ -90,7 +90,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.light(),
+          theme: AppTheme.data(false),
           home: Scaffold(
             body: Center(
               child: BondRing(connection: connection),
@@ -124,7 +124,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.light(),
+          theme: AppTheme.data(false),
           home: Scaffold(
             body: Center(
               child: BondRing(
@@ -159,7 +159,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.light(),
+          theme: AppTheme.data(false),
           home: Scaffold(
             body: Center(
               child: BondRing(connection: connection),
@@ -190,7 +190,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.light(),
+          theme: AppTheme.data(false),
           home: Scaffold(
             body: Center(
               child: BondRing(connection: connection),
@@ -222,7 +222,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.light(),
+          theme: AppTheme.data(false),
           home: Scaffold(
             body: Center(
               child: BondRing(connection: connection, size: 32),

@@ -79,61 +79,6 @@ class AppHeader extends StatelessWidget {
   }
 }
 
-class TealPageHeader extends StatelessWidget {
-  const TealPageHeader({
-    super.key,
-    required this.title,
-    this.subtitle,
-    required this.backLabel,
-  });
-  final String title;
-  final String? subtitle;
-  final String backLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    return Container(
-      color: tokens.primary,
-      padding: const EdgeInsets.fromLTRB(28, 34, 28, 34),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            InkWell(
-              onTap: Navigator.of(context).pop,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.arrow_back, color: tokens.primaryOn, size: 34),
-                  const SizedBox(width: 12),
-                  Text(
-                    backLabel,
-                    style: AppTypography.h1(color: tokens.primaryOn),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            Text(
-              title,
-              style: AppTypography.display(color: tokens.primaryOn),
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                subtitle!,
-                style: AppTypography.h2(color: tokens.primaryOn),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 @Deprecated('Use BondRing instead. ScoreRing will be removed in a future release.')
 class ScoreRing extends StatelessWidget {
   const ScoreRing({

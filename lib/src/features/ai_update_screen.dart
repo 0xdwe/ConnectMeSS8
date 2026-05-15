@@ -83,45 +83,44 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
           Text('Tell AI anything', style: AppTypography.h2()),
           const SizedBox(height: 8),
           Text('Text, images, files. Mock AI categorizes info into correct basket and updates history/dashboard.', style: AppTypography.body(color: tokens.inkMuted)),
-            const SizedBox(height: 16),
-            TextField(key: const Key('ai-input-field'), controller: input, minLines: 4, maxLines: 12, decoration: const InputDecoration(hintText: 'Example: Sam said today is first day at job. Ask how it went tomorrow.')),
-            const SizedBox(height: 14),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              ActionChip(avatar: const Icon(Icons.attach_file), label: const Text('Attach'), onPressed: pick),
-              ActionChip(key: const Key('add-image-chip'), avatar: const Icon(Icons.image), label: const Text('Add image'), onPressed: pickImage),
-              for (final file in attachments)
-                if (_isImage(file.name))
-                  ClipRRect(
-                    key: Key('attachment-preview-${file.name}'),
-                    borderRadius: BorderRadius.circular(8),
-                    child: file.path != null
-                        ? Image.file(
-                            File(file.path!),
-                            width: 64,
-                            height: 64,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              width: 64,
-                              height: 64,
-                              color: tokens.surfaceSunken,
-                              child: Icon(Icons.image_outlined, color: tokens.inkSubtle),
-                            ),
-                          )
-                        : Container(
+          const SizedBox(height: 16),
+          TextField(key: const Key('ai-input-field'), controller: input, minLines: 4, maxLines: 12, decoration: const InputDecoration(hintText: 'Example: Sam said today is first day at job. Ask how it went tomorrow.')),
+          const SizedBox(height: 14),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            ActionChip(avatar: const Icon(Icons.attach_file), label: const Text('Attach'), onPressed: pick),
+            ActionChip(key: const Key('add-image-chip'), avatar: const Icon(Icons.image), label: const Text('Add image'), onPressed: pickImage),
+            for (final file in attachments)
+              if (_isImage(file.name))
+                ClipRRect(
+                  key: Key('attachment-preview-${file.name}'),
+                  borderRadius: BorderRadius.circular(8),
+                  child: file.path != null
+                      ? Image.file(
+                          File(file.path!),
+                          width: 64,
+                          height: 64,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
                             width: 64,
                             height: 64,
                             color: tokens.surfaceSunken,
                             child: Icon(Icons.image_outlined, color: tokens.inkSubtle),
                           ),
-                  )
-                else
-                  Chip(label: Text(file.name)),
-            ]),
-            const SizedBox(height: 20),
-            FilledButton.icon(key: const Key('run-ai-button'), onPressed: loading ? null : submit, icon: const Icon(Icons.auto_awesome), label: const Text('Update Connection')),
-          ])),
-        ]),
-      ),
+                        )
+                      : Container(
+                          width: 64,
+                          height: 64,
+                          color: tokens.surfaceSunken,
+                          child: Icon(Icons.image_outlined, color: tokens.inkSubtle),
+                        ),
+                )
+              else
+                Chip(label: Text(file.name)),
+          ]),
+          const SizedBox(height: 20),
+          FilledButton.icon(key: const Key('run-ai-button'), onPressed: loading ? null : submit, icon: const Icon(Icons.auto_awesome), label: const Text('Update Connection')),
+        ])),
+      ]),
     );
   }
 }

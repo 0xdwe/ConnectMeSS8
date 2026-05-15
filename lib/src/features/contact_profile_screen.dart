@@ -143,37 +143,6 @@ class ContactProfileScreen extends ConsumerWidget {
   }
 }
 
-class _HeaderBackButton extends StatelessWidget {
-  const _HeaderBackButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.arrow_back, color: tokens.primaryOn, size: 32),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                'Back',
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.h1(color: tokens.primaryOn),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _BondScorePanel extends StatelessWidget {
   const _BondScorePanel({required this.score});
   final int score;

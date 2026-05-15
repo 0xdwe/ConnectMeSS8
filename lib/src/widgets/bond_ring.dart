@@ -47,7 +47,7 @@ enum BondTrend {
 /// - Optional trend arrow at 4 o'clock when trend != flat
 ///
 /// Touch target: minimum 44×44 regardless of size.
-/// Semantic label: "<name>, <tier>, <trend>" for screen readers.
+/// Semantic label: "name, tier, trend" for screen readers.
 class BondRing extends StatelessWidget {
   const BondRing({
     super.key,

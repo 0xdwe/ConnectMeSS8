@@ -29,7 +29,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Text(
-            'Hi, ${state.currentUser.name.split(' ').first}.',
+            'Hi, ${state.user.name.split(' ').first}.',
             style: AppTypography.bodyLg(color: tokens.ink),
           ),
         ),
