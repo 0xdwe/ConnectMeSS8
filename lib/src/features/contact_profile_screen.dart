@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../models/social_models.dart';
 import '../state/app_state.dart';
+import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/bond_ring.dart';
@@ -44,14 +45,14 @@ class ContactProfileScreen extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(AppSpacing.space4),
         children: [
           // Header section with BondRing, name, category, and insight summary
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(AppSpacing.space5),
             decoration: BoxDecoration(
               color: tokens.surfaceRaised,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
             ),
             child: Column(
               children: [
@@ -59,7 +60,7 @@ class ContactProfileScreen extends ConsumerWidget {
                 Row(
                   children: [
                     BondRing(connection: person, size: 96),
-                    const SizedBox(width: 20),
+                    SizedBox(width: AppSpacing.space5),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,14 +69,14 @@ class ContactProfileScreen extends ConsumerWidget {
                             person.name,
                             style: AppTypography.display(),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: AppSpacing.space2),
                           Row(
                             children: [
                               CircleAvatar(
                                 radius: 4,
                                 backgroundColor: categoryColor(person.category, tokens),
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: AppSpacing.space2),
                               Text(
                                 person.category,
                                 style: AppTypography.caption(color: tokens.inkMuted),
@@ -87,7 +88,7 @@ class ContactProfileScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: AppSpacing.space4),
                 // Row 2: Insight summary (subtle, no yellow border)
                 Text(
                   insight.summary,
@@ -96,7 +97,7 @@ class ContactProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.space4),
           // Primary action: Update with AI
           SizedBox(
             width: double.infinity,
@@ -111,7 +112,7 @@ class ContactProfileScreen extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.space4),
           // Relationship facts card
           RelationshipFactsCard(connection: person, insight: insight),
           // History section
@@ -119,11 +120,11 @@ class ContactProfileScreen extends ConsumerWidget {
             SectionTitle('History'),
             for (final item in history)
               CardBox(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.space4, vertical: AppSpacing.space3),
                 child: Row(
                   children: [
                     Icon(item.type.icon, color: tokens.inkMuted),
-                    const SizedBox(width: 12),
+                    SizedBox(width: AppSpacing.space3),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,18 +138,18 @@ class ContactProfileScreen extends ConsumerWidget {
                                 ),
                               ),
                               if (item.source == InteractionSource.aiSuggested) ...[
-                                const SizedBox(width: 8),
+                                SizedBox(width: AppSpacing.space2),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.space1, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: tokens.primaryTint,
-                                    borderRadius: BorderRadius.circular(6),
+                                    borderRadius: BorderRadius.circular(AppRadius.sm),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(Icons.auto_awesome, size: 12, color: tokens.primary),
-                                      const SizedBox(width: 4),
+                                      SizedBox(width: AppSpacing.space1),
                                       Text(
                                         'AI',
                                         style: AppTypography.caption(color: tokens.primary).copyWith(fontSize: 11),
@@ -159,7 +160,7 @@ class ContactProfileScreen extends ConsumerWidget {
                               ],
                             ],
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: AppSpacing.space1),
                           Text(
                             '${DateFormat.yMMMd().format(item.date)} • ${item.type.label}',
                             style: AppTypography.caption(color: tokens.inkMuted),
@@ -172,7 +173,7 @@ class ContactProfileScreen extends ConsumerWidget {
               ),
           ] else ...[
             // Warm empty state when no history
-            const SizedBox(height: 24),
+            SizedBox(height: AppSpacing.space5),
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 280),
@@ -183,7 +184,7 @@ class ContactProfileScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: AppSpacing.space5),
           ],
         ],
       ),
