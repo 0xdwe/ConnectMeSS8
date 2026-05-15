@@ -43,23 +43,11 @@ class ContactProfileScreen extends ConsumerWidget {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       _HeaderBackButton(onTap: Navigator.of(context).pop),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton.filledTonal(
-                            tooltip: 'Edit',
-                            onPressed: () =>
-                                showEditConnectionModal(context, person),
-                            icon: const Icon(Icons.edit),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton.filled(
-                            tooltip: 'AI Update',
-                            onPressed: () =>
-                                context.push('/ai-update/${person.id}'),
-                            icon: const Icon(Icons.auto_awesome),
-                          ),
-                        ],
+                      IconButton.filledTonal(
+                        tooltip: 'Edit',
+                        onPressed: () =>
+                            showEditConnectionModal(context, person),
+                        icon: const Icon(Icons.edit),
                       ),
                     ],
                   ),
@@ -138,6 +126,18 @@ class ContactProfileScreen extends ConsumerWidget {
                   },
                 ),
                 InsightCard(insight: insight),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () =>
+                          context.push('/ai-update/${person.id}'),
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text('Update with AI'),
+                    ),
+                  ),
+                ),
                 RelationshipFactsCard(connection: person, insight: insight),
                 CommunicationChannelsCard(channels: insight.preferredChannels),
                 InteractionFrequencyCard(

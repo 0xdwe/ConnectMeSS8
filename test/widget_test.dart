@@ -113,7 +113,7 @@ void main() {
     );
     await tester.tap(find.text('Mike Chen'));
     await tester.pumpAndSettle();
-    expect(find.text('AI Update'), findsOneWidget);
+    expect(find.text('Update with AI'), findsOneWidget);
     expect(find.text('Update Mike Chen'), findsOneWidget);
   });
 

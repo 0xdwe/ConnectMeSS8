@@ -37,7 +37,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6F7),
       body: Column(children: [
-        TealPageHeader(title: 'AI Update', subtitle: 'Update ${person.name}', backLabel: 'Back'),
+        TealPageHeader(title: 'Update with AI', subtitle: 'Update ${person.name}', backLabel: 'Back'),
         Expanded(child: ListView(padding: const EdgeInsets.all(26), children: [
           CardBox(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Tell AI anything', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
