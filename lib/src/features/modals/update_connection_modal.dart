@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
+import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
 Future<void> showUpdateConnectionModal(BuildContext context, Connection connection) {
@@ -25,21 +26,26 @@ class _UpdateConnectionModalState extends ConsumerState<UpdateConnectionModal> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(left: 20, right: 20, top: 18, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
+      padding: EdgeInsets.only(
+        left: AppSpacing.space5,
+        right: AppSpacing.space5,
+        top: AppSpacing.space4,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.space5,
+      ),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Update ${widget.connection.name}', style: AppTypography.h1()),
-        const SizedBox(height: 10),
+        SizedBox(height: AppSpacing.space2),
         DropdownButtonFormField<InteractionType>(
           initialValue: type,
           decoration: const InputDecoration(labelText: 'Basket'),
           items: InteractionType.values.map((item) => DropdownMenuItem(value: item, child: Text(item.label))).toList(),
           onChanged: (value) => setState(() => type = value ?? type),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: AppSpacing.space2),
         TextField(controller: title, decoration: const InputDecoration(labelText: 'Title')),
-        const SizedBox(height: 10),
+        SizedBox(height: AppSpacing.space2),
         TextField(controller: note, decoration: const InputDecoration(labelText: 'Note'), minLines: 2, maxLines: 5),
-        const SizedBox(height: 16),
+        SizedBox(height: AppSpacing.space4),
         FilledButton(
           onPressed: () {
             ref.read(appControllerProvider.notifier).logInteraction(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_state.dart';
+import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
 Future<void> showAddConnectionModal(BuildContext context) => showModalBottomSheet<void>(context: context, isScrollControlled: true, builder: (_) => const AddConnectionModal());
@@ -24,18 +25,23 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
     final state = ref.watch(appControllerProvider);
     category ??= state.categories.first;
     return Padding(
-      padding: EdgeInsets.only(left: 22, right: 22, top: 22, bottom: MediaQuery.of(context).viewInsets.bottom + 22),
+      padding: EdgeInsets.only(
+        left: AppSpacing.space5,
+        right: AppSpacing.space5,
+        top: AppSpacing.space5,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.space5,
+      ),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Add Connection', style: AppTypography.h1()),
-        const SizedBox(height: 14),
+        SizedBox(height: AppSpacing.space3),
         TextField(key: const Key('add-name-field'), controller: name, decoration: const InputDecoration(labelText: 'Name')),
-        const SizedBox(height: 10),
+        SizedBox(height: AppSpacing.space2),
         TextField(key: const Key('add-email-field'), controller: email, decoration: const InputDecoration(labelText: 'Email')),
-        const SizedBox(height: 10),
+        SizedBox(height: AppSpacing.space2),
         DropdownButtonFormField<String>(initialValue: category, decoration: const InputDecoration(labelText: 'Category'), items: state.categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(), onChanged: (value) => setState(() => category = value)),
-        const SizedBox(height: 10),
+        SizedBox(height: AppSpacing.space2),
         TextField(controller: notes, decoration: const InputDecoration(labelText: 'First connection starter'), minLines: 2, maxLines: 4),
-        const SizedBox(height: 18),
+        SizedBox(height: AppSpacing.space4),
         FilledButton(
           key: const Key('save-connection-button'),
           onPressed: () {
