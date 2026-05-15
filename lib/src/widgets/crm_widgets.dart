@@ -14,8 +14,15 @@ class AppSurface extends StatelessWidget {
 }
 
 class AppHeader extends StatelessWidget {
-  const AppHeader({super.key, required this.onProfileTap});
+  const AppHeader({
+    super.key,
+    required this.onProfileTap,
+    required this.userName,
+    required this.userAvatar,
+  });
   final VoidCallback onProfileTap;
+  final String userName;
+  final String userAvatar;
 
   @override
   Widget build(BuildContext context) {
@@ -36,24 +43,39 @@ class AppHeader extends StatelessWidget {
         children: [
           const Text('🔗', style: TextStyle(fontSize: 38)),
           const SizedBox(width: 14),
-          const Expanded(
-            child: Text(
-              'Connect Me',
-              style: TextStyle(
-                color: AppTheme.moss,
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-              ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'Connect Me',
+                  style: TextStyle(
+                    color: AppTheme.moss,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  userName,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
           ),
           InkWell(
             key: const Key('profile-button'),
             borderRadius: BorderRadius.circular(40),
             onTap: onProfileTap,
-            child: const CircleAvatar(
+            child: CircleAvatar(
               radius: 34,
-              backgroundColor: Color(0xFFE0F0F0),
-              child: Text('👤', style: TextStyle(fontSize: 32)),
+              backgroundColor: const Color(0xFFE0F0F0),
+              child: Text(userAvatar, style: const TextStyle(fontSize: 32)),
             ),
           ),
         ],
@@ -205,29 +227,46 @@ class CardBox extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(24),
     this.border,
+    this.onTap,
   });
   final Widget child;
   final EdgeInsets padding;
   final Border? border;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final decoration = BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      border: border,
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x1F000000),
+          blurRadius: 7,
+          offset: Offset(0, 2),
+        ),
+      ],
+    );
+    if (onTap == null) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: padding,
+        decoration: decoration,
+        child: child,
+      );
+    }
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: padding,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: border,
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1F000000),
-            blurRadius: 7,
-            offset: Offset(0, 2),
-          ),
-        ],
+      decoration: decoration,
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(padding: padding, child: child),
+        ),
       ),
-      child: child,
     );
   }
 }
@@ -306,10 +345,12 @@ class RecommendationCard extends StatelessWidget {
     required this.connection,
     required this.recommendation,
     this.highlight = false,
+    this.onTap,
   });
   final Connection connection;
   final Recommendation recommendation;
   final bool highlight;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -322,6 +363,7 @@ class RecommendationCard extends StatelessWidget {
         : const Color(0xFFB26B42);
     return CardBox(
       border: highlight ? Border.all(color: AppTheme.moss, width: 1.5) : null,
+      onTap: onTap,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -415,6 +457,14 @@ class RecommendationCard extends StatelessWidget {
               ),
             ],
           ),
+          if (onTap != null) ...[
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.chevron_right,
+              color: Colors.black38,
+              size: 32,
+            ),
+          ],
         ],
       ),
     );
@@ -556,34 +606,52 @@ class EventTile extends StatelessWidget {
   const EventTile({
     super.key,
     required this.event,
-    required this.contact,
+    this.contact,
+    this.onTap,
     this.onDelete,
   });
   final PlannerEvent event;
-  final Connection contact;
+  final Connection? contact;
+  final VoidCallback? onTap;
   final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) => CardBox(
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
     child: ListTile(
+      onTap: onTap,
       contentPadding: EdgeInsets.zero,
       title: Text(
         event.title,
         style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
       ),
-      subtitle: Text(
-        DateFormat('yyyy-MM-dd').format(event.date),
-        style: const TextStyle(
-          fontSize: 22,
-          color: Color(0xFF4B5563),
-          fontWeight: FontWeight.w700,
-        ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            DateFormat('yyyy-MM-dd').format(event.date),
+            style: const TextStyle(
+              fontSize: 22,
+              color: Color(0xFF4B5563),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Text(
+            event.isAllDay
+                ? '${event.eventType}${event.isRecurring ? ' • ${event.recurrencePattern?.label ?? 'Repeats'}' : ''}'
+                : '${event.eventType} • ${_formatMinutes(event.startTimeMinutes)}-${_formatMinutes(event.endTimeMinutes)}',
+            style: const TextStyle(
+              color: Colors.black54,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(contact.avatar, style: const TextStyle(fontSize: 28)),
+          if (contact != null)
+            Text(contact!.avatar, style: const TextStyle(fontSize: 28)),
           if (onDelete != null)
             IconButton(
               onPressed: onDelete,
@@ -593,6 +661,13 @@ class EventTile extends StatelessWidget {
       ),
     ),
   );
+
+  static String _formatMinutes(int? minutes) {
+    if (minutes == null) return '';
+    final hour = (minutes ~/ 60).toString().padLeft(2, '0');
+    final minute = (minutes % 60).toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
 }
 
 class RecommendedActionCard extends StatelessWidget {

@@ -11,6 +11,61 @@ enum InteractionType {
 
 enum ContactSort { name, lastContact, bondScore }
 
+enum AvatarKind { emoji, image }
+
+enum RecurrencePattern { daily, weekly, monthly, yearly }
+
+enum SharedActivityType { note, photo }
+
+extension RecurrencePatternLabel on RecurrencePattern {
+  String get label => switch (this) {
+    RecurrencePattern.daily => 'Daily',
+    RecurrencePattern.weekly => 'Weekly',
+    RecurrencePattern.monthly => 'Monthly',
+    RecurrencePattern.yearly => 'Yearly',
+  };
+}
+
+class AppUser {
+  const AppUser({
+    required this.name,
+    required this.email,
+    required this.avatar,
+    required this.avatarKind,
+    required this.totalPoints,
+    required this.currentLevel,
+    required this.nextLevelPoints,
+  });
+
+  final String name;
+  final String email;
+  final String avatar;
+  final AvatarKind avatarKind;
+  final int totalPoints;
+  final int currentLevel;
+  final int nextLevelPoints;
+
+  AppUser copyWith({
+    String? name,
+    String? email,
+    String? avatar,
+    AvatarKind? avatarKind,
+    int? totalPoints,
+    int? currentLevel,
+    int? nextLevelPoints,
+  }) {
+    return AppUser(
+      name: name ?? this.name,
+      email: email ?? this.email,
+      avatar: avatar ?? this.avatar,
+      avatarKind: avatarKind ?? this.avatarKind,
+      totalPoints: totalPoints ?? this.totalPoints,
+      currentLevel: currentLevel ?? this.currentLevel,
+      nextLevelPoints: nextLevelPoints ?? this.nextLevelPoints,
+    );
+  }
+}
+
 extension ContactSortLabel on ContactSort {
   String get label => switch (this) {
     ContactSort.name => 'Name',
@@ -130,19 +185,70 @@ class PlannerEvent {
   const PlannerEvent({
     required this.id,
     required this.title,
-    required this.contactId,
+    this.contactId,
     required this.category,
     required this.date,
     required this.note,
+    this.eventType = 'Plan',
+    this.isAllDay = true,
+    this.startTimeMinutes,
+    this.endTimeMinutes,
+    this.isRecurring = false,
+    this.recurrencePattern,
   });
 
   final String id;
   final String title;
-  final String contactId;
+  final String? contactId;
   final String category;
   final DateTime date;
   final String note;
+  final String eventType;
+  final bool isAllDay;
+  final int? startTimeMinutes;
+  final int? endTimeMinutes;
+  final bool isRecurring;
+  final RecurrencePattern? recurrencePattern;
+
+  PlannerEvent copyWith({
+    String? title,
+    Object? contactId = _sentinel,
+    String? category,
+    DateTime? date,
+    String? note,
+    String? eventType,
+    bool? isAllDay,
+    Object? startTimeMinutes = _sentinel,
+    Object? endTimeMinutes = _sentinel,
+    bool? isRecurring,
+    Object? recurrencePattern = _sentinel,
+  }) {
+    return PlannerEvent(
+      id: id,
+      title: title ?? this.title,
+      contactId: identical(contactId, _sentinel)
+          ? this.contactId
+          : contactId as String?,
+      category: category ?? this.category,
+      date: date ?? this.date,
+      note: note ?? this.note,
+      eventType: eventType ?? this.eventType,
+      isAllDay: isAllDay ?? this.isAllDay,
+      startTimeMinutes: identical(startTimeMinutes, _sentinel)
+          ? this.startTimeMinutes
+          : startTimeMinutes as int?,
+      endTimeMinutes: identical(endTimeMinutes, _sentinel)
+          ? this.endTimeMinutes
+          : endTimeMinutes as int?,
+      isRecurring: isRecurring ?? this.isRecurring,
+      recurrencePattern: identical(recurrencePattern, _sentinel)
+          ? this.recurrencePattern
+          : recurrencePattern as RecurrencePattern?,
+    );
+  }
 }
+
+const Object _sentinel = Object();
 
 class Recommendation {
   const Recommendation({

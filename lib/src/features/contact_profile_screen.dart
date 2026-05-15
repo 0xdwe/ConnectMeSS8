@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../models/social_models.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/crm_widgets.dart';
 import 'modals/edit_connection_modal.dart';
+import 'modals/shared_activity_modal.dart';
 
 class ContactProfileScreen extends ConsumerWidget {
   const ContactProfileScreen({super.key, required this.contactId});
@@ -46,12 +48,23 @@ class ContactProfileScreen extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton.filledTonal(
+                            tooltip: 'Edit',
                             onPressed: () =>
                                 showEditConnectionModal(context, person),
                             icon: const Icon(Icons.edit),
                           ),
                           const SizedBox(width: 8),
+                          IconButton.filledTonal(
+                            tooltip: 'Share Activity',
+                            onPressed: () => showSharedActivityModal(
+                              context,
+                              initialContactId: person.id,
+                            ),
+                            icon: const Icon(Icons.ios_share),
+                          ),
+                          const SizedBox(width: 8),
                           IconButton.filled(
+                            tooltip: 'AI Update',
                             onPressed: () =>
                                 context.push('/ai-update/${person.id}'),
                             icon: const Icon(Icons.auto_awesome),
@@ -135,6 +148,15 @@ class ContactProfileScreen extends ConsumerWidget {
                   },
                 ),
                 InsightCard(insight: insight),
+                FilledButton.icon(
+                  onPressed: () => showSharedActivityModal(
+                    context,
+                    initialContactId: person.id,
+                  ),
+                  icon: const Icon(Icons.ios_share),
+                  label: const Text('Share Activity'),
+                ),
+                const SizedBox(height: 16),
                 RelationshipFactsCard(connection: person, insight: insight),
                 CommunicationChannelsCard(channels: insight.preferredChannels),
                 InteractionFrequencyCard(
@@ -147,7 +169,9 @@ class ContactProfileScreen extends ConsumerWidget {
                       child: ListTile(
                         leading: Icon(item.type.icon),
                         title: Text(item.title),
-                        subtitle: Text(item.note),
+                        subtitle: Text(
+                          '${DateFormat.yMMMd().format(item.date)} • ${item.note}',
+                        ),
                       ),
                     ),
                 ],

@@ -1,11 +1,27 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
 import 'package:connect_me/src/features/contact_profile_screen.dart';
+import 'package:connect_me/src/features/tabs/planner_tab.dart';
+import 'package:connect_me/src/features/tabs/settings_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> pumpConnectMe(WidgetTester tester) async {
   await tester.pumpWidget(const ProviderScope(child: ConnectMeApp()));
+  await tester.pumpAndSettle();
+}
+
+Future<void> signInAsDemo(WidgetTester tester) async {
+  await tester.enterText(
+    find.byKey(const Key('login-email-field')),
+    'demo@example.com',
+  );
+  await tester.enterText(
+    find.byKey(const Key('login-password-field')),
+    'password123',
+  );
+  await tester.tap(find.byKey(const Key('sign-in-button')));
+  await tester.pumpAndSettle();
 }
 
 Future<void> openJessicaProfile(WidgetTester tester) async {
@@ -31,9 +47,8 @@ void main() {
   ) async {
     await pumpConnectMe(tester);
 
-    expect(find.text('Remember people\nlike it matters.'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('sign-in-button')));
-    await tester.pumpAndSettle();
+    expect(find.text('Welcome back.'), findsOneWidget);
+    await signInAsDemo(tester);
 
     expect(find.byKey(const Key('home-tab')), findsOneWidget);
     await tester.tap(find.text('People'));
@@ -46,8 +61,7 @@ void main() {
 
   testWidgets('profile button opens heatmap profile', (tester) async {
     await pumpConnectMe(tester);
-    await tester.tap(find.byKey(const Key('sign-in-button')));
-    await tester.pumpAndSettle();
+    await signInAsDemo(tester);
 
     await tester.tap(find.byKey(const Key('profile-button')));
     await tester.pumpAndSettle();
@@ -60,8 +74,7 @@ void main() {
     tester,
   ) async {
     await pumpConnectMe(tester);
-    await tester.tap(find.byKey(const Key('sign-in-button')));
-    await tester.pumpAndSettle();
+    await signInAsDemo(tester);
 
     await tester.tap(find.byKey(const Key('plus-action-button')));
     await tester.pumpAndSettle();
@@ -87,8 +100,7 @@ void main() {
     tester,
   ) async {
     await pumpConnectMe(tester);
-    await tester.tap(find.byKey(const Key('sign-in-button')));
-    await tester.pumpAndSettle();
+    await signInAsDemo(tester);
 
     await tester.tap(find.byKey(const Key('plus-action-button')));
     await tester.pumpAndSettle();
@@ -109,8 +121,7 @@ void main() {
     tester,
   ) async {
     await pumpConnectMe(tester);
-    await tester.tap(find.byKey(const Key('sign-in-button')));
-    await tester.pumpAndSettle();
+    await signInAsDemo(tester);
 
     await openJessicaProfile(tester);
 
@@ -122,8 +133,7 @@ void main() {
 
   testWidgets('AI insight card expands why details', (tester) async {
     await pumpConnectMe(tester);
-    await tester.tap(find.byKey(const Key('sign-in-button')));
-    await tester.pumpAndSettle();
+    await signInAsDemo(tester);
 
     await openJessicaProfile(tester);
 
@@ -166,5 +176,100 @@ void main() {
           .where((message) => message.contains('RenderFlex overflowed')),
       isEmpty,
     );
+  });
+
+  testWidgets('profile can be edited from settings', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: Scaffold(body: SettingsTab())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit Profile'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Name'),
+      'Jamie Chen',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Email'),
+      'jamie@example.com',
+    );
+    await tester.tap(find.text('Save Changes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit Profile'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextField, 'Jamie Chen'), findsOneWidget);
+  });
+
+  testWidgets('settings can add custom event type', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: Scaffold(body: SettingsTab())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Manage Event Types'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'New event type'),
+      'Workshop',
+    );
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Workshop'), findsOneWidget);
+  });
+
+  testWidgets('planner opens existing event in edit mode', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: Scaffold(body: PlannerTab())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Coffee with Sarah'),
+      120,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('planner-tab')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.ensureVisible(find.text('Coffee with Sarah').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Coffee with Sarah').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit Event'), findsOneWidget);
+    expect(find.text('Delete Event'), findsOneWidget);
+  });
+
+  testWidgets('contact screen can share activity note', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: ContactProfileScreen(contactId: 'sarah')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Share Activity'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Share Activity'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Notes'),
+      'Walked by the river',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('AI Suggestion'), findsOneWidget);
+    await tester.tap(find.text('Share Activity').last);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Walked by the river'), findsOneWidget);
   });
 }

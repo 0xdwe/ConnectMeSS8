@@ -25,7 +25,16 @@ class _HomeTabState extends ConsumerState<HomeTab> {
       children: [
         BigScoreCircle(score: state.averageConnectionScore),
         SectionTitle('Today\'s Recommendation', action: TextButton(onPressed: () => context.push('/recommendations'), child: const Text('View All ->', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)))),
-        for (var i = 0; i < recs.length; i++) RecommendationCard(connection: state.connections.firstWhere((c) => c.id == recs[i].contactId), recommendation: recs[i], highlight: i == 1),
+        for (var i = 0; i < recs.length; i++)
+          RecommendationCard(
+            key: Key('recommendation-card-${recs[i].contactId}'),
+            connection: state.connections.firstWhere(
+              (c) => c.id == recs[i].contactId,
+            ),
+            recommendation: recs[i],
+            highlight: i == 1,
+            onTap: () => context.push('/contact/${recs[i].contactId}'),
+          ),
         if (!showAll) Center(child: TextButton(onPressed: () => setState(() => showAll = true), child: const Text('Expand recommendations'))),
       ],
     );

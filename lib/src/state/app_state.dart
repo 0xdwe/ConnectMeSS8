@@ -16,10 +16,12 @@ class AppState {
     required this.isAuthed,
     required this.darkMode,
     required this.selectedTab,
+    required this.user,
     required this.connections,
     required this.interactions,
     required this.events,
     required this.categories,
+    required this.eventTypes,
     required this.googleCalendarLinked,
     this.lastAiSummary,
   });
@@ -27,10 +29,12 @@ class AppState {
   final bool isAuthed;
   final bool darkMode;
   final int selectedTab;
+  final AppUser user;
   final List<Connection> connections;
   final List<CrmInteraction> interactions;
   final List<PlannerEvent> events;
   final List<String> categories;
+  final List<String> eventTypes;
   final bool googleCalendarLinked;
   final String? lastAiSummary;
 
@@ -134,8 +138,18 @@ class AppState {
       isAuthed: false,
       darkMode: false,
       selectedTab: 0,
+      user: const AppUser(
+        name: 'Alex Martinez',
+        email: 'alex.martinez@email.com',
+        avatar: '👤',
+        avatarKind: AvatarKind.emoji,
+        totalPoints: 240,
+        currentLevel: 7,
+        nextLevelPoints: 300,
+      ),
       connections: people,
       categories: const ['Family', 'Friends', 'High School', 'College', 'Work'],
+      eventTypes: AppController.defaultEventTypes,
       googleCalendarLinked: true,
       interactions: [
         CrmInteraction(
@@ -171,6 +185,10 @@ class AppState {
           category: 'Friends',
           date: DateTime(2026, 4, 28),
           note: 'Google Calendar mock sync',
+          eventType: 'Coffee',
+          isAllDay: false,
+          startTimeMinutes: 10 * 60,
+          endTimeMinutes: 11 * 60 + 30,
         ),
         PlannerEvent(
           id: 'e2',
@@ -179,6 +197,10 @@ class AppState {
           category: 'Work',
           date: DateTime(2026, 4, 30),
           note: 'Discuss launch',
+          eventType: 'Meeting',
+          isAllDay: false,
+          startTimeMinutes: 14 * 60,
+          endTimeMinutes: 15 * 60 + 30,
         ),
         PlannerEvent(
           id: 'e3',
@@ -187,6 +209,7 @@ class AppState {
           category: 'High School',
           date: DateTime(2026, 5, 5),
           note: 'Ask about job application',
+          eventType: 'Reminder',
         ),
         PlannerEvent(
           id: 'e4',
@@ -195,6 +218,7 @@ class AppState {
           category: 'Work',
           date: DateTime(2026, 5, 12),
           note: 'Send message',
+          eventType: 'Birthday',
         ),
         PlannerEvent(
           id: 'e5',
@@ -203,6 +227,10 @@ class AppState {
           category: 'Family',
           date: DateTime(2026, 5, 15),
           note: 'Dinner',
+          eventType: 'Dinner',
+          isAllDay: false,
+          startTimeMinutes: 18 * 60 + 30,
+          endTimeMinutes: 21 * 60,
         ),
       ],
     );
@@ -212,10 +240,12 @@ class AppState {
     bool? isAuthed,
     bool? darkMode,
     int? selectedTab,
+    AppUser? user,
     List<Connection>? connections,
     List<CrmInteraction>? interactions,
     List<PlannerEvent>? events,
     List<String>? categories,
+    List<String>? eventTypes,
     bool? googleCalendarLinked,
     String? lastAiSummary,
   }) {
@@ -223,10 +253,12 @@ class AppState {
       isAuthed: isAuthed ?? this.isAuthed,
       darkMode: darkMode ?? this.darkMode,
       selectedTab: selectedTab ?? this.selectedTab,
+      user: user ?? this.user,
       connections: connections ?? this.connections,
       interactions: interactions ?? this.interactions,
       events: events ?? this.events,
       categories: categories ?? this.categories,
+      eventTypes: eventTypes ?? this.eventTypes,
       googleCalendarLinked: googleCalendarLinked ?? this.googleCalendarLinked,
       lastAiSummary: lastAiSummary ?? this.lastAiSummary,
     );
@@ -300,16 +332,52 @@ class AppState {
 
 class AppController extends Notifier<AppState> {
   static const _uuid = Uuid();
+  static const defaultEventTypes = [
+    'Plan',
+    'Reminder',
+    'Birthday',
+    'Meeting',
+    'Call',
+    'Dinner',
+    'Coffee',
+  ];
 
   @override
   AppState build() => AppState.seeded();
 
   void signIn() => state = state.copyWith(isAuthed: true);
+  void signUp({required String name, required String email}) {
+    final cleanName = name.trim();
+    final cleanEmail = email.trim();
+    state = state.copyWith(
+      isAuthed: true,
+      user: state.user.copyWith(
+        name: cleanName.isEmpty ? state.user.name : cleanName,
+        email: cleanEmail.isEmpty ? state.user.email : cleanEmail,
+      ),
+    );
+  }
   void signOut() => state = AppState.seeded();
   void setTab(int index) => state = state.copyWith(selectedTab: index);
   void setDarkMode(bool value) => state = state.copyWith(darkMode: value);
   void toggleGoogleCalendar(bool value) =>
       state = state.copyWith(googleCalendarLinked: value);
+
+  void updateUser({
+    required String name,
+    required String email,
+    required String avatar,
+    required AvatarKind avatarKind,
+  }) {
+    state = state.copyWith(
+      user: state.user.copyWith(
+        name: name.trim().isEmpty ? state.user.name : name.trim(),
+        email: email.trim().isEmpty ? state.user.email : email.trim(),
+        avatar: avatar.trim().isEmpty ? state.user.avatar : avatar.trim(),
+        avatarKind: avatarKind,
+      ),
+    );
+  }
 
   void addConnection({
     required String name,
@@ -342,6 +410,23 @@ class AppController extends Notifier<AppState> {
     );
   }
 
+  void deleteConnection(String contactId) {
+    state = state.copyWith(
+      connections: [
+        for (final connection in state.connections)
+          if (connection.id != contactId) connection,
+      ],
+      events: [
+        for (final event in state.events)
+          if (event.contactId != contactId) event,
+      ],
+      interactions: [
+        for (final interaction in state.interactions)
+          if (interaction.contactId != contactId) interaction,
+      ],
+    );
+  }
+
   void logInteraction(
     String contactId,
     InteractionType type,
@@ -366,23 +451,48 @@ class AppController extends Notifier<AppState> {
     DateTime date,
     String note,
   ) {
-    final event = PlannerEvent(
-      id: _uuid.v4(),
-      title: title,
-      contactId: contactId,
-      category: category,
-      date: date,
-      note: note,
+    saveEvent(
+      PlannerEvent(
+        id: _uuid.v4(),
+        title: title,
+        contactId: contactId,
+        category: category,
+        date: date,
+        note: note,
+      ),
     );
-    state = state.copyWith(events: [...state.events, event]);
   }
 
-  void deleteEvent(String eventId) {
+  void saveEvent(PlannerEvent event) {
+    final exists = state.events.any((item) => item.id == event.id);
     state = state.copyWith(
-      events: [
-        for (final event in state.events)
-          if (event.id != eventId) event,
-      ],
+      events: exists
+          ? [
+              for (final item in state.events)
+                if (item.id == event.id) event else item,
+            ]
+          : [...state.events, event],
+    );
+  }
+
+  PlannerEvent? deleteEvent(String eventId) {
+    PlannerEvent? deleted;
+    final remaining = <PlannerEvent>[];
+    for (final event in state.events) {
+      if (event.id == eventId) {
+        deleted = event;
+      } else {
+        remaining.add(event);
+      }
+    }
+    state = state.copyWith(events: remaining);
+    return deleted;
+  }
+
+  void restoreEvent(PlannerEvent event) {
+    state = state.copyWith(
+      events: [...state.events, event]
+        ..sort((a, b) => a.date.compareTo(b.date)),
     );
   }
 
@@ -391,6 +501,82 @@ class AppController extends Notifier<AppState> {
       return;
     }
     state = state.copyWith(categories: [...state.categories, category.trim()]);
+  }
+
+  void addEventType(String eventType) {
+    final clean = eventType.trim();
+    if (clean.isEmpty || state.eventTypes.contains(clean)) return;
+    state = state.copyWith(eventTypes: [...state.eventTypes, clean]);
+  }
+
+  void renameEventType(String oldValue, String newValue) {
+    final clean = newValue.trim();
+    if (clean.isEmpty || state.eventTypes.contains(clean)) return;
+    state = state.copyWith(
+      eventTypes: [
+        for (final item in state.eventTypes)
+          if (item == oldValue) clean else item,
+      ],
+      events: [
+        for (final event in state.events)
+          if (event.eventType == oldValue)
+            event.copyWith(eventType: clean)
+          else
+            event,
+      ],
+    );
+  }
+
+  void deleteEventType(String eventType) {
+    if (defaultEventTypes.contains(eventType)) return;
+    state = state.copyWith(
+      eventTypes: [
+        for (final item in state.eventTypes)
+          if (item != eventType) item,
+      ],
+      events: [
+        for (final event in state.events)
+          if (event.eventType == eventType)
+            event.copyWith(eventType: 'Plan')
+          else
+            event,
+      ],
+    );
+  }
+
+  void logSharedActivity({
+    required String contactId,
+    required SharedActivityType type,
+    required String content,
+  }) {
+    final clean = content.trim();
+    if (clean.isEmpty) return;
+    final interaction = CrmInteraction(
+      id: _uuid.v4(),
+      contactId: contactId,
+      type: InteractionType.sharedActivity,
+      title: type == SharedActivityType.photo ? 'Shared photo' : 'Shared note',
+      note: clean,
+      date: DateTime.now(),
+      attachments: type == SharedActivityType.photo
+          ? [AttachmentRef(name: 'Shared photo', path: clean)]
+          : const [],
+    );
+    final updatedConnections = [
+      for (final connection in state.connections)
+        if (connection.id == contactId)
+          connection.copyWith(
+            lastContact: DateTime.now(),
+            bondScore: (connection.bondScore + 3).clamp(0, 100),
+            nextStep: 'Plan a follow-up activity within the next week',
+          )
+        else
+          connection,
+    ];
+    state = state.copyWith(
+      interactions: [interaction, ...state.interactions],
+      connections: updatedConnections,
+    );
   }
 
   Future<void> runAiUpdate(
