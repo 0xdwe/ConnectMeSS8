@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../state/app_state.dart';
+import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/crm_widgets.dart';
@@ -20,10 +21,15 @@ class SettingsTab extends ConsumerWidget {
     final headerStyle = AppTypography.h2(color: tokens.inkMuted);
     return ListView(
       key: const Key('settings-tab'),
-      padding: const EdgeInsets.fromLTRB(26, 30, 26, 126),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.space6,
+        AppSpacing.space6,
+        AppSpacing.space6,
+        AppSpacing.pageBottomPadding,
+      ),
       children: [
         Text('Account', style: headerStyle),
-        const SizedBox(height: 14),
+        SizedBox(height: AppSpacing.space3),
         CardBox(
           padding: EdgeInsets.zero,
           child: Column(
@@ -46,9 +52,9 @@ class SettingsTab extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(height: 22),
+        SizedBox(height: AppSpacing.space5),
         Text('Customization', style: headerStyle),
-        const SizedBox(height: 14),
+        SizedBox(height: AppSpacing.space3),
         CardBox(
           padding: EdgeInsets.zero,
           child: Column(
@@ -71,9 +77,9 @@ class SettingsTab extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(height: 22),
+        SizedBox(height: AppSpacing.space5),
         Text('About', style: headerStyle),
-        const SizedBox(height: 14),
+        SizedBox(height: AppSpacing.space3),
         CardBox(
           padding: EdgeInsets.zero,
           child: _Row(
@@ -83,7 +89,7 @@ class SettingsTab extends ConsumerWidget {
                 _info(context, 'Connect Me v3.0\nMaking relationships matter'),
           ),
         ),
-        const SizedBox(height: 48),
+        SizedBox(height: AppSpacing.space8),
         Center(
           child: Text(
             'Connect Me v3.0\nMaking relationships matter',
@@ -91,7 +97,7 @@ class SettingsTab extends ConsumerWidget {
             style: AppTypography.bodyLg(color: tokens.inkMuted),
           ),
         ),
-        const SizedBox(height: 20),
+        SizedBox(height: AppSpacing.space5),
         TextButton(
           onPressed: () {
             ref.read(appControllerProvider.notifier).signOut();

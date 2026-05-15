@@ -254,14 +254,14 @@ class _CalendarGrid extends StatelessWidget {
                     ),
                     if (hasEvent)
                       Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        padding: EdgeInsets.only(top: AppSpacing.space1),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             // Show up to 3 dots for events
                             for (int i = 0; i < eventsOnDay.length && i < 3; i++)
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                                padding: EdgeInsets.symmetric(horizontal: 1.5),
                                 child: CircleAvatar(
                                   radius: 2,
                                   backgroundColor: isToday
