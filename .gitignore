@@ -46,3 +46,6 @@ app.*.map.json
 
 # Brainstorming companion
 .superpowers/
+
+# Subagent run outputs
+.subagent-runs/

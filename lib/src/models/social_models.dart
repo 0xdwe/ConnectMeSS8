@@ -30,36 +30,24 @@ class AppUser {
     required this.email,
     required this.avatar,
     required this.avatarKind,
-    required this.totalPoints,
-    required this.currentLevel,
-    required this.nextLevelPoints,
   });
 
   final String name;
   final String email;
   final String avatar;
   final AvatarKind avatarKind;
-  final int totalPoints;
-  final int currentLevel;
-  final int nextLevelPoints;
 
   AppUser copyWith({
     String? name,
     String? email,
     String? avatar,
     AvatarKind? avatarKind,
-    int? totalPoints,
-    int? currentLevel,
-    int? nextLevelPoints,
   }) {
     return AppUser(
       name: name ?? this.name,
       email: email ?? this.email,
       avatar: avatar ?? this.avatar,
       avatarKind: avatarKind ?? this.avatarKind,
-      totalPoints: totalPoints ?? this.totalPoints,
-      currentLevel: currentLevel ?? this.currentLevel,
-      nextLevelPoints: nextLevelPoints ?? this.nextLevelPoints,
     );
   }
 }
