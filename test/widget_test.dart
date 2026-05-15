@@ -138,6 +138,8 @@ void main() {
     await openJessicaProfile(tester);
 
     expect(find.byKey(const Key('ai-insight-why')), findsNothing);
+    await tester.ensureVisible(find.byKey(const Key('ai-insight-card')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('ai-insight-card')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('ai-insight-why')), findsOneWidget);

@@ -20,7 +20,7 @@ Future<void> _pumpAndSignIn(WidgetTester tester) async {
 
 void main() {
   testWidgets(
-    'tapping Update with AI on a contact dashboard opens the AI Update screen',
+    'tapping Update with AI on a contact dashboard opens the Update with AI screen',
     (tester) async {
       await _pumpAndSignIn(tester);
 
@@ -40,13 +40,11 @@ void main() {
       await tester.tap(find.text('Mike Chen'));
       await tester.pumpAndSettle();
 
-      final updateButton = find.widgetWithText(FilledButton, 'Update with AI');
-      await tester.ensureVisible(updateButton);
-      await tester.pumpAndSettle();
+      final updateButton = find.byKey(const Key('update-with-ai-button'));
       await tester.tap(updateButton);
       await tester.pumpAndSettle();
 
-      expect(find.text('Update with AI'), findsWidgets);
+      expect(find.text('Update with AI'), findsOneWidget);
       expect(find.text('Update Mike Chen'), findsOneWidget);
     },
   );

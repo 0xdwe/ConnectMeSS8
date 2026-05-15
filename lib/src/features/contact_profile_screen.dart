@@ -99,6 +99,19 @@ class ContactProfileScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      key: const Key('update-with-ai-button'),
+                      onPressed: () =>
+                          context.push('/ai-update/${person.id}'),
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text('Update with AI'),
+                    ),
+                  ),
+                ),
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final narrow = constraints.maxWidth < 430;
@@ -126,18 +139,6 @@ class ContactProfileScreen extends ConsumerWidget {
                   },
                 ),
                 InsightCard(insight: insight),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () =>
-                          context.push('/ai-update/${person.id}'),
-                      icon: const Icon(Icons.auto_awesome),
-                      label: const Text('Update with AI'),
-                    ),
-                  ),
-                ),
                 RelationshipFactsCard(connection: person, insight: insight),
                 CommunicationChannelsCard(channels: insight.preferredChannels),
                 InteractionFrequencyCard(
