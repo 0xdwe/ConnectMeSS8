@@ -1,5 +1,28 @@
 import 'package:flutter/material.dart';
 
+/// Border radius scale tokens for ConnectMe.
+///
+/// Source of truth: `DESIGN.md` Radius section. Every widget reads radius
+/// through these tokens — no raw `BorderRadius.circular()` literals.
+class AppRadius {
+  const AppRadius._();
+
+  /// 8px — chips, pills, small inline pills.
+  static const double sm = 8;
+
+  /// 14px — inputs, secondary buttons.
+  static const double md = 14;
+
+  /// 18px — primary cards, sheet corners.
+  static const double lg = 18;
+
+  /// 24px — hero cards on Home only.
+  static const double xl = 24;
+
+  /// 999px — bond rings, avatar shapes (full circle).
+  static const double pill = 999;
+}
+
 /// Semantic design tokens for ConnectMe.
 ///
 /// Source of truth: `DESIGN.md` Color section. Every widget reads colors
@@ -185,6 +208,29 @@ class AppTokens extends ThemeExtension<AppTokens> {
       categoryHighSchool: Color.lerp(categoryHighSchool, other.categoryHighSchool, t)!,
     );
   }
+
+  /// Elevation level 0: no shadow (flat surface, default).
+  static List<BoxShadow> elevation0() => [];
+
+  /// Elevation level 1: cards, sheets resting on surface.
+  /// Light mode: subtle shadow. Dark mode: subtle inset glow.
+  static List<BoxShadow> elevation1(bool dark) => [
+        BoxShadow(
+          color: dark ? const Color(0x0FFFFFFF) : const Color(0x0F000000),
+          blurRadius: 2,
+          offset: const Offset(0, 1),
+        ),
+      ];
+
+  /// Elevation level 2: sheets while dragging, popovers.
+  /// Light mode: deeper shadow. Dark mode: stronger glow.
+  static List<BoxShadow> elevation2(bool dark) => [
+        BoxShadow(
+          color: dark ? const Color(0x66000000) : const Color(0x1A000000),
+          blurRadius: 24,
+          offset: const Offset(0, 8),
+        ),
+      ];
 }
 
 /// Ergonomic accessor: `context.tokens.primary`.
