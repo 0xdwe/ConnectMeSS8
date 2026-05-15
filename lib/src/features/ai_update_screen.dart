@@ -23,13 +23,14 @@ class AiUpdateScreen extends ConsumerStatefulWidget {
   ConsumerState<AiUpdateScreen> createState() => _AiUpdateScreenState();
 }
 
-class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
+class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProviderStateMixin {
   final input = TextEditingController();
   final attachments = <AttachmentRef>[];
   AiUpdateState currentState = AiUpdateState.inputting;
   AiUpdateResult? previewResult;
   List<TextEditingController> titleControllers = [];
   List<TextEditingController> noteControllers = [];
+  List<AnimationController> cardAnimationControllers = [];
 
   @override
   void initState() {
@@ -82,10 +83,36 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
           .map((i) => TextEditingController(text: i.note))
           .toList();
       
+      // Initialize animation controllers for stagger effect
+      final disableAnimations = MediaQuery.of(context).disableAnimations;
+      cardAnimationControllers = List.generate(
+        result.interactions.length,
+        (index) => AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 240),
+        ),
+      );
+      
       setState(() {
         previewResult = result;
         currentState = AiUpdateState.previewing;
       });
+      
+      // Start staggered animations
+      if (!disableAnimations) {
+        for (int i = 0; i < cardAnimationControllers.length; i++) {
+          Future.delayed(Duration(milliseconds: 80 * i), () {
+            if (mounted && cardAnimationControllers.length > i) {
+              cardAnimationControllers[i].forward();
+            }
+          });
+        }
+      } else {
+        // Skip animation if reduce motion is enabled
+        for (final controller in cardAnimationControllers) {
+          controller.value = 1.0;
+        }
+      }
     } catch (e) {
       setState(() => currentState = AiUpdateState.inputting);
       if (mounted) {
@@ -106,8 +133,12 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
       for (final controller in noteControllers) {
         controller.dispose();
       }
+      for (final controller in cardAnimationControllers) {
+        controller.dispose();
+      }
       titleControllers.clear();
       noteControllers.clear();
+      cardAnimationControllers.clear();
     });
   }
 
@@ -163,6 +194,9 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
       controller.dispose();
     }
     for (final controller in noteControllers) {
+      controller.dispose();
+    }
+    for (final controller in cardAnimationControllers) {
       controller.dispose();
     }
     super.dispose();
@@ -271,10 +305,28 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
 
   Widget _buildPreviewCard(AppTokens tokens, Connection person, int index) {
     final interaction = previewResult!.interactions[index];
+    final animationController = cardAnimationControllers[index];
     
-    return CardBox(
-      key: Key('preview-card-$index'),
-      child: Column(
+    // Create curved animation for smooth easing
+    final animation = CurvedAnimation(
+      parent: animationController,
+      curve: Curves.easeOutQuart,
+    );
+    
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: animation.value,
+          child: Transform.translate(
+            offset: Offset(0, 8 * (1 - animation.value)),
+            child: child,
+          ),
+        );
+      },
+      child: CardBox(
+        key: Key('preview-card-$index'),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Contact match row
@@ -348,6 +400,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> {
             ],
           ),
         ],
+      ),
       ),
     );
   }

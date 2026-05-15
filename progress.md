@@ -1,39 +1,32 @@
 # Progress
 
 ## Status
-Complete - Issue #025: UI Consistency Audit
+Completed - Issue #022: AI preview stagger animation
 
 ## Tasks
-- [x] Read context and issue spec
-- [x] Phase 1: Add token systems (AppSpacing, AppRadius, AppTokens.elevation)
-- [x] Phase 2: Migrate 20+ files to use tokens
-  - [x] crm_widgets.dart
-  - [x] auth_screen.dart
-  - [x] profile_screen.dart
-  - [x] contact_profile_screen.dart
-  - [x] home_tab.dart
-  - [x] people_tab.dart
-  - [x] planner_tab.dart
-  - [x] settings_tab.dart
-  - [x] theme_modal.dart
-  - [x] plus_sheet.dart
-  - [x] ai_update_screen.dart
-  - [x] recommendations_screen.dart
-  - [x] update_person_picker_modal.dart
-  - [x] manage_categories_modal.dart
-  - [x] manage_event_types_modal.dart
-  - [x] add_connection_modal.dart
-  - [x] update_connection_modal.dart
-  - [x] edit_connection_modal.dart
-  - [x] edit_user_profile_modal.dart
-  - [x] add_event_modal.dart
-  - [x] shell_screen.dart
-- [x] Phase 3: Verification (regex checks, flutter analyze)
+- [x] Write test: first card fades in from opacity 0
+- [x] Write test: stagger timing (80ms * index)
+- [x] Write test: reduce motion (all cards opacity 1 immediately)
+- [x] Wrap preview cards in AnimatedBuilder
+- [x] Add AnimationController per card (240ms, easeOutQuart)
+- [x] Implement stagger delay (80ms * index)
+- [x] Implement opacity 0→1 + transform translate(0, 8px→0)
+- [x] Respect MediaQuery.disableAnimations
+- [x] Verify tests pass
+- [x] Run flutter analyze
+- [x] Commit changes
 
 ## Files Changed
-- lib/src/theme/app_spacing.dart (created)
-- lib/src/theme/app_tokens.dart (added AppRadius class and elevation methods)
-- 21 feature/widget files migrated to use tokens
+- lib/src/features/ai_update_screen.dart
+- test/features/ai_preview_stagger_test.dart
 
 ## Notes
-Successfully completed UI consistency audit. All raw spacing, radius, and elevation values have been migrated to design tokens. All verification checks pass.
+TDD cycle completed successfully:
+1. Wrote 4 tests covering fade-in, stagger timing, transform animation, and reduce motion
+2. Implemented animation with AnimationController per card
+3. Used Future.delayed for 80ms stagger per index
+4. Applied Curves.easeOutQuart for smooth easing
+5. Respected MediaQuery.disableAnimations for accessibility
+6. All tests passing (4/4)
+7. All existing AI preview tests still passing
+8. No new analyzer warnings introduced
