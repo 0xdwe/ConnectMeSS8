@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/app_state.dart';
+import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
@@ -30,13 +31,13 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(26),
+        padding: EdgeInsets.all(AppSpacing.space6),
         children: [
           Container(
-            padding: const EdgeInsets.all(26),
+            padding: EdgeInsets.all(AppSpacing.space6),
             decoration: BoxDecoration(
               color: tokens.surfaceRaised,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
             ),
             child: Column(
               children: [
@@ -48,12 +49,12 @@ class ProfileScreen extends ConsumerWidget {
                     style: AppTypography.glyph(54),
                   ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: AppSpacing.space5),
                 Text(
                   user.name,
                   style: AppTypography.display(),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: AppSpacing.space3),
                 Text(
                   user.email,
                   style: AppTypography.h2(color: tokens.inkMuted),
@@ -61,7 +62,7 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: AppSpacing.space5),
           Row(
             children: [
               Expanded(
@@ -84,7 +85,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 20),
+              SizedBox(width: AppSpacing.space5),
               Expanded(
                 child: CardBox(
                   child: Column(
@@ -107,7 +108,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: AppSpacing.space5),
           HeatmapCard(connections: state.connections),
         ],
       ),
