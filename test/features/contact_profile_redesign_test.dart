@@ -150,9 +150,16 @@ void main() {
     testWidgets('profile shows warm empty copy when no history', (tester) async {
       await pumpProfileScreen(tester, 'jessica');
 
-      // Jessica has no interactions, should show warm empty state below the
-      // AI Insights card.
-      expect(find.text('History'), findsNothing);
+      // Jessica has no interactions. The History header is always
+      // rendered (the empty copy lives inside the same History card),
+      // so we scroll to bring it into view, then assert both the header
+      // and the warm empty state copy.
+      await tester.scrollUntilVisible(
+        find.text('History'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('History'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.textContaining('new'),
         200,
