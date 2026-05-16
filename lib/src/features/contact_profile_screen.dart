@@ -75,28 +75,29 @@ class ContactProfileScreen extends ConsumerWidget {
       body: ListView(
         padding: EdgeInsets.all(AppSpacing.space4),
         children: [
-          // Header section: BondRing left, name + category + facts strip
-          // right, Edit pill anchored top-right of the card.
-          Stack(
-            children: [
-              Container(
-                padding: EdgeInsets.all(AppSpacing.space5),
-                decoration: BoxDecoration(
-                  color: tokens.primaryTint,
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    BondRing(connection: person, size: 96),
-                    SizedBox(width: AppSpacing.space5),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          // Header section: BondRing left, name + Edit pill on the
+          // first row, then category and facts strip below. Edit pill is
+          // a structural sibling of the name Expanded — never overlays.
+          Container(
+            padding: EdgeInsets.all(AppSpacing.space5),
+            decoration: BoxDecoration(
+              color: tokens.primaryTint,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                BondRing(connection: person, size: 96),
+                SizedBox(width: AppSpacing.space5),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Reserve space on the right of the name row for the Edit pill.
-                          Padding(
-                            padding: EdgeInsets.only(right: AppSpacing.space7),
+                          Expanded(
                             child: Text(
                               person.name,
                               style: AppTypography.display(),
@@ -104,65 +105,66 @@ class ContactProfileScreen extends ConsumerWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          SizedBox(height: AppSpacing.space2),
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 4,
-                                backgroundColor:
-                                    categoryColor(person.category, tokens),
+                          SizedBox(width: AppSpacing.space3),
+                          OutlinedButton.icon(
+                            key: const Key('edit-connection-button'),
+                            onPressed: () =>
+                                showEditConnectionModal(context, person),
+                            icon: Icon(Icons.edit,
+                                size: 16, color: tokens.primary),
+                            label: Text(
+                              'Edit',
+                              style: TextStyle(
+                                color: tokens.primary,
+                                fontWeight: FontWeight.w600,
                               ),
-                              SizedBox(width: AppSpacing.space2),
-                              Text(
-                                person.category,
-                                style: AppTypography.caption(
-                                    color: tokens.inkMuted),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: tokens.surfaceRaised,
+                              side: BorderSide(color: tokens.surfaceRaised),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.pill),
                               ),
-                            ],
-                          ),
-                          SizedBox(height: AppSpacing.space2),
-                          Text(
-                            '${insight.relationshipLabel} · known ${insight.knownSinceYears} years · last contact ${DateFormat.yMMMd().format(person.lastContact)}',
-                            style: AppTypography.caption(
-                                color: tokens.inkMuted),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSpacing.space3,
+                                vertical: AppSpacing.space2,
+                              ),
+                              minimumSize: const Size(0, 36),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                top: AppSpacing.space3,
-                right: AppSpacing.space3,
-                child: OutlinedButton.icon(
-                  key: const Key('edit-connection-button'),
-                  onPressed: () => showEditConnectionModal(context, person),
-                  icon: Icon(Icons.edit, size: 16, color: tokens.primary),
-                  label: Text(
-                    'Edit',
-                    style: TextStyle(
-                      color: tokens.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: tokens.surfaceRaised,
-                    side: BorderSide(color: tokens.surfaceRaised),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.space4,
-                      vertical: AppSpacing.space2,
-                    ),
-                    minimumSize: const Size(0, 36),
+                      SizedBox(height: AppSpacing.space2),
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 4,
+                            backgroundColor:
+                                categoryColor(person.category, tokens),
+                          ),
+                          SizedBox(width: AppSpacing.space2),
+                          Text(
+                            person.category,
+                            style:
+                                AppTypography.caption(color: tokens.inkMuted),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: AppSpacing.space2),
+                      Text(
+                        '${insight.relationshipLabel} · known ${insight.knownSinceYears} years · last contact ${DateFormat.yMMMd().format(person.lastContact)}',
+                        style: AppTypography.caption(color: tokens.inkMuted),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           SizedBox(height: AppSpacing.space4),
           // AI Insights collapsible card (Pass 2 #034)

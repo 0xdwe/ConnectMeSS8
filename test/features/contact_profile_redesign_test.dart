@@ -173,6 +173,36 @@ void main() {
       expect(find.text('Update with AI'), findsOneWidget);
     });
 
+    testWidgets('header renders name and Edit pill side-by-side without overlap at 320pt', (tester) async {
+      // Pump at default size first so navigation through the People tab
+      // works in a comfortable viewport.
+      await pumpProfileScreen(tester, 'jessica');
+
+      // Now simulate iPhone SE 1st gen (320 logical px) and let the
+      // profile screen relayout.
+      tester.view.physicalSize = const Size(320 * 2, 800 * 2);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpAndSettle();
+
+      // The name and the Edit pill must both render — the structural
+      // Row+Expanded layout (replacing the previous Stack+Positioned)
+      // ensures the name ellipsizes rather than sliding under the pill.
+      expect(find.text('Jessica Taylor'), findsAtLeastNWidgets(1));
+      expect(find.byKey(const Key('edit-connection-button')), findsOneWidget);
+
+      // Anchor the structural fix: the header's name Text renders with
+      // maxLines: 1, which is what makes ellipsis work in the new Row.
+      final headerNameText = find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            widget.data == 'Jessica Taylor' &&
+            widget.maxLines == 1,
+      );
+      expect(headerNameText, findsOneWidget);
+    });
+
     testWidgets('profile shows Edit action in header card pill', (tester) async {
       await pumpProfileScreen(tester, 'jessica');
 
