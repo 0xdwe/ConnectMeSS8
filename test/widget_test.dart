@@ -145,7 +145,7 @@ void main() {
     expect(find.text('Paste a chat, AI will categorize.'), findsOneWidget);
   });
 
-  testWidgets('contact profile renders relationship facts and history', (
+  testWidgets('contact profile renders relationship facts strip and history', (
     tester,
   ) async {
     await pumpConnectMe(tester);
@@ -153,13 +153,22 @@ void main() {
 
     await openJessicaProfile(tester);
 
-    // Scroll to ensure content is visible
+    // Wait for layout.
     await tester.pumpAndSettle();
-    
-    // Relationship facts should be visible
-    expect(find.text('Relationship'), findsOneWidget);
-    expect(find.text('Known Since'), findsOneWidget);
-    // Jessica has no history, so warm empty state should show
+
+    // Pass 2 (#033): the facts (relationship label, known years, last
+    // contact) now live as a single inline caption strip in the header
+    // card instead of a separate RelationshipFactsCard.
+    expect(find.textContaining('known'), findsOneWidget);
+    expect(find.textContaining('last contact'), findsOneWidget);
+
+    // Jessica has no history, so the dense History card shows the warm
+    // empty-state copy. Scroll to it past the AI Insights card.
+    await tester.scrollUntilVisible(
+      find.textContaining('new'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.textContaining('new'), findsOneWidget);
   });
 
