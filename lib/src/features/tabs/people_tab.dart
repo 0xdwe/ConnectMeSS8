@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
+import '../../state/query_providers.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
@@ -24,18 +25,19 @@ class _PeopleTabState extends ConsumerState<PeopleTab> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final state = ref.watch(appControllerProvider);
-    final categories = ['All', ...state.categories];
-    final people = state.connections.where((c) {
-      final matchesQuery = '${c.name} ${c.email} ${c.category}'.toLowerCase().contains(query.toLowerCase());
-      final matchesCategory = category == 'All' || c.category == category;
-      return matchesQuery && matchesCategory;
-    }).toList()
-      ..sort((a, b) => switch (sort) {
-            ContactSort.name => a.name.compareTo(b.name),
-            ContactSort.lastContact => b.lastContact.compareTo(a.lastContact),
-            ContactSort.bondScore => b.bondScore.compareTo(a.bondScore),
-          });
+    final categories = ref.watch(
+      appControllerProvider.select((state) => ['All', ...state.categories]),
+    );
+    final filter = ContactFilter(
+      query: query,
+      category: category,
+      sort: sort,
+    );
+    final people = ref.watch(filteredContactsProvider(filter));
+    final hasAnyConnections = ref.watch(
+      appControllerProvider.select((state) => state.connections.isNotEmpty),
+    );
+    
     return ListView(
       key: const Key('people-tab'),
       padding: EdgeInsets.fromLTRB(
@@ -53,7 +55,7 @@ class _PeopleTabState extends ConsumerState<PeopleTab> {
         SizedBox(height: AppSpacing.space3),
         SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: ContactSort.values.map((item) => _FilterChip(label: item.label, selected: item == sort, onTap: () => setState(() => sort = item))).toList())),
         SizedBox(height: AppSpacing.space5),
-        if (people.isEmpty && state.connections.isEmpty)
+        if (people.isEmpty && !hasAnyConnections)
           Center(
             child: Padding(
               padding: EdgeInsets.all(AppSpacing.space8),

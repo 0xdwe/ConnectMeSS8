@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
+import '../../state/query_providers.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
@@ -23,10 +24,14 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(appControllerProvider);
-    final selectedEvents = state.events
-        .where((event) => DateUtils.isSameDay(event.date, selected))
-        .toList();
+    final googleCalendarLinked = ref.watch(
+      appControllerProvider.select((state) => state.googleCalendarLinked),
+    );
+    final allEvents = ref.watch(
+      appControllerProvider.select((state) => state.events),
+    );
+    final selectedEvents = ref.watch(selectedDayEventsProvider(selected));
+    
     return ListView(
       key: const Key('planner-tab'),
       padding: EdgeInsets.fromLTRB(
@@ -37,7 +42,7 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
       ),
       children: [
         SwitchListTile(
-          value: state.googleCalendarLinked,
+          value: googleCalendarLinked,
           onChanged: ref
               .read(appControllerProvider.notifier)
               .toggleGoogleCalendar,
@@ -54,7 +59,7 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
           child: _CalendarGrid(
             month: month,
             selected: selected,
-            events: state.events,
+            events: allEvents,
             onPrev: () =>
                 setState(() => month = DateTime(month.year, month.month - 1)),
             onNext: () =>
@@ -69,7 +74,7 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
             child: const Text('Create'),
           ),
         ),
-        if (state.events.isEmpty)
+        if (allEvents.isEmpty)
           Center(
             child: Padding(
               padding: EdgeInsets.all(AppSpacing.space8),
@@ -88,32 +93,23 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
           ),
           SizedBox(height: AppSpacing.space2),
           for (final event in selectedEvents)
-            EventTile(
+            _EventTileWithContact(
               event: event,
-              contact: _contactFor(state, event.contactId),
               onTap: () => _editEvent(context, event),
               onDelete: () => _deleteWithUndo(context, event.id),
             ),
         ],
           for (final event in [
-            ...state.events,
+            ...allEvents,
           ]..sort((a, b) => a.date.compareTo(b.date)))
-            EventTile(
+            _EventTileWithContact(
               event: event,
-              contact: _contactFor(state, event.contactId),
               onTap: () => _editEvent(context, event),
               onDelete: () => _deleteWithUndo(context, event.id),
             ),
         ],
       ],
     );
-  }
-
-  Connection? _contactFor(AppState state, String? contactId) {
-    for (final connection in state.connections) {
-      if (connection.id == contactId) return connection;
-    }
-    return null;
   }
 
   Future<void> _editEvent(BuildContext context, PlannerEvent event) async {
@@ -139,6 +135,34 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
           },
         ),
       ),
+    );
+  }
+}
+
+/// Helper widget that looks up contact by ID and renders EventTile.
+/// Returns empty widget if contact not found (graceful degradation).
+class _EventTileWithContact extends ConsumerWidget {
+  const _EventTileWithContact({
+    required this.event,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  final PlannerEvent event;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final contact = event.contactId != null
+        ? ref.watch(contactByIdProvider(event.contactId!))
+        : null;
+    
+    return EventTile(
+      event: event,
+      contact: contact,
+      onTap: onTap,
+      onDelete: onDelete,
     );
   }
 }

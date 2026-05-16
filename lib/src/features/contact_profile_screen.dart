@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../models/social_models.dart';
 import '../state/app_state.dart';
+import '../state/query_providers.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
@@ -19,15 +20,44 @@ class ContactProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
+    final person = ref.watch(contactByIdProvider(contactId));
+    
+    // Handle missing contact gracefully
+    if (person == null) {
+      return Scaffold(
+        backgroundColor: tokens.surface,
+        appBar: AppBar(
+          title: Text('Contact Not Found', style: AppTypography.h2()),
+          elevation: 0,
+          backgroundColor: tokens.surface,
+          foregroundColor: tokens.ink,
+        ),
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.space8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'This contact no longer exists.',
+                  style: AppTypography.bodyLg(color: tokens.inkMuted),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppSpacing.space4),
+                TextButton(
+                  onPressed: () => context.pop(),
+                  child: const Text('Go Back'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    
     final state = ref.watch(appControllerProvider);
-    final person = state.connections.firstWhere(
-      (connection) => connection.id == contactId,
-      orElse: () => throw Exception('Contact not found'),
-    );
     final insight = state.contactInsightFor(contactId);
-    final history = state.interactions
-        .where((interaction) => interaction.contactId == contactId)
-        .toList();
+    final history = ref.watch(interactionsByContactProvider(contactId));
     
     return Scaffold(
       backgroundColor: tokens.surface,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../state/app_state.dart';
+import '../../state/query_providers.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
@@ -47,13 +48,17 @@ class _HomeTabState extends ConsumerState<HomeTab> {
           )
         else ...[
           for (var i = 0; i < recs.length; i++)
-            RecommendationCard(
-              key: Key('recommendation-card-${recs[i].contactId}'),
-              connection: state.connections.firstWhere(
-                (c) => c.id == recs[i].contactId,
-              ),
-              recommendation: recs[i],
-              onTap: () => context.push('/contact/${recs[i].contactId}'),
+            Builder(
+              builder: (context) {
+                final contact = ref.watch(contactByIdProvider(recs[i].contactId));
+                if (contact == null) return const SizedBox.shrink();
+                return RecommendationCard(
+                  key: Key('recommendation-card-${recs[i].contactId}'),
+                  connection: contact,
+                  recommendation: recs[i],
+                  onTap: () => context.push('/contact/${recs[i].contactId}'),
+                );
+              },
             ),
           if (!showAll) Center(child: TextButton(onPressed: () => setState(() => showAll = true), child: const Text('Expand recommendations'))),
         ],
