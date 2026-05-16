@@ -23,6 +23,17 @@ void main() {
       expect(tokens.danger, const Color(0xFFC53030));
       expect(tokens.categoryWork, const Color(0xFF5283A8));
     });
+
+    test('exposes Pass 2 AI surface tokens', () {
+      final tokens = AppTokens.light();
+      // aiGradient: two-color purple→indigo gradient
+      expect(tokens.aiGradient.colors.length, 2);
+      // Recommendation callout + topic accent are real, opaque colors
+      // (full opacity at every channel-encoded representation).
+      expect(tokens.recommendationSurface.a, 1.0);
+      expect(tokens.recommendationBorder.a, 1.0);
+      expect(tokens.topicAccent.a, 1.0);
+    });
   });
 
   group('AppTokens.dark', () {
@@ -35,6 +46,17 @@ void main() {
       expect(tokens.primaryOn, const Color(0xFFFFFFFF));
       expect(tokens.success, const Color(0xFF5BC094));
       expect(tokens.danger, const Color(0xFFE25555));
+    });
+
+    test('Pass 2 AI surface tokens differ from light values', () {
+      final light = AppTokens.light();
+      final dark = AppTokens.dark();
+      // Different at minimum on the two endpoints we care about visually.
+      expect(dark.aiGradient.colors, isNot(equals(light.aiGradient.colors)));
+      expect(dark.recommendationSurface, isNot(equals(light.recommendationSurface)));
+      expect(dark.recommendationBorder, isNot(equals(light.recommendationBorder)));
+      expect(dark.topicAccent, isNot(equals(light.topicAccent)));
+      expect(dark.aiGradient.colors.length, 2);
     });
   });
 

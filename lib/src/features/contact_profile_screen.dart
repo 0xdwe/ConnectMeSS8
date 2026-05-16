@@ -66,28 +66,22 @@ class ContactProfileScreen extends ConsumerWidget {
         elevation: 0,
         backgroundColor: tokens.surface,
         foregroundColor: tokens.ink,
-        actions: [
-          IconButton(
-            tooltip: 'Edit',
-            onPressed: () => showEditConnectionModal(context, person),
-            icon: const Icon(Icons.edit),
-          ),
-        ],
       ),
       body: ListView(
         padding: EdgeInsets.all(AppSpacing.space4),
         children: [
-          // Header section with BondRing, name, category, and insight summary
-          Container(
-            padding: EdgeInsets.all(AppSpacing.space5),
-            decoration: BoxDecoration(
-              color: tokens.surfaceRaised,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-            ),
-            child: Column(
-              children: [
-                // Row 1: BondRing + Name + Category dot
-                Row(
+          // Header section: BondRing left, name + category + facts strip
+          // right, Edit pill anchored top-right of the card.
+          Stack(
+            children: [
+              Container(
+                padding: EdgeInsets.all(AppSpacing.space5),
+                decoration: BoxDecoration(
+                  color: tokens.primaryTint,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     BondRing(connection: person, size: 96),
                     SizedBox(width: AppSpacing.space5),
@@ -95,37 +89,75 @@ class ContactProfileScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            person.name,
-                            style: AppTypography.display(),
+                          // Reserve space on the right of the name row for the Edit pill.
+                          Padding(
+                            padding: EdgeInsets.only(right: AppSpacing.space7),
+                            child: Text(
+                              person.name,
+                              style: AppTypography.display(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           SizedBox(height: AppSpacing.space2),
                           Row(
                             children: [
                               CircleAvatar(
                                 radius: 4,
-                                backgroundColor: categoryColor(person.category, tokens),
+                                backgroundColor:
+                                    categoryColor(person.category, tokens),
                               ),
                               SizedBox(width: AppSpacing.space2),
                               Text(
                                 person.category,
-                                style: AppTypography.caption(color: tokens.inkMuted),
+                                style: AppTypography.caption(
+                                    color: tokens.inkMuted),
                               ),
                             ],
+                          ),
+                          SizedBox(height: AppSpacing.space2),
+                          Text(
+                            '${insight.relationshipLabel} · known ${insight.knownSinceYears} years · last contact ${DateFormat.yMMMd().format(person.lastContact)}',
+                            style: AppTypography.caption(
+                                color: tokens.inkMuted),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: AppSpacing.space4),
-                // Row 2: Insight summary (subtle, no yellow border)
-                Text(
-                  insight.summary,
-                  style: AppTypography.body(color: tokens.inkMuted),
+              ),
+              Positioned(
+                top: AppSpacing.space3,
+                right: AppSpacing.space3,
+                child: OutlinedButton.icon(
+                  key: const Key('edit-connection-button'),
+                  onPressed: () => showEditConnectionModal(context, person),
+                  icon: Icon(Icons.edit, size: 16, color: tokens.primary),
+                  label: Text(
+                    'Edit',
+                    style: TextStyle(
+                      color: tokens.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: tokens.surfaceRaised,
+                    side: BorderSide(color: tokens.surfaceRaised),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.space4,
+                      vertical: AppSpacing.space2,
+                    ),
+                    minimumSize: const Size(0, 36),
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           SizedBox(height: AppSpacing.space4),
           // Primary action: Update with AI

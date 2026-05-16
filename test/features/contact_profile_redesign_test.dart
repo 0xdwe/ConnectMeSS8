@@ -159,11 +159,14 @@ void main() {
       expect(find.text('Update with AI'), findsOneWidget);
     });
 
-    testWidgets('profile shows Edit action in AppBar', (tester) async {
+    testWidgets('profile shows Edit action in header card pill', (tester) async {
       await pumpProfileScreen(tester, 'jessica');
 
-      // Edit button should be in AppBar
-      expect(find.widgetWithIcon(IconButton, Icons.edit), findsOneWidget);
+      // Edit pill now lives on the header card, not the AppBar.
+      expect(find.byKey(const Key('edit-connection-button')), findsOneWidget);
+      expect(find.text('Edit'), findsOneWidget);
+      // The AppBar should no longer contain a trailing Edit IconButton.
+      expect(find.widgetWithIcon(IconButton, Icons.edit), findsNothing);
     });
   });
 }

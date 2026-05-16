@@ -51,6 +51,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
     required this.categoryFriends,
     required this.categoryCollege,
     required this.categoryHighSchool,
+    required this.aiGradient,
+    required this.recommendationSurface,
+    required this.recommendationBorder,
+    required this.topicAccent,
   });
 
   /// Light-mode token palette per DESIGN.md.
@@ -80,6 +84,18 @@ class AppTokens extends ThemeExtension<AppTokens> {
         categoryFriends: Color(0xFF7C3AED),
         categoryCollege: Color(0xFF3B9D6E),
         categoryHighSchool: Color(0xFFFF8C00),
+        // Pass 2 "AI surface" semantics. The aiGradient is purple-to-indigo,
+        // matching primary at the start and a deeper indigo at the end.
+        aiGradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)],
+        ),
+        // Recommendation callout: warm cream surface, golden-yellow border.
+        recommendationSurface: Color(0xFFFFF8E1),
+        recommendationBorder: Color(0xFFF6D372),
+        // Conversation Topics pill fill: terracotta from the Figma spec.
+        topicAccent: Color(0xFFE77E55),
       );
 
   /// Dark-mode token palette per DESIGN.md. The two `*Tint` values for
@@ -108,6 +124,18 @@ class AppTokens extends ThemeExtension<AppTokens> {
         categoryFriends: Color(0xFF9B6BF0),
         categoryCollege: Color(0xFF5BC094),
         categoryHighSchool: Color(0xFFFFA240),
+        // Pass 2 "AI surface" semantics, dark variants. Lighter purple/indigo
+        // so the gradient stays readable on the deeper dark canvas.
+        aiGradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)],
+        ),
+        // Deep amber + muted gold for dark mode — desaturated equivalents.
+        recommendationSurface: Color(0xFF3D2E0F),
+        recommendationBorder: Color(0xFF8A6A2C),
+        // Slightly desaturated terracotta for dark mode.
+        topicAccent: Color(0xFFC85F3A),
       );
 
   final Color surface;
@@ -131,6 +159,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final Color categoryFriends;
   final Color categoryCollege;
   final Color categoryHighSchool;
+  final LinearGradient aiGradient;
+  final Color recommendationSurface;
+  final Color recommendationBorder;
+  final Color topicAccent;
 
   @override
   AppTokens copyWith({
@@ -155,6 +187,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
     Color? categoryFriends,
     Color? categoryCollege,
     Color? categoryHighSchool,
+    LinearGradient? aiGradient,
+    Color? recommendationSurface,
+    Color? recommendationBorder,
+    Color? topicAccent,
   }) {
     return AppTokens(
       surface: surface ?? this.surface,
@@ -178,6 +214,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
       categoryFriends: categoryFriends ?? this.categoryFriends,
       categoryCollege: categoryCollege ?? this.categoryCollege,
       categoryHighSchool: categoryHighSchool ?? this.categoryHighSchool,
+      aiGradient: aiGradient ?? this.aiGradient,
+      recommendationSurface: recommendationSurface ?? this.recommendationSurface,
+      recommendationBorder: recommendationBorder ?? this.recommendationBorder,
+      topicAccent: topicAccent ?? this.topicAccent,
     );
   }
 
@@ -206,6 +246,10 @@ class AppTokens extends ThemeExtension<AppTokens> {
       categoryFriends: Color.lerp(categoryFriends, other.categoryFriends, t)!,
       categoryCollege: Color.lerp(categoryCollege, other.categoryCollege, t)!,
       categoryHighSchool: Color.lerp(categoryHighSchool, other.categoryHighSchool, t)!,
+      aiGradient: LinearGradient.lerp(aiGradient, other.aiGradient, t)!,
+      recommendationSurface: Color.lerp(recommendationSurface, other.recommendationSurface, t)!,
+      recommendationBorder: Color.lerp(recommendationBorder, other.recommendationBorder, t)!,
+      topicAccent: Color.lerp(topicAccent, other.topicAccent, t)!,
     );
   }
 
