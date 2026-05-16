@@ -305,31 +305,6 @@ class RecommendationCard extends StatelessWidget {
             recommendation.insight,
             style: AppTypography.body(color: tokens.inkMuted),
           ),
-          SizedBox(height: AppSpacing.space4),
-          // Row 4: Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton(
-                  onPressed: () {
-                    // TODO: Navigate to Update Connection flow
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: tokens.primary,
-                    foregroundColor: tokens.primaryOn,
-                  ),
-                  child: const Text('Update Connection'),
-                ),
-              ),
-              SizedBox(width: AppSpacing.space3),
-              Expanded(
-                child: TextButton(
-                  onPressed: onTap,
-                  child: const Text('Open profile'),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );

@@ -96,18 +96,18 @@ void main() {
       expect(insightWidget.style?.fontWeight, FontWeight.w400);
     });
 
-    testWidgets('renders Update Connection button', (tester) async {
+    testWidgets('does NOT render Update Connection button', (tester) async {
       await tester.pumpWidget(buildTestCard());
 
-      final buttonFinder = find.widgetWithText(FilledButton, 'Update Connection');
-      expect(buttonFinder, findsOneWidget);
+      // Action buttons removed in #029. Whole card is the tap target.
+      expect(find.widgetWithText(FilledButton, 'Update Connection'),
+          findsNothing);
     });
 
-    testWidgets('renders Open profile button', (tester) async {
+    testWidgets('does NOT render Open profile button', (tester) async {
       await tester.pumpWidget(buildTestCard());
 
-      final buttonFinder = find.widgetWithText(TextButton, 'Open profile');
-      expect(buttonFinder, findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Open profile'), findsNothing);
     });
 
     testWidgets('does NOT render priority text', (tester) async {
@@ -170,19 +170,19 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    testWidgets('both action buttons are present and tappable', (tester) async {
-      await tester.pumpWidget(buildTestCard());
+    testWidgets('action buttons removed; whole card is tappable', (tester) async {
+      var tapped = false;
+      await tester.pumpWidget(buildTestCard(onTap: () => tapped = true));
 
-      // Both buttons should be present
-      expect(find.widgetWithText(FilledButton, 'Update Connection'), findsOneWidget);
-      expect(find.widgetWithText(TextButton, 'Open profile'), findsOneWidget);
+      // Action buttons removed in #029.
+      expect(find.widgetWithText(FilledButton, 'Update Connection'),
+          findsNothing);
+      expect(find.widgetWithText(TextButton, 'Open profile'), findsNothing);
 
-      // Buttons should be tappable (not throw when tapped)
-      await tester.tap(find.widgetWithText(FilledButton, 'Update Connection'));
+      // Tapping anywhere on the card still navigates via onTap.
+      await tester.tap(find.byType(RecommendationCard));
       await tester.pumpAndSettle();
-
-      await tester.tap(find.widgetWithText(TextButton, 'Open profile'));
-      await tester.pumpAndSettle();
+      expect(tapped, isTrue);
     });
   });
 }
