@@ -185,20 +185,23 @@ class ContactListCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     return CardBox(
-      padding: EdgeInsets.all(AppSpacing.space5),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.space4,
+        vertical: AppSpacing.space3,
+      ),
       child: InkWell(
         onTap: onTap,
         child: Row(
           children: [
             CircleAvatar(
-              radius: 40,
+              radius: 28,
               backgroundColor: tokens.primaryTint,
               child: Text(
                 connection.avatar,
-                style: AppTypography.glyph(30),
+                style: AppTypography.glyph(26),
               ),
             ),
-            SizedBox(width: AppSpacing.space5),
+            SizedBox(width: AppSpacing.space4),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,21 +236,12 @@ class ContactListCard extends StatelessWidget {
                   ),
                   Text(
                     connection.email,
-                    style: AppTypography.bodyLg(color: tokens.inkMuted),
-                  ),
-                  SizedBox(height: AppSpacing.space2),
-                  Chip(
-                    label: Text(
-                      connection.category,
-                      style: AppTypography.body(),
-                    ),
-                    backgroundColor: tokens.surfaceSunken,
-                    side: BorderSide.none,
+                    style: AppTypography.body(color: tokens.inkMuted),
                   ),
                 ],
               ),
             ),
-            BondRing(connection: connection, size: 72),
+            BondRing(connection: connection, size: 48, showAvatar: false),
           ],
         ),
       ),
