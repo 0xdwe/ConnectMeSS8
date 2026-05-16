@@ -88,6 +88,28 @@ void main() {
       expect(find.byType(CardBox), findsOneWidget);
     });
 
+    testWidgets('renders without overflow on narrow phone width', (tester) async {
+      // Simulate a narrow phone (iPhone SE 1st gen at 320 logical px).
+      tester.view.physicalSize = const Size(320 * 2, 800 * 2);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.data(false),
+          home: const Scaffold(
+            body: SingleChildScrollView(
+              child: ConnectionScoreHero(score: 100), // worst case width
+            ),
+          ),
+        ),
+      );
+
+      // Any RenderFlex overflow surfaces as a FlutterError logged via takeException().
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('has correct semantic label', (tester) async {
       await tester.pumpWidget(
         MaterialApp(

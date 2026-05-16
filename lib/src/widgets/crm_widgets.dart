@@ -856,9 +856,13 @@ class ConnectionScoreHero extends StatelessWidget {
                         style: AppTypography.display(color: tokens.ink),
                       ),
                       SizedBox(width: AppSpacing.space2),
-                      Text(
-                        '· ${tier.label}',
-                        style: AppTypography.h2(color: tokens.inkMuted),
+                      Flexible(
+                        child: Text(
+                          '· ${tier.label}',
+                          style: AppTypography.h2(color: tokens.inkMuted),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
                       ),
                     ],
                   ),
