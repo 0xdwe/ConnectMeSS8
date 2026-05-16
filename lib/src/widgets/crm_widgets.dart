@@ -1121,7 +1121,7 @@ class _TopicPill extends StatelessWidget {
           ),
           child: Text(
             topic,
-            style: AppTypography.body(color: Colors.white)
+            style: AppTypography.body(color: tokens.primaryOn)
                 .copyWith(fontWeight: FontWeight.w600),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
