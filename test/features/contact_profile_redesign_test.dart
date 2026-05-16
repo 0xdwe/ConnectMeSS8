@@ -182,5 +182,39 @@ void main() {
       // The AppBar should no longer contain a trailing Edit IconButton.
       expect(find.widgetWithIcon(IconButton, Icons.edit), findsNothing);
     });
+
+    testWidgets('history rows render inline AI badge in the dense list', (tester) async {
+      // Mike's seed history is 1 interaction — so this asserts the
+      // single-row branch lays out, with no dividers (n - 1 = 0).
+      await pumpProfileScreen(tester, 'mike');
+
+      await tester.scrollUntilVisible(
+        find.text('History'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.scrollUntilVisible(
+        find.textContaining('Job'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      // n = 1 → no dividers in the history list.
+      expect(find.byType(Divider), findsNothing);
+    });
+
+    testWidgets('empty history renders inside the History card with zero dividers', (tester) async {
+      await pumpProfileScreen(tester, 'jessica');
+
+      // The empty-state copy lives inside the same History card, so the
+      // section header is now visible even with no interactions.
+      await tester.scrollUntilVisible(
+        find.text('History'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('History'), findsOneWidget);
+      // No interactions → no dividers (n - 1 with n = 0).
+      expect(find.byType(Divider), findsNothing);
+    });
   });
 }

@@ -167,77 +167,126 @@ class ContactProfileScreen extends ConsumerWidget {
           SizedBox(height: AppSpacing.space4),
           // AI Insights collapsible card (Pass 2 #034)
           AiInsightsCard(connection: person, insight: insight),
-          // History section
-          if (history.isNotEmpty) ...[
-            SectionTitle('History'),
-            for (final item in history)
-              CardBox(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.space4, vertical: AppSpacing.space3),
-                child: Row(
-                  children: [
-                    Icon(item.type.icon, color: tokens.inkMuted),
-                    SizedBox(width: AppSpacing.space3),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          // History section (Pass 2 #036): one CardBox holding either a
+          // dense list of interactions separated by border dividers, or
+          // a warm empty state when there is no history.
+          CardBox(
+            padding: EdgeInsets.zero,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.space5,
+                    AppSpacing.space5,
+                    AppSpacing.space5,
+                    AppSpacing.space4,
+                  ),
+                  child: Row(
+                    children: [
+                      Text('History', style: AppTypography.h2()),
+                      if (history.isNotEmpty) ...[
+                        SizedBox(width: AppSpacing.space2),
+                        Text(
+                          '(${history.length})',
+                          style: AppTypography.caption(
+                              color: tokens.inkMuted),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (history.isEmpty)
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.space5,
+                      0,
+                      AppSpacing.space5,
+                      AppSpacing.space5,
+                    ),
+                    child: Center(
+                      child: Text(
+                        "${person.name.split(' ').first}'s new \u2014 you'll fill this in over time.",
+                        textAlign: TextAlign.center,
+                        style: AppTypography.bodyLg(color: tokens.inkMuted),
+                      ),
+                    ),
+                  )
+                else
+                  for (var i = 0; i < history.length; i++) ...[
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.space5,
+                        vertical: AppSpacing.space3,
+                      ),
+                      child: Row(
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  item.title,
-                                  style: AppTypography.bodyLg(),
-                                ),
-                              ),
-                              if (item.source == InteractionSource.aiSuggested) ...[
-                                SizedBox(width: AppSpacing.space2),
-                                Container(
-                                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.space1, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: tokens.primaryTint,
-                                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.auto_awesome, size: 12, color: tokens.primary),
-                                      SizedBox(width: AppSpacing.space1),
-                                      Text(
-                                        'AI',
-                                        style: AppTypography.caption(color: tokens.primary).copyWith(fontSize: 11),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ],
+                          Icon(
+                            history[i].type.icon,
+                            color: tokens.inkMuted,
+                            size: 20,
                           ),
-                          SizedBox(height: AppSpacing.space1),
+                          SizedBox(width: AppSpacing.space3),
+                          Expanded(
+                            child: Text(
+                              history[i].title,
+                              style: AppTypography.bodyLg(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          SizedBox(width: AppSpacing.space3),
                           Text(
-                            '${DateFormat.yMMMd().format(item.date)} • ${item.type.label}',
-                            style: AppTypography.caption(color: tokens.inkMuted),
+                            DateFormat.yMMMd().format(history[i].date),
+                            style: AppTypography.caption(
+                                color: tokens.inkMuted),
                           ),
+                          if (history[i].source ==
+                              InteractionSource.aiSuggested) ...[
+                            SizedBox(width: AppSpacing.space2),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSpacing.space2,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: tokens.primaryTint,
+                                borderRadius: BorderRadius.circular(
+                                    AppRadius.sm),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.auto_awesome,
+                                    size: 11,
+                                    color: tokens.primary,
+                                  ),
+                                  SizedBox(width: 2),
+                                  Text(
+                                    'AI',
+                                    style: AppTypography.caption(
+                                            color: tokens.primary)
+                                        .copyWith(
+                                            fontSize: 10, height: 1),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
+                    if (i < history.length - 1)
+                      Divider(
+                        color: tokens.border,
+                        height: 1,
+                        thickness: 1,
+                      ),
                   ],
-                ),
-              ),
-          ] else ...[
-            // Warm empty state when no history
-            SizedBox(height: AppSpacing.space5),
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 280),
-                child: Text(
-                  "${person.name.split(' ').first}'s new \u2014 you'll fill this in over time.",
-                  textAlign: TextAlign.center,
-                  style: AppTypography.bodyLg(color: tokens.inkMuted),
-                ),
-              ),
+              ],
             ),
-            SizedBox(height: AppSpacing.space5),
-          ],
+          ),
         ],
       ),
     );
