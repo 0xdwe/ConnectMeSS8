@@ -82,7 +82,8 @@ void main() {
       // Insight summary should be visible as text in header
       expect(find.textContaining('Jessica'), findsWidgets);
       
-      // Yellow InsightCard should NOT be present (no "AI Insight" expandable card)
+      // The old yellow tap-to-expand InsightCard (singular "AI Insight")
+      // should NOT be present.
       expect(find.text('AI Insight'), findsNothing);
     });
 
@@ -121,33 +122,46 @@ void main() {
       expect(find.text('Interaction Frequency (12 months)'), findsNothing);
     });
 
-    testWidgets('profile shows RelationshipFactsCard', (tester) async {
+    testWidgets('profile shows AI Insights card with three subsections', (tester) async {
       await pumpProfileScreen(tester, 'jessica');
 
-      // Relationship facts should be visible
-      expect(find.text('Relationship'), findsOneWidget);
-      expect(find.text('Known Since'), findsOneWidget);
-      expect(find.textContaining('Last contact:'), findsOneWidget);
+      // The new AI Insights card replaces RelationshipFactsCard.
+      expect(find.text('AI Insights'), findsOneWidget);
+      expect(find.text('Recommendation'), findsOneWidget);
+      expect(find.text('Person Summary'), findsOneWidget);
+      expect(find.text('Conversation Topics'), findsOneWidget);
     });
 
     testWidgets('profile shows History section with interactions', (tester) async {
       await pumpProfileScreen(tester, 'mike');
 
-      // History section should be present (Mike has interactions in seed data)
+      // History sits below the new AI Insights card; scroll first to the
+      // section title, then to a known interaction title.
+      await tester.scrollUntilVisible(
+        find.text('History'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('History'), findsOneWidget);
-      
-      // Should show interaction items
+      await tester.scrollUntilVisible(
+        find.textContaining('Job'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.textContaining('Job'), findsAtLeastNWidgets(1));
     });
 
     testWidgets('profile shows warm empty copy when no history', (tester) async {
       await pumpProfileScreen(tester, 'jessica');
 
-      // Jessica has no interactions, should show warm empty state
-      // History section should not appear when empty
+      // Jessica has no interactions, should show warm empty state below the
+      // AI Insights card.
       expect(find.text('History'), findsNothing);
-      
-      // Should show warm empty copy ("Jessica's new")
+      await tester.scrollUntilVisible(
+        find.textContaining('new'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.textContaining('new'), findsOneWidget);
     });
 

@@ -885,3 +885,475 @@ class ConnectionScoreHero extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI Insights card (Pass 2, issue #034)
+//
+// Three subsections:
+//   1. Recommendation callout — bond-tier-derived encouragement
+//   2. Person Summary         — ContactInsight.why
+//   3. Conversation Topics    — category-keyed pill tags + tap-to-open
+//                                bottom sheet of static suggestions
+//
+// The category-keyed topics helper and suggestions map are the
+// Pass 3 swap point per docs/prd/2026-05-16-per-contact-memory-files-prd.md.
+// When memory lands, `topicsForContact` and `suggestionsForTopic`
+// redirect to memory-derived data.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const Map<String, List<String>> _topicDefaultsByCategory = {
+  'Family':      ['Family updates', 'Shared memories', 'Daily life', 'Future plans'],
+  'Friends':     ['Recent meetups', 'Inside jokes', 'Plans together', 'Life updates'],
+  'College':     ['Old classes', 'Mutual friends', 'Career', 'Reunions'],
+  'High School': ['Old times', 'Mutual friends', 'Where they are now', 'Reunions'],
+  'Work':        ['Projects', 'Career', 'Industry news', 'Team updates'],
+};
+
+const List<String> _genericTopicDefaults = [
+  'Recent updates',
+  'Shared interests',
+  'Life events',
+  'Future plans',
+];
+
+/// Returns up to 4 topic strings for a contact, keyed by category.
+/// Pass 3 swap point: this becomes a memory-derived read.
+List<String> topicsForContact(Connection connection) {
+  final list = _topicDefaultsByCategory[connection.category] ?? _genericTopicDefaults;
+  return list.take(4).toList(growable: false);
+}
+
+const Map<String, Map<String, List<String>>> _topicSuggestions = {
+  'Family': {
+    'Family updates':  ['Ask how the family is doing', 'Share a recent family photo', 'Mention an upcoming family event'],
+    'Shared memories': ['Recall a favorite holiday', 'Bring up a childhood story', 'Reference a shared inside joke'],
+    'Daily life':      ['Ask about their week', 'Share something from your routine', 'Plan a regular check-in'],
+    'Future plans':    ['Discuss travel ideas', 'Talk about upcoming milestones', 'Mention something you want to do together'],
+  },
+  'Friends': {
+    'Recent meetups':  ['Reference the last hangout', 'Plan the next one', 'Share a photo from the last meet-up'],
+    'Inside jokes':    ['Bring up a running joke', 'Send a meme that fits your vibe', 'Reminisce about a funny moment'],
+    'Plans together':  ['Suggest a coffee or meal', 'Pitch a small adventure', 'Pick a date that works for both'],
+    'Life updates':    ['Ask what\'s been new lately', 'Share something from your week', 'Catch up on the bigger picture'],
+  },
+  'College': {
+    'Old classes':       ['Bring up a favorite class', 'Reference a tough exam you survived', 'Mention a professor you both had'],
+    'Mutual friends':    ['Ask if they\'re still in touch with someone', 'Share an update about a mutual friend', 'Suggest a small reunion'],
+    'Career':            ['Ask how work is going', 'Share a career update of your own', 'Talk about industry shifts'],
+    'Reunions':          ['Float a meet-up idea', 'Mention an upcoming alumni event', 'Suggest a video call to catch up'],
+  },
+  'High School': {
+    'Old times':              ['Reference a memorable moment', 'Share an old photo', 'Bring up a teacher you both remember'],
+    'Mutual friends':         ['Ask about a shared friend', 'Suggest a group chat', 'Share what you\'ve heard from someone'],
+    'Where they are now':     ['Ask what they\'re up to these days', 'Share what you\'re focused on', 'Compare notes on life stage'],
+    'Reunions':               ['Mention an upcoming reunion', 'Pitch a small get-together', 'Suggest a quick video call'],
+  },
+  'Work': {
+    'Projects':       ['Ask what they\'re working on', 'Share a recent project win', 'Trade notes on a tough problem'],
+    'Career':         ['Ask about career goals', 'Share an opportunity you saw', 'Compare notes on growth'],
+    'Industry news':  ['Reference a recent headline', 'Share an article you found useful', 'Ask their take on a trend'],
+    'Team updates':   ['Ask how the team is doing', 'Share a team change of your own', 'Talk about working styles'],
+  },
+};
+
+const List<String> _genericSuggestions = [
+  'Ask an open question about how they\'ve been',
+  'Share a recent update from your own life',
+  'Suggest meeting up',
+];
+
+/// Returns 3-5 conversation-starter suggestions for a (category, topic) pair.
+/// Pass 3 swap point: this becomes memory-derived.
+List<String> suggestionsForTopic(String category, String topic) {
+  return _topicSuggestions[category]?[topic] ?? _genericSuggestions;
+}
+
+/// Bond-tier-derived encouragement copy for the Recommendation callout.
+String _bondEncouragement(BondTier tier) => switch (tier) {
+      BondTier.close    => 'Strong bond! Keep up the regular communication.',
+      BondTier.steady   => 'Steady ground — a quick check-in keeps it warm.',
+      BondTier.drifting => 'It\'s been a while. A short hello goes a long way.',
+    };
+
+// Recommendation callout interior text colors.
+//
+// These are intentionally hardcoded brown/gold. There is no semantic
+// "on-recommendation" token in the system yet. If we keep this pattern
+// long-term we should add tokens for these colors.
+const Color _recommendationTitleColor = Color(0xFF7B4F12);
+const Color _recommendationBodyColor  = Color(0xFF6B4513);
+const Color _recommendationIconColor  = Color(0xFFB7791F);
+
+class AiInsightsCard extends StatefulWidget {
+  const AiInsightsCard({
+    super.key,
+    required this.connection,
+    required this.insight,
+  });
+  final Connection connection;
+  final ContactInsight insight;
+
+  @override
+  State<AiInsightsCard> createState() => _AiInsightsCardState();
+}
+
+class _AiInsightsCardState extends State<AiInsightsCard> {
+  bool expanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final tier = BondTier.from(widget.connection.bondScore);
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
+
+    return CardBox(
+      padding: EdgeInsets.zero,
+      border: Border.all(color: tokens.border, width: 1),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row: sparkle + "AI Insights" + chevron, full-width tap target.
+          InkWell(
+            key: const Key('ai-insights-header'),
+            onTap: () => setState(() => expanded = !expanded),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.space5,
+                AppSpacing.space5,
+                AppSpacing.space5,
+                AppSpacing.space4,
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.auto_awesome, size: 18, color: tokens.primary),
+                  SizedBox(width: AppSpacing.space3),
+                  Expanded(
+                    child: Text(
+                      'AI Insights',
+                      style: AppTypography.h2(),
+                    ),
+                  ),
+                  Icon(
+                    expanded ? Icons.expand_less : Icons.expand_more,
+                    color: tokens.inkMuted,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Body — animated collapse, instant under reduced motion.
+          //
+          // We deliberately skip the AnimatedSize wrapper under
+          // MediaQuery.disableAnimations: AnimatedSize with Duration.zero
+          // trips a framework RenderAnimatedSize layout assertion, and
+          // skipping the wrapper entirely is also semantically correct
+          // when the user has reduced-motion preference.
+          if (disableAnimations)
+            expanded
+                ? Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.space5,
+                      0,
+                      AppSpacing.space5,
+                      AppSpacing.space5,
+                    ),
+                    child: _AiInsightsBody(
+                      connection: widget.connection,
+                      insight: widget.insight,
+                      tier: tier,
+                      tokens: tokens,
+                    ),
+                  )
+                : const SizedBox.shrink()
+          else
+            AnimatedSize(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutQuart,
+              alignment: Alignment.topCenter,
+              child: expanded
+                  ? Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        AppSpacing.space5,
+                        0,
+                        AppSpacing.space5,
+                        AppSpacing.space5,
+                      ),
+                      child: _AiInsightsBody(
+                        connection: widget.connection,
+                        insight: widget.insight,
+                        tier: tier,
+                        tokens: tokens,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Internal body of the AI Insights card. Extracted so that both the
+/// animated and non-animated builds in `_AiInsightsCardState.build` can
+/// share the same subtree.
+class _AiInsightsBody extends StatelessWidget {
+  const _AiInsightsBody({
+    required this.connection,
+    required this.insight,
+    required this.tier,
+    required this.tokens,
+  });
+
+  final Connection connection;
+  final ContactInsight insight;
+  final BondTier tier;
+  final AppTokens tokens;
+
+  @override
+  Widget build(BuildContext context) {
+    final topics = topicsForContact(connection);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Recommendation callout
+        Container(
+          padding: EdgeInsets.all(AppSpacing.space4),
+          decoration: BoxDecoration(
+            color: tokens.recommendationSurface,
+            border: Border.all(
+              color: tokens.recommendationBorder,
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.lightbulb_outline,
+                color: _recommendationIconColor,
+                size: 22,
+              ),
+              SizedBox(width: AppSpacing.space3),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Recommendation',
+                      style: AppTypography.h2(
+                        color: _recommendationTitleColor,
+                      ),
+                    ),
+                    SizedBox(height: AppSpacing.space1),
+                    Text(
+                      _bondEncouragement(tier),
+                      style: AppTypography.body(
+                        color: _recommendationBodyColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: AppSpacing.space5),
+        // Person Summary
+        Row(
+          children: [
+            Icon(
+              Icons.person_outline,
+              size: 20,
+              color: tokens.primary,
+            ),
+            SizedBox(width: AppSpacing.space2),
+            Flexible(
+              child: Text(
+                'Person Summary',
+                style: AppTypography.h2(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: AppSpacing.space2),
+        Text(
+          insight.why,
+          style: AppTypography.body(color: tokens.inkMuted),
+        ),
+        SizedBox(height: AppSpacing.space5),
+        // Conversation Topics
+        Row(
+          children: [
+            Icon(
+              Icons.chat_bubble_outline,
+              size: 20,
+              color: tokens.secondary,
+            ),
+            SizedBox(width: AppSpacing.space2),
+            Flexible(
+              child: Text(
+                'Conversation Topics',
+                style: AppTypography.h2(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: AppSpacing.space3),
+        Wrap(
+          spacing: AppSpacing.space2,
+          runSpacing: AppSpacing.space2,
+          children: [
+            for (final topic in topics)
+              _TopicPill(
+                topic: topic,
+                onTap: () => _showTopicSuggestionsSheet(
+                  context,
+                  connection.category,
+                  topic,
+                ),
+              ),
+          ],
+        ),
+        SizedBox(height: AppSpacing.space3),
+        Text(
+          'Click any topic to see AI suggestions.',
+          style: AppTypography.caption(color: tokens.inkSubtle),
+        ),
+      ],
+    );
+  }
+}
+
+class _TopicPill extends StatelessWidget {
+  const _TopicPill({required this.topic, required this.onTap});
+  final String topic;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        child: Container(
+          // Cap pill width so very long topic labels truncate instead of
+          // pushing the row off-screen.
+          constraints: const BoxConstraints(maxWidth: 180),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.space3,
+            vertical: AppSpacing.space2,
+          ),
+          decoration: BoxDecoration(
+            color: tokens.topicAccent,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          child: Text(
+            topic,
+            style: AppTypography.body(color: Colors.white)
+                .copyWith(fontWeight: FontWeight.w600),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Opens a read-only bottom sheet listing 3-5 conversation suggestions
+/// for the given (category, topic) pair.
+void _showTopicSuggestionsSheet(
+  BuildContext context,
+  String category,
+  String topic,
+) {
+  final tokens = context.tokens;
+  final suggestions = suggestionsForTopic(category, topic);
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: tokens.surfaceRaised,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(AppRadius.lg),
+      ),
+    ),
+    builder: (context) {
+      final sheetTokens = context.tokens;
+      return SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.space5,
+            AppSpacing.space3,
+            AppSpacing.space5,
+            AppSpacing.space5,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: sheetTokens.border,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                ),
+              ),
+              SizedBox(height: AppSpacing.space4),
+              Row(
+                children: [
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 20,
+                    color: sheetTokens.secondary,
+                  ),
+                  SizedBox(width: AppSpacing.space2),
+                  Expanded(
+                    child: Text(
+                      topic,
+                      style: AppTypography.h2(),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: AppSpacing.space4),
+              for (final suggestion in suggestions)
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.space3),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.arrow_forward,
+                        size: 16,
+                        color: sheetTokens.inkMuted,
+                      ),
+                      SizedBox(width: AppSpacing.space3),
+                      Expanded(
+                        child: Text(
+                          suggestion,
+                          style: AppTypography.body(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}

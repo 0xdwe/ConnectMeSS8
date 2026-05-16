@@ -175,8 +175,8 @@ class ContactProfileScreen extends ConsumerWidget {
             ),
           ),
           SizedBox(height: AppSpacing.space4),
-          // Relationship facts card
-          RelationshipFactsCard(connection: person, insight: insight),
+          // AI Insights collapsible card (Pass 2 #034)
+          AiInsightsCard(connection: person, insight: insight),
           // History section
           if (history.isNotEmpty) ...[
             SectionTitle('History'),
