@@ -1357,3 +1357,50 @@ void _showTopicSuggestionsSheet(
     },
   );
 }
+
+/// Pill-shaped, gradient floating action button used for "Update with AI"
+/// on the contact profile screen (Pass 2 #035). Uses `tokens.aiGradient`
+/// from #033, with an InkWell + Container shape so the gradient renders
+/// (Flutter's FloatingActionButton.extended only accepts a single Color).
+class AiActionFab extends StatelessWidget {
+  const AiActionFab({super.key, required this.onTap, this.label = 'Update with AI'});
+  final VoidCallback onTap;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.space5,
+            vertical: AppSpacing.space3,
+          ),
+          decoration: BoxDecoration(
+            gradient: tokens.aiGradient,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            boxShadow: AppTokens.elevation2(dark),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+              SizedBox(width: AppSpacing.space2),
+              Text(
+                label,
+                style: AppTypography.bodyLg(color: Colors.white)
+                    .copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

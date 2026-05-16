@@ -67,6 +67,11 @@ class ContactProfileScreen extends ConsumerWidget {
         backgroundColor: tokens.surface,
         foregroundColor: tokens.ink,
       ),
+      floatingActionButton: AiActionFab(
+        key: const Key('update-with-ai-button'),
+        onTap: () => context.push('/ai-update/${person.id}'),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: ListView(
         padding: EdgeInsets.all(AppSpacing.space4),
         children: [
@@ -158,21 +163,6 @@ class ContactProfileScreen extends ConsumerWidget {
                 ),
               ),
             ],
-          ),
-          SizedBox(height: AppSpacing.space4),
-          // Primary action: Update with AI
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              key: const Key('update-with-ai-button'),
-              onPressed: () => context.push('/ai-update/${person.id}'),
-              icon: const Icon(Icons.auto_awesome),
-              label: const Text('Update with AI'),
-              style: FilledButton.styleFrom(
-                backgroundColor: tokens.primary,
-                foregroundColor: tokens.primaryOn,
-              ),
-            ),
           ),
           SizedBox(height: AppSpacing.space4),
           // AI Insights collapsible card (Pass 2 #034)

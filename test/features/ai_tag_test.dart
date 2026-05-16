@@ -54,7 +54,13 @@ void main() {
     await tester.tap(find.byKey(const Key('save-button')));
     await tester.pumpAndSettle();
 
-    // Should be back on profile, verify AI tag appears
+    // Should be back on profile, verify AI tag appears in history below
+    // the AI Insights card. Scroll until the badge is visible.
+    await tester.scrollUntilVisible(
+      find.text('AI'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('AI'), findsOneWidget);
     expect(find.byIcon(Icons.auto_awesome), findsWidgets);
   });
