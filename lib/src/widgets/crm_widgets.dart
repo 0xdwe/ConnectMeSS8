@@ -845,7 +845,10 @@ class GradientScaffold extends AppSurface {
 }
 
 /// ConnectionScoreHero: displays the user's average connection score
-/// as a large BondRing with label and caption.
+/// as a horizontal layout with the BondRing on the left and a
+/// display-size score number plus tier label on the right. The score
+/// is rendered at AppTypography.display so it reads as the page hero,
+/// larger than the section titles below it.
 class ConnectionScoreHero extends StatelessWidget {
   const ConnectionScoreHero({super.key, required this.score});
   
@@ -861,22 +864,42 @@ class ConnectionScoreHero extends StatelessWidget {
     return Semantics(
       label: semanticLabel,
       child: CardBox(
-        child: Column(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             BondRing.fromScore(
               score: score,
               label: 'Overall connection health',
-              size: 120,
+              size: 96,
             ),
-            SizedBox(height: AppSpacing.space5),
-            Text(
-              'Connection Score',
-              style: AppTypography.h2(),
-            ),
-            SizedBox(height: AppSpacing.space2),
-            Text(
-              'Average across all connections',
-              style: AppTypography.caption(color: tokens.inkMuted),
+            SizedBox(width: AppSpacing.space5),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        '$score',
+                        style: AppTypography.display(color: tokens.ink),
+                      ),
+                      SizedBox(width: AppSpacing.space2),
+                      Text(
+                        '· ${tier.label}',
+                        style: AppTypography.h2(color: tokens.inkMuted),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: AppSpacing.space2),
+                  Text(
+                    'Average across all connections',
+                    style: AppTypography.bodyLg(color: tokens.inkMuted),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

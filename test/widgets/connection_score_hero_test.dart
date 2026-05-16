@@ -16,8 +16,11 @@ void main() {
         ),
       );
 
-      // Verify labels
-      expect(find.text('Connection Score'), findsOneWidget);
+      // Score number is rendered at display size on the right; tier label
+      // sits inline next to it; subtitle below. The score also appears
+      // inside the BondRing.fromScore center, so '73' is found twice.
+      expect(find.text('73'), findsNWidgets(2));
+      expect(find.text('· steady'), findsOneWidget);
       expect(find.text('Average across all connections'), findsOneWidget);
       
       // Verify BondRing is present
