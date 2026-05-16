@@ -1,0 +1,124 @@
+# Per-Contact Memory Files with Agentic AI Updates PRD
+
+## Problem Statement
+
+Today, "Update with AI" on the contact profile screen runs `MockAiUpdateService.categorizeAndUpdate`, a string-matching stub that picks an `InteractionType` and appends one `CrmInteraction` to the contact's history. The "AI" never reasons about the relationship, never accumulates context across updates, and never produces narrative memory the user can read. `ContactInsight.summary` and `ContactInsight.why` are static, seeded once in `app_state.dart`.
+
+The product vision is different: the user opens "Update with AI", types or pastes context ("had coffee with Sarah; she's switching jobs to a startup; her kid started kindergarten"), and an AI agent updates a per-contact narrative memory file the user can browse on the contact profile. Subsequent updates accumulate. Conversation Topics on the profile (the pill tags from the Pass 2 redesign) read from this memory, so what the user has actually told the app about Sarah drives what gets surfaced — not a category-keyed default.
+
+This PRD captures the architecture for that memory system. It ships the agentic loop, file storage, parser, and topic surface using a deterministic mock updater. Real LLM provider integration, API key UX, and Firebase backend land in follow-up passes once the interfaces and storage shape are stable.
+
+## Solution
+
+A four-layer system, built bottom-up, each layer testable in isolation:
+
+1. **Memory document layer.** `MemoryDocument` is a parsed representation of a per-contact markdown file with frontmatter, narrative sections (summary, history, preferences), and a topics keyword block. Parses from string, renders back to string, round-trips losslessly.
+
+2. **Memory store layer.** `MemoryStore` owns persistence. Files live at `<app_documents>/memories/<contactId>.md`. The agent and the UI both interact with memories through this interface — never through raw paths. A name-shaped view exposes "Sarah Chen.md" semantics to the agent's prompt while disk uses stable contact ids.
+
+3. **Agentic updater layer.** `MemoryUpdater` is the AI orchestration boundary. It runs an agent loop: read current memory, accept user input, decide what to change, write updated memory. Pass 3 ships `MockMemoryUpdater` (deterministic, simulates the loop without a real LLM). `LlmMemoryUpdater` is post-Pass-3 work.
+
+4. **UI integration layer.** A Riverpod `memoryProvider` (family-keyed by contactId) surfaces the current memory to the contact profile. `memoryTopicsProvider` derives the Conversation Topics pills. The Pass 2 contact profile redesign already places these surfaces on the screen with category-keyed placeholder content; Pass 3 swaps the data source by changing the provider read.
+
+`AiUpdateService` continues to exist as the primary "Update with AI" entry point. After it produces an `AiUpdateResult` (the existing interaction-creation flow), it calls `MemoryUpdater.update()` as a side effect. The user-visible flow does not change in the AI Update screen itself; what changes is that memory now accumulates and is visible on the contact profile.
+
+A migration writes a seed memory file for every existing connection on first run. After migration, memory is the source of truth for narrative + topics; `ContactInsight.summary` and `ContactInsight.why` either read from memory or are removed.
+
+## User Stories
+
+1. As a busy professional, I want the app to remember context across "Update with AI" sessions, so that the second time I update Sarah's record the AI knows about the first conversation.
+2. As a user with ADHD, I want a single readable narrative per person that I can scan on the profile screen, so that I am not piecing together history from a list of interaction tiles.
+3. As any user, I want the Conversation Topics on a contact's profile to reflect things I have actually told the app about that person, so that the pills feel personal rather than generic.
+4. As any user, I want my memory files to survive app restarts, so that the AI's accumulated understanding of my relationships is durable.
+5. As any user, I want to rename a contact without losing or scrambling their memory, so that "Sarah" becoming "Sarah Chen" does not break their accumulated history.
+6. As any user, I want every contact to start with a memory on first run, so that I am not staring at empty narrative cards on day one.
+7. As a developer, I want the memory system isolated behind a small interface, so that swapping the deterministic mock updater for a real LLM later is a one-class change.
+8. As a developer, I want memory file persistence behind an interface, so that swapping local files for a Firebase-backed store later is a one-class change.
+9. As a developer, I want the agentic loop expressed as the agent calling tools (`read_memory`, `write_memory`), so that the same shape works for both the mock and a real LLM agent.
+10. As a developer, I want unit-test coverage on the parser, the store, and the mock updater, so that changes to memory format do not silently corrupt existing memories.
+11. As a usability test participant, I want tapping a Conversation Topic pill to show suggested ways to continue that conversation, so that the topic surface earns its place on the screen.
+12. As any user, I want the app to gracefully tolerate a malformed or missing memory file, so that a parse error on one contact does not break the rest of the app.
+13. As a developer, I want memory writes capped by size (per-contact and global), so that an unbounded agent update cannot fill the device.
+14. As any user, I want the AI agent's writes to feel deterministic in the mock-updater build, so that running the prototype during evaluation produces the same behavior every time.
+15. As an evaluator (course grading), I want the prototype to demonstrate the agentic memory architecture even without a real LLM key configured, so that the design is visible regardless of network/API access.
+16. As any user, I want my memory files to be plain markdown I could open in any editor, so that nothing about the format is locked behind the app.
+17. As any user, I want deleting a contact to remove their memory file, so that stale memory does not linger on disk.
+18. As any user, I want the agent's update to roll back cleanly if the write fails partway through, so that I never end up with a half-written memory.
+
+## Implementation Decisions
+
+**Memory document and format.**
+- `MemoryDocument` is an immutable Dart class with: `contactId` (String), `displayName` (String, mirrored from `Connection.name` at write time), `lastUpdated` (DateTime), `version` (int, schema version, starts at 1), `summary` (String, narrative paragraph), `history` (String, longer narrative), `preferences` (String, optional), and `topics` (List<String>, deduped, lowercased for matching, original-case preserved for display).
+- File format is YAML frontmatter (between `---` fences) followed by markdown sections delimited by `## Summary`, `## History`, `## Preferences`, and `## Topics`. The Topics section is a bullet list of strings.
+- `MemoryDocument.parse(String)` is total — it returns a best-effort document on malformed input, never throws. Parse failures populate a `parseErrors: List<String>` field for debugging without breaking the UI.
+- `MemoryDocument.render() → String` round-trips. Round-trip is asserted in unit tests.
+- `MemoryDocument.empty(contactId, displayName)` constructs a fresh memory with empty sections, version 1, lastUpdated = now.
+
+**Storage.**
+- `MemoryStore` is an abstract class with `load(contactId) → Future<MemoryDocument?>`, `save(contactId, doc) → Future<void>`, `delete(contactId) → Future<void>`, and `listAll() → Future<Map<String, MemoryDocument>>`.
+- `FileMemoryStore` writes to `<app_documents>/memories/<contactId>.md` using `path_provider`. Saves are atomic — write to `<id>.md.tmp`, fsync, rename to `<id>.md`. Roll back on partial failure.
+- `InMemoryMemoryStore` holds a `Map<String, MemoryDocument>` for tests and the seed-migration tooling. Default for unit tests.
+- File path uses contact id (stable across renames). The agent's tools and prompt expose memory as `<displayName>.md` while the store resolves to `<contactId>.md` at the I/O boundary. This is the compromise: id-stable on disk, name-shaped in the agent's view.
+- Per-contact memory size cap: 64 KB. Global cap: 16 MB (for ~250 contacts). Writes that would exceed the per-contact cap are rejected; the updater is expected to summarize-and-trim before writing.
+- Deleting a contact via `AppController.removeConnection` cascades to `MemoryStore.delete`.
+
+**Agentic updater.**
+- `MemoryUpdater` interface: `Future<MemoryDocument> update({required MemoryDocument current, required Connection contact, required String userInput, required List<AttachmentRef> attachments})`.
+- The interface is shaped for an agent loop: an implementation may make multiple internal "tool" calls (read fields, list topics, propose changes) before returning a final document. The interface returns only the final state; intermediate steps are an implementation detail.
+- `MockMemoryUpdater` is the Pass 3 implementation. Deterministic. On each update: appends a one-line summary of the user input to the History section with a date stamp, extracts topic keywords by simple matching against a curated keyword list, dedupes against existing topics, caps total topics at 8 (oldest fall off when capped), updates `lastUpdated`, increments nothing on `version`. Same input produces same output every run — important for evaluation.
+- `LlmMemoryUpdater` is post-Pass-3. The interface is designed so the LLM implementation reads `current` as the agent's starting state, runs an agent loop with tools (`get_user_input`, `get_recent_interactions`, `read_memory`, `write_memory`), and returns the final memory after the loop terminates. API key handling, provider selection, error/retry, and Firebase persistence are not part of this PRD.
+
+**Riverpod integration.**
+- `memoryProvider = FutureProvider.family<MemoryDocument?, String>((ref, contactId) => ...)` reads via `MemoryStore`. Auto-rebuilds when invalidated.
+- `memoryTopicsProvider = Provider.family<List<String>, String>` derives topics from `memoryProvider.select((doc) => doc?.topics ?? const [])`.
+- `AppController.runAiUpdate` (or its successor in the AI update flow) calls `MemoryUpdater.update` after producing the `AiUpdateResult`, persists via `MemoryStore.save`, then invalidates `memoryProvider(contactId)` so the contact profile rebuilds.
+- Errors in the memory side path do not block the existing interaction-creation flow. A failed memory update logs to `progress.md`-style debug output and continues.
+
+**Pass 2 ↔ Pass 3 seam.**
+- Pass 2 ships the Conversation Topics pill row reading from a category-keyed default helper.
+- Pass 3 changes one line in the topics widget: from `_categoryDefaults(connection.category)` to `ref.watch(memoryTopicsProvider(connection.id))` with `_categoryDefaults` as the empty-state fallback.
+- Person Summary on the contact profile screen migrates from `ContactInsight.why` to `memory.summary` + `memory.history` (or just `memory.summary` if `history` is also rendered as a separate "Recent context" subsection — minor IA call deferred to implementation).
+
+**Seed migration.**
+- On first run with Pass 3 deployed, a one-shot migration in `AppController.init` (or equivalent bootstrap) iterates over seeded connections and writes a memory file per contact via `MemoryStore.save`. Memory content is constructed from existing `ContactInsight.summary`, `why`, and a category-derived starter topics list.
+- Migration is idempotent — guarded by a `memoriesSeeded: true` flag persisted in shared prefs, so a second run does not overwrite.
+- Existing user-created contacts (added between Pass 2 and Pass 3) get an empty memory document on first observe, lazily.
+
+**Failure modes.**
+- Parse errors on `load` return a `MemoryDocument.empty(...)` plus a logged warning. UI shows the empty narrative state.
+- Write failures roll back the temp file and surface a snackbar "Couldn't save memory — try again." The interaction itself is still persisted (memory is the side effect, not the primary write).
+- Per-contact size cap rejection from the updater is treated as a bug in the updater (it should self-trim), surfaced in debug logs, and the previous memory remains in place.
+
+## Testing Decisions
+
+- **Good tests verify external behavior.** A memory document parses, renders, and round-trips. A store loads what it saves. A mock updater produces deterministic output for a given input. None of these tests should care how the agent loop is structured internally, only what comes out the other side.
+- **Unit tests live under `test/state/memory/` (new directory).**
+- **`MemoryDocument` parser tests:** valid frontmatter + sections round-trips losslessly; missing optional sections parse without error; malformed frontmatter populates `parseErrors`; empty file produces an empty document; a 64KB document parses within reasonable time; the topics block is deduped and cap-respected on write.
+- **`InMemoryMemoryStore` tests:** save then load round-trips a document; delete removes; listAll returns all saved; load on an unknown id returns null. `FileMemoryStore` gets a small smoke test using a temp directory; the bulk of behavior is tested through the in-memory variant.
+- **`MockMemoryUpdater` tests:** given an empty memory + a known input, produces an expected updated memory (assert specific topics extracted, history appended, lastUpdated changed); the same input twice produces the same output (determinism); an input exceeding the size cap is summarized rather than rejected; topic count never exceeds 8.
+- **Provider tests:** `memoryProvider` returns null for unknown ids and a parsed document for known ones; `memoryTopicsProvider` returns the document's topics or an empty list; an invalidate after a save causes a re-read.
+- **Integration tests** (in `test/features/`): "Update with AI" flow on a contact with no prior memory creates a memory, then a second update appends without overwriting; the Conversation Topics pills on the contact profile reflect the latest memory.
+- **Prior art:** existing tests in `test/state/query_providers_test.dart` cover the family-provider pattern; existing widget tests in `test/features/ai_update_preview_test.dart` cover the AI update flow and are the right shape for the new integration cases.
+
+## Out of Scope
+
+- Real LLM provider integration (OpenAI / Anthropic / Gemini / on-device). `LlmMemoryUpdater` is referenced as a future class but not implemented.
+- API key management UX (where the key is entered, where it lives, how it is rotated). Deferred to a Pass 3.5 or post-Pass-3 issue.
+- Firebase backend for memory file sync. Deferred. The `MemoryStore` interface is shaped to make this a swap, but no Firebase-backed implementation is part of Pass 3.
+- Multi-device conflict resolution. Pass 3 is single-device.
+- Memory file export, import, or sharing. Files are plain markdown on disk and accessible there, but no in-app export UI ships.
+- A "memory editor" UI where the user hand-edits the memory file. Pass 3 surfaces memory read-only on the contact profile; mutations go through `MemoryUpdater`.
+- Structured topic taxonomies, topic suggestions when typing "Update with AI", or topic-based filtering of contacts. Topics are display-only on the contact profile in Pass 3.
+- Migrating away from `ContactInsight.summary` / `why` entirely. Pass 3 lets memory take over those surfaces but leaves the `ContactInsight` fields intact for any non-profile UI that still reads them.
+- Real-time agent loop progress UI ("Agent reading memory... agent updating topics..."). The mock updater is fast enough to ignore this; the LLM updater can revisit when it lands.
+- Versioned memory history / undo across multiple updates. The current `lastUpdated` field is informational only.
+
+## Further Notes
+
+The `<Name>Memory.md` semantics the user originally asked about are preserved at the agent's prompt boundary. When `LlmMemoryUpdater` lands and is wired to a real model, the prompt and tool calls reference "Sarah Chen.md" — which is what the user wanted for clarity in agent reasoning. The compromise is purely about disk durability under renames and collisions.
+
+The Pass 2 contact profile redesign is the natural visual home for Pass 3's data. Pass 2 ships first with category-keyed topic placeholders. The two passes are deliberately decoupled: Pass 2 is a visual reskin, Pass 3 is an architectural feature. Bundling them would have made both larger and riskier.
+
+Pass 3's mock-updater path is not throwaway. It exercises the full pipeline (file I/O, parser, agent interface, provider invalidation, UI rebuild) and gives evaluation runs deterministic behavior. When `LlmMemoryUpdater` arrives, the only changed surface is the updater class and its construction site in the DI/init code. Every other module — store, document, providers, UI — stays put.
+
+A future "share memory across devices" feature lands by writing a `FirebaseMemoryStore` and swapping the registered `MemoryStore` instance. That work also handles auth, conflict resolution, and offline cache. None of it leaks into Pass 3.

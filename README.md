@@ -1,17 +1,41 @@
 # connect_me
 
-A new Flutter project.
+A Flutter app for relationship maintenance, designed for busy professionals and people with ADHD who need a memory aid for the people in their lives.
 
-## Getting Started
+## Project documentation
 
-This project is a starting point for a Flutter application.
+Four files at the project root are the canonical living docs. Everything else is per-task or historical.
 
-A few resources to get you started if this is your first Flutter project:
+- `README.md` — this file
+- `PRODUCT.md` — product principles and audience
+- `DESIGN.md` — design system, tokens, typography
+- `progress.md` — active worklog
+
+## `docs/` layout
+
+```
+docs/
+  prd/        # Product Requirement Documents, one per feature
+  issues/     # Atomic issue specs (numbered, kebab-case)
+  reviews/    # Subagent reviews, audits, and research output (dated)
+  context/    # Per-task agent scratchpads (dated)
+  archive/    # Superseded snapshots and per-task closeouts (dated)
+```
+
+## Convention for agent-generated markdown
+
+When a subagent produces a `.md` file mid-task (review, research brief, context handoff, completion report, implementation summary), it does **not** live at the project root. Use:
+
+- `docs/reviews/<YYYY-MM-DD>-<topic>.md` — one-shot reviews, audits, research briefs
+- `docs/context/<YYYY-MM-DD>-<topic>.md` — per-task context handoffs and scratchpads
+- `docs/archive/<YYYY-MM-DD>-<topic>.md` — completion reports, implementation summaries, and stale snapshots kept for historical reference
+
+Only the four canonical docs above belong at the project root. PRDs and issues live under `docs/prd/` and `docs/issues/`.
+
+## Getting started with Flutter
+
+If this is your first Flutter project:
 
 - [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
 - [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- [Online documentation](https://docs.flutter.dev/)
