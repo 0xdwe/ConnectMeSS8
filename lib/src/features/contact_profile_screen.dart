@@ -73,7 +73,16 @@ class ContactProfileScreen extends ConsumerWidget {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: ListView(
-        padding: EdgeInsets.all(AppSpacing.space4),
+        // Reserve room at the bottom so the floating Update with AI
+        // button (AiActionFab, ~72pt + safe area) does not obscure the
+        // last History row. Reuses the existing pageBottomPadding token
+        // already used by the home/people tabs for nav-bar clearance.
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.space4,
+          AppSpacing.space4,
+          AppSpacing.space4,
+          AppSpacing.pageBottomPadding,
+        ),
         children: [
           // Header section: BondRing left, name + Edit pill on the
           // first row, then category and facts strip below. Edit pill is
