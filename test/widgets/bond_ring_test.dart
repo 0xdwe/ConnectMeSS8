@@ -240,6 +240,70 @@ void main() {
     });
   });
 
+  group('BondRing showAvatar=false', () {
+    testWidgets('renders numeric score and hides avatar emoji', (tester) async {
+      final connection = Connection(
+        id: 'test',
+        name: 'Test User',
+        email: 'test@example.com',
+        category: 'Friends',
+        avatar: '🌟',
+        bondScore: 78,
+        nextStep: '',
+        lastContact: DateTime(2026, 5, 1),
+        notes: '',
+        knownSince: DateTime(2020, 1, 1),
+        preferredChannels: [],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.data(false),
+          home: Scaffold(
+            body: Center(
+              child: BondRing(connection: connection, showAvatar: false),
+            ),
+          ),
+        ),
+      );
+
+      // Numeric score is rendered, the avatar emoji is not.
+      expect(find.text('78'), findsOneWidget);
+      expect(find.text('🌟'), findsNothing);
+    });
+
+    testWidgets('preserves trend arrow when score >= 70', (tester) async {
+      final connection = Connection(
+        id: 'test',
+        name: 'Test User',
+        email: 'test@example.com',
+        category: 'Friends',
+        avatar: '🌟',
+        bondScore: 82,
+        nextStep: '',
+        lastContact: DateTime(2026, 5, 1),
+        notes: '',
+        knownSince: DateTime(2020, 1, 1),
+        preferredChannels: [],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.data(false),
+          home: Scaffold(
+            body: Center(
+              child: BondRing(connection: connection, showAvatar: false),
+            ),
+          ),
+        ),
+      );
+
+      // Trend arrow still renders independently of avatar visibility.
+      expect(connection.bondTrend, BondTrend.up);
+      expect(find.byIcon(Icons.arrow_upward), findsOneWidget);
+    });
+  });
+
   group('BondTier', () {
     test('from() factory maps scores correctly', () {
       expect(BondTier.from(100), BondTier.close);

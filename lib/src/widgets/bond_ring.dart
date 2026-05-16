@@ -41,7 +41,8 @@ enum BondTrend {
 /// BondRing: avatar wrapped by tier-colored arc showing bond strength.
 ///
 /// Anatomy per DESIGN.md:
-/// - Avatar CircleAvatar at center
+/// - Avatar CircleAvatar at center (or numeric score when [showAvatar] is
+///   false on the connection-aware constructor)
 /// - Background ring (full circle, border color at 40% opacity)
 /// - Foreground arc (bondScore/100 fraction, tier color, 3px stroke)
 /// - Optional trend arrow at 4 o'clock when trend != flat
@@ -53,12 +54,17 @@ enum BondTrend {
 ///
 /// Touch target: minimum 44×44 regardless of size.
 /// Semantic label: "name, tier, trend" for screen readers.
+///
+/// Set [showAvatar] to false on the connection-aware constructor to render
+/// the numeric bond score in the center instead of the connection's avatar.
+/// Trend arrow, tier color, animation, and semantic label are preserved.
 class BondRing extends StatefulWidget {
   const BondRing({
     super.key,
     required Connection connection,
     this.size = 64,
     this.onTap,
+    this.showAvatar = true,
   }) : _connection = connection,
        _score = null,
        _label = null;
@@ -72,13 +78,15 @@ class BondRing extends StatefulWidget {
     this.onTap,
   }) : _connection = null,
        _score = score,
-       _label = label;
+       _label = label,
+       showAvatar = true;
 
   final Connection? _connection;
   final int? _score;
   final String? _label;
   final double size;
   final VoidCallback? onTap;
+  final bool showAvatar;
 
   // Convenience getters
   Connection? get connection => _connection;
@@ -215,8 +223,8 @@ class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin
                   strokeWidth: 3,
                 ),
               ),
-              // Avatar (only for Connection-based rings)
-              if (widget.avatar != null)
+              // Avatar (only for Connection-based rings when showAvatar is true)
+              if (widget.avatar != null && widget.showAvatar)
                 CircleAvatar(
                   radius: (widget.size - 8) / 2,
                   backgroundColor: tokens.primaryTint,
@@ -225,8 +233,8 @@ class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin
                     style: TextStyle(fontSize: widget.size * 0.4),
                   ),
                 ),
-              // Score number for fromScore constructor
-              if (widget.avatar == null)
+              // Score number for fromScore constructor or showAvatar=false
+              if (widget.avatar == null || !widget.showAvatar)
                 Text(
                   '${widget.score}',
                   style: TextStyle(
