@@ -215,6 +215,11 @@ class ContactListCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      SizedBox(width: AppSpacing.space2),
+                      CircleAvatar(
+                        radius: 4,
+                        backgroundColor: categoryColor(connection.category, tokens),
+                      ),
                       if (connection.isSample) ...[
                         SizedBox(width: AppSpacing.space2),
                         Container(
