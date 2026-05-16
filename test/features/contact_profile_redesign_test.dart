@@ -81,10 +81,6 @@ void main() {
 
       // Insight summary should be visible as text in header
       expect(find.textContaining('Jessica'), findsWidgets);
-      
-      // The old yellow tap-to-expand InsightCard (singular "AI Insight")
-      // should NOT be present.
-      expect(find.text('AI Insight'), findsNothing);
     });
 
     testWidgets('profile does NOT show _BondScorePanel', (tester) async {

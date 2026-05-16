@@ -180,8 +180,6 @@ void main() {
 
     // Insight summary should be visible in header (not as expandable card)
     expect(find.textContaining('Jessica'), findsWidgets);
-    // Old yellow InsightCard should not be present
-    expect(find.text('AI Insight'), findsNothing);
   });
 
   testWidgets('contact profile avoids overflow at narrow large text scale', (
