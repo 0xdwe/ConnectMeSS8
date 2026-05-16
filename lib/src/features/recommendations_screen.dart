@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
+import '../state/query_providers.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
@@ -24,7 +25,24 @@ class RecommendationsScreen extends ConsumerWidget {
         foregroundColor: tokens.ink,
       ),
       body: ListView(padding: EdgeInsets.all(AppSpacing.space6), children: [
-        for (var i = 0; i < state.recommendations.length; i++) RecommendationCard(key: Key('recommendation-card-${state.recommendations[i].contactId}'), connection: state.connections.firstWhere((c) => c.id == state.recommendations[i].contactId), recommendation: state.recommendations[i], onTap: () => context.push('/contact/${state.recommendations[i].contactId}')),
+        for (var i = 0; i < state.recommendations.length; i++)
+          Builder(
+            builder: (context) {
+              final contact = ref.watch(
+                contactByIdProvider(state.recommendations[i].contactId),
+              );
+              if (contact == null) return const SizedBox.shrink();
+              return RecommendationCard(
+                key: Key(
+                  'recommendation-card-${state.recommendations[i].contactId}',
+                ),
+                connection: contact,
+                recommendation: state.recommendations[i],
+                onTap: () =>
+                    context.push('/contact/${state.recommendations[i].contactId}'),
+              );
+            },
+          ),
       ]),
     );
   }
