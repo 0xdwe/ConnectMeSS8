@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../models/social_models.dart';
 import '../state/app_state.dart';
+import '../state/query_providers.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
@@ -169,13 +170,16 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
     ref.read(appControllerProvider.notifier).commitAiUpdate(editedResult);
     
     if (mounted) {
-      final person = ref.read(appControllerProvider).connections.firstWhere(
-        (c) => c.id == widget.contactId,
-      );
+      final person = ref.read(contactByIdProvider(widget.contactId));
+      final count = editedInteractions.length;
+      final plural = count == 1 ? '' : 's';
+      final message = person == null
+          ? 'Logged $count update$plural'
+          : 'Logged $count update$plural with ${person.name}';
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Logged ${editedInteractions.length} update${editedInteractions.length == 1 ? '' : 's'} with ${person.name}'),
+          content: Text(message),
           action: SnackBarAction(
             label: 'Undo',
             onPressed: () {
@@ -205,8 +209,40 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final person = ref.watch(appControllerProvider).connections.firstWhere((c) => c.id == widget.contactId);
-    
+    final person = ref.watch(contactByIdProvider(widget.contactId));
+
+    if (person == null) {
+      return Scaffold(
+        backgroundColor: tokens.surface,
+        appBar: AppBar(
+          title: Text('Contact Not Found', style: AppTypography.h2()),
+          elevation: 0,
+          backgroundColor: tokens.surface,
+          foregroundColor: tokens.ink,
+        ),
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.space8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'This contact no longer exists.',
+                  style: AppTypography.bodyLg(color: tokens.inkMuted),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppSpacing.space4),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Go Back'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: tokens.surface,
       appBar: AppBar(
