@@ -1371,33 +1371,42 @@ class AiActionFab extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final dark = Theme.of(context).brightness == Brightness.dark;
+    // Material > Ink (gradient surface) > InkWell (above the gradient,
+    // so the tap splash renders on top of the gradient instead of
+    // being hidden by an opaque Container above it).
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.space5,
-            vertical: AppSpacing.space3,
-          ),
-          decoration: BoxDecoration(
-            gradient: tokens.aiGradient,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            boxShadow: AppTokens.elevation2(dark),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
-              SizedBox(width: AppSpacing.space2),
-              Text(
-                label,
-                style: AppTypography.bodyLg(color: Colors.white)
-                    .copyWith(fontWeight: FontWeight.w600),
+      child: Ink(
+        decoration: BoxDecoration(
+          gradient: tokens.aiGradient,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          boxShadow: AppTokens.elevation2(dark),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.space5,
+              vertical: AppSpacing.space3,
+            ),
+            child: ConstrainedBox(
+              // Keeps total touch target >= 48pt (vertical padding 12 * 2 = 24,
+              // so the row content needs at least 24 to reach 48).
+              constraints: const BoxConstraints(minHeight: 24),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.auto_awesome, color: tokens.primaryOn, size: 20),
+                  SizedBox(width: AppSpacing.space2),
+                  Text(
+                    label,
+                    style: AppTypography.bodyLg(color: tokens.primaryOn)
+                        .copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
