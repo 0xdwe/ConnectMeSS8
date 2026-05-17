@@ -172,4 +172,48 @@ void main() {
       expect(textWidget.style!.fontSize, 13); // caption size per AppTypography
     });
   });
+
+  group('Calendar layout regressions', () {
+    testWidgets(
+        'day cells with events do not overflow at narrow phone width',
+        (tester) async {
+      // Reproduce the worst-case width reported in production. Modern
+      // phones land in the 360-414pt range; 360pt is the conservative
+      // mainstream lower bound used here.
+      tester.view.physicalSize = const Size(360 * 2, 800 * 2);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        const ProviderScope(child: ConnectMeApp()),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+          find.byKey(const Key('login-email-field')), 'test@example.com');
+      await tester.enterText(
+          find.byKey(const Key('login-password-field')), 'password123');
+      await tester.tap(find.byKey(const Key('sign-in-button')));
+      await tester.pumpAndSettle();
+
+      // Navigate to the planner tab by icon (label may be 'Plan' or 'Planner'
+      // depending on layout; the icon is stable).
+      await tester.tap(find.byIcon(Icons.calendar_today_outlined));
+      await tester.pumpAndSettle();
+
+      // Sanity: at least one day cell with events is rendered. The seeded
+      // state includes events, so dots should appear on at least one cell.
+      final dotsAcrossCalendar = find.descendant(
+        of: find.byType(GridView),
+        matching: find.byType(CircleAvatar),
+      );
+      expect(dotsAcrossCalendar, findsWidgets);
+
+      // The actual regression assertion: no exception was thrown during
+      // layout. RenderFlex overflows surface as exceptions captured by
+      // the test framework and visible via takeException().
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

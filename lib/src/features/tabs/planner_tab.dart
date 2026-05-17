@@ -285,20 +285,21 @@ class _CalendarGrid extends StatelessWidget {
                   children: [
                     Text(
                       '$dayNumber',
-                      style: AppTypography.bodyLg(
+                      maxLines: 1,
+                      style: AppTypography.body(
                         color: textColor,
                       ),
                     ),
                     if (hasEvent)
                       Padding(
-                        padding: EdgeInsets.only(top: AppSpacing.space1),
+                        padding: const EdgeInsets.only(top: 2),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             // Show up to 3 dots for events
                             for (int i = 0; i < eventsOnDay.length && i < 3; i++)
                               Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 1.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 1.5),
                                 child: CircleAvatar(
                                   radius: 2,
                                   backgroundColor: isToday
