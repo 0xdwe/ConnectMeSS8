@@ -74,16 +74,13 @@ void main() {
     expect(find.byKey(const Key('planner-tab')), findsOneWidget);
   });
 
-  testWidgets('profile button opens heatmap profile', (tester) async {
-    await pumpConnectMe(tester);
-    await signInAsDemo(tester);
-
-    await tester.tap(find.byKey(const Key('profile-button')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Alex Martinez'), findsOneWidget);
-    expect(find.text('Connection Heatmap by Category'), findsOneWidget);
-  });
+  // Test 'profile button opens heatmap profile' was removed here.
+  // It exercised find.byKey(Key('profile-button')) which only exists on
+  // AppHeader (crm_widgets.dart) — a widget no longer instantiated by any
+  // screen since #016 (three-tab IA). The /me route still exists and
+  // ProfileScreen + HeatmapCard still exist as orphaned code, but no UI
+  // entry point reaches them. See #037 for the triage decision (delete
+  // dead code or restore an entry point).
 
   testWidgets('plus menu add connection mutates visible people list', (
     tester,
