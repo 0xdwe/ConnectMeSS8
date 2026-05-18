@@ -122,6 +122,28 @@ The parallel-review pass also surfaced an unrelated finding worth a
 follow-up: `ProfileScreen` and `HeatmapCard` are orphaned dead code
 since #016 dropped their entry point. Captured in #037.
 
+### Status: closed
+
+As of 2026-05-18, all residual failures are resolved.
+
+- Group C: helper updated to find `'Plan'` (commit `16bd3fc`)
+- Group B drift: assertions updated to match Pass 2 copy
+  (`e8481c3`, `5a6257c`)
+- Group B dead test: `profile button opens heatmap profile` deleted,
+  replaced by #037 follow-up (commit `c63c153`)
+- Group B duplicate finder: picker-modal scope (commit `628a5ab`)
+- Group A viewport: surface size 800×1200 (commit `0ca1c61`)
+- Group D animation: `_isFirstBuild` flag removed from `BondRing`
+  (commit `fff16ac`)
+
+Acceptance criteria status:
+- [x] `flutter test` (full suite, no exclusions) completes in under
+      2 minutes on a clean checkout (~10s).
+- [x] All tests pass — **169 passed, 0 failed**.
+- [x] `test/theme/app_typography_test.dart` no longer hangs.
+- [x] `flutter analyze` remains clean (1 pre-existing info lint at
+      `ai_update_screen.dart:88`, out of scope).
+
 ## Blocked by
 
 None — independent of feature work.
