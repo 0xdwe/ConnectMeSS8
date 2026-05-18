@@ -68,75 +68,59 @@ License 1.1 (license file included).
 - Side effect: the running app now actually renders Inter on device
   instead of falling back to Roboto/SF.
 
-### Residual: 12 widget-test failures
+### Residual: parallel-review pass 2026-05-18 + #032 cleanup
 
-The 12 fixture failures are genuine and unrelated to the asset issue.
-They persist after the font fix. Categorization:
+A parallel-review pass on 2026-05-18 (correctness + simplicity
+reviewers, fresh context) confirmed **Pass 1 and Pass 2 have zero real
+user-visible regressions** in the failing test set. Every failure is
+one of: stale assertion against pre-redesign UI, fixture problem
+(viewport/duplicate finder/wrong tab label), or pre-existing animation
+bug from #021. The original "12 failures" list also included 3 tests
+that were already passing at HEAD when the doc was written; the doc
+was stale in that respect too.
 
-**Group A — `WidgetTester.showKeyboard` `Bad state: No element` (1 test)**
+The true residual was 9 failures. As of this commit, Fixes 1–5 (Group
+C helper, Group B tap-test copy, Group B signup-username assertion,
+Group B dead profile-button test, Group B picker-modal duplicate
+finder) have been applied. What remains:
+
+**Group A — viewport too small (1 test)**
 - `test/widget_test.dart > settings can add custom event type` —
-  the test taps a `Text` widget that's offset (396, 603) outside the
-  800×600 root render tree, then calls `enterText` which fails because
-  there is no `EditableTextState` to find. Fix likely needs a
-  `tester.binding.setSurfaceSize(...)` larger viewport or a different
-  finder that resolves to an on-screen target.
+  Settings tab's "Manage Event Types" row lands at y≈603 in the
+  default 800×600 test surface; `enterText` then fails because the
+  field is offscreen. Fix is `tester.binding.setSurfaceSize(...)` to
+  give Settings comfortable vertical room.
 
-**Group B — Hit-test misses on Pass 2 redesigned contact profile (8 tests)**
-Tests written against the pre-Pass-2 contact profile screen layout
-still find widgets but tap-targets land on the wrong element after
-the redesign:
-- `test/features/recommendation_tap_test.dart > tapping a recommendation
-  on Home opens the contact dashboard`
-- `test/features/recommendation_tap_test.dart > tapping a recommendation
-  on the recommendations screen opens the contact dashboard`
-- `test/features/auth_screen_test.dart > valid signup updates profile and
-  enters the main app`
-- `test/widget_test.dart > profile button opens heatmap profile`
-- `test/widget_test.dart > plus menu update connection opens AI update
-  page`
-- `test/widget_test.dart > contact profile shows insight summary in
-  header` (assertion targets old inline summary line that #033 moved
-  into Person Summary)
-- `test/widget_test.dart > contact profile avoids overflow at narrow
-  large text scale` (asserts old layout)
-- `test/widget_test.dart > profile can be edited from settings` (taps
-  the old AppBar Edit IconButton which #033 removed)
-
-**Group C — Calendar fixture issues (4 tests)**
-- `test/features/planner_calendar_test.dart > Calendar accessibility day
-  cells have minimum 44pt touch target`
-- `test/features/planner_calendar_test.dart > Calendar visual states
-  today indicator shows filled primary circle`
-- `test/features/planner_calendar_test.dart > Calendar visual states
-  selected day (not today) shows primaryTint bg with primary ring`
-- `test/features/planner_calendar_test.dart > Calendar visual states
-  days with events show up to 3 dots`
-- `test/features/planner_calendar_test.dart > Calendar typography
-  day-of-week header uses caption style with inkMuted`
-
-**Group D — BondRing animation timing (1 test)**
+**Group D — BondRing first-score animation suppressed (1 test)**
 - `test/widgets/bond_ring_test.dart > BondRing Animation animates arc
-  when score changes` — asserts the animation is at 0.5 mid-flight
-  but observed 0.8. Animation curve change drift (`Curves.easeOutQuart`
-  vs the test's expected curve) or a timing assumption change.
+  when score changes` — `_isFirstBuild` flag in
+  `lib/src/widgets/bond_ring.dart` suppresses the animation on the
+  *first* score change after mount (subsequent changes animate fine).
+  Pre-existing from #021. Cosmetic severity, but a real bug worth
+  removing — small visible polish improvement (first score change
+  now animates).
 
-### Recommended next steps
+Both are addressed in follow-up commits in the same #032 chain. After
+those land, the full sweep should be at 0 failures.
 
-Fix Group B by updating the affected widget tests to match the Pass 2
-redesigned layout (most are 1–2 line assertion updates: find Edit pill
-in header instead of AppBar IconButton; assert Person Summary instead
-of inline summary line). Fixing Group B alone would knock the residual
-from 12 to 4.
+### History: original 12-failure breakdown (for reference)
 
-Group A and Group C need real fixture investigation. Group D is a
-one-line tolerance update.
+The doc previously categorized the failures as:
+- Group A (1) — viewport / `showKeyboard`
+- Group B (8) — tests written against pre-Pass-2 contact profile
+- Group C (5) — calendar fixture
+- Group D (1) — BondRing animation timing
 
-Acceptance criteria status:
-- [x] `flutter test` (full suite, no exclusions) completes in under
-      2 minutes on a clean checkout.
-- [ ] All tests pass — 12 fixture failures remain (Groups A–D above).
-- [x] `test/theme/app_typography_test.dart` no longer hangs.
-- [x] `flutter analyze` remains clean (1 pre-existing info lint).
+Three of the listed Group B tests (`contact profile shows insight
+summary in header`, `contact profile avoids overflow at narrow large
+text scale`, `profile can be edited from settings`) were actually
+passing at HEAD when this doc was written; they are not part of the
+actual residual. The remaining 5 Group B + 1 Group A + 5 Group C +
+1 Group D = 12 listed, but the ground-truth count was 9.
+
+The parallel-review pass also surfaced an unrelated finding worth a
+follow-up: `ProfileScreen` and `HeatmapCard` are orphaned dead code
+since #016 dropped their entry point. Captured in #037.
 
 ## Blocked by
 
