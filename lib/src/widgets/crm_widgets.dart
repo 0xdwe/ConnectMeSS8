@@ -429,21 +429,69 @@ class SectionTitle extends StatelessWidget {
   final String title;
   final Widget? action;
 
+  /// Threshold below which the action stacks beneath the title.
+  ///
+  /// At h1 (26pt bold) a long title like "Today's Recommendation" needs
+  /// ~290pt of width. With a typical action (~110pt) and gutter, the Row
+  /// layout requires roughly 420pt of constraint width to avoid wrapping
+  /// the title. Phones (320–414pt) sit below that line; tablets (≥768pt)
+  /// have plenty of room. 420 is the empirically-tuned cutoff.
+  static const double _stackBelowWidth = 420;
+
+  /// Title length below which the Row layout is safe even on narrow
+  /// phones. "History" (7), "Plan" (4), "Settings" (8) all fit easily.
+  /// "Today's Recommendation" (22) does not.
+  static const int _shortTitleMaxChars = 12;
+
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(AppSpacing.space1, AppSpacing.space4, AppSpacing.space1, AppSpacing.space2),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: AppTypography.h1(),
-              ),
-            ),
-            ?action,
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.space1,
+        AppSpacing.space4,
+        AppSpacing.space1,
+        AppSpacing.space2,
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final titleWidget = Text(
+            title,
+            style: AppTypography.h1(),
+            softWrap: true,
+          );
+
+          if (action == null) {
+            return titleWidget;
+          }
+
+          final mustStack = constraints.maxWidth < _stackBelowWidth &&
+              title.length > _shortTitleMaxChars;
+
+          if (mustStack) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                titleWidget,
+                SizedBox(height: AppSpacing.space2),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: action!,
+                ),
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: titleWidget),
+              action!,
+            ],
+          );
+        },
+      ),
+    );
+  }
 }
 
 class EventTile extends StatelessWidget {
