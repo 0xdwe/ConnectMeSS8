@@ -88,7 +88,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('home-tab')), findsOneWidget);
-    expect(find.text('Jamie Chen'), findsWidgets);
+    // Username is no longer surfaced on shell chrome (#016 dropped the
+    // wordmark+username header in favor of a three-tab IA); home-tab
+    // visibility proves successful signup-to-shell entry.
   });
 
   testWidgets('signup blocks empty submit with field-level errors', (
