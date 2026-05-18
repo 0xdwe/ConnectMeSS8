@@ -1,8 +1,17 @@
 import 'package:connect_me/src/theme/app_spacing.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
+import 'package:connect_me/src/theme/app_typography.dart';
 import 'package:connect_me/src/widgets/crm_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+/// Maximum acceptable title height: 2 lines of h1 plus a 1pt rendering fudge.
+/// Bound to AppTypography so this stays correct if typography is retuned.
+double _maxTitleHeightTwoLines() {
+  final style = AppTypography.h1();
+  final lineHeight = (style.height ?? 1.2) * (style.fontSize ?? 26);
+  return lineHeight * 2 + 1.0;
+}
 
 /// Tests `SectionTitle` responsive layout across phone and tablet widths.
 ///
@@ -58,13 +67,15 @@ void main() {
           reason: 'no overflow / layout exceptions on 390pt');
       expect(find.text("Today's Recommendation"), findsOneWidget);
 
-      // Title height should be at most 2 lines of h1 (26 * 1.20 ≈ 31.2pt
-      // per line, so 2 lines ≈ 62.4pt). If it's larger, the title was
-      // forced to wrap mid-character into 3+ lines, which is the bug.
+      // Title height should be at most 2 lines of h1. If it's larger, the
+      // title was forced to wrap mid-character into 3+ lines, which is the
+      // bug. Bound is read from AppTypography so retunes don't silently
+      // weaken this assertion.
       final renderedText = tester.renderObject<RenderBox>(
         find.text("Today's Recommendation"),
       );
-      expect(renderedText.size.height, lessThanOrEqualTo(2 * 26 * 1.21),
+      expect(renderedText.size.height,
+          lessThanOrEqualTo(_maxTitleHeightTwoLines()),
           reason: 'title fits in two lines or fewer');
     });
 
@@ -88,6 +99,17 @@ void main() {
           reason: 'no overflow / layout exceptions on 320pt');
       expect(find.text("Today's Recommendation"), findsOneWidget);
       expect(find.text('View All'), findsOneWidget);
+
+      // The original mid-character wrap bug renders silently without
+      // raising — `takeException()` would have passed against the buggy
+      // code. Assert the title fits in two lines or fewer so this test
+      // actually proves the responsive layout choice.
+      final renderedText = tester.renderObject<RenderBox>(
+        find.text("Today's Recommendation"),
+      );
+      expect(renderedText.size.height,
+          lessThanOrEqualTo(_maxTitleHeightTwoLines()),
+          reason: 'title fits in two lines or fewer at 320pt');
     });
 
     testWidgets('uses Row layout on tablet width (768pt iPad Mini)',
