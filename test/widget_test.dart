@@ -1,5 +1,6 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
 import 'package:connect_me/src/features/contact_profile_screen.dart';
+import 'package:connect_me/src/features/modals/update_person_picker_modal.dart';
 import 'package:connect_me/src/features/tabs/planner_tab.dart';
 import 'package:connect_me/src/features/tabs/settings_tab.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
@@ -118,12 +119,25 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Update Connection'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Mike Chen'),
-      120,
-      scrollable: find.byType(Scrollable).last,
+
+    // Scope the finder to the picker modal so we don't collide with the
+    // 'Mike Chen' that's still rendered on the recommendation card behind
+    // the modal scrim.
+    final mikeInPicker = find.descendant(
+      of: find.byType(UpdatePersonPickerModal),
+      matching: find.text('Mike Chen'),
     );
-    await tester.tap(find.text('Mike Chen'));
+    await tester.scrollUntilVisible(
+      mikeInPicker,
+      120,
+      scrollable: find
+          .descendant(
+            of: find.byType(UpdatePersonPickerModal),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(mikeInPicker);
     await tester.pumpAndSettle();
     expect(find.text('Update with AI'), findsOneWidget);
     expect(find.text('Update Mike Chen'), findsOneWidget);
