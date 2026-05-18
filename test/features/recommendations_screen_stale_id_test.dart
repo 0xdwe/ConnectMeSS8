@@ -41,7 +41,7 @@ void main() {
 
       // Navigate to the recommendations screen via the View All link
       // on the home tab.
-      await tester.tap(find.text('View All ->'));
+      await tester.tap(find.text('View All'));
       await tester.pumpAndSettle();
 
       // The screen must render without throwing. The other (still-valid)

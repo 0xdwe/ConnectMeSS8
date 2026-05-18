@@ -34,7 +34,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
       ),
       children: [
         ConnectionScoreHero(score: state.averageConnectionScore),
-        SectionTitle('Today\'s Recommendation', action: TextButton(onPressed: () => context.push('/recommendations'), child: Text('View All ->', style: AppTypography.bodyLg().copyWith(fontWeight: FontWeight.w600)))),
+        SectionTitle('Today\'s Recommendation', action: TextButton.icon(onPressed: () => context.push('/recommendations'), label: Text('View All', style: AppTypography.bodyLg().copyWith(fontWeight: FontWeight.w600)), icon: const Icon(Icons.arrow_forward, size: 18), iconAlignment: IconAlignment.end)),
         if (recs.isEmpty)
           Center(
             child: Padding(

@@ -53,7 +53,7 @@ void main() {
     (tester) async {
       await _pump(tester);
 
-      await tester.tap(find.text('View All ->'));
+      await tester.tap(find.text('View All'));
       await tester.pumpAndSettle();
 
       final card = find.byKey(const Key('recommendation-card-jessica'));
