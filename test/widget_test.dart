@@ -258,6 +258,13 @@ void main() {
   });
 
   testWidgets('settings can add custom event type', (tester) async {
+    // Default test surface is 800x600. SettingsTab's 'Manage Event Types'
+    // row sits at y≈603, just below the visible viewport, which causes
+    // enterText to fail because the TextField is offscreen. Give
+    // Settings comfortable vertical room.
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
