@@ -48,26 +48,95 @@ regressions.
 - CI signal value is reduced: a real regression introduced by a future
   change is hidden inside a noisy baseline.
 
-## What to fix
+## Status
 
-1. Patch the typography test's `tearDownAll` so it does not block on
-   `GoogleFonts.pendingFonts()` in offline test runs (likely: skip the
-   await, or guard it on `kIsWeb`/test env, or replace with a
-   `Completer().future.timeout(...)`).
-2. Triage the ~13 failing widget tests. For each, decide: fix the
-   underlying code, fix the test fixture, or document why the test is
-   intentionally skipped under the current Flutter version.
+**Partially resolved 2026-05-18 in commit `077ab33`.**
 
-## Acceptance criteria
+Root cause of problem 1 (typography hang) was missing Inter font assets
+— `google_fonts` was attempting a runtime HTTP fetch which
+`flutter_test_config.dart` blocks but never times out. Fixed by
+bundling Inter as static `.ttf` files in `assets/fonts/` and wiring
+them into `pubspec.yaml`. The font is shipped under the SIL Open Font
+License 1.1 (license file included).
 
-- [ ] `flutter test` (full suite, no exclusions) completes in under
+### Resolved
+- `test/theme/app_typography_test.dart` no longer hangs. Goes from
+  indefinite (>9 min) to passing in 23s. All 11 typography assertions
+  pass.
+- Full `flutter test` sweep now completes in under a minute (was
+  impossible to complete before).
+- Side effect: the running app now actually renders Inter on device
+  instead of falling back to Roboto/SF.
+
+### Residual: 12 widget-test failures
+
+The 12 fixture failures are genuine and unrelated to the asset issue.
+They persist after the font fix. Categorization:
+
+**Group A — `WidgetTester.showKeyboard` `Bad state: No element` (1 test)**
+- `test/widget_test.dart > settings can add custom event type` —
+  the test taps a `Text` widget that's offset (396, 603) outside the
+  800×600 root render tree, then calls `enterText` which fails because
+  there is no `EditableTextState` to find. Fix likely needs a
+  `tester.binding.setSurfaceSize(...)` larger viewport or a different
+  finder that resolves to an on-screen target.
+
+**Group B — Hit-test misses on Pass 2 redesigned contact profile (8 tests)**
+Tests written against the pre-Pass-2 contact profile screen layout
+still find widgets but tap-targets land on the wrong element after
+the redesign:
+- `test/features/recommendation_tap_test.dart > tapping a recommendation
+  on Home opens the contact dashboard`
+- `test/features/recommendation_tap_test.dart > tapping a recommendation
+  on the recommendations screen opens the contact dashboard`
+- `test/features/auth_screen_test.dart > valid signup updates profile and
+  enters the main app`
+- `test/widget_test.dart > profile button opens heatmap profile`
+- `test/widget_test.dart > plus menu update connection opens AI update
+  page`
+- `test/widget_test.dart > contact profile shows insight summary in
+  header` (assertion targets old inline summary line that #033 moved
+  into Person Summary)
+- `test/widget_test.dart > contact profile avoids overflow at narrow
+  large text scale` (asserts old layout)
+- `test/widget_test.dart > profile can be edited from settings` (taps
+  the old AppBar Edit IconButton which #033 removed)
+
+**Group C — Calendar fixture issues (4 tests)**
+- `test/features/planner_calendar_test.dart > Calendar accessibility day
+  cells have minimum 44pt touch target`
+- `test/features/planner_calendar_test.dart > Calendar visual states
+  today indicator shows filled primary circle`
+- `test/features/planner_calendar_test.dart > Calendar visual states
+  selected day (not today) shows primaryTint bg with primary ring`
+- `test/features/planner_calendar_test.dart > Calendar visual states
+  days with events show up to 3 dots`
+- `test/features/planner_calendar_test.dart > Calendar typography
+  day-of-week header uses caption style with inkMuted`
+
+**Group D — BondRing animation timing (1 test)**
+- `test/widgets/bond_ring_test.dart > BondRing Animation animates arc
+  when score changes` — asserts the animation is at 0.5 mid-flight
+  but observed 0.8. Animation curve change drift (`Curves.easeOutQuart`
+  vs the test's expected curve) or a timing assumption change.
+
+### Recommended next steps
+
+Fix Group B by updating the affected widget tests to match the Pass 2
+redesigned layout (most are 1–2 line assertion updates: find Edit pill
+in header instead of AppBar IconButton; assert Person Summary instead
+of inline summary line). Fixing Group B alone would knock the residual
+from 12 to 4.
+
+Group A and Group C need real fixture investigation. Group D is a
+one-line tolerance update.
+
+Acceptance criteria status:
+- [x] `flutter test` (full suite, no exclusions) completes in under
       2 minutes on a clean checkout.
-- [ ] All tests pass, OR any intentionally skipped test is annotated
-      with `@Skip('reason')` and documented in `progress.md`.
-- [ ] `test/theme/app_typography_test.dart` no longer hangs.
-- [ ] `flutter analyze` remains clean (1 known info-level lint at
-      `lib/src/features/ai_update_screen.dart:87` is pre-existing and
-      out of scope here).
+- [ ] All tests pass — 12 fixture failures remain (Groups A–D above).
+- [x] `test/theme/app_typography_test.dart` no longer hangs.
+- [x] `flutter analyze` remains clean (1 pre-existing info lint).
 
 ## Blocked by
 
