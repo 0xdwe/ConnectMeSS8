@@ -21,8 +21,9 @@ Future<void> authenticateAndNavigateToPlanner(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('sign-in-button')));
   await tester.pumpAndSettle();
 
-  // Navigate to Planner tab
-  final planTab = find.text('Planner');
+  // Navigate to Planner tab. Tab label was renamed from 'Planner' to 'Plan'
+  // in commit 62b06cb (#016, three-tab IA); helper was missed at the time.
+  final planTab = find.text('Plan');
   expect(planTab, findsOneWidget);
   await tester.tap(planTab);
   await tester.pumpAndSettle();
