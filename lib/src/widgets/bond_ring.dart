@@ -102,7 +102,6 @@ class BondRing extends StatefulWidget {
 class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
-  bool _isFirstBuild = true;
 
   @override
   void initState() {
@@ -127,42 +126,31 @@ class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin
     final oldScore = oldWidget.score;
     final newScore = widget.score;
     
-    // Only animate if score changed and not first build
+    // Only animate if score changed.
     if (oldScore != newScore) {
-      if (_isFirstBuild) {
-        // First build: render immediately at target value
+      final disableAnimations = MediaQuery.of(context).disableAnimations;
+      
+      if (disableAnimations) {
+        // Skip animation, render immediately
         setState(() {
           _animation = Tween<double>(
             begin: newScore / 100,
             end: newScore / 100,
           ).animate(_controller);
-          _isFirstBuild = false;
         });
       } else {
-        final disableAnimations = MediaQuery.of(context).disableAnimations;
-        
-        if (disableAnimations) {
-          // Skip animation, render immediately
-          setState(() {
-            _animation = Tween<double>(
-              begin: newScore / 100,
-              end: newScore / 100,
-            ).animate(_controller);
-          });
-        } else {
-          // Animate from old to new score
-          _controller.reset();
-          setState(() {
-            _animation = Tween<double>(
-              begin: oldScore / 100,
-              end: newScore / 100,
-            ).animate(CurvedAnimation(
-              parent: _controller,
-              curve: Curves.easeOutQuart,
-            ));
-          });
-          _controller.forward();
-        }
+        // Animate from old to new score
+        _controller.reset();
+        setState(() {
+          _animation = Tween<double>(
+            begin: oldScore / 100,
+            end: newScore / 100,
+          ).animate(CurvedAnimation(
+            parent: _controller,
+            curve: Curves.easeOutQuart,
+          ));
+        });
+        _controller.forward();
       }
     }
   }
