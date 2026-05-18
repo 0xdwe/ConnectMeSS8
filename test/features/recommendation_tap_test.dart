@@ -41,8 +41,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Mike Chen'), findsWidgets);
-    expect(find.text('Recommended Action!'), findsOneWidget);
-    expect(find.text('AI Insight'), findsOneWidget);
+    // Pass 2 #034 replaced 'Recommended Action!' / 'AI Insight' with the
+    // AI Insights collapsible card using 'AI Insights' (section header)
+    // and 'Recommendation' (callout title).
+    expect(find.text('AI Insights'), findsOneWidget);
+    expect(find.text('Recommendation'), findsOneWidget);
   });
 
   testWidgets(
@@ -65,8 +68,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Jessica Taylor'), findsWidgets);
-      expect(find.text('Recommended Action!'), findsOneWidget);
-      expect(find.text('AI Insight'), findsOneWidget);
+      // Pass 2 #034 replaced 'Recommended Action!' / 'AI Insight' with
+      // the AI Insights collapsible card.
+      expect(find.text('AI Insights'), findsOneWidget);
+      expect(find.text('Recommendation'), findsOneWidget);
     },
   );
 }
