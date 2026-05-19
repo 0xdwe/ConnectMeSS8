@@ -1,4 +1,5 @@
 import 'package:connect_me/src/models/social_models.dart';
+import 'package:connect_me/src/state/memory/memory_document.dart';
 import 'package:connect_me/src/state/recommendation_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -334,6 +335,245 @@ void main() {
       expect(ranked.first.priority, 'high priority');
       expect(ranked[1].priority, 'medium priority');
       expect(ranked[2].priority, 'low priority');
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // PRD Q12 / #049 — Upcoming-driven recommendation cards.
+  //
+  // Effective date = endDate if present, else startDate.
+  // Window: [now - 3d, now + 1d].
+  //   Post-trip: effective ≤ now
+  //   Pre-trip:  effective > now
+  // -------------------------------------------------------------------
+  group('upcoming-driven recommendations', () {
+    final now = DateTime(2026, 5, 19, 12, 0, 0);
+
+    Connection sam({DateTime? lastContact}) => _connection(
+          id: 'sam',
+          name: 'Sam',
+          bondScore: 70,
+          lastContact: lastContact ?? now.subtract(const Duration(days: 5)),
+        );
+
+    MemoryDocument memoryWith(
+      String contactId, {
+      required UpcomingEntry entry,
+    }) =>
+        MemoryDocument.empty(contactId: contactId, displayName: contactId,
+                now: now)
+            .copyWith(upcoming: [entry]);
+
+    test('post-trip card surfaces when endDate equals now', () {
+      final memory = memoryWith(
+        'sam',
+        entry: UpcomingEntry(
+          startDate: now.subtract(const Duration(days: 6)),
+          endDate: now,
+          description: 'USA trip',
+        ),
+      );
+      final ranked = rankRecommendations(
+        connections: [sam()],
+        interactions: const [],
+        memories: {'sam': memory},
+        now: now,
+      );
+      expect(ranked, hasLength(1));
+      expect(ranked.first.contactId, 'sam');
+      expect(
+        ranked.first.reason,
+        contains('just got back from USA trip'),
+      );
+    });
+
+    test('post-trip card surfaces when endDate is 3 days ago', () {
+      final memory = memoryWith(
+        'sam',
+        entry: UpcomingEntry(
+          startDate: now.subtract(const Duration(days: 10)),
+          endDate: now.subtract(const Duration(days: 3)),
+          description: 'Iceland',
+        ),
+      );
+      final ranked = rankRecommendations(
+        connections: [sam()],
+        interactions: const [],
+        memories: {'sam': memory},
+        now: now,
+      );
+      expect(ranked.first.reason, contains('just got back from Iceland'));
+    });
+
+    test('pre-trip card surfaces when startDate is 1 day in the future', () {
+      final memory = memoryWith(
+        'sam',
+        entry: UpcomingEntry(
+          startDate: now.add(const Duration(days: 1)),
+          description: 'Tokyo',
+        ),
+      );
+      final ranked = rankRecommendations(
+        connections: [sam()],
+        interactions: const [],
+        memories: {'sam': memory},
+        now: now,
+      );
+      expect(ranked.first.reason, contains('Tokyo starts tomorrow'));
+      expect(ranked.first.reason, contains("Sam's"));
+    });
+
+    test('entry without endDate uses startDate as effective date', () {
+      final memory = memoryWith(
+        'sam',
+        entry: UpcomingEntry(
+          startDate: now,
+          description: 'workshop',
+        ),
+      );
+      final ranked = rankRecommendations(
+        connections: [sam()],
+        interactions: const [],
+        memories: {'sam': memory},
+        now: now,
+      );
+      // startDate == now is at the post-trip boundary (effective <= now).
+      expect(ranked.first.reason, contains('just got back from workshop'));
+    });
+
+    test('entry outside the [now-3d, now+1d] window does not surface', () {
+      final farPast = memoryWith(
+        'sam',
+        entry: UpcomingEntry(
+          startDate: now.subtract(const Duration(days: 30)),
+          endDate: now.subtract(const Duration(days: 4)),
+          description: 'old trip',
+        ),
+      );
+      final farFuture = memoryWith(
+        'sam',
+        entry: UpcomingEntry(
+          startDate: now.add(const Duration(days: 7)),
+          description: 'future trip',
+        ),
+      );
+
+      // Far-past sam: only the bond-tier ranking should surface.
+      final pastRanked = rankRecommendations(
+        connections: [sam()],
+        interactions: const [],
+        memories: {'sam': farPast},
+        now: now,
+      );
+      expect(pastRanked.first.reason, isNot(contains('got back')));
+      expect(pastRanked.first.reason, isNot(contains('starts tomorrow')));
+
+      // Far-future sam: same.
+      final futureRanked = rankRecommendations(
+        connections: [sam()],
+        interactions: const [],
+        memories: {'sam': farFuture},
+        now: now,
+      );
+      expect(futureRanked.first.reason, isNot(contains('got back')));
+      expect(futureRanked.first.reason, isNot(contains('starts tomorrow')));
+    });
+
+    test('upcoming card outranks the bond-tier ranking', () {
+      // Sam has a fresh post-trip card. Mike is drifting, hasn't been
+      // contacted in a long time — normally he'd be the top pick.
+      final samMemory = memoryWith(
+        'sam',
+        entry: UpcomingEntry(
+          startDate: now.subtract(const Duration(days: 7)),
+          endDate: now.subtract(const Duration(days: 1)),
+          description: 'Iceland',
+        ),
+      );
+      final mike = _connection(
+        id: 'mike',
+        name: 'Mike',
+        bondScore: 30, // drifting
+        lastContact: now.subtract(const Duration(days: 90)),
+      );
+
+      final ranked = rankRecommendations(
+        connections: [mike, sam()],
+        interactions: const [],
+        memories: {'sam': samMemory},
+        now: now,
+      );
+
+      expect(ranked.first.contactId, 'sam');
+      expect(ranked.first.reason, contains('just got back'));
+      expect(ranked[1].contactId, 'mike');
+    });
+
+    test('one upcoming card per contact — the first matching entry wins', () {
+      final memory = memoryWith(
+        'sam',
+        entry: UpcomingEntry(
+          startDate: now.subtract(const Duration(days: 5)),
+          endDate: now.subtract(const Duration(days: 1)),
+          description: 'Iceland',
+        ),
+      ).copyWith(upcoming: [
+        UpcomingEntry(
+          startDate: now.subtract(const Duration(days: 5)),
+          endDate: now.subtract(const Duration(days: 1)),
+          description: 'Iceland',
+        ),
+        UpcomingEntry(
+          startDate: now.add(const Duration(days: 1)),
+          description: 'Tokyo',
+        ),
+      ]);
+      final ranked = rankRecommendations(
+        connections: [sam()],
+        interactions: const [],
+        memories: {'sam': memory},
+        now: now,
+      );
+      // Only one card for Sam, and it's the Iceland (post-trip) one
+      // because that's the first entry in the list.
+      expect(ranked.where((r) => r.contactId == 'sam'), hasLength(1));
+      expect(ranked.first.reason, contains('Iceland'));
+    });
+
+    test('no regression: empty upcoming on every contact still ranks normally',
+        () {
+      // PRD Q12 explicitly: no regression in #047 ranking when no
+      // Upcoming entries exist.
+      final connections = [
+        _connection(
+            id: 'drifting',
+            name: 'D',
+            bondScore: 30,
+            lastContact: now.subtract(const Duration(days: 10))),
+        _connection(
+            id: 'steady',
+            name: 'S',
+            bondScore: 60,
+            lastContact: now.subtract(const Duration(days: 12))),
+        _connection(
+            id: 'close',
+            name: 'C',
+            bondScore: 90,
+            lastContact: now.subtract(const Duration(days: 14))),
+      ];
+      final memories = {
+        for (final c in connections)
+          c.id:
+              MemoryDocument.empty(contactId: c.id, displayName: c.name, now: now),
+      };
+      final ranked = rankRecommendations(
+        connections: connections,
+        interactions: const [],
+        memories: memories,
+        now: now,
+      );
+      expect(ranked.map((r) => r.contactId).toList(),
+          ['drifting', 'steady', 'close']);
     });
   });
 }
