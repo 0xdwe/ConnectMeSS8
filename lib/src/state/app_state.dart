@@ -45,27 +45,6 @@ class AppState {
                 connections.length)
             .round();
 
-  List<Recommendation> get recommendations => [
-    const Recommendation(
-      contactId: 'mike',
-      reason: "Mike's been quiet for a while.",
-      insight: "It's been about 5 weeks since you talked.",
-      priority: 'high priority',
-    ),
-    const Recommendation(
-      contactId: 'jessica',
-      reason: 'Jessica is starting to drift.',
-      insight: 'She mentioned planning a trip to Europe.',
-      priority: 'medium priority',
-    ),
-    const Recommendation(
-      contactId: 'emily',
-      reason: 'You and Emily have been close lately.',
-      insight: 'This is her first week at the new role.',
-      priority: 'low priority',
-    ),
-  ];
-
   factory AppState.seeded() {
     final now = DateTime.now();
     final people = [

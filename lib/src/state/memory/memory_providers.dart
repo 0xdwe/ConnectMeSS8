@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../ai/ai_update.dart';
 import '../../models/social_models.dart';
 import '../app_state.dart';
+import '../recommendation_engine.dart';
 import 'file_memory_store.dart';
 import 'memory_document.dart';
 import 'memory_store.dart';
@@ -30,6 +31,28 @@ final aiUpdateProvider = Provider<AiUpdate>((ref) {
   return MockAiUpdate(
     memoryStore: ref.watch(memoryStoreProvider),
     appController: ref.read(appControllerProvider.notifier),
+  );
+});
+
+/// Bond-tier-weighted recency recommendations (PRD Q11).
+///
+/// Recomputes on every read in #047 — dual invalidation lands in #048.
+/// Watches only the slices the engine reads (connections, interactions);
+/// memory map is empty here because #047 ranking does not consume it.
+/// #048 will populate the memory map and add caching; #049 is when
+/// memories actually drive ranking.
+final recommendationsProvider = Provider<List<Recommendation>>((ref) {
+  final connections = ref.watch(
+    appControllerProvider.select((state) => state.connections),
+  );
+  final interactions = ref.watch(
+    appControllerProvider.select((state) => state.interactions),
+  );
+  return rankRecommendations(
+    connections: connections,
+    interactions: interactions,
+    memories: const {},
+    now: DateTime.now(),
   );
 });
 

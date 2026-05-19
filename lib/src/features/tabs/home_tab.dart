@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../state/app_state.dart';
+import '../../state/memory/memory_providers.dart';
 import '../../state/query_providers.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
@@ -23,7 +24,8 @@ class _HomeTabState extends ConsumerState<HomeTab> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final state = ref.watch(appControllerProvider);
-    final recs = showAll ? state.recommendations : state.recommendations.take(2).toList();
+    final allRecs = ref.watch(recommendationsProvider);
+    final recs = showAll ? allRecs : allRecs.take(2).toList();
     return ListView(
       key: const Key('home-tab'),
       padding: EdgeInsets.fromLTRB(
