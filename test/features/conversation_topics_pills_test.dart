@@ -89,4 +89,68 @@ void main() {
       expect(find.text('startup'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'tapping a memory-extracted pill with no curated entry shows the templated fallback',
+    (tester) async {
+      // Coverage for #044: a topic the curated `_topicSuggestions`
+      // map does not know about (e.g. 'kindergarten' — it's in the
+      // keyword extractor but not in any category's curated map)
+      // should drive the three rotating templates with `{topic}`
+      // and `{firstName}` slots filled in.
+      await _pumpAndSignIn(tester);
+
+      await tester.tap(find.text('People').last);
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('Mike Chen'),
+        120,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const Key('people-tab')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.tap(find.text('Mike Chen'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('update-with-ai-button')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('ai-input-field')),
+        "Mike's kid just started kindergarten last week.",
+      );
+      await tester.tap(find.byKey(const Key('run-ai-button')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('save-button')));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Conversation Topics'));
+      await tester.pumpAndSettle();
+
+      // Pill exists for the memory-extracted topic.
+      expect(find.text('kindergarten'), findsOneWidget);
+
+      // Tap the pill to open the suggestions sheet.
+      await tester.tap(find.text('kindergarten'));
+      await tester.pumpAndSettle();
+
+      // Three templated suggestions, slots filled with the topic and
+      // Mike's first name.
+      expect(find.text("How's the kindergarten going?"), findsOneWidget);
+      expect(
+        find.text(
+            'Last time you mentioned kindergarten \u2014 anything new?'),
+        findsOneWidget,
+      );
+      expect(
+        find.text("Curious how Mike's kindergarten is going."),
+        findsOneWidget,
+      );
+    },
+  );
 }
