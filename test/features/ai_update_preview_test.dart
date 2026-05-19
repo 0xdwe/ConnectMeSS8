@@ -437,6 +437,74 @@ void main() {
         expect(find.byKey(const Key('memory-delta-card')), findsNothing);
       },
     );
+
+    testWidgets(
+      'commit failure surfaces a snackbar and leaves memory + interactions unchanged',
+      (tester) async {
+        // PRD Q4 / #046 — the user-visible expression of the
+        // all-or-nothing contract on the AI Update screen. A forced
+        // commit failure must not log an interaction or persist
+        // memory; the user sees a retryable error.
+        final store = InMemoryMemoryStore();
+        final container = ProviderContainer(overrides: [
+          memoryStoreProvider.overrideWithValue(store),
+          aiUpdateProvider.overrideWith((ref) => MockAiUpdate(
+                memoryStore: ref.watch(memoryStoreProvider),
+                appController: ref.read(appControllerProvider.notifier),
+                failOnSave: true,
+              )),
+        ]);
+        addTearDown(container.dispose);
+
+        // Drive the seed pass so memory mirrors the seed shape.
+        await container.read(memorySeedingProvider.future);
+
+        final priorMemory = await store.load('mike');
+        final priorInteractionCount =
+            container.read(appControllerProvider).interactions.length;
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              theme: AppTheme.data(false),
+              home: const AiUpdateScreen(
+                contactId: 'mike',
+                initialAttachments: [],
+              ),
+            ),
+          ),
+        );
+
+        await tester.enterText(
+          find.byKey(const Key('ai-input-field')),
+          'Mike got a promotion',
+        );
+        await tester.tap(find.byKey(const Key('run-ai-button')));
+        await tester.pumpAndSettle();
+
+        // Hit Save — commit() throws on the save step.
+        await tester.tap(find.byKey(const Key('save-button')));
+        await tester.pumpAndSettle();
+
+        // Snackbar surfaces.
+        expect(
+          find.textContaining("Couldn't save update"),
+          findsOneWidget,
+        );
+        // Preview view stays — the screen did NOT pop.
+        expect(find.byKey(const Key('save-button')), findsOneWidget);
+        // Memory unchanged.
+        final afterMemory = await store.load('mike');
+        expect(afterMemory!.history, priorMemory!.history);
+        expect(afterMemory.topics, priorMemory.topics);
+        // Interactions unchanged.
+        expect(
+          container.read(appControllerProvider).interactions.length,
+          priorInteractionCount,
+        );
+      },
+    );
   });
 }
 

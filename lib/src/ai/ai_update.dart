@@ -5,6 +5,18 @@ import '../state/app_state.dart';
 import '../state/memory/memory_document.dart';
 import '../state/memory/memory_store.dart';
 
+/// Marker exception for engine-level [AiUpdate] failures (PRD Q4).
+///
+/// Thrown by [MockAiUpdate] under test-injection or by future LLM
+/// adapters when the run cannot produce a coherent result. Surfaced
+/// to the user as a snackbar by the AI Update screen.
+class AiUpdateFailure implements Exception {
+  const AiUpdateFailure(this.message);
+  final String message;
+  @override
+  String toString() => 'AiUpdateFailure: $message';
+}
+
 /// Unified AI-update seam (PRD Q1).
 ///
 /// One public entry point for the user-level operation "Update with AI
@@ -46,14 +58,39 @@ abstract interface class AiUpdate {
 /// date-stamped bullet to [MemoryDocument.history] so memory grows
 /// narrative on each AI update — the "memory grows" property is the
 /// whole point of #042.
+///
+/// All-or-nothing failure contract per PRD Q4 (#046):
+/// - [run] is purely constructive — no I/O, no state mutation. A
+///   failure in `run` cannot leave anything persisted.
+/// - [commit] persists memory first, then applies the state delta.
+///   If the state delta throws after the save succeeds, [commit]
+///   reverts the memory file so neither side observes the failed run.
+///
+/// Test injection: [failOnRun], [failOnSave], and [failOnApply] force
+/// failures at specific points to prove the contract. Not used in
+/// production wiring — only set by tests.
 class MockAiUpdate implements AiUpdate {
   MockAiUpdate({
     required this.memoryStore,
     required this.appController,
+    this.failOnRun = false,
+    this.failOnSave = false,
+    this.failOnApply = false,
   });
 
   final MemoryStore memoryStore;
   final AppController appController;
+
+  /// When true, [run] throws before producing a result. Test-only.
+  final bool failOnRun;
+
+  /// When true, [commit] throws on the [MemoryStore.save] step.
+  /// Wraps the store in a failing decorator. Test-only.
+  final bool failOnSave;
+
+  /// When true, [commit] throws on the state-delta step *after* the
+  /// memory save succeeds, exercising the rollback path. Test-only.
+  final bool failOnApply;
 
   static const _uuid = Uuid();
 
@@ -64,6 +101,9 @@ class MockAiUpdate implements AiUpdate {
     required MemoryDocument currentMemory,
     required List<AttachmentRef> attachments,
   }) async {
+    if (failOnRun) {
+      throw const AiUpdateFailure('test-injected run failure');
+    }
     final type = _categorize(userInput);
     final title = _titleFor(type);
     final now = DateTime.now();
@@ -118,17 +158,50 @@ class MockAiUpdate implements AiUpdate {
 
   @override
   Future<void> commit(AiUpdateResult result) async {
-    // 1. Persist the memory first. If save throws, the in-memory state
-    //    delta is never applied. The engine-level all-or-nothing
-    //    rollback is hardened in #046.
     final memory = result.memoryDocument;
+
+    // Capture the pre-run memory so the state-delta-failure path can
+    // restore the file. Loaded by contactId rather than passed in so
+    // the [AiUpdate] interface stays narrow — callers do not have to
+    // hand commit() the prior memory document.
+    final priorMemory =
+        memory == null ? null : await memoryStore.load(memory.contactId);
+
+    // 1. Persist the memory. If save throws, the in-memory state
+    //    delta is never applied — nothing has changed for the user.
     if (memory != null) {
+      if (failOnSave) {
+        throw const AiUpdateFailure('test-injected save failure');
+      }
       await memoryStore.save(memory);
     }
-    // 2. Apply the AppState delta: append interactions, bump bond,
-    //    update lastContact, set lastAiSummary. Same logic the old
-    //    AppController.commitAiUpdate had.
-    appController.applyAiUpdateResult(result);
+
+    // 2. Apply the AppState delta. If this throws after step 1
+    //    succeeded, the file rename has already committed but the
+    //    in-memory state has not — roll the file back so neither side
+    //    observes the failed run. This is the all-or-nothing rollback
+    //    PRD Q4 specifies (#046).
+    try {
+      if (failOnApply) {
+        throw const AiUpdateFailure('test-injected apply failure');
+      }
+      appController.applyAiUpdateResult(result);
+    } catch (e) {
+      if (memory != null) {
+        try {
+          if (priorMemory != null) {
+            await memoryStore.save(priorMemory);
+          } else {
+            await memoryStore.delete(memory.contactId);
+          }
+        } catch (_) {
+          // Best-effort rollback. The original failure is what the
+          // caller cares about; surfacing a rollback error would mask
+          // it.
+        }
+      }
+      rethrow;
+    }
   }
 
   // -- private helpers ------------------------------------------------

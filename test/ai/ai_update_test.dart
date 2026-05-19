@@ -1,3 +1,4 @@
+import 'package:connect_me/src/ai/ai_update.dart';
 import 'package:connect_me/src/models/social_models.dart';
 import 'package:connect_me/src/state/app_state.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
@@ -391,6 +392,144 @@ void main() {
           );
 
       expect(result.memoryDocument!.topics, ['existing-topic']);
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // PRD Q4 / #046 — all-or-nothing failure contract.
+  //
+  // The Mock path's failures are essentially impossible by
+  // construction; the contract earns its keep when the LLM lands.
+  // Test injection knobs (`failOnRun`, `failOnSave`, `failOnApply`)
+  // exist solely to prove the contract here.
+  // ---------------------------------------------------------------
+  group('AiUpdate all-or-nothing (PRD Q4 / #046)', () {
+    test('failOnRun: nothing persists, both sides observe the pre-run state',
+        () async {
+      final store = InMemoryMemoryStore();
+      final container = ProviderContainer(overrides: [
+        memoryStoreProvider.overrideWithValue(store),
+        aiUpdateProvider.overrideWith((ref) => MockAiUpdate(
+              memoryStore: ref.watch(memoryStoreProvider),
+              appController: ref.read(appControllerProvider.notifier),
+              failOnRun: true,
+            )),
+      ]);
+      addTearDown(container.dispose);
+
+      // Drive the seed migration so the store mirrors the seed shape.
+      await container.read(memorySeedingProvider.future);
+
+      final mike = _connection(container.read(appControllerProvider), 'mike');
+      final priorMemory = await container.read(memoryProvider('mike').future);
+      final priorInteractionCount =
+          container.read(appControllerProvider).interactions.length;
+
+      await expectLater(
+        container.read(aiUpdateProvider).run(
+              contact: mike,
+              userInput: 'this run will fail',
+              currentMemory: priorMemory,
+              attachments: const [],
+            ),
+        throwsA(isA<AiUpdateFailure>()),
+      );
+
+      // Memory unchanged.
+      final afterMemory = await store.load('mike');
+      expect(afterMemory!.history, priorMemory.history);
+      expect(afterMemory.topics, priorMemory.topics);
+      // Interaction list unchanged.
+      expect(
+        container.read(appControllerProvider).interactions.length,
+        priorInteractionCount,
+      );
+    });
+
+    test('failOnSave: state delta is never applied; memory unchanged',
+        () async {
+      final store = InMemoryMemoryStore();
+      final container = ProviderContainer(overrides: [
+        memoryStoreProvider.overrideWithValue(store),
+        aiUpdateProvider.overrideWith((ref) => MockAiUpdate(
+              memoryStore: ref.watch(memoryStoreProvider),
+              appController: ref.read(appControllerProvider.notifier),
+              failOnSave: true,
+            )),
+      ]);
+      addTearDown(container.dispose);
+
+      await container.read(memorySeedingProvider.future);
+
+      final mike = _connection(container.read(appControllerProvider), 'mike');
+      final priorMemory = await container.read(memoryProvider('mike').future);
+      final priorInteractionCount =
+          container.read(appControllerProvider).interactions.length;
+
+      // run() succeeds (run is purely constructive), commit() fails.
+      final adapter = container.read(aiUpdateProvider);
+      final result = await adapter.run(
+        contact: mike,
+        userInput: 'Mike got a promotion',
+        currentMemory: priorMemory,
+        attachments: const [],
+      );
+      await expectLater(
+        adapter.commit(result),
+        throwsA(isA<AiUpdateFailure>()),
+      );
+
+      final afterMemory = await store.load('mike');
+      expect(afterMemory!.history, priorMemory.history);
+      expect(
+        container.read(appControllerProvider).interactions.length,
+        priorInteractionCount,
+      );
+    });
+
+    test(
+        'failOnApply: memory file is rolled back to the pre-run state '
+        'after the in-memory delta throws', () async {
+      final store = InMemoryMemoryStore();
+      final container = ProviderContainer(overrides: [
+        memoryStoreProvider.overrideWithValue(store),
+        aiUpdateProvider.overrideWith((ref) => MockAiUpdate(
+              memoryStore: ref.watch(memoryStoreProvider),
+              appController: ref.read(appControllerProvider.notifier),
+              failOnApply: true,
+            )),
+      ]);
+      addTearDown(container.dispose);
+
+      await container.read(memorySeedingProvider.future);
+
+      final mike = _connection(container.read(appControllerProvider), 'mike');
+      final priorMemory = await container.read(memoryProvider('mike').future);
+      final priorInteractionCount =
+          container.read(appControllerProvider).interactions.length;
+
+      final adapter = container.read(aiUpdateProvider);
+      final result = await adapter.run(
+        contact: mike,
+        userInput: 'Mike got a promotion',
+        currentMemory: priorMemory,
+        attachments: const [],
+      );
+      await expectLater(
+        adapter.commit(result),
+        throwsA(isA<AiUpdateFailure>()),
+      );
+
+      // The save succeeded then the apply threw — the rollback
+      // restored the pre-run memory.
+      final afterMemory = await store.load('mike');
+      expect(afterMemory!.history, priorMemory.history);
+      expect(afterMemory.topics, priorMemory.topics);
+      // State delta also never landed.
+      expect(
+        container.read(appControllerProvider).interactions.length,
+        priorInteractionCount,
+      );
     });
   });
 }
