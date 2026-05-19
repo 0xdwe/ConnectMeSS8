@@ -143,6 +143,15 @@ class RecommendationsNotifier extends Notifier<List<Recommendation>> {
       return cache.list;
     }
 
+    // PRD Q12 / #049: the engine knows how to surface upcoming-driven
+    // cards from `memory.upcoming`, but the Mock updater never
+    // populates that section. Aggregating the memory map for
+    // production reads requires async I/O against `MemoryStore` which
+    // doesn't fit a sync `Notifier.build()`. Pass `const {}` for now
+    // — the engine logic is fixture-tested, and a follow-up issue
+    // wires the loaded map when (a) `LlmAiUpdate` lands in Pass 4 and
+    // starts producing upcoming entries, or (b) the demo path needs
+    // hand-edited upcoming entries surfaced.
     final list = rankRecommendations(
       connections: connections,
       interactions: interactions,

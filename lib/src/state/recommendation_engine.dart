@@ -27,8 +27,46 @@ List<Recommendation> rankRecommendations({
   required Map<String, MemoryDocument> memories,
   required DateTime now,
 }) {
+  // 1. Upcoming-driven special cards (PRD Q12).
+  //
+  //    Surface a special recommendation when a `MemoryDocument.upcoming`
+  //    entry's endDate (or startDate if no endDate) falls in the
+  //    window [now - 3d, now + 1d]. These cards rank ABOVE the
+  //    bond-tier-weighted ranking and reduce the remaining slot count
+  //    accordingly — we'd rather surface "Sam just got back from
+  //    USA" than a third drifting reminder.
+  //
+  //    The Mock updater never populates `upcoming` (extracting
+  //    "tomorrow" / "for a week" deterministically is too brittle).
+  //    The engine logic exists so Pass 4's LLM adapter doesn't have
+  //    to revisit the engine when memory.upcoming starts being
+  //    populated for real.
+  final byId = {for (final c in connections) c.id: c};
+  final special = <Recommendation>[];
+  // Iterate connections rather than memories.entries so output order
+  // is deterministic regardless of the map's iteration order.
+  for (final connection in connections) {
+    final memory = memories[connection.id];
+    if (memory == null) continue;
+    for (final entry in memory.upcoming) {
+      final card = _upcomingRecommendation(connection, entry, now);
+      if (card != null) {
+        special.add(card);
+        break; // At most one upcoming card per contact.
+      }
+    }
+  }
+
+  final remainingSlots = 3 - special.length;
+  if (remainingSlots <= 0) {
+    return special.take(3).toList(growable: false);
+  }
+
+  // 2. Bond-tier-weighted recency for the remaining slots (PRD Q11).
+  final specialIds = {for (final r in special) r.contactId};
   final scored = <_Scored>[];
   for (final connection in connections) {
+    if (specialIds.contains(connection.id)) continue; // de-dupe
     final daysSince = now.difference(connection.lastContact).inDays;
     if (daysSince < 1) continue; // 24h cooldown
     final tier = BondTier.from(connection.bondScore);
@@ -42,8 +80,14 @@ List<Recommendation> rankRecommendations({
     ));
   }
   scored.sort((a, b) => b.score.compareTo(a.score));
-  final top = scored.take(3).toList(growable: false);
-  return top.map(_toRecommendation).toList(growable: false);
+  final ranked = scored.take(remainingSlots).map(_toRecommendation);
+
+  // Reference `byId` so the variable isn't dead in builds where the
+  // upcoming branch never matched any contact. Also documents that
+  // the lookup is by id.
+  assert(byId.length == connections.length);
+
+  return [...special, ...ranked];
 }
 
 double _tierWeight(BondTier tier) => switch (tier) {
@@ -106,3 +150,53 @@ String _priorityFor(BondTier tier) => switch (tier) {
       BondTier.steady => 'medium priority',
       BondTier.close => 'low priority',
     };
+
+// ---------------------------------------------------------------------------
+// Upcoming-driven cards (PRD Q12 / #049).
+// ---------------------------------------------------------------------------
+
+/// Window edges, expressed as durations from `now`. The window is
+/// `[now - postTripWindow, now + preTripWindow]` for the entry's
+/// effective date (endDate when present, otherwise startDate).
+const Duration _postTripWindow = Duration(days: 3);
+const Duration _preTripWindow = Duration(days: 1);
+
+/// Returns a special-card recommendation for `entry` if its effective
+/// date sits in the trip window, else null.
+///
+/// Effective date: `endDate` if present, else `startDate`. The two
+/// flavors of card are:
+///   - Post-trip:  effective ∈ [now - 3d, now]
+///   - Pre-trip:   effective ∈ (now, now + 1d]
+///
+/// Anti-shame guardrail still applies: no numeric day counts in copy.
+Recommendation? _upcomingRecommendation(
+  Connection connection,
+  UpcomingEntry entry,
+  DateTime now,
+) {
+  final effective = entry.endDate ?? entry.startDate;
+  final earliest = now.subtract(_postTripWindow);
+  final latest = now.add(_preTripWindow);
+  if (effective.isBefore(earliest) || effective.isAfter(latest)) {
+    return null;
+  }
+  final isPostTrip = !effective.isAfter(now); // effective ≤ now
+  final reason = isPostTrip
+      ? '${connection.name} just got back from ${entry.description} — '
+          'ask how it went'
+      : "${connection.name}'s ${entry.description} starts tomorrow — "
+          'wish them well';
+  final insight = isPostTrip
+      ? 'They might have stories to share.'
+      : 'A short note before they head out goes a long way.';
+  return Recommendation(
+    contactId: connection.id,
+    reason: reason,
+    insight: insight,
+    // Upcoming cards are time-bound and visible regardless of tier;
+    // tag them medium so existing UI doesn't render a high-priority
+    // pill for what is really a warmth nudge.
+    priority: 'medium priority',
+  );
+}
