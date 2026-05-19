@@ -205,7 +205,20 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
       memoryDocument: previewResult!.memoryDocument,
     );
 
-    await ref.read(aiUpdateProvider).commit(editedResult);
+    try {
+      await ref.read(aiUpdateProvider).commit(editedResult);
+    } catch (e) {
+      // PRD Q4 / #046: a failed commit leaves both memory and
+      // interactions exactly as they were. Surface the error and
+      // stay on the preview view so the user can retry.
+      if (mounted) {
+        setState(() => currentState = AiUpdateState.previewing);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Couldn\'t save update — try again. ($e)')),
+        );
+      }
+      return;
+    }
     // Drop the captured pre-run memory once committed; the next run
     // will recapture it from `memoryProvider`.
     priorMemory = null;
