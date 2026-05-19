@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../models/social_models.dart';
 import '../state/app_state.dart';
+import '../state/memory/memory_providers.dart';
 import '../state/query_providers.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
@@ -70,11 +71,17 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
   Future<void> submit() async {
     setState(() => currentState = AiUpdateState.generating);
     try {
-      final result = await ref.read(appControllerProvider.notifier).previewAiUpdate(
-        widget.contactId,
-        input.text.trim(),
-        attachments,
-      );
+      final connection = ref
+          .read(appControllerProvider)
+          .connections
+          .firstWhere((c) => c.id == widget.contactId);
+      final memory = await ref.read(memoryProvider(widget.contactId).future);
+      final result = await ref.read(aiUpdateProvider).run(
+            contact: connection,
+            userInput: input.text.trim(),
+            currentMemory: memory,
+            attachments: attachments,
+          );
       
       // Initialize controllers for editable fields
       titleControllers = result.interactions
@@ -165,9 +172,13 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
       contactId: previewResult!.contactId,
       interactions: editedInteractions,
       nextStep: previewResult!.nextStep,
+      // Pass through the memory delta unchanged — the user only edits
+      // interaction title/note in this slice; the memory append is
+      // produced by `AiUpdate.run` and committed as-is.
+      memoryDocument: previewResult!.memoryDocument,
     );
-    
-    ref.read(appControllerProvider.notifier).commitAiUpdate(editedResult);
+
+    await ref.read(aiUpdateProvider).commit(editedResult);
     
     if (mounted) {
       final person = ref.read(contactByIdProvider(widget.contactId));

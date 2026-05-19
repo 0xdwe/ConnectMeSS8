@@ -8,6 +8,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// #042: AiUpdateScreen now reads `memoryProvider(contactId).future`
+/// before running AI, which routes through `memoryStoreProvider`. The
+/// production override is `FileMemoryStore` and would do real disk
+/// I/O under `pumpAndSettle`; widget tests install an in-memory store.
+Widget _wrapScreen({required String contactId, List<AttachmentRef>? initialAttachments}) {
+  return ProviderScope(
+    overrides: [
+      memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+    ],
+    child: MaterialApp(
+      theme: AppTheme.data(false),
+      home: AiUpdateScreen(
+        contactId: contactId,
+        initialAttachments: initialAttachments,
+      ),
+    ),
+  );
+}
+
 Future<void> _pumpAndSignIn(WidgetTester tester) async {
   // #041: production memoryStoreProvider returns FileMemoryStore. Real
   // disk I/O can't run under pumpAndSettle's fake async, so widget
@@ -36,14 +55,7 @@ Future<void> _pumpAndSignIn(WidgetTester tester) async {
 void main() {
   group('AI Update Screen State Machine', () {
     testWidgets('starts in inputting state with form visible', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.data(false),
-          home: const ProviderScope(
-            child: AiUpdateScreen(contactId: 'mike'),
-          ),
-        ),
-      );
+      await tester.pumpWidget(_wrapScreen(contactId: 'mike'));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('ai-input-field')), findsOneWidget);
@@ -52,14 +64,7 @@ void main() {
     });
 
     testWidgets('transitions to previewing state after AI generates result', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.data(false),
-          home: const ProviderScope(
-            child: AiUpdateScreen(contactId: 'mike'),
-          ),
-        ),
-      );
+      await tester.pumpWidget(_wrapScreen(contactId: 'mike'));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -79,14 +84,7 @@ void main() {
     });
 
     testWidgets('preview shows editable title and note fields', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.data(false),
-          home: const ProviderScope(
-            child: AiUpdateScreen(contactId: 'mike'),
-          ),
-        ),
-      );
+      await tester.pumpWidget(_wrapScreen(contactId: 'mike'));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -105,14 +103,7 @@ void main() {
     });
 
     testWidgets('user can edit preview fields before saving', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.data(false),
-          home: const ProviderScope(
-            child: AiUpdateScreen(contactId: 'mike'),
-          ),
-        ),
-      );
+      await tester.pumpWidget(_wrapScreen(contactId: 'mike'));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -133,14 +124,7 @@ void main() {
     });
 
     testWidgets('cancel button returns to inputting state', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.data(false),
-          home: const ProviderScope(
-            child: AiUpdateScreen(contactId: 'mike'),
-          ),
-        ),
-      );
+      await tester.pumpWidget(_wrapScreen(contactId: 'mike'));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -232,16 +216,11 @@ void main() {
     'image attachments render as previews, non-image attachments render as chips',
     (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.data(false),
-          home: const ProviderScope(
-            child: AiUpdateScreen(
-              contactId: 'mike',
-              initialAttachments: [
-                AttachmentRef(name: 'photo.jpg', path: '/tmp/missing.jpg'),
-              ],
-            ),
-          ),
+        _wrapScreen(
+          contactId: 'mike',
+          initialAttachments: const [
+            AttachmentRef(name: 'photo.jpg', path: '/tmp/missing.jpg'),
+          ],
         ),
       );
       await tester.pumpAndSettle();

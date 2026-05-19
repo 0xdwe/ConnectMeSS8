@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../ai/ai_update.dart';
 import '../../models/social_models.dart';
 import '../app_state.dart';
 import 'file_memory_store.dart';
@@ -14,6 +15,23 @@ import 'memory_store.dart';
 final memoryStoreProvider = Provider<MemoryStore>(
   (ref) => FileMemoryStore(),
 );
+
+/// Unified [AiUpdate] adapter (PRD Q1).
+///
+/// Production returns a [MockAiUpdate] wired to the active store and
+/// the live [AppController]. Tests override either this provider
+/// directly (to install a stub) or [memoryStoreProvider] alone (since
+/// the production adapter reads whatever store override is in place).
+///
+/// `ref.read` for the controller — the adapter just needs a handle and
+/// does not need to react to AppState changes. `ref.watch` for the
+/// store so swapping the store override in tests takes effect.
+final aiUpdateProvider = Provider<AiUpdate>((ref) {
+  return MockAiUpdate(
+    memoryStore: ref.watch(memoryStoreProvider),
+    appController: ref.read(appControllerProvider.notifier),
+  );
+});
 
 /// Per-contact [MemoryDocument] (family by `contactId`).
 ///

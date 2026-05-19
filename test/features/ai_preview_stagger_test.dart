@@ -1,13 +1,24 @@
 import 'package:connect_me/src/features/ai_update_screen.dart';
+import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
+import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// #042: AiUpdateScreen now reads `memoryProvider(contactId).future`
+/// before running AI. Override `memoryStoreProvider` so widget tests
+/// don't stall on real disk I/O via the production `FileMemoryStore`.
+ProviderContainer _container() {
+  return ProviderContainer(overrides: [
+    memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+  ]);
+}
+
 void main() {
   group('AI Preview Stagger Animation', () {
     testWidgets('first card starts with low opacity and fades in', (tester) async {
-      final container = ProviderContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       // Build the screen
@@ -55,7 +66,7 @@ void main() {
     });
 
     testWidgets('cards stagger by 80ms per index', (tester) async {
-      final container = ProviderContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       await tester.pumpWidget(
@@ -113,7 +124,7 @@ void main() {
     });
 
     testWidgets('cards translate from 8px down to 0', (tester) async {
-      final container = ProviderContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       await tester.pumpWidget(
@@ -156,7 +167,7 @@ void main() {
     });
 
     testWidgets('reduce motion: all cards render at full opacity immediately', (tester) async {
-      final container = ProviderContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       await tester.pumpWidget(
