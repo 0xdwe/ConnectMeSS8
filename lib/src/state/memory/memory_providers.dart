@@ -2,16 +2,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/social_models.dart';
 import '../app_state.dart';
-import 'in_memory_memory_store.dart';
+import 'file_memory_store.dart';
 import 'memory_document.dart';
 import 'memory_store.dart';
 
-/// Active [MemoryStore] for the running app. Defaults to the in-memory
-/// adapter for this Pass 3 slice; #041 overrides this to a file-backed
-/// adapter at the root `ProviderScope`. Tests override it to install a
+/// Active [MemoryStore] for the running app. Production returns the
+/// file-backed adapter writing to `<app_documents>/memories/` per
+/// PRD Q6. Tests override it with `InMemoryMemoryStore` (or a
+/// `FileMemoryStore` rooted at a temp directory) to install a
 /// pre-populated store or skip seeding.
 final memoryStoreProvider = Provider<MemoryStore>(
-  (ref) => InMemoryMemoryStore(),
+  (ref) => FileMemoryStore(),
 );
 
 /// Per-contact [MemoryDocument] (family by `contactId`).

@@ -1,11 +1,17 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
 import 'package:connect_me/src/state/app_state.dart';
+import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
+import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<ProviderContainer> _pumpAndSignIn(WidgetTester tester) async {
-  final container = ProviderContainer();
+  final container = ProviderContainer(
+    overrides: [
+      memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+    ],
+  );
   addTearDown(container.dispose);
   await tester.pumpWidget(
     UncontrolledProviderScope(
