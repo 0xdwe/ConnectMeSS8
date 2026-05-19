@@ -90,8 +90,18 @@ class MockAiUpdate implements AiUpdate {
     final newHistory = currentMemory.history.isEmpty
         ? bullet
         : '${currentMemory.history}\n$bullet';
+
+    // Extract topics from the user input and merge into the existing
+    // memory.topics list. Dedup is case-insensitive (existing entry
+    // wins so original case is preserved); cap is 8 with oldest-first
+    // eviction (PRD Q6). Cap is enforced both here — so the preview
+    // shows the post-cap candidate — and in `MemoryDocument.render()`.
+    final extracted = _extractTopics(userInput);
+    final mergedTopics = _mergeTopics(currentMemory.topics, extracted);
+
     final newMemory = currentMemory.copyWith(
       history: newHistory,
+      topics: mergedTopics,
       lastUpdated: now,
     );
 
@@ -166,4 +176,69 @@ class MockAiUpdate implements AiUpdate {
     if (s.length <= max) return s;
     return '${s.substring(0, max)}…';
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Topic extractor (PRD Q7).
+//
+// Hand-curated keyword list across family, career, location, health,
+// hobbies, and milestones. Substring matching against the
+// lowercased user input. Determinism: results follow keyword-list
+// order (not input order), so the same input always produces the
+// same extracted topics in the same sequence — the property the
+// PRD calls out explicitly.
+//
+// Templated suggestion fallback for memory-extracted topics with no
+// curated entry lands in #044, not here.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const List<String> _topicKeywords = <String>[
+  // family
+  'kindergarten', 'wedding', 'engaged', 'pregnant', 'baby', 'married',
+  'divorced', 'parent', 'mom', 'dad',
+  // career
+  'promotion', 'startup', 'interview', 'fired', 'quit', 'hired', 'raise',
+  'job', 'project',
+  // location
+  'moved', 'travel', 'vacation', 'relocated', 'trip',
+  // health
+  'surgery', 'sick', 'hospital', 'recovering', 'doctor',
+  // hobbies
+  'marathon', 'gym', 'learning', 'reading', 'concert', 'art', 'music',
+  // milestones
+  'birthday', 'anniversary', 'graduated', 'bought', 'house',
+];
+
+/// Returns the keywords from [_topicKeywords] that appear as substrings
+/// of [userInput] (case-insensitive). Output preserves keyword-list
+/// order, so callers get a deterministic sequence regardless of where
+/// the keyword appears in the input.
+List<String> _extractTopics(String userInput) {
+  if (userInput.isEmpty) return const [];
+  final haystack = userInput.toLowerCase();
+  final found = <String>[];
+  for (final keyword in _topicKeywords) {
+    if (haystack.contains(keyword)) found.add(keyword);
+  }
+  return found;
+}
+
+/// Merges [extracted] into [existing] with case-insensitive dedup
+/// (existing entry wins so the on-disk case is preserved), then caps
+/// at [MemoryDocument.topicCap] with oldest-first eviction.
+///
+/// Note: this is dedup-on-merge; render also dedupes/caps. The two
+/// rules agree on the final state, but merging here keeps the preview
+/// candidate already capped — callers do not have to round-trip
+/// through render to see the persisted shape.
+List<String> _mergeTopics(List<String> existing, List<String> extracted) {
+  final seen = <String>{for (final t in existing) t.toLowerCase()};
+  final out = <String>[...existing];
+  for (final topic in extracted) {
+    final key = topic.toLowerCase();
+    if (seen.add(key)) out.add(topic);
+  }
+  if (out.length <= MemoryDocument.topicCap) return out;
+  // Oldest-first eviction: drop from the head until we hit the cap.
+  return out.sublist(out.length - MemoryDocument.topicCap);
 }
