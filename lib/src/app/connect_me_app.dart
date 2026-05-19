@@ -69,8 +69,11 @@ class _MemorySeedingSplash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator.adaptive()),
-    );
+    // Static placeholder rather than a spinner. The seed pass resolves
+    // in microseconds (in-memory) or tens of milliseconds (file), so
+    // the user never visibly sees this frame. A `CircularProgressIndicator`
+    // here would also break `pumpAndSettle` in widget tests, since its
+    // animation never stops.
+    return const Scaffold(body: SizedBox.shrink());
   }
 }

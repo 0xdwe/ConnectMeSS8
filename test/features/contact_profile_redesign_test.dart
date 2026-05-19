@@ -1,13 +1,22 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
+import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
+import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:connect_me/src/widgets/bond_ring.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-// Helper to pump ContactProfileScreen with full app context
+// Helper to pump ContactProfileScreen with full app context. #041:
+// override memoryStoreProvider so the seed pass doesn't hit real disk
+// I/O under pumpAndSettle's fake async.
 Future<void> pumpProfileScreen(WidgetTester tester, String contactId) async {
   await tester.pumpWidget(
-    const ProviderScope(child: ConnectMeApp()),
+    ProviderScope(
+      overrides: [
+        memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+      ],
+      child: const ConnectMeApp(),
+    ),
   );
   await tester.pumpAndSettle();
   

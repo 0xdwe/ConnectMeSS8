@@ -1,10 +1,24 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
+import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
+import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+Widget _bootedApp() {
+  // #041: production memoryStoreProvider returns FileMemoryStore. Real
+  // disk I/O can't run under pumpAndSettle's fake async, so widget
+  // tests override to InMemoryMemoryStore.
+  return ProviderScope(
+    overrides: [
+      memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+    ],
+    child: const ConnectMeApp(),
+  );
+}
+
 Future<void> _pumpAndSignIn(WidgetTester tester) async {
-  await tester.pumpWidget(const ProviderScope(child: ConnectMeApp()));
+  await tester.pumpWidget(_bootedApp());
   await tester.pumpAndSettle();
   await tester.enterText(
     find.byKey(const Key('login-email-field')),
@@ -66,7 +80,7 @@ void main() {
   });
 
   testWidgets('manual interactions do not show AI tag', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: ConnectMeApp()));
+    await tester.pumpWidget(_bootedApp());
     await tester.pumpAndSettle();
 
     await tester.enterText(

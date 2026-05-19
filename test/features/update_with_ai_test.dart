@@ -1,13 +1,25 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
 import 'package:connect_me/src/features/ai_update_screen.dart';
 import 'package:connect_me/src/models/social_models.dart';
+import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
+import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> _pumpAndSignIn(WidgetTester tester) async {
-  await tester.pumpWidget(const ProviderScope(child: ConnectMeApp()));
+  // #041: production memoryStoreProvider returns FileMemoryStore. Real
+  // disk I/O can't run under pumpAndSettle's fake async, so widget
+  // tests override to InMemoryMemoryStore.
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+      ],
+      child: const ConnectMeApp(),
+    ),
+  );
   await tester.pumpAndSettle();
   await tester.enterText(
     find.byKey(const Key('login-email-field')),
