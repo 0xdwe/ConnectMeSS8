@@ -61,22 +61,24 @@ void main() {
     expect(state.lastAiSummary, contains('Reminder'));
   });
 
-  test('contactInsightFor returns future-AI-shaped insight data', () {
+  test('contactInsightFor returns relationship metadata', () {
     final container = _container();
     addTearDown(container.dispose);
 
     final state = container.read(appControllerProvider);
     final insight = state.contactInsightFor('jessica');
 
+    // #050 trimmed ContactInsight to (contactId, relationshipLabel,
+    // knownSinceYears). Person Summary now reads MemoryDocument.summary
+    // via memoryProvider; "why now" copy comes from
+    // RecommendationEngine output. The deleted assertions on summary,
+    // why, recommendedAction, potentialScoreGain, preferredChannels,
+    // and frequencyByMonth covered widgets that were already removed
+    // by Pass 2 (RecommendedActionCard, CommunicationChannelsCard,
+    // InteractionFrequencyCard).
     expect(insight.contactId, 'jessica');
-    expect(insight.summary, isNotEmpty);
-    expect(insight.why, isNotEmpty);
-    expect(insight.recommendedAction, isNotEmpty);
-    expect(insight.potentialScoreGain, greaterThan(0));
     expect(insight.relationshipLabel, 'College');
     expect(insight.knownSinceYears, greaterThanOrEqualTo(1));
-    expect(insight.preferredChannels, contains('FaceTime'));
-    expect(insight.frequencyByMonth, hasLength(12));
   });
 
   test('user profile updates drive app state', () {

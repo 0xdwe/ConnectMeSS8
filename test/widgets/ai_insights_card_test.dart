@@ -39,19 +39,11 @@ Connection _connection({
 
 ContactInsight _insight({
   String contactId = 'test',
-  String why =
-      'Long-standing connection with steady check-ins and shared milestones.',
 }) {
   return ContactInsight(
     contactId: contactId,
-    summary: 'Steady friend.',
-    why: why,
-    recommendedAction: 'Send a casual hello.',
-    potentialScoreGain: 4,
     relationshipLabel: 'Close friend',
     knownSinceYears: 6,
-    preferredChannels: const ['Text'],
-    frequencyByMonth: const [1, 2, 1, 0, 1, 1, 1, 2, 1, 0, 1, 2],
   );
 }
 
@@ -125,13 +117,17 @@ void main() {
       );
     });
 
-    testWidgets('renders Person Summary body from ContactInsight.why',
+    testWidgets('renders Person Summary body from MemoryDocument.summary',
         (tester) async {
+      // Pre-#050 this test fed the body via `ContactInsight.why`. After
+      // #050 the body comes from `MemoryDocument.summary` threaded
+      // through the `memorySummary` parameter on `AiInsightsCard`.
       await tester.pumpWidget(
         _wrap(
           AiInsightsCard(
             connection: _connection(),
-            insight: _insight(why: 'Bespoke summary string for this test.'),
+            insight: _insight(),
+            memorySummary: 'Bespoke summary string for this test.',
           ),
         ),
       );

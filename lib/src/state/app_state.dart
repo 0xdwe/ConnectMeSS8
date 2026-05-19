@@ -250,65 +250,16 @@ class AppState {
     final contact = connections.firstWhere(
       (connection) => connection.id == contactId,
     );
-    final contactInteractions = interactions
-        .where((interaction) => interaction.contactId == contactId)
-        .toList();
     final now = DateTime.now();
-    final daysSinceContact = now.difference(contact.lastContact).inDays;
     final knownSinceYears = (now.difference(contact.knownSince).inDays / 365)
         .floor()
         .clamp(1, 99);
-    final frequency = _frequencyByMonth(contactInteractions, now);
-    final channel = contact.preferredChannels.isEmpty
-        ? 'Text'
-        : contact.preferredChannels.first;
-    final timing = daysSinceContact >= 21
-        ? '$daysSinceContact days since your last contact'
-        : 'recent momentum from contact $daysSinceContact days ago';
-    final frequencyTotal = frequency.reduce((sum, count) => sum + count);
 
     return ContactInsight(
       contactId: contact.id,
-      summary: '$timing. Reach out via $channel to keep ${contact.name} close.',
-      why:
-          'Last contact was $daysSinceContact days ago; ${contact.category} relationship, ${contact.bondScore} bond score, $frequencyTotal interactions in the last 12 months.',
-      recommendedAction: contact.nextStep,
-      potentialScoreGain: _potentialGain(contact.bondScore, daysSinceContact),
       relationshipLabel: contact.category,
       knownSinceYears: knownSinceYears,
-      preferredChannels: contact.preferredChannels,
-      frequencyByMonth: frequency,
-      aiConfidence: 0.82,
     );
-  }
-
-  static int _potentialGain(int bondScore, int daysSinceContact) {
-    if (daysSinceContact >= 30 && bondScore < 75) return 10;
-    if (daysSinceContact >= 21) return 8;
-    if (bondScore >= 85) return 4;
-    return 6;
-  }
-
-  static List<int> _frequencyByMonth(
-    List<CrmInteraction> contactInteractions,
-    DateTime now,
-  ) {
-    final months = List<int>.filled(12, 0);
-    final firstMonth = DateTime(now.year, now.month - 11);
-    for (final interaction in contactInteractions) {
-      final interactionMonth = DateTime(
-        interaction.date.year,
-        interaction.date.month,
-      );
-      final monthOffset =
-          (interactionMonth.year - firstMonth.year) * 12 +
-          interactionMonth.month -
-          firstMonth.month;
-      if (monthOffset >= 0 && monthOffset < months.length) {
-        months[monthOffset] += 1;
-      }
-    }
-    return months;
   }
 }
 
