@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/social_models.dart';
+import '../state/conversation_topics.dart';
+import '../state/memory/memory_document.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
@@ -804,82 +806,15 @@ class ConnectionScoreHero extends StatelessWidget {
 //
 // Three subsections:
 //   1. Recommendation callout — bond-tier-derived encouragement
-//   2. Person Summary         — ContactInsight.why
-//   3. Conversation Topics    — category-keyed pill tags + tap-to-open
+//   2. Person Summary         — ContactInsight.why / memory.summary
+//   3. Conversation Topics    — memory-derived pill tags + tap-to-open
 //                                bottom sheet of static suggestions
 //
-// The category-keyed topics helper and suggestions map are the
-// Pass 3 swap point per docs/prd/2026-05-16-per-contact-memory-files-prd.md.
-// When memory lands, `topicsForContact` and `suggestionsForTopic`
-// redirect to memory-derived data.
+// The category-keyed topics helper and suggestions map live in
+// `lib/src/state/conversation_topics.dart` (extracted in #043). When
+// `memory.topics` is non-empty, those topics drive the pill row;
+// otherwise the static category-default fallback applies.
 // ─────────────────────────────────────────────────────────────────────────────
-
-const Map<String, List<String>> _topicDefaultsByCategory = {
-  'Family':      ['Family updates', 'Shared memories', 'Daily life', 'Future plans'],
-  'Friends':     ['Recent meetups', 'Inside jokes', 'Plans together', 'Life updates'],
-  'College':     ['Old classes', 'Mutual friends', 'Career', 'Reunions'],
-  'High School': ['Old times', 'Mutual friends', 'Where they are now', 'Reunions'],
-  'Work':        ['Projects', 'Career', 'Industry news', 'Team updates'],
-};
-
-const List<String> _genericTopicDefaults = [
-  'Recent updates',
-  'Shared interests',
-  'Life events',
-  'Future plans',
-];
-
-/// Returns up to 4 topic strings for a contact, keyed by category.
-/// Pass 3 swap point: this becomes a memory-derived read.
-List<String> topicsForContact(Connection connection) {
-  final list = _topicDefaultsByCategory[connection.category] ?? _genericTopicDefaults;
-  return list.take(4).toList(growable: false);
-}
-
-const Map<String, Map<String, List<String>>> _topicSuggestions = {
-  'Family': {
-    'Family updates':  ['Ask how the family is doing', 'Share a recent family photo', 'Mention an upcoming family event'],
-    'Shared memories': ['Recall a favorite holiday', 'Bring up a childhood story', 'Reference a shared inside joke'],
-    'Daily life':      ['Ask about their week', 'Share something from your routine', 'Plan a regular check-in'],
-    'Future plans':    ['Discuss travel ideas', 'Talk about upcoming milestones', 'Mention something you want to do together'],
-  },
-  'Friends': {
-    'Recent meetups':  ['Reference the last hangout', 'Plan the next one', 'Share a photo from the last meet-up'],
-    'Inside jokes':    ['Bring up a running joke', 'Send a meme that fits your vibe', 'Reminisce about a funny moment'],
-    'Plans together':  ['Suggest a coffee or meal', 'Pitch a small adventure', 'Pick a date that works for both'],
-    'Life updates':    ['Ask what\'s been new lately', 'Share something from your week', 'Catch up on the bigger picture'],
-  },
-  'College': {
-    'Old classes':       ['Bring up a favorite class', 'Reference a tough exam you survived', 'Mention a professor you both had'],
-    'Mutual friends':    ['Ask if they\'re still in touch with someone', 'Share an update about a mutual friend', 'Suggest a small reunion'],
-    'Career':            ['Ask how work is going', 'Share a career update of your own', 'Talk about industry shifts'],
-    'Reunions':          ['Float a meet-up idea', 'Mention an upcoming alumni event', 'Suggest a video call to catch up'],
-  },
-  'High School': {
-    'Old times':              ['Reference a memorable moment', 'Share an old photo', 'Bring up a teacher you both remember'],
-    'Mutual friends':         ['Ask about a shared friend', 'Suggest a group chat', 'Share what you\'ve heard from someone'],
-    'Where they are now':     ['Ask what they\'re up to these days', 'Share what you\'re focused on', 'Compare notes on life stage'],
-    'Reunions':               ['Mention an upcoming reunion', 'Pitch a small get-together', 'Suggest a quick video call'],
-  },
-  'Work': {
-    'Projects':       ['Ask what they\'re working on', 'Share a recent project win', 'Trade notes on a tough problem'],
-    'Career':         ['Ask about career goals', 'Share an opportunity you saw', 'Compare notes on growth'],
-    'Industry news':  ['Reference a recent headline', 'Share an article you found useful', 'Ask their take on a trend'],
-    'Team updates':   ['Ask how the team is doing', 'Share a team change of your own', 'Talk about working styles'],
-  },
-};
-
-const List<String> _genericSuggestions = [
-  'Ask an open question about how they\'ve been',
-  'Share a recent update from your own life',
-  'Suggest meeting up',
-];
-
-/// Returns 3-5 conversation-starter suggestions for a (category, topic) pair.
-/// Pass 3 swap point: this becomes memory-derived.
-List<String> suggestionsForTopic(String category, String topic) {
-  return _topicSuggestions[category]?[topic] ?? _genericSuggestions;
-}
 
 /// Bond-tier-derived encouragement copy for the Recommendation callout.
 String _bondEncouragement(BondTier tier) => switch (tier) {
@@ -903,6 +838,7 @@ class AiInsightsCard extends StatefulWidget {
     required this.connection,
     required this.insight,
     this.memorySummary,
+    this.memory,
   });
   final Connection connection;
   final ContactInsight insight;
@@ -911,6 +847,11 @@ class AiInsightsCard extends StatefulWidget {
   /// empty, the card falls back to `insight.why` (#050 deletes the
   /// fallback once the data path is proven).
   final String? memorySummary;
+
+  /// Full memory document for the contact. Drives the Conversation
+  /// Topics pill row via `memory.topics` (#043). Null when memory is
+  /// still loading or unavailable — falls back to category defaults.
+  final MemoryDocument? memory;
 
   @override
   State<AiInsightsCard> createState() => _AiInsightsCardState();
@@ -980,6 +921,7 @@ class _AiInsightsCardState extends State<AiInsightsCard> {
                       connection: widget.connection,
                       insight: widget.insight,
                       memorySummary: widget.memorySummary,
+                      memory: widget.memory,
                       tier: tier,
                       tokens: tokens,
                     ),
@@ -1002,6 +944,7 @@ class _AiInsightsCardState extends State<AiInsightsCard> {
                         connection: widget.connection,
                         insight: widget.insight,
                         memorySummary: widget.memorySummary,
+                        memory: widget.memory,
                         tier: tier,
                         tokens: tokens,
                       ),
@@ -1024,17 +967,19 @@ class _AiInsightsBody extends StatelessWidget {
     required this.tier,
     required this.tokens,
     this.memorySummary,
+    this.memory,
   });
 
   final Connection connection;
   final ContactInsight insight;
   final String? memorySummary;
+  final MemoryDocument? memory;
   final BondTier tier;
   final AppTokens tokens;
 
   @override
   Widget build(BuildContext context) {
-    final topics = topicsForContact(connection);
+    final topics = topicsForContact(connection, memory);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1140,6 +1085,7 @@ class _AiInsightsBody extends StatelessWidget {
                   context,
                   connection.category,
                   topic,
+                  connection.name,
                 ),
               ),
           ],
@@ -1193,14 +1139,15 @@ class _TopicPill extends StatelessWidget {
 }
 
 /// Opens a read-only bottom sheet listing 3-5 conversation suggestions
-/// for the given (category, topic) pair.
+/// for the given (category, topic, contactName) tuple.
 void _showTopicSuggestionsSheet(
   BuildContext context,
   String category,
   String topic,
+  String contactName,
 ) {
   final tokens = context.tokens;
-  final suggestions = suggestionsForTopic(category, topic);
+  final suggestions = suggestionsForTopic(category, topic, contactName);
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: tokens.surfaceRaised,

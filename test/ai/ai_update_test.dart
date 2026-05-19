@@ -244,4 +244,153 @@ void main() {
           contains('AI reviewed 2 attachment(s).'));
     });
   });
+
+  group('MockAiUpdate topic extraction', () {
+    test('extracts known keywords from user input', () async {
+      final container = _container();
+      addTearDown(container.dispose);
+
+      final mike = _connection(container.read(appControllerProvider), 'mike');
+      final memory = await container.read(memoryProvider('mike').future);
+
+      final result = await container.read(aiUpdateProvider).run(
+            contact: mike,
+            userInput: 'Had coffee, she got a promotion at her startup.',
+            currentMemory: memory,
+            attachments: const [],
+          );
+
+      final topics = result.memoryDocument!.topics;
+      expect(topics, contains('promotion'));
+      expect(topics, contains('startup'));
+    });
+
+    test('dedupes topics case-insensitively, existing entry wins', () async {
+      final store = InMemoryMemoryStore();
+      // Pre-seed memory with 'Promotion' (capitalized) so that an
+      // input mentioning 'promotion' would otherwise create a duplicate.
+      await store.save(MemoryDocument(
+        contactId: 'mike',
+        displayName: 'Mike Chen',
+        lastUpdated: DateTime.utc(2026, 5, 19),
+        topics: const ['Promotion'],
+      ));
+
+      final container = _container(store: store);
+      addTearDown(container.dispose);
+
+      final mike = _connection(container.read(appControllerProvider), 'mike');
+      final memory = await container.read(memoryProvider('mike').future);
+
+      final result = await container.read(aiUpdateProvider).run(
+            contact: mike,
+            userInput: 'She got a promotion last week.',
+            currentMemory: memory,
+            attachments: const [],
+          );
+
+      final topics = result.memoryDocument!.topics;
+      // Existing 'Promotion' kept; lowercase 'promotion' is not added.
+      expect(topics, ['Promotion']);
+    });
+
+    test('caps topics at 8 with oldest-first eviction', () async {
+      final store = InMemoryMemoryStore();
+      // Pre-seed memory with 8 topics, none of which match the input
+      // keyword so the merge has to evict the oldest.
+      await store.save(MemoryDocument(
+        contactId: 'mike',
+        displayName: 'Mike Chen',
+        lastUpdated: DateTime.utc(2026, 5, 19),
+        topics: const [
+          'oldest',
+          'two',
+          'three',
+          'four',
+          'five',
+          'six',
+          'seven',
+          'eight',
+        ],
+      ));
+
+      final container = _container(store: store);
+      addTearDown(container.dispose);
+
+      final mike = _connection(container.read(appControllerProvider), 'mike');
+      final memory = await container.read(memoryProvider('mike').future);
+
+      final result = await container.read(aiUpdateProvider).run(
+            contact: mike,
+            // Single keyword. Phrasing is chosen to avoid incidental
+            // substring hits like 'art' inside 'quarter' under PRD-Q7
+            // substring matching.
+            userInput: 'Mike got a promotion this week.',
+            currentMemory: memory,
+            attachments: const [],
+          );
+
+      final topics = result.memoryDocument!.topics;
+      // One new keyword merged; oldest pre-existing topic evicted to
+      // keep the cap at 8.
+      expect(topics.length, MemoryDocument.topicCap);
+      expect(topics, isNot(contains('oldest')));
+      expect(topics.first, 'two');
+      expect(topics.last, 'promotion');
+    });
+
+    test('topic order is deterministic across runs', () async {
+      final container = _container();
+      addTearDown(container.dispose);
+
+      final mike = _connection(container.read(appControllerProvider), 'mike');
+      final memory = await container.read(memoryProvider('mike').future);
+
+      final adapter = container.read(aiUpdateProvider);
+      // 'birthday' first in the input, 'promotion' second; the
+      // extractor must still emit them in keyword-list order
+      // (career cluster before milestones), not input order.
+      const input = 'Got a birthday card and a promotion.';
+      final a = await adapter.run(
+        contact: mike,
+        userInput: input,
+        currentMemory: memory,
+        attachments: const [],
+      );
+      final b = await adapter.run(
+        contact: mike,
+        userInput: input,
+        currentMemory: memory,
+        attachments: const [],
+      );
+
+      expect(a.memoryDocument!.topics, b.memoryDocument!.topics);
+      expect(a.memoryDocument!.topics, ['promotion', 'birthday']);
+    });
+
+    test('input with no keywords leaves topics unchanged', () async {
+      final store = InMemoryMemoryStore();
+      await store.save(MemoryDocument(
+        contactId: 'mike',
+        displayName: 'Mike Chen',
+        lastUpdated: DateTime.utc(2026, 5, 19),
+        topics: const ['existing-topic'],
+      ));
+
+      final container = _container(store: store);
+      addTearDown(container.dispose);
+
+      final mike = _connection(container.read(appControllerProvider), 'mike');
+      final memory = await container.read(memoryProvider('mike').future);
+
+      final result = await container.read(aiUpdateProvider).run(
+            contact: mike,
+            userInput: 'just chatting, nothing special to mention',
+            currentMemory: memory,
+            attachments: const [],
+          );
+
+      expect(result.memoryDocument!.topics, ['existing-topic']);
+    });
+  });
 }

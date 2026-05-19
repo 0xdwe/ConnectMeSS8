@@ -33,6 +33,21 @@ final aiUpdateProvider = Provider<AiUpdate>((ref) {
   );
 });
 
+/// Per-contact list of conversation topics (family by `contactId`).
+///
+/// Derived from [memoryProvider]: returns `MemoryDocument.topics` when
+/// the doc resolves with topics, or an empty list otherwise. The
+/// empty-list signal lets callers fall back to category defaults via
+/// `topicsForContact` without binding this provider to widget code.
+final memoryTopicsProvider =
+    Provider.family<List<String>, String>((ref, contactId) {
+  final memory = ref.watch(memoryProvider(contactId));
+  return memory.maybeWhen(
+    data: (doc) => doc.topics,
+    orElse: () => const <String>[],
+  );
+});
+
 /// Per-contact [MemoryDocument] (family by `contactId`).
 ///
 /// Lazy-creates an empty document via the store when none exists, so

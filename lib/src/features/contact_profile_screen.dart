@@ -60,15 +60,13 @@ class ContactProfileScreen extends ConsumerWidget {
     final insight = state.contactInsightFor(contactId);
     final history = ref.watch(interactionsByContactProvider(contactId));
     final memoryAsync = ref.watch(memoryProvider(contactId));
-    final memorySummary = memoryAsync.when(
-      data: (doc) => doc.summary.trim().isEmpty ? null : doc.summary,
-      // Loading and error fall back to the legacy ContactInsight path
-      // for now (#050 deletes the fallback once the memory data path
-      // is proven). Returning null here triggers the fallback inside
-      // AiInsightsCard.
-      loading: () => null,
-      error: (_, _) => null,
+    final memory = memoryAsync.maybeWhen(
+      data: (doc) => doc,
+      orElse: () => null,
     );
+    final memorySummary = (memory != null && memory.summary.trim().isNotEmpty)
+        ? memory.summary
+        : null;
     
     return Scaffold(
       backgroundColor: tokens.surface,
@@ -192,6 +190,7 @@ class ContactProfileScreen extends ConsumerWidget {
             connection: person,
             insight: insight,
             memorySummary: memorySummary,
+            memory: memory,
           ),
           // History section (Pass 2 #036): one CardBox holding either a
           // dense list of interactions separated by border dividers, or
