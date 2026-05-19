@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../models/social_models.dart';
 import '../state/app_state.dart';
+import '../state/memory/memory_providers.dart';
 import '../state/query_providers.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
@@ -58,6 +59,16 @@ class ContactProfileScreen extends ConsumerWidget {
     final state = ref.watch(appControllerProvider);
     final insight = state.contactInsightFor(contactId);
     final history = ref.watch(interactionsByContactProvider(contactId));
+    final memoryAsync = ref.watch(memoryProvider(contactId));
+    final memorySummary = memoryAsync.when(
+      data: (doc) => doc.summary.trim().isEmpty ? null : doc.summary,
+      // Loading and error fall back to the legacy ContactInsight path
+      // for now (#050 deletes the fallback once the memory data path
+      // is proven). Returning null here triggers the fallback inside
+      // AiInsightsCard.
+      loading: () => null,
+      error: (_, _) => null,
+    );
     
     return Scaffold(
       backgroundColor: tokens.surface,
@@ -177,7 +188,11 @@ class ContactProfileScreen extends ConsumerWidget {
           ),
           SizedBox(height: AppSpacing.space4),
           // AI Insights collapsible card (Pass 2 #034)
-          AiInsightsCard(connection: person, insight: insight),
+          AiInsightsCard(
+            connection: person,
+            insight: insight,
+            memorySummary: memorySummary,
+          ),
           // History section (Pass 2 #036): one CardBox holding either a
           // dense list of interactions separated by border dividers, or
           // a warm empty state when there is no history.

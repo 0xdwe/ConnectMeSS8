@@ -1,0 +1,229 @@
+import 'package:connect_me/src/state/memory/memory_document.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('MemoryDocument.parse', () {
+    test('round-trips a fully populated document', () {
+      final original = MemoryDocument(
+        contactId: 'sarah',
+        displayName: 'Sarah Johnson',
+        lastUpdated: DateTime.utc(2026, 5, 19, 12, 30, 0),
+        version: 1,
+        summary: 'Long-time friend who loves coffee.',
+        history: 'Met in 2020. Coffee in April.',
+        preferences: 'Texts work best on weekends.',
+        topics: const ['coffee', 'travel', 'music'],
+        upcoming: [
+          UpcomingEntry(
+            startDate: DateTime(2026, 5, 19),
+            description: 'birthday lunch',
+          ),
+          UpcomingEntry(
+            startDate: DateTime(2026, 5, 19),
+            endDate: DateTime(2026, 5, 26),
+            description: 'USA trip',
+          ),
+        ],
+      );
+
+      final parsed = MemoryDocument.parse(original.render());
+
+      expect(parsed.contactId, original.contactId);
+      expect(parsed.displayName, original.displayName);
+      expect(parsed.version, original.version);
+      expect(parsed.summary, original.summary);
+      expect(parsed.history, original.history);
+      expect(parsed.preferences, original.preferences);
+      expect(parsed.topics, original.topics);
+      expect(parsed.upcoming, original.upcoming);
+      expect(parsed.parseErrors, isEmpty);
+      // lastUpdated round-trips at ISO-8601 second precision.
+      expect(parsed.lastUpdated.toIso8601String(),
+          original.lastUpdated.toIso8601String());
+    });
+
+    test('missing optional sections parse without error', () {
+      const raw = '''---
+contactId: 'mike'
+displayName: 'Mike Chen'
+lastUpdated: '2026-05-19T00:00:00.000Z'
+version: 1
+---
+
+## Summary
+Just a summary.
+
+## History
+A line of history.
+
+## Topics
+- school
+''';
+
+      final doc = MemoryDocument.parse(raw);
+
+      expect(doc.parseErrors, isEmpty);
+      expect(doc.summary, 'Just a summary.');
+      expect(doc.history, 'A line of history.');
+      expect(doc.preferences, '');
+      expect(doc.upcoming, isEmpty);
+      expect(doc.topics, ['school']);
+    });
+
+    test('malformed frontmatter populates parseErrors but body still parses',
+        () {
+      const raw = '''---
+not: [valid
+---
+## Summary
+Body still here.
+''';
+
+      final doc = MemoryDocument.parse(raw);
+
+      expect(doc.parseErrors, isNotEmpty);
+      // The body section after the broken frontmatter should still be
+      // recoverable. Either the frontmatter regex bails (treating the
+      // whole input as body) or yaml fails and we fall back to body —
+      // both paths must reach the Summary section.
+      expect(doc.summary, 'Body still here.');
+    });
+
+    test('empty string does not throw and yields a parseError', () {
+      final doc = MemoryDocument.parse('');
+
+      expect(doc.parseErrors, contains('missing contactId'));
+      expect(doc.contactId, '');
+      expect(doc.summary, '');
+    });
+
+    test('garbage bytes do not throw', () {
+      final raw = String.fromCharCodes(
+          List<int>.generate(64, (i) => (i * 7) % 256));
+
+      // The contract: no exception. Anything else is fine.
+      expect(() => MemoryDocument.parse(raw), returnsNormally);
+    });
+
+    test('Upcoming entry with only startDate round-trips', () {
+      const raw = '''---
+contactId: 'sarah'
+displayName: 'Sarah Johnson'
+lastUpdated: '2026-05-19T00:00:00.000Z'
+version: 1
+---
+
+## Upcoming
+- 2026-05-19 trip
+''';
+      final doc = MemoryDocument.parse(raw);
+      expect(doc.upcoming, hasLength(1));
+      expect(doc.upcoming.first.startDate, DateTime(2026, 5, 19));
+      expect(doc.upcoming.first.endDate, isNull);
+      expect(doc.upcoming.first.description, 'trip');
+
+      final reparsed = MemoryDocument.parse(doc.render());
+      expect(reparsed.upcoming, doc.upcoming);
+    });
+
+    test('Upcoming entry with both dates round-trips', () {
+      const raw = '''---
+contactId: 'sarah'
+displayName: 'Sarah Johnson'
+lastUpdated: '2026-05-19T00:00:00.000Z'
+version: 1
+---
+
+## Upcoming
+- 2026-05-19/2026-05-26 USA trip
+''';
+      final doc = MemoryDocument.parse(raw);
+      expect(doc.upcoming, hasLength(1));
+      expect(doc.upcoming.first.startDate, DateTime(2026, 5, 19));
+      expect(doc.upcoming.first.endDate, DateTime(2026, 5, 26));
+      expect(doc.upcoming.first.description, 'USA trip');
+
+      final reparsed = MemoryDocument.parse(doc.render());
+      expect(reparsed.upcoming, doc.upcoming);
+    });
+
+    test('Topics dedup case-insensitively, first-occurrence case wins', () {
+      const raw = '''---
+contactId: 'sarah'
+displayName: 'Sarah Johnson'
+lastUpdated: '2026-05-19T00:00:00.000Z'
+version: 1
+---
+
+## Topics
+- coffee
+- Coffee
+- COFFEE
+''';
+      final doc = MemoryDocument.parse(raw);
+      expect(doc.topics, ['coffee']);
+    });
+
+    test('Topics cap drops trailing entries beyond 8', () {
+      const raw = '''---
+contactId: 'sarah'
+displayName: 'Sarah Johnson'
+lastUpdated: '2026-05-19T00:00:00.000Z'
+version: 1
+---
+
+## Topics
+- t1
+- t2
+- t3
+- t4
+- t5
+- t6
+- t7
+- t8
+- t9
+- t10
+- t11
+- t12
+''';
+      final doc = MemoryDocument.parse(raw);
+      expect(doc.topics, hasLength(MemoryDocument.topicCap));
+      expect(doc.topics, ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 't8']);
+    });
+
+    test('unknown sections are dropped and reported via parseErrors', () {
+      const raw = '''---
+contactId: 'sarah'
+displayName: 'Sarah Johnson'
+lastUpdated: '2026-05-19T00:00:00.000Z'
+version: 1
+---
+
+## Mystery
+should not survive
+''';
+      final doc = MemoryDocument.parse(raw);
+      expect(doc.parseErrors, contains('unknown section: Mystery'));
+    });
+  });
+
+  group('MemoryDocument.empty', () {
+    test('yields a v1 doc with empty narrative sections', () {
+      final now = DateTime.utc(2026, 5, 19);
+      final doc = MemoryDocument.empty(
+        contactId: 'sarah',
+        displayName: 'Sarah Johnson',
+        now: now,
+      );
+      expect(doc.contactId, 'sarah');
+      expect(doc.displayName, 'Sarah Johnson');
+      expect(doc.lastUpdated, now);
+      expect(doc.version, 1);
+      expect(doc.summary, '');
+      expect(doc.history, '');
+      expect(doc.preferences, '');
+      expect(doc.topics, isEmpty);
+      expect(doc.upcoming, isEmpty);
+    });
+  });
+}

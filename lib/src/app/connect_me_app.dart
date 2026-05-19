@@ -10,6 +10,7 @@ import '../features/recommendations_screen.dart';
 import '../features/settings_screen.dart';
 import '../features/shell_screen.dart';
 import '../state/app_state.dart';
+import '../state/memory/memory_providers.dart';
 import '../theme/app_theme.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -33,6 +34,12 @@ class ConnectMeApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appState = ref.watch(appControllerProvider);
+    // Drive the seed migration on first observe. The provider is a
+    // FutureProvider<void>; we watch it so the initial frame waits on
+    // the seed pass before any screen reads memoryProvider. Tests
+    // override memoryStoreProvider with a pre-populated store, which
+    // makes the seeding a no-op.
+    final seeding = ref.watch(memorySeedingProvider);
     return MaterialApp.router(
       title: 'Connect Me',
       debugShowCheckedModeBanner: false,
@@ -44,6 +51,26 @@ class ConnectMeApp extends ConsumerWidget {
         AppThemeMode.dark => ThemeMode.dark,
       },
       routerConfig: ref.watch(routerProvider),
+      builder: (context, child) {
+        return seeding.when(
+          data: (_) => child ?? const SizedBox.shrink(),
+          loading: () => const _MemorySeedingSplash(),
+          // On error we proceed to the app; the lazy-creation path in
+          // memoryProvider covers any still-unbacked connection.
+          error: (_, _) => child ?? const SizedBox.shrink(),
+        );
+      },
+    );
+  }
+}
+
+class _MemorySeedingSplash extends StatelessWidget {
+  const _MemorySeedingSplash();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator.adaptive()),
     );
   }
 }
