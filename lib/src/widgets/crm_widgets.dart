@@ -902,9 +902,15 @@ class AiInsightsCard extends StatefulWidget {
     super.key,
     required this.connection,
     required this.insight,
+    this.memorySummary,
   });
   final Connection connection;
   final ContactInsight insight;
+
+  /// Person Summary text from `MemoryDocument.summary`. When null or
+  /// empty, the card falls back to `insight.why` (#050 deletes the
+  /// fallback once the data path is proven).
+  final String? memorySummary;
 
   @override
   State<AiInsightsCard> createState() => _AiInsightsCardState();
@@ -973,6 +979,7 @@ class _AiInsightsCardState extends State<AiInsightsCard> {
                     child: _AiInsightsBody(
                       connection: widget.connection,
                       insight: widget.insight,
+                      memorySummary: widget.memorySummary,
                       tier: tier,
                       tokens: tokens,
                     ),
@@ -994,6 +1001,7 @@ class _AiInsightsCardState extends State<AiInsightsCard> {
                       child: _AiInsightsBody(
                         connection: widget.connection,
                         insight: widget.insight,
+                        memorySummary: widget.memorySummary,
                         tier: tier,
                         tokens: tokens,
                       ),
@@ -1015,10 +1023,12 @@ class _AiInsightsBody extends StatelessWidget {
     required this.insight,
     required this.tier,
     required this.tokens,
+    this.memorySummary,
   });
 
   final Connection connection;
   final ContactInsight insight;
+  final String? memorySummary;
   final BondTier tier;
   final AppTokens tokens;
 
@@ -1093,7 +1103,9 @@ class _AiInsightsBody extends StatelessWidget {
         ),
         SizedBox(height: AppSpacing.space2),
         Text(
-          insight.why,
+          (memorySummary != null && memorySummary!.trim().isNotEmpty)
+              ? memorySummary!
+              : insight.why,
           style: AppTypography.body(color: tokens.inkMuted),
         ),
         SizedBox(height: AppSpacing.space5),
