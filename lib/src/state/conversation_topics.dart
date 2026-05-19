@@ -32,14 +32,46 @@ List<String> topicsForContact(Connection connection, MemoryDocument? memory) {
 /// Returns 3-5 conversation-starter suggestions for a
 /// `(category, topic, contactName)` tuple.
 ///
-/// Pass 3 (#043): looks up the curated static map only and falls back
-/// to a generic three-line list when the (category, topic) is unknown.
-/// The templated `{firstName}`-based fallback for memory-extracted
-/// topics lands in #044; `contactName` is accepted now to stabilize
-/// the signature ahead of that change.
+/// Pass 3 (#044): the static `_topicSuggestions` map is consulted
+/// first; on a miss, three rotating templates with `{topic}` and
+/// `{firstName}` slots filled in are returned so memory-extracted
+/// topics like `violin lessons` or `kindergarten` get useful prompts
+/// rather than the generic three-line fallback. The generic list
+/// remains the safety net for degenerate inputs (empty `topic` or
+/// empty `contactName`), where rendering a template would produce
+/// awkward strings.
+///
+/// First name is the leading whitespace-split token of `contactName`
+/// (e.g., `'Mike Chen'` → `'Mike'`, `'Mike'` → `'Mike'`).
 List<String> suggestionsForTopic(
     String category, String topic, String contactName) {
-  return _topicSuggestions[category]?[topic] ?? _genericSuggestions;
+  final curated = _topicSuggestions[category]?[topic];
+  if (curated != null) return curated;
+
+  // Degenerate input: blank topic or blank contact name would render
+  // an empty slot like "How's the  going?" or "Curious how 's …".
+  // The generic three-line list is a friendlier fallback than that.
+  final trimmedTopic = topic.trim();
+  final trimmedContact = contactName.trim();
+  if (trimmedTopic.isEmpty || trimmedContact.isEmpty) {
+    return _genericSuggestions;
+  }
+
+  final firstName = _firstNameOf(trimmedContact);
+  return <String>[
+    "How's the $trimmedTopic going?",
+    'Last time you mentioned $trimmedTopic \u2014 anything new?',
+    "Curious how $firstName's $trimmedTopic is going.",
+  ];
+}
+
+/// Returns the leading whitespace-split token of [contactName]. Caller
+/// is responsible for passing an already-trimmed string when it has a
+/// fallback for empty inputs; this helper does not re-trim.
+String _firstNameOf(String contactName) {
+  final match = RegExp(r'\s+').firstMatch(contactName);
+  if (match == null) return contactName;
+  return contactName.substring(0, match.start);
 }
 
 const Map<String, List<String>> _topicDefaultsByCategory = {

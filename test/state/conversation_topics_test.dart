@@ -105,34 +105,115 @@ void main() {
       ]);
     });
 
-    test('returns generic suggestions for an unknown category', () {
-      // Templated fallback for memory-extracted topics is #044.
-      final suggestions =
-          suggestionsForTopic('UnknownCategory', 'whatever', 'Sam');
-      expect(suggestions, [
-        'Ask an open question about how they\'ve been',
-        'Share a recent update from your own life',
-        'Suggest meeting up',
-      ]);
-    });
-
-    test('returns generic suggestions for an unknown topic in a known category',
-        () {
-      final suggestions =
-          suggestionsForTopic('Work', 'promotion', 'Mike Chen');
-      expect(suggestions, [
-        'Ask an open question about how they\'ve been',
-        'Share a recent update from your own life',
-        'Suggest meeting up',
-      ]);
-    });
-
-    test('contactName is accepted but does not change static-map output', () {
-      // Per #043, contactName is wired through but not yet consumed.
-      // The templated {firstName} fallback lands in #044.
+    test('curated-map hit wins over the templated fallback', () {
+      // Sanity check: even when contactName would otherwise drive a
+      // distinct templated render, a curated hit short-circuits.
       final a = suggestionsForTopic('Family', 'Family updates', 'Alice');
       final b = suggestionsForTopic('Family', 'Family updates', 'Bob');
       expect(a, b);
+      expect(a.first, 'Ask how the family is doing');
+    });
+
+    test(
+        'returns templated fallback when topic is missing from the curated map',
+        () {
+      final suggestions =
+          suggestionsForTopic('Friends', 'kindergarten', 'Sarah Chen');
+      expect(suggestions, [
+        "How's the kindergarten going?",
+        'Last time you mentioned kindergarten \u2014 anything new?',
+        "Curious how Sarah's kindergarten is going.",
+      ]);
+    });
+
+    test('templated fallback also fires for an unknown category', () {
+      final suggestions =
+          suggestionsForTopic('UnknownCategory', 'violin', 'Mike Chen');
+      expect(suggestions, [
+        "How's the violin going?",
+        'Last time you mentioned violin \u2014 anything new?',
+        "Curious how Mike's violin is going.",
+      ]);
+    });
+
+    test('templated fallback uses the first whitespace-split token only', () {
+      final suggestions =
+          suggestionsForTopic('Friends', 'violin', 'Mike Chen');
+      expect(
+        suggestions,
+        contains("Curious how Mike's violin is going."),
+      );
+      expect(
+        suggestions,
+        isNot(contains("Curious how Mike Chen's violin is going.")),
+      );
+    });
+
+    test('single-name contact uses the whole name as the first name', () {
+      final suggestions =
+          suggestionsForTopic('Friends', 'pottery', 'Mike');
+      expect(
+        suggestions,
+        contains("Curious how Mike's pottery is going."),
+      );
+    });
+
+    test('contactName with surrounding whitespace is trimmed before split',
+        () {
+      final suggestions =
+          suggestionsForTopic('Friends', 'climbing', '  Sarah  Chen  ');
+      expect(
+        suggestions,
+        contains("Curious how Sarah's climbing is going."),
+      );
+    });
+
+    test('topic with surrounding whitespace is trimmed before rendering', () {
+      final suggestions =
+          suggestionsForTopic('Friends', '  violin  ', 'Sarah Chen');
+      expect(suggestions, [
+        "How's the violin going?",
+        'Last time you mentioned violin \u2014 anything new?',
+        "Curious how Sarah's violin is going.",
+      ]);
+    });
+
+    test('empty topic falls back to the generic three-line list', () {
+      final suggestions =
+          suggestionsForTopic('Friends', '', 'Sarah Chen');
+      expect(suggestions, [
+        'Ask an open question about how they\'ve been',
+        'Share a recent update from your own life',
+        'Suggest meeting up',
+      ]);
+    });
+
+    test('whitespace-only topic falls back to the generic list', () {
+      final suggestions =
+          suggestionsForTopic('Friends', '   ', 'Sarah Chen');
+      expect(suggestions, [
+        'Ask an open question about how they\'ve been',
+        'Share a recent update from your own life',
+        'Suggest meeting up',
+      ]);
+    });
+
+    test('empty contactName falls back to the generic list', () {
+      final suggestions = suggestionsForTopic('Friends', 'pottery', '');
+      expect(suggestions, [
+        'Ask an open question about how they\'ve been',
+        'Share a recent update from your own life',
+        'Suggest meeting up',
+      ]);
+    });
+
+    test('whitespace-only contactName falls back to the generic list', () {
+      final suggestions = suggestionsForTopic('Friends', 'pottery', '   ');
+      expect(suggestions, [
+        'Ask an open question about how they\'ve been',
+        'Share a recent update from your own life',
+        'Suggest meeting up',
+      ]);
     });
   });
 }
