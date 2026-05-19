@@ -73,6 +73,7 @@ class MockAiUpdate implements AiUpdate {
   MockAiUpdate({
     required this.memoryStore,
     required this.appController,
+    this.onMemoryWritten,
     this.failOnRun = false,
     this.failOnSave = false,
     this.failOnApply = false,
@@ -80,6 +81,12 @@ class MockAiUpdate implements AiUpdate {
 
   final MemoryStore memoryStore;
   final AppController appController;
+
+  /// Optional hook fired after [MemoryStore.save] succeeds in
+  /// [commit]. Wired in production to bump `memoryEpochProvider` so
+  /// `recommendationsProvider` sees the memory-change half of the
+  /// PRD Q2 dual invalidation. Tests can wire it to count writes.
+  final void Function()? onMemoryWritten;
 
   /// When true, [run] throws before producing a result. Test-only.
   final bool failOnRun;
@@ -174,6 +181,13 @@ class MockAiUpdate implements AiUpdate {
         throw const AiUpdateFailure('test-injected save failure');
       }
       await memoryStore.save(memory);
+      // Signal "memory changed" to subscribers (e.g.
+      // `recommendationsProvider`) before the state delta lands so
+      // the next read sees a fresh epoch. The rollback path below
+      // does not unsignal this — a transient bump on a rolled-back
+      // commit is harmless: it just causes one extra recompute that
+      // produces the same output as the pre-run cache.
+      onMemoryWritten?.call();
     }
 
     // 2. Apply the AppState delta. If this throws after step 1
