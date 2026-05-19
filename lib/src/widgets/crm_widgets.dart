@@ -560,151 +560,6 @@ class EventTile extends StatelessWidget {
   }
 }
 
-class RecommendedActionCard extends StatelessWidget {
-  const RecommendedActionCard({super.key, required this.insight});
-  final ContactInsight insight;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    return CardBox(
-      padding: EdgeInsets.zero,
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(AppSpacing.space5),
-        decoration: BoxDecoration(
-          color: tokens.secondary,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              'Recommended Action!',
-              textAlign: TextAlign.center,
-              style: AppTypography.h2(color: tokens.primaryOn),
-            ),
-            SizedBox(height: AppSpacing.space3),
-            Text(
-              'You can gain ${insight.potentialScoreGain}% Connection Score',
-              textAlign: TextAlign.center,
-              style: AppTypography.bodyLg(color: tokens.primaryOn),
-            ),
-            SizedBox(height: AppSpacing.space2),
-            Text(
-              insight.recommendedAction,
-              textAlign: TextAlign.center,
-              style: AppTypography.bodyLg(color: tokens.primaryOn),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class CommunicationChannelsCard extends StatelessWidget {
-  const CommunicationChannelsCard({super.key, required this.channels});
-  final List<String> channels;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    return CardBox(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.chat_bubble_outline, color: tokens.primary),
-              SizedBox(width: AppSpacing.space3),
-              Expanded(
-                child: Text(
-                  'Top Communication Channels',
-                  style: AppTypography.h2(),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: AppSpacing.space3),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              for (final channel in channels)
-                Chip(
-                  label: Text(
-                    channel,
-                    style: AppTypography.body(color: tokens.primaryOn),
-                  ),
-                  backgroundColor: tokens.primary,
-                  side: BorderSide.none,
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class InteractionFrequencyCard extends StatelessWidget {
-  const InteractionFrequencyCard({super.key, required this.frequencyByMonth});
-  final List<int> frequencyByMonth;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    final values = frequencyByMonth.length >= 12
-        ? frequencyByMonth.take(12).toList()
-        : [
-            ...frequencyByMonth,
-            ...List<int>.filled(12 - frequencyByMonth.length, 0),
-          ];
-    final maxValue = values.fold<int>(
-      1,
-      (max, value) => value > max ? value : max,
-    );
-    return CardBox(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Interaction Frequency (12 months)',
-            style: AppTypography.h2(),
-          ),
-          SizedBox(height: AppSpacing.space4),
-          Row(
-            children: List.generate(12, (index) {
-              final alpha = 0.35 + (values[index] / maxValue) * 0.55;
-              return Expanded(
-                child: Column(
-                  children: [
-                    Container(
-                      key: Key('frequency-bar-$index'),
-                      height: 32,
-                      margin: EdgeInsets.symmetric(horizontal: AppSpacing.space1),
-                      decoration: BoxDecoration(
-                        color: tokens.primary.withValues(alpha: alpha),
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                    ),
-                    SizedBox(height: AppSpacing.space2),
-                    Text(
-                      '${index + 1}',
-                      style: AppTypography.caption(color: tokens.inkMuted),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class EmptyState extends StatelessWidget {
   const EmptyState({super.key, required this.title, required this.message});
   final String title;
@@ -844,8 +699,8 @@ class AiInsightsCard extends StatefulWidget {
   final ContactInsight insight;
 
   /// Person Summary text from `MemoryDocument.summary`. When null or
-  /// empty, the card falls back to `insight.why` (#050 deletes the
-  /// fallback once the data path is proven).
+  /// empty, the card renders an empty body (memory is the single
+  /// source of truth post-#050).
   final String? memorySummary;
 
   /// Full memory document for the contact. Drives the Conversation
@@ -1050,7 +905,7 @@ class _AiInsightsBody extends StatelessWidget {
         Text(
           (memorySummary != null && memorySummary!.trim().isNotEmpty)
               ? memorySummary!
-              : insight.why,
+              : '',
           style: AppTypography.body(color: tokens.inkMuted),
         ),
         SizedBox(height: AppSpacing.space5),

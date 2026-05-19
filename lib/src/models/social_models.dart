@@ -290,30 +290,34 @@ class Recommendation {
   final String priority;
 }
 
+/// Per-contact derived signals consumed by the contact profile UI.
+///
+/// Pass 3 (#050) trimmed this model heavily — [Pass 3 PRD Q10]. The
+/// fields that left:
+///
+/// - `summary` — replaced by `MemoryDocument.summary` via
+///   `memoryProvider`. The card reads memory directly now.
+/// - `why` — replaced by `RecommendationEngine`'s narrative copy.
+///   Engine output is the single source of "why now" prose.
+/// - `recommendedAction`, `potentialScoreGain`, `aiConfidence` — all
+///   consumed by the deleted `RecommendedActionCard` (pre-Pass-2). The
+///   "You can gain X% Connection Score" copy was a shame mechanic per
+///   PRODUCT.md and the card was already removed from the screen by
+///   Pass 2. #050 deletes the constants behind it.
+/// - `preferredChannels`, `frequencyByMonth` — consumed by the deleted
+///   `CommunicationChannelsCard` and `InteractionFrequencyCard` (also
+///   removed by Pass 2). Live data still exists on the `Connection`
+///   model directly.
 class ContactInsight {
   const ContactInsight({
     required this.contactId,
-    required this.summary,
-    required this.why,
-    required this.recommendedAction,
-    required this.potentialScoreGain,
     required this.relationshipLabel,
     required this.knownSinceYears,
-    required this.preferredChannels,
-    required this.frequencyByMonth,
-    this.aiConfidence,
   });
 
   final String contactId;
-  final String summary;
-  final String why;
-  final String recommendedAction;
-  final int potentialScoreGain;
   final String relationshipLabel;
   final int knownSinceYears;
-  final List<String> preferredChannels;
-  final List<int> frequencyByMonth;
-  final double? aiConfidence;
 }
 
 class AiUpdateResult {
