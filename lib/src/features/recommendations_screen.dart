@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../state/app_state.dart';
+import '../state/memory/memory_providers.dart';
 import '../state/query_providers.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
@@ -15,7 +15,7 @@ class RecommendationsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
-    final state = ref.watch(appControllerProvider);
+    final recommendations = ref.watch(recommendationsProvider);
     return Scaffold(
       backgroundColor: tokens.surface,
       appBar: AppBar(
@@ -25,21 +25,21 @@ class RecommendationsScreen extends ConsumerWidget {
         foregroundColor: tokens.ink,
       ),
       body: ListView(padding: EdgeInsets.all(AppSpacing.space6), children: [
-        for (var i = 0; i < state.recommendations.length; i++)
+        for (final recommendation in recommendations)
           Builder(
             builder: (context) {
               final contact = ref.watch(
-                contactByIdProvider(state.recommendations[i].contactId),
+                contactByIdProvider(recommendation.contactId),
               );
               if (contact == null) return const SizedBox.shrink();
               return RecommendationCard(
                 key: Key(
-                  'recommendation-card-${state.recommendations[i].contactId}',
+                  'recommendation-card-${recommendation.contactId}',
                 ),
                 connection: contact,
-                recommendation: state.recommendations[i],
+                recommendation: recommendation,
                 onTap: () =>
-                    context.push('/contact/${state.recommendations[i].contactId}'),
+                    context.push('/contact/${recommendation.contactId}'),
               );
             },
           ),
