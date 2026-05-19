@@ -136,3 +136,46 @@ The Pass 2 contact profile redesign is the natural visual home for Pass 3's data
 Pass 3's mock-updater path is not throwaway. It exercises the full pipeline (file I/O, parser, agent interface, provider invalidation, UI rebuild) and gives evaluation runs deterministic behavior. When `LlmMemoryUpdater` arrives, the only changed surface is the updater class and its construction site in the DI/init code. Every other module — store, document, providers, UI — stays put.
 
 A future "share memory across devices" feature lands by writing a `FirebaseMemoryStore` and swapping the registered `MemoryStore` instance. That work also handles auth, conflict resolution, and offline cache. None of it leaks into Pass 3.
+
+## Firebase Readiness Considerations
+
+Firebase is **Pass 4 or later**, not Pass 3. The Pass 3 PRD scope is in-memory state plus local file persistence for memories only. This section captures what Pass 3 should and should not do to make Pass 4's Firebase integration cheap, without speculatively designing for it.
+
+### Where things actually sit today
+
+| Layer | Today (after Pass 1+2) | Pass 3 (this PRD) | Pass 4+ (not designed) |
+|---|---|---|---|
+| Storage | In-memory; `signOut` resets to `AppState.seeded()` | Per-contact `.md` files via `path_provider`, local device only. Memory is the *first* persisted thing in the codebase | Firebase Firestore for state; Firebase Storage / Firestore for memory files; cross-device sync |
+| Auth | Mock — any email/password works | Still mock | Firebase Auth replaces the mock |
+| AI | `MockAiUpdateService` (string matching, no LLM) | `MockMemoryUpdater` deterministic; `LlmMemoryUpdater` interface ready but not wired | Real LLM (Anthropic/OpenAI/Gemini) with API key UX |
+
+### What Pass 3 does for Firebase readiness (lightly, not speculatively)
+
+- **First real persistence seam.** Pass 3 introduces `MemoryStore` with two adapters: `FileMemoryStore` (production, local) and `InMemoryMemoryStore` (tests, seed migration). That's a real seam (not a hypothetical one) by the "two adapters = real seam" rule. When Pass 4 lands, `FirebaseMemoryStore` is a third adapter satisfying the same interface. One adapter swap; the rest of the system (UI, providers, updater, document parser) is unaffected.
+- **`MemoryStore` is async.** Every method returns `Future`. `FileMemoryStore` could technically be synchronous on disk, but the interface is async so a future Firebase adapter doesn't force a re-shape from sync to async at every call site.
+- **`MemoryStore` operations are idempotent and atomic.** `save` writes via `<id>.md.tmp` then renames; `delete` is safe to retry. These properties are required by Firebase too, so the interface contract carries forward.
+- **Memory file path is contact-id stable.** `<contactId>.md` on disk maps cleanly to a Firestore document keyed by `contactId`. Renaming a contact does not require any file or document migration.
+
+### What Pass 3 does NOT do for Firebase readiness (deliberate restraint)
+
+- **No generic `Repository` or persistence abstraction.** One adapter is a hypothetical seam. Pass 3 has two adapters for memory only — that's a real seam scoped to memory. Generalizing across all of `AppState` now would be premature; we don't know yet whether Pass 4 will move state to Firestore atomically or in pieces.
+- **No pre-async-ifying `AppController`.** Today its mutators are synchronous `copyWith` calls. Wrapping them in `Future` now adds boilerplate without payoff.
+- **No `firebase_core` dependency added to `pubspec.yaml`.** Adding the SDK before any Firebase code is written is dead weight and pulls in build-time complexity (config files, platform setup) for zero current benefit.
+- **No offline-cache design, no security-rules sketch, no Firestore schema.** All of these benefit from real Firebase decisions that haven't been made yet (provider choice, collection layout, auth model).
+- **No multi-device conflict resolution logic.** Pass 3 is explicitly single-device.
+
+### How Pass 3 architectural decisions affect Pass 4 difficulty
+
+The two architecture-deepening candidates held over for Pass 3 grilling have direct Firebase readiness implications and should be decided with Pass 4 in mind, not just code-cleanliness now.
+
+- **Candidate 1 (`AppController` split into Contacts / Planner / AiUpdate / Session modules).** This is the single biggest lever for Firebase readiness. If Pass 3 splits the controller, Pass 4 becomes "swap each module's storage adapter." If Pass 3 leaves the 642-line controller intact, Pass 4 becomes "rewrite a wide controller while also adding network calls and offline cache." Decide candidate 1 with Pass 4 as one of its motivations, not just "make it cleaner now."
+- **Candidate 2 (AI seam reshape).** A real LLM call eventually replaces the mock; an `AiUpdate` module that owns the user-level operation (input + contact → updated interactions + memory) has one place to add network handling, retry, and cancellation when the LLM goes live. The PRD's parallel-boundary plan (separate `MemoryUpdater` and `AiUpdateService`) doubles the network-handling surface.
+
+### Posture
+
+During Pass 3 grilling, treat "Firebase readiness" as a named user story:
+
+> *As a developer, I want Pass 3's persistence and AI seams shaped so that Pass 4 (Firebase + real LLM) is one adapter swap per concern, not a controller rewrite.*
+
+Apply this when discussing candidate 1, candidate 2, the `MemoryStore` contract, and the `MemoryUpdater` shape. Do not apply it as license to add abstractions for hypothetical Pass 4 needs.
+
