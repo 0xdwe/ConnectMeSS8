@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../state/memory/memory_document.dart';
 import '../widgets/bond_ring.dart';
 
 enum InteractionType {
@@ -321,9 +322,16 @@ class AiUpdateResult {
     required this.contactId,
     required this.interactions,
     this.nextStep,
+    this.memoryDocument,
   });
   final String summary;
   final String contactId;
   final List<CrmInteraction> interactions;
   final String? nextStep;
+
+  /// The new memory document produced by this run, ready to be persisted
+  /// in the commit step. Nullable so legacy in-memory construction (no
+  /// memory delta) still works; #042 unified `AiUpdate.run` always
+  /// populates it.
+  final MemoryDocument? memoryDocument;
 }

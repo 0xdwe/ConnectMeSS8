@@ -1,12 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
-import '../ai/ai_update_service.dart';
 import '../models/social_models.dart';
+import 'memory/memory_providers.dart';
 
-final aiUpdateServiceProvider = Provider<AiUpdateService>(
-  (ref) => const MockAiUpdateService(),
-);
 final appControllerProvider = NotifierProvider<AppController, AppState>(
   AppController.new,
 );
@@ -440,6 +437,11 @@ class AppController extends Notifier<AppState> {
           if (interaction.contactId != contactId) interaction,
       ],
     );
+    // Cascade memory delete (PRD Q3). Fire-and-forget for this slice;
+    // rollback-on-failure is part of the all-or-nothing contract that
+    // #046 owns.
+    // TODO(#046): revert in-memory delete if MemoryStore.delete fails.
+    ref.read(memoryStoreProvider).delete(contactId);
   }
 
   void removeSampleConnections() {
@@ -581,40 +583,11 @@ class AppController extends Notifier<AppState> {
     );
   }
 
-  Future<AiUpdateResult> previewAiUpdate(
-    String contactId,
-    String input,
-    List<AttachmentRef> attachments,
-  ) async {
-    final result = await ref
-        .read(aiUpdateServiceProvider)
-        .categorizeAndUpdate(
-          input: input,
-          fallbackContactId: contactId,
-          attachments: attachments,
-        );
-    // Mark all interactions as AI-suggested
-    final aiMarkedInteractions = result.interactions
-        .map((interaction) => CrmInteraction(
-              id: interaction.id,
-              contactId: interaction.contactId,
-              type: interaction.type,
-              title: interaction.title,
-              note: interaction.note,
-              date: interaction.date,
-              attachments: interaction.attachments,
-              source: InteractionSource.aiSuggested,
-            ))
-        .toList();
-    return AiUpdateResult(
-      summary: result.summary,
-      contactId: result.contactId,
-      interactions: aiMarkedInteractions,
-      nextStep: result.nextStep,
-    );
-  }
-
-  void commitAiUpdate(AiUpdateResult result) {
+  /// Applies a previously-produced [AiUpdateResult] to in-memory state:
+  /// appends interactions, bumps `bondScore`, updates `lastContact`,
+  /// sets `lastAiSummary`. Public so the unified `AiUpdate.commit`
+  /// adapter can call it after persisting the memory document.
+  void applyAiUpdateResult(AiUpdateResult result) {
     final updatedConnections = state.connections.map((connection) {
       if (connection.id != result.contactId) return connection;
       final nextScore = (connection.bondScore + 3).clamp(0, 100);
@@ -629,14 +602,5 @@ class AppController extends Notifier<AppState> {
       connections: updatedConnections,
       lastAiSummary: result.summary,
     );
-  }
-
-  Future<void> runAiUpdate(
-    String contactId,
-    String input,
-    List<AttachmentRef> attachments,
-  ) async {
-    final result = await previewAiUpdate(contactId, input, attachments);
-    commitAiUpdate(result);
   }
 }

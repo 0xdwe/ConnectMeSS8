@@ -1,11 +1,22 @@
+import 'package:connect_me/src/ai/ai_update.dart';
 import 'package:connect_me/src/models/social_models.dart';
 import 'package:connect_me/src/state/app_state.dart';
+import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
+import 'package:connect_me/src/state/memory/memory_document.dart';
+import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+ProviderContainer _container({InMemoryMemoryStore? store}) {
+  final memoryStore = store ?? InMemoryMemoryStore();
+  return ProviderContainer(overrides: [
+    memoryStoreProvider.overrideWithValue(memoryStore),
+  ]);
+}
+
 void main() {
   test('connection and category mutations update session state', () {
-    final container = ProviderContainer();
+    final container = _container();
     addTearDown(container.dispose);
 
     final controller = container.read(appControllerProvider.notifier);
@@ -24,15 +35,24 @@ void main() {
   });
 
   test('mock AI update adds categorized interaction', () async {
-    final container = ProviderContainer();
+    final container = _container();
     addTearDown(container.dispose);
 
     final before = container.read(appControllerProvider).interactions.length;
-    await container.read(appControllerProvider.notifier).runAiUpdate(
-      'mike',
-      'Remember to follow up with Mike next week.',
-      const [AttachmentRef(name: 'note.png', path: '/tmp/note.png')],
+    final mike = container
+        .read(appControllerProvider)
+        .connections
+        .firstWhere((c) => c.id == 'mike');
+    final memory = await container.read(memoryProvider('mike').future);
+
+    final adapter = container.read(aiUpdateProvider);
+    final result = await adapter.run(
+      contact: mike,
+      userInput: 'Remember to follow up with Mike next week.',
+      currentMemory: memory,
+      attachments: const [AttachmentRef(name: 'note.png', path: '/tmp/note.png')],
     );
+    await adapter.commit(result);
 
     final state = container.read(appControllerProvider);
     expect(state.interactions.length, before + 1);
@@ -42,7 +62,7 @@ void main() {
   });
 
   test('contactInsightFor returns future-AI-shaped insight data', () {
-    final container = ProviderContainer();
+    final container = _container();
     addTearDown(container.dispose);
 
     final state = container.read(appControllerProvider);
@@ -60,7 +80,7 @@ void main() {
   });
 
   test('user profile updates drive app state', () {
-    final container = ProviderContainer();
+    final container = _container();
     addTearDown(container.dispose);
 
     container
@@ -80,7 +100,7 @@ void main() {
   });
 
   test('event CRUD supports edit, delete, and restore', () {
-    final container = ProviderContainer();
+    final container = _container();
     addTearDown(container.dispose);
 
     final controller = container.read(appControllerProvider.notifier);
@@ -142,7 +162,7 @@ void main() {
   });
 
   test('event type management protects defaults and updates custom types', () {
-    final container = ProviderContainer();
+    final container = _container();
     addTearDown(container.dispose);
 
     final controller = container.read(appControllerProvider.notifier);
@@ -157,8 +177,17 @@ void main() {
     expect(eventTypes, isNot(contains('Demo Day')));
   });
 
-  test('deleting connection removes related events and interactions', () {
-    final container = ProviderContainer();
+  test('deleting connection removes related events and interactions', () async {
+    final store = InMemoryMemoryStore();
+    // Pre-populate the store so the cascade has something to delete.
+    await store.save(MemoryDocument(
+      contactId: 'mike',
+      displayName: 'Mike Chen',
+      lastUpdated: DateTime.utc(2026, 5, 19),
+      summary: 'pre-existing memory',
+    ));
+
+    final container = _container(store: store);
     addTearDown(container.dispose);
 
     container.read(appControllerProvider.notifier).deleteConnection('mike');
@@ -173,5 +202,20 @@ void main() {
       state.interactions.any((interaction) => interaction.contactId == 'mike'),
       isFalse,
     );
+
+    // Cascade (PRD Q3): the memory file is removed alongside the
+    // connection. The cascade is fire-and-forget for this slice; pump
+    // the event loop so the async delete lands before the assertion.
+    await Future<void>.delayed(Duration.zero);
+    expect(await store.load('mike'), isNull);
+  });
+
+  test('AiUpdate is exposed via aiUpdateProvider', () {
+    final container = _container();
+    addTearDown(container.dispose);
+
+    final adapter = container.read(aiUpdateProvider);
+    expect(adapter, isA<AiUpdate>());
+    expect(adapter, isA<MockAiUpdate>());
   });
 }
