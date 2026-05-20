@@ -182,7 +182,7 @@ The signature visualization. Never replace the avatar circle with a number; alwa
 
 **Sizes:** 64px (default in lists), 96px (contact profile header), 120px (no longer needed; the existing `BigScoreCircle` is removed).
 
-**Animation (signature moment):** when bond score changes (after `runAiUpdate` completes), the arc sweeps from old value to new value. ~600ms, ease-out-quart. Dimmed during travel, full saturation at rest. Reduced motion: instant cut.
+**Animation (signature moment):** when bond score changes (after `aiUpdateProvider.commit` lands its delta), the arc sweeps from old value to new value. ~600ms, ease-out-quart. Dimmed during travel, full saturation at rest. Reduced motion: instant cut.
 
 ### Recommendation card (Home)
 
