@@ -42,6 +42,8 @@ dependencies:
   file_selector: ^1.1.0
   yaml: ^3.1.2
   path_provider: ^2.1.4
+  firebase_core: ^4.2.0
+  firebase_auth: ^6.2.0
 
 dev_dependencies:
   flutter_test:
@@ -53,6 +55,10 @@ dev_dependencies:
   # `path_provider` resolves to today.
   path_provider_platform_interface: ^2.1.2
   plugin_platform_interface: ^2.1.8
+  # firebase_auth_mocks lets tests override `firebaseAuthProvider` with
+  # an in-memory `MockFirebaseAuth` so the AuthScreen-driven tests do
+  # not need a real Firebase project. Pass 4.1 (#052).
+  firebase_auth_mocks: ^0.15.2
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
