@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../state/app_state.dart';
+import '../../state/firebase_providers.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
@@ -104,7 +105,16 @@ class SettingsTab extends ConsumerWidget {
         ),
         SizedBox(height: AppSpacing.space5),
         TextButton(
-          onPressed: () {
+          onPressed: () async {
+            // Sign out of Firebase first; the AppController reset is
+            // local state and survives if the network call hiccups.
+            try {
+              await ref.read(firebaseAuthProvider).signOut();
+            } catch (_) {
+              // Best-effort — a failure here doesn't block the local
+              // sign-out. The user can retry from /auth.
+            }
+            if (!context.mounted) return;
             ref.read(appControllerProvider.notifier).signOut();
             context.go('/auth');
           },

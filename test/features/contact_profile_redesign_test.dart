@@ -1,19 +1,33 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
+import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:connect_me/src/widgets/bond_ring.dart';
+import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Helper to pump ContactProfileScreen with full app context. #041:
 // override memoryStoreProvider so the seed pass doesn't hit real disk
-// I/O under pumpAndSettle's fake async.
+// I/O under pumpAndSettle's fake async. #052: also override
+// firebaseAuthProvider with MockFirebaseAuth so the demo sign-in
+// resolves without a real Firebase project.
 Future<void> pumpProfileScreen(WidgetTester tester, String contactId) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+        firebaseAuthProvider.overrideWithValue(
+          MockFirebaseAuth(
+            mockUser: MockUser(
+              isAnonymous: false,
+              uid: 'demo-uid',
+              email: 'demo@example.com',
+              displayName: 'Demo',
+            ),
+          ),
+        ),
       ],
       child: const ConnectMeApp(),
     ),

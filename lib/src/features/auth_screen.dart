@@ -1,8 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
+import '../state/firebase_providers.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
@@ -19,6 +21,7 @@ class AuthScreen extends ConsumerStatefulWidget {
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   _AuthMode _mode = _AuthMode.login;
+  bool _busy = false;
 
   final _loginEmail = TextEditingController();
   final _loginPassword = TextEditingController();
@@ -57,7 +60,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     return null;
   }
 
-  void _submitLogin() {
+  Future<void> _submitLogin() async {
     final emailError = _validateEmail(_loginEmail.text.trim());
     final passwordError = _validatePassword(_loginPassword.text);
     setState(() {
@@ -65,11 +68,41 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       _loginPasswordError = passwordError;
     });
     if (emailError != null || passwordError != null) return;
+
+    setState(() => _busy = true);
+    try {
+      await ref.read(firebaseAuthProvider).signInWithEmailAndPassword(
+            email: _loginEmail.text.trim(),
+            password: _loginPassword.text,
+          );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        // Map Firebase error codes to inline field errors so the user
+        // sees the same UX shape as the local validators.
+        switch (e.code) {
+          case 'user-not-found':
+          case 'invalid-email':
+          case 'invalid-credential':
+            _loginEmailError = _firebaseAuthMessage(e);
+            break;
+          case 'wrong-password':
+            _loginPasswordError = _firebaseAuthMessage(e);
+            break;
+          default:
+            _loginEmailError = _firebaseAuthMessage(e);
+        }
+      });
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
     ref.read(appControllerProvider.notifier).signIn();
-    context.go('/app');
+    if (mounted) context.go('/app');
   }
 
-  void _submitSignup() {
+  Future<void> _submitSignup() async {
     final name = _signupName.text.trim();
     final email = _signupEmail.text.trim();
     final password = _signupPassword.text;
@@ -95,8 +128,66 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         confirmError != null) {
       return;
     }
+
+    setState(() => _busy = true);
+    try {
+      final cred =
+          await ref.read(firebaseAuthProvider).createUserWithEmailAndPassword(
+                email: email,
+                password: password,
+              );
+      // Best-effort displayName — the AppController user record is
+      // populated from the form name regardless, so a failure here is
+      // not fatal.
+      try {
+        await cred.user?.updateDisplayName(name);
+      } catch (_) {/* ignore */}
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        switch (e.code) {
+          case 'email-already-in-use':
+          case 'invalid-email':
+            _signupEmailError = _firebaseAuthMessage(e);
+            break;
+          case 'weak-password':
+            _signupPasswordError = _firebaseAuthMessage(e);
+            break;
+          default:
+            _signupEmailError = _firebaseAuthMessage(e);
+        }
+      });
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
     ref.read(appControllerProvider.notifier).signUp(name: name, email: email);
-    context.go('/app');
+    if (mounted) context.go('/app');
+  }
+
+  String _firebaseAuthMessage(FirebaseAuthException e) {
+    // Translate Firebase codes into the app's voice (warm, never
+    // shaming, never technical).
+    switch (e.code) {
+      case 'user-not-found':
+        return "We don't see an account with that email yet.";
+      case 'wrong-password':
+      case 'invalid-credential':
+        return "That password doesn't match — give it another try.";
+      case 'invalid-email':
+        return 'That email address looks off — check the spelling.';
+      case 'email-already-in-use':
+        return 'An account already exists with that email.';
+      case 'weak-password':
+        return 'Try a stronger password — at least 6 characters helps.';
+      case 'network-request-failed':
+        return 'Network hiccup — try again in a moment.';
+      case 'too-many-requests':
+        return 'A lot of attempts in a short window — take a breath and retry.';
+      default:
+        return e.message ?? 'Something went sideways — try again.';
+    }
   }
 
   void _switchMode(_AuthMode next) {
@@ -158,6 +249,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     passwordController: _loginPassword,
                     emailError: _loginEmailError,
                     passwordError: _loginPasswordError,
+                    busy: _busy,
                     onSubmit: _submitLogin,
                     onSwitch: () => _switchMode(_AuthMode.signup),
                   )
@@ -171,12 +263,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     emailError: _signupEmailError,
                     passwordError: _signupPasswordError,
                     confirmError: _signupConfirmError,
+                    busy: _busy,
                     onSubmit: _submitSignup,
                     onSwitch: () => _switchMode(_AuthMode.login),
                   ),
                 SizedBox(height: AppSpacing.space4),
                 Text(
-                  'Prototype demo. No real backend or saved accounts.',
+                  'Powered by Firebase Auth.',
                   textAlign: TextAlign.center,
                   style: AppTypography.caption(color: tokens.inkMuted),
                 ),
@@ -271,6 +364,7 @@ class _LoginForm extends StatelessWidget {
     required this.passwordController,
     required this.emailError,
     required this.passwordError,
+    required this.busy,
     required this.onSubmit,
     required this.onSwitch,
   });
@@ -278,6 +372,7 @@ class _LoginForm extends StatelessWidget {
   final TextEditingController passwordController;
   final String? emailError;
   final String? passwordError;
+  final bool busy;
   final VoidCallback onSubmit;
   final VoidCallback onSwitch;
 
@@ -310,13 +405,19 @@ class _LoginForm extends StatelessWidget {
         SizedBox(height: AppSpacing.space5),
         FilledButton.icon(
           key: const Key('sign-in-button'),
-          onPressed: onSubmit,
-          icon: const Icon(Icons.arrow_forward),
-          label: const Text('Log in'),
+          onPressed: busy ? null : onSubmit,
+          icon: busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.arrow_forward),
+          label: Text(busy ? 'Signing in…' : 'Log in'),
         ),
         SizedBox(height: AppSpacing.space3),
         TextButton(
-          onPressed: onSwitch,
+          onPressed: busy ? null : onSwitch,
           child: const Text("Don't have an account? Sign up"),
         ),
       ],
@@ -334,6 +435,7 @@ class _SignupForm extends StatelessWidget {
     required this.emailError,
     required this.passwordError,
     required this.confirmError,
+    required this.busy,
     required this.onSubmit,
     required this.onSwitch,
   });
@@ -345,6 +447,7 @@ class _SignupForm extends StatelessWidget {
   final String? emailError;
   final String? passwordError;
   final String? confirmError;
+  final bool busy;
   final VoidCallback onSubmit;
   final VoidCallback onSwitch;
 
@@ -397,13 +500,19 @@ class _SignupForm extends StatelessWidget {
         SizedBox(height: AppSpacing.space5),
         FilledButton.icon(
           key: const Key('sign-up-button'),
-          onPressed: onSubmit,
-          icon: const Icon(Icons.check),
-          label: const Text('Create account'),
+          onPressed: busy ? null : onSubmit,
+          icon: busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.check),
+          label: Text(busy ? 'Creating account…' : 'Create account'),
         ),
         SizedBox(height: AppSpacing.space3),
         TextButton(
-          onPressed: onSwitch,
+          onPressed: busy ? null : onSwitch,
           child: const Text('Already have an account? Log in'),
         ),
       ],
