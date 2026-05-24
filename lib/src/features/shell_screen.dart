@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
+import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
@@ -33,22 +34,40 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     return Scaffold(
       backgroundColor: tokens.surface,
       appBar: AppBar(
-        title: const Text('Connect Me'),
-        backgroundColor: tokens.surfaceRaised,
-        surfaceTintColor: Colors.transparent,
+        toolbarHeight: 55,
+        titleSpacing: 20,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF6D4CFF), Color(0xFF9F7BFF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        title: Text(
+          'Connect Me',
+          style: AppTypography.h2(color: Colors.white),
+        ),
         actions: [
           IconButton(
-            key: const Key('plus-action-button'),
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add, color: Colors.white),
             onPressed: () => showPlusSheet(context),
           ),
           IconButton(
             icon: CircleAvatar(
-              radius: 16,
-              child: Text(userAvatar),
+              radius: 18,
+              backgroundColor: Colors.white,
+              child: Text(
+                userAvatar,
+                style: AppTypography.body(color: const Color(0xFF6D4CFF)),
+              ),
             ),
             onPressed: () => context.push('/settings'),
           ),
+          SizedBox(width: AppSpacing.space2),
         ],
       ),
       body: AppSurface(
@@ -58,9 +77,15 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
           child: _tabs[selectedTab],
         ),
       ),
-      bottomNavigationBar: _BottomNav(
-        selectedTab: selectedTab,
-        onTab: ref.read(appControllerProvider.notifier).setTab,
+      bottomNavigationBar: BottomAppBar(
+        color: tokens.surfaceRaised,
+        elevation: 0,
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8,
+        child: _BottomNav(
+          selectedTab: selectedTab,
+          onTab: ref.read(appControllerProvider.notifier).setTab,
+        ),
       ),
     );
   }
@@ -136,15 +161,16 @@ class _NavItem extends StatelessWidget {
     return InkWell(
       onTap: () => onTap(index),
       child: SizedBox(
-        width: 78,
+        width: 72,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
               color: selected ? tokens.primary : tokens.inkMuted,
-              size: 32,
+              size: 28,
             ),
+            SizedBox(height: AppSpacing.space1),
             Text(
               label,
               style: AppTypography.caption(

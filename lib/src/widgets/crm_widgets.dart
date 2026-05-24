@@ -270,47 +270,82 @@ class RecommendationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    
+    final priority = _recommendationPriority(connection.bondScore);
+    final priorityColor = _recommendationPriorityColor(connection.bondScore, tokens);
+
     return CardBox(
       onTap: onTap,
-      padding: EdgeInsets.all(AppSpacing.space5),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.space4,
+        vertical: AppSpacing.space4,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Row 1: BondRing + name + category dot
-          Row(
-            children: [
-              BondRing(connection: connection, size: 56),
-              SizedBox(width: AppSpacing.space4),
-              Expanded(
-                child: Text(
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: tokens.primaryTint,
+            child: Text(
+              connection.avatar,
+              style: AppTypography.glyph(20, color: tokens.primary),
+            ),
+          ),
+          SizedBox(width: AppSpacing.space4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   connection.name,
                   style: AppTypography.h2(color: tokens.ink),
                 ),
+                SizedBox(height: AppSpacing.space2),
+                Text(
+                  recommendation.reason,
+                  style: AppTypography.body(color: tokens.inkMuted),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: AppSpacing.space4),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.space3,
+                  vertical: AppSpacing.space1,
+                ),
+                decoration: BoxDecoration(
+                  color: priorityColor.withOpacity(0.16),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Text(
+                  priority,
+                  style: AppTypography.caption(color: priorityColor),
+                ),
               ),
-              CircleAvatar(
-                radius: 4,
-                backgroundColor: categoryColor(connection.category, tokens),
+              SizedBox(height: AppSpacing.space3),
+              BondRing.fromScore(
+                score: connection.bondScore,
+                label: connection.name,
+                size: 44,
               ),
             ],
-          ),
-          SizedBox(height: AppSpacing.space4),
-          // Row 2: Conversational headline
-          Text(
-            recommendation.reason,
-            style: AppTypography.bodyLg(color: tokens.ink),
-          ),
-          SizedBox(height: AppSpacing.space3),
-          // Row 3: Insight text
-          Text(
-            recommendation.insight,
-            style: AppTypography.body(color: tokens.inkMuted),
           ),
         ],
       ),
     );
   }
 }
+
+String _recommendationPriority(int score) => score < 55 ? 'High' : 'Medium';
+
+Color _recommendationPriorityColor(int score, AppTokens tokens) =>
+    score < 55 ? tokens.danger : tokens.secondary;
 
 /// Returns the category-color mapping per DESIGN.md.
 Color categoryColor(String category, AppTokens tokens) {
@@ -427,9 +462,10 @@ class _HeatmapRow extends StatelessWidget {
 }
 
 class SectionTitle extends StatelessWidget {
-  const SectionTitle(this.title, {super.key, this.action});
+  const SectionTitle(this.title, {super.key, this.action, this.titleStyle});
   final String title;
   final Widget? action;
+  final TextStyle? titleStyle;
 
   /// Threshold below which the action stacks beneath the title.
   ///
@@ -458,7 +494,7 @@ class SectionTitle extends StatelessWidget {
         builder: (context, constraints) {
           final titleWidget = Text(
             title,
-            style: AppTypography.h1(),
+            style: titleStyle ?? AppTypography.h1(),
             softWrap: true,
           );
 
@@ -466,25 +502,8 @@ class SectionTitle extends StatelessWidget {
             return titleWidget;
           }
 
-          final mustStack = constraints.maxWidth < _stackBelowWidth &&
-              title.length > _shortTitleMaxChars;
-
-          if (mustStack) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                titleWidget,
-                SizedBox(height: AppSpacing.space2),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: action!,
-                ),
-              ],
-            );
-          }
-
           return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(child: titleWidget),
               action!,
@@ -601,53 +620,46 @@ class ConnectionScoreHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final tier = BondTier.from(score);
-    final trendLabel = score >= 70 ? 'trending up' : '';
-    final semanticLabel = 'Connection score: $score, ${tier.label}${trendLabel.isNotEmpty ? ', $trendLabel' : ''}';
-    
+    final semanticLabel = 'Connection score: $score';
+
     return Semantics(
       label: semanticLabel,
-      child: CardBox(
-        child: Row(
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.space5,
+          vertical: AppSpacing.space6,
+        ),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            Text(
+              'Connection score',
+              style: AppTypography.bodyLg(color: tokens.inkMuted),
+            ),
+            SizedBox(height: AppSpacing.space4),
             BondRing.fromScore(
               score: score,
-              label: 'Overall connection health',
-              size: 96,
+              label: 'Connection score',
+              size: 176,
+              strokeWidth: 11,
             ),
-            SizedBox(width: AppSpacing.space5),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        '$score',
-                        style: AppTypography.display(color: tokens.ink),
-                      ),
-                      SizedBox(width: AppSpacing.space2),
-                      Flexible(
-                        child: Text(
-                          '· ${tier.label}',
-                          style: AppTypography.h2(color: tokens.inkMuted),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: AppSpacing.space2),
-                  Text(
-                    'Average across all connections',
-                    style: AppTypography.bodyLg(color: tokens.inkMuted),
-                  ),
-                ],
-              ),
+            SizedBox(height: AppSpacing.space4),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppSpacing.space2,
+              alignment: WrapAlignment.center,
+              children: [
+                Icon(
+                  Icons.trending_up,
+                  color: tokens.primary,
+                  size: 18,
+                ),
+                Text(
+                  'Keep nurturing your relationships!',
+                  style: AppTypography.body(color: tokens.inkMuted),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ],
         ),
