@@ -1,18 +1,28 @@
-/// Firebase emulator test scaffold (Pass 4.2, #056).
+/// Firebase emulator test scaffold (Pass 4.2, #056 + #057).
 ///
 /// Shared helpers that initialize Firebase against the local Firestore
 /// and Auth emulators so adapter, migration, and provider tests can
 /// exercise the real Firebase SDK without talking to the production
-/// `connect-me-e20b1` project. Tests that use this helper must be
-/// tagged `emulator` (see `dart_test.yaml`) so the default
-/// `flutter test` sweep still runs offline and stays the 289-passing
-/// baseline established at the end of Pass 3.
+/// `connect-me-e20b1` project.
+///
+/// **Why this lives under `integration_test/` and not `test/`.**
+/// `flutter test` runs in a headless Dart VM that cannot load
+/// `firebase_core`'s native plugin channels — `Firebase.initializeApp`
+/// throws `channel-error` immediately. The `integration_test` package
+/// boots a real Flutter engine on a device target, which is what the
+/// Firebase SDK needs. Default `flutter test` therefore does not run
+/// any of these tests; physical location under `integration_test/`
+/// gates them, no `--tags` workaround needed.
 ///
 /// Canonical invocation (from repo root):
 ///
 ///     firebase emulators:exec --only firestore,auth \
 ///       --project connect-me-rules-test \
-///       "flutter test --tags emulator --run-skipped"
+///       "flutter test integration_test -d macos"
+///
+/// macOS desktop is the cheapest engine to boot. iOS simulator,
+/// Android emulator, and Chrome are alternatives — pick what
+/// `flutter devices` reports.
 ///
 /// Non-goals:
 ///
@@ -57,7 +67,7 @@ bool _initialized = false;
 /// First call boots the SDK and routes Firestore + Auth at the
 /// emulator. Later calls short-circuit.
 ///
-/// Tests that call this helper must be tagged `emulator` so the
+/// Tests that call this helper live under `integration_test/` so the
 /// default `flutter test` sweep skips them.
 Future<void> setUpEmulators() async {
   if (_initialized) return;
@@ -147,9 +157,42 @@ Future<void> clearAuthEmulator() async {
   }
 }
 
-/// Convenience: clear both emulators. Call from `tearDown` in tests
-/// that mutate emulator state.
+/// Convenience: clear both emulators and the SDK's local state.
+/// Call from `tearDown` (or `setUp`) in tests that mutate emulator
+/// state so each test starts from a known-empty world.
+///
+/// Why three steps:
+///   1. **Sign out.** `signInAnonymously` returns the *existing*
+///      in-memory session if one is set, even after the auth
+///      emulator wipe deleted the server-side user. Without an
+///      explicit sign-out, the next test would reuse the previous
+///      test's UID and hit the same Firestore path.
+///   2. **Terminate + clearPersistence.** The Firestore SDK keeps a
+///      local cache. The emulator REST wipe only deletes server-side
+///      data; without clearing persistence, the SDK happily serves
+///      stale cached docs to subsequent reads.
+///   3. **Server-side wipe.** REST DELETE on both emulators.
+///
+/// After termination, `FirebaseFirestore.instance` is auto-recreated
+/// the next time it's accessed. The emulator route established in
+/// `setUpEmulators` does *not* survive the recreation, so we re-route
+/// at the end.
 Future<void> tearDownEmulators() async {
+  try {
+    await FirebaseAuth.instance.signOut();
+  } catch (_) {
+    // No-op: not signed in is fine.
+  }
+  try {
+    await FirebaseFirestore.instance.terminate();
+    await FirebaseFirestore.instance.clearPersistence();
+  } on FirebaseException {
+    // First-call / not-initialized edge cases are harmless.
+  }
   await clearFirestoreEmulator();
   await clearAuthEmulator();
+  FirebaseFirestore.instance.useFirestoreEmulator(
+    _firestoreHost,
+    _firestorePort,
+  );
 }

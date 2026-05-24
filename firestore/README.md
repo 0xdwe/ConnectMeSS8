@@ -56,7 +56,14 @@ cd firestore && npm test
 
 ## A note on scope
 
-This is the **rules-test suite only**. It does not run as part of
-`flutter test` and it does not exercise any Dart code. Pass 4.2's Dart
-adapter, migration, and provider tests live under the normal Flutter
-`test/` tree and use a separate emulator-backed scaffold (issue #056).
+This is the **rules-test suite only**. It does not exercise any Dart
+code. Pass 4.2's Dart adapter, migration, and provider tests live
+under `integration_test/` (issues #056 + #057) because `flutter test`
+is a headless Dart VM that cannot load Firebase plugin channels. They
+run against the same emulator via:
+
+```bash
+firebase emulators:exec --only firestore,auth \
+  --project connect-me-rules-test \
+  "flutter test integration_test -d macos"
+```
