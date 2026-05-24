@@ -1,0 +1,15 @@
+{
+  "name": "connect-me-firestore-rules-tests",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Jest + @firebase/rules-unit-testing suite for Connect Me Firestore security rules. Runs against the local Firebase emulator.",
+  "scripts": {
+    "test": "jest --runInBand"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "4.0.1",
+    "firebase": "11.1.0",
+    "firebase-admin": "13.0.2",
+    "jest": "29.7.0"
+  }
+}

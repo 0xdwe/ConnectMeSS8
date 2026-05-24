@@ -1,0 +1,16 @@
+# dart_test.yaml
+#
+# Pass 4.2 (#057): emulator-backed Firebase tests no longer live under
+# `test/`. They moved to `integration_test/` because `flutter test`
+# runs in a headless Dart VM that cannot load `firebase_core` plugin
+# channels. Physical location under `integration_test/` is now the
+# gating mechanism — the default `flutter test` sweep does not pick
+# those tests up at all, so no `--tags` workaround is needed.
+#
+# Canonical run for emulator-backed Dart tests:
+#
+#     firebase emulators:exec --only firestore,auth \
+#       --project connect-me-rules-test \
+#       "flutter test integration_test -d macos"
+#
+# See `integration_test/firebase_test_setup.dart` for details.
