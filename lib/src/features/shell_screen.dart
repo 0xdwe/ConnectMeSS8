@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
 import '../theme/app_spacing.dart';
@@ -11,6 +10,7 @@ import 'modals/plus_sheet.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/people_tab.dart';
 import 'tabs/planner_tab.dart';
+import 'settings_screen.dart';
 
 class ShellScreen extends ConsumerStatefulWidget {
   const ShellScreen({super.key});
@@ -20,7 +20,7 @@ class ShellScreen extends ConsumerStatefulWidget {
 }
 
 class _ShellScreenState extends ConsumerState<ShellScreen> {
-  static const _tabs = [HomeTab(), PeopleTab(), PlannerTab()];
+  static const _tabs = [HomeTab(), PeopleTab(), PlannerTab(), SettingsScreen()];
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +33,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     );
     return Scaffold(
       backgroundColor: tokens.surface,
+
       appBar: AppBar(
         toolbarHeight: 55,
         titleSpacing: 20,
@@ -53,10 +54,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: Colors.white),
-            onPressed: () => showPlusSheet(context),
-          ),
-          IconButton(
             icon: CircleAvatar(
               radius: 18,
               backgroundColor: Colors.white,
@@ -65,11 +62,12 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
                 style: AppTypography.body(color: const Color(0xFF6D4CFF)),
               ),
             ),
-            onPressed: () => context.push('/settings'),
+            onPressed: () => ref.read(appControllerProvider.notifier).setTab(3),
           ),
           SizedBox(width: AppSpacing.space2),
         ],
       ),
+
       body: AppSurface(
         child: SafeArea(
           top: false,
@@ -77,15 +75,31 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
           child: _tabs[selectedTab],
         ),
       ),
-      bottomNavigationBar: BottomAppBar(
-        color: tokens.surfaceRaised,
-        elevation: 0,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        child: _BottomNav(
-          selectedTab: selectedTab,
-          onTab: ref.read(appControllerProvider.notifier).setTab,
+
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: Transform.translate(
+        offset: const Offset(0, 18),
+        child: SizedBox(
+          width: 72,
+          height: 72,
+          child: FloatingActionButton(
+            key: const Key('plus-action-button'),
+            shape: const CircleBorder(),
+            backgroundColor: tokens.primary,
+            elevation: 10,
+            onPressed: () => showPlusSheet(context),
+            child: const Icon(
+              Icons.add,
+              color: Colors.white,
+              size: 42,
+            ),
+          ),
         ),
+      ),
+
+      bottomNavigationBar: _BottomNav(
+        selectedTab: selectedTab,
+        onTab: ref.read(appControllerProvider.notifier).setTab,
       ),
     );
   }
@@ -96,20 +110,20 @@ class _BottomNav extends StatelessWidget {
     required this.selectedTab,
     required this.onTab,
   });
+
   final int selectedTab;
   final ValueChanged<int> onTab;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      height: 92,
-      decoration: BoxDecoration(
-        color: tokens.surfaceRaised,
-        border: Border(top: BorderSide(color: tokens.border)),
-        boxShadow: AppTokens.elevation1(dark),
-      ),
+
+    return BottomAppBar(
+      height: 88,
+      color: tokens.surfaceRaised,
+      elevation: 8,
+      shape: const CircularNotchedRectangle(),
+      notchMargin: 6,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
@@ -127,11 +141,21 @@ class _BottomNav extends StatelessWidget {
             label: 'People',
             onTap: onTab,
           ),
+
+          const SizedBox(width: 80),
+
           _NavItem(
             index: 2,
             selectedTab: selectedTab,
-            icon: Icons.calendar_today_outlined,
-            label: 'Plan',
+            icon: Icons.calendar_month_outlined,
+            label: 'Planner',
+            onTap: onTab,
+          ),
+          _NavItem(
+            index: 3,
+            selectedTab: selectedTab,
+            icon: Icons.settings_outlined,
+            label: 'Settings',
             onTap: onTab,
           ),
         ],
