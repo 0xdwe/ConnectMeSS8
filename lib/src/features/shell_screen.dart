@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
 import '../theme/app_spacing.dart';
@@ -10,7 +11,6 @@ import 'modals/plus_sheet.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/people_tab.dart';
 import 'tabs/planner_tab.dart';
-import 'settings_screen.dart';
 
 class ShellScreen extends ConsumerStatefulWidget {
   const ShellScreen({super.key});
@@ -20,7 +20,7 @@ class ShellScreen extends ConsumerStatefulWidget {
 }
 
 class _ShellScreenState extends ConsumerState<ShellScreen> {
-  static const _tabs = [HomeTab(), PeopleTab(), PlannerTab(), SettingsScreen()];
+  static const _tabs = [HomeTab(), PeopleTab(), PlannerTab()];
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +33,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     );
     return Scaffold(
       backgroundColor: tokens.surface,
-
       appBar: AppBar(
         toolbarHeight: 55,
         titleSpacing: 20,
@@ -62,12 +61,11 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
                 style: AppTypography.body(color: const Color(0xFF6D4CFF)),
               ),
             ),
-            onPressed: () => ref.read(appControllerProvider.notifier).setTab(3),
+            onPressed: () => context.push('/settings'),
           ),
           SizedBox(width: AppSpacing.space2),
         ],
       ),
-
       body: AppSurface(
         child: SafeArea(
           top: false,
@@ -112,7 +110,6 @@ class _BottomNav extends StatelessWidget {
     required this.selectedTab,
     required this.onTab,
   });
-
   final int selectedTab;
   final ValueChanged<int> onTab;
 
