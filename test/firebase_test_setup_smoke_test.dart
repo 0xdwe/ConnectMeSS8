@@ -1,11 +1,12 @@
 /// Smoke test for the #056 Firebase emulator scaffold.
 ///
-/// Tagged `emulator` so the default `flutter test` sweep skips it.
+/// Tagged `emulator` so the default `flutter test` sweep skips it
+/// (the tag is configured with `skip:` in `dart_test.yaml`).
 /// Run via:
 ///
 ///     firebase emulators:exec --only firestore,auth \
 ///       --project connect-me-rules-test \
-///       "flutter test --tags emulator"
+///       "flutter test --tags emulator --run-skipped"
 ///
 /// This test exists only to prove the scaffold boots Firebase against
 /// the emulator and round-trips a request. Real adapter coverage

@@ -1,18 +1,20 @@
 # dart_test.yaml
 #
 # Tag emulator-backed tests so the default `flutter test` sweep stays
-# fast and offline. The `emulator` tag is opt-in: the default invocation
-# excludes it, so the 289-passing Pass 3 baseline is preserved.
+# fast and offline. The `emulator` tag is configured with `skip:`,
+# which means tagged tests appear in the default sweep as skipped
+# (with the canonical command in the reason) and the 289-passing
+# Pass 3 baseline is preserved. Pass `--run-skipped` to actually
+# execute them under the emulator.
 #
 # Canonical run for emulator-backed Dart tests:
 #
 #     firebase emulators:exec --only firestore,auth \
 #       --project connect-me-rules-test \
-#       "flutter test --tags emulator"
+#       "flutter test --tags emulator --run-skipped"
 #
 # See test/firebase_test_setup.dart for details.
 
 tags:
-  emulator: {}
-
-exclude_tags: "emulator"
+  emulator:
+    skip: "Requires Firebase emulator. Run with: firebase emulators:exec --only firestore,auth --project connect-me-rules-test \"flutter test --tags emulator --run-skipped\""

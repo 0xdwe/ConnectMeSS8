@@ -31,9 +31,9 @@ All of this works behind the existing test sweep with `MockFirebaseAuth`, so the
 
 For emulator-backed Dart tests (Pass 4.2, #056) the canonical command is:
 
-    firebase emulators:exec --only firestore,auth --project connect-me-rules-test "flutter test --tags emulator"
+    firebase emulators:exec --only firestore,auth --project connect-me-rules-test "flutter test --tags emulator --run-skipped"
 
-Default `flutter test` (no `--tags`) leaves the 289-passing baseline untouched; the emulator-tagged smoke test is skipped without an emulator running.
+Default `flutter test` (no `--tags`) leaves the 289-passing baseline untouched; the emulator-tagged smoke test reports as skipped (with the canonical command in the skip reason) when no emulator is running.
 
 ## Pass 3 summary
 

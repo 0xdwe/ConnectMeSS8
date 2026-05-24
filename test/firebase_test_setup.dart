@@ -12,7 +12,7 @@
 ///
 ///     firebase emulators:exec --only firestore,auth \
 ///       --project connect-me-rules-test \
-///       "flutter test --tags emulator"
+///       "flutter test --tags emulator --run-skipped"
 ///
 /// Non-goals:
 ///
