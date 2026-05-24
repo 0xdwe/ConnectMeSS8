@@ -29,6 +29,12 @@ Before 4.2 starts touching Firestore, the running app should be verified on a de
 
 All of this works behind the existing test sweep with `MockFirebaseAuth`, so the gate is real-device testing rather than `flutter test`.
 
+For emulator-backed Dart tests (Pass 4.2, #056) the canonical command is:
+
+    firebase emulators:exec --only firestore,auth --project connect-me-rules-test "flutter test --tags emulator --run-skipped"
+
+Default `flutter test` (no `--tags`) leaves the 289-passing baseline untouched; the emulator-tagged smoke test reports as skipped (with the canonical command in the skip reason) when no emulator is running.
+
 ## Pass 3 summary
 
 The architectural pivot from the v2 PRD (`docs/prd/2026-05-19-per-contact-memory-files-v2-prd.md`) replaced v1's parallel `MemoryUpdater` + `AiUpdateService` plan with a single `AiUpdate` module shaped around the user-level operation ("Update with AI on Sarah"). Memory is now persistent on disk, narrative grows on each AI update, and recommendations are produced by a real engine ranking the live connection list rather than three frozen constants.
