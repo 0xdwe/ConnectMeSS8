@@ -137,19 +137,21 @@ const Duration recommendationsFreshness = Duration(hours: 6);
 ///
 /// Holds the engine output alongside the wall-clock time at which it
 /// was computed, plus identity-comparable references to the dep
-/// slices the engine consumed. The notifier checks all four
-/// invariants (time, memory epoch, connections identity,
-/// interactions identity) to decide between serving the cache or
-/// recomputing.
+/// slices the engine consumed. The notifier checks all five
+/// invariants (time, memory epoch, store identity, connections
+/// identity, interactions identity) to decide between serving the
+/// cache or recomputing.
 class _RecommendationsCache {
   const _RecommendationsCache({
     required this.computedAt,
     required this.list,
+    required this.store,
     required this.connections,
     required this.interactions,
   });
   final DateTime computedAt;
   final List<Recommendation> list;
+  final MemoryStore store;
   final List<Connection> connections;
   final List<CrmInteraction> interactions;
 }
@@ -177,6 +179,19 @@ class RecommendationsNotifier extends Notifier<List<Recommendation>> {
 
   @override
   List<Recommendation> build() {
+    // Watch the active memory store so an auth swap (sign-out
+    // then sign-in-as-different-user) rebuilds this notifier and
+    // discards the previous user's cached list. #062 follow-up
+    // against #058 AC4. The store reference is also pinned into
+    // the cache tuple below: the long-lived Notifier instance
+    // outlives an override swap, so `_cache` would otherwise
+    // survive the rebuild and serve user A's list to user B when
+    // connections + interactions stay object-identical across the
+    // swap (the AppController is not yet auth-aware). Bounded
+    // today because the engine still receives `memories: const
+    // {}`; closes the leak before #051 wires real per-contact
+    // memory in.
+    final store = ref.watch(memoryStoreProvider);
     final connections = ref.watch(
       appControllerProvider.select((state) => state.connections),
     );
@@ -191,6 +206,7 @@ class RecommendationsNotifier extends Notifier<List<Recommendation>> {
     final isFresh = cache != null &&
         now.difference(cache.computedAt) < recommendationsFreshness &&
         (memoryEpoch == null || !memoryEpoch.isAfter(cache.computedAt)) &&
+        identical(cache.store, store) &&
         identical(cache.connections, connections) &&
         identical(cache.interactions, interactions);
 
@@ -216,6 +232,7 @@ class RecommendationsNotifier extends Notifier<List<Recommendation>> {
     _cache = _RecommendationsCache(
       computedAt: now,
       list: list,
+      store: store,
       connections: connections,
       interactions: interactions,
     );

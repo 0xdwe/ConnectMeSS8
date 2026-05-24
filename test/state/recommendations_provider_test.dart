@@ -237,6 +237,41 @@ void main() {
     });
 
     test(
+        'cache does not survive a memoryStoreProvider swap '
+        '(sign-out then sign-in-as-different-user) — #062', () {
+      // Two distinct stores, one per user. We override
+      // memoryStoreProvider directly to model the production
+      // scenario: an auth swap rebuilds memoryStoreProvider's
+      // identity. AppController is intentionally NOT overridden, so
+      // connections + interactions stay object-identical across the
+      // swap — that's the exact case where the existing identity-
+      // based cache check would happily serve user A's list to user B
+      // if the provider didn't watch the store. Identity is the right
+      // invariant: content may be coincidentally equal because the
+      // engine input did not change; we're asserting the notifier
+      // recomputed rather than served the cached list.
+      final storeA = InMemoryMemoryStore();
+      final storeB = InMemoryMemoryStore();
+      final container = ProviderContainer(overrides: [
+        memoryStoreProvider.overrideWithValue(storeA),
+      ]);
+      addTearDown(container.dispose);
+
+      final listA = container.read(recommendationsProvider);
+
+      container.updateOverrides([
+        memoryStoreProvider.overrideWithValue(storeB),
+      ]);
+
+      final listB = container.read(recommendationsProvider);
+
+      expect(identical(listA, listB), isFalse,
+          reason: 'recommendationsProvider must rebuild when '
+              'memoryStoreProvider rebuilds (auth user swap), so the '
+              "previous user's cached list is not reused.");
+    });
+
+    test(
         'failed commit (failOnApply) still bumps the epoch — a transient '
         'extra recompute is acceptable per the rollback contract', () async {
       final store = InMemoryMemoryStore();
