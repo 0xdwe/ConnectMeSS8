@@ -78,13 +78,15 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
 
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: Transform.translate(
-        offset: const Offset(0, 18),
+        offset: const Offset(0, 15),
         child: SizedBox(
           width: 72,
           height: 72,
           child: FloatingActionButton(
             key: const Key('plus-action-button'),
-            shape: const CircleBorder(),
+            shape: const CircleBorder(
+              side: BorderSide(color: Colors.white, width: 5),
+            ),
             backgroundColor: tokens.primary,
             elevation: 10,
             onPressed: () => showPlusSheet(context),
@@ -118,54 +120,69 @@ class _BottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    return BottomAppBar(
-      height: 88,
-      color: tokens.surfaceRaised,
-      elevation: 8,
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 6,
-      child: Row(
-        children: [
-          Expanded(
-            child: _NavItem(
-              index: 0,
-              selectedTab: selectedTab,
-              icon: Icons.home_outlined,
-              label: 'Home',
-              onTap: onTab,
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              offset: const Offset(0, -3),
+              blurRadius: 8,
             ),
-          ),
-          Expanded(
-            child: _NavItem(
-              index: 1,
-              selectedTab: selectedTab,
-              icon: Icons.people_outline,
-              label: 'People',
-              onTap: onTab,
-            ),
-          ),
+          ],
+        ),
+        child: BottomAppBar(
+          height: 74,
+          color: tokens.surfaceRaised,
+          elevation: 0,
+          shape: null,
+          child: Row(
+            children: [
+              Expanded(
+                child: _NavItem(
+                  index: 0,
+                  selectedTab: selectedTab,
+                  icon: Icons.home_outlined,
+                  label: 'Home',
+                  onTap: onTab,
+                ),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: _NavItem(
+                  index: 1,
+                  selectedTab: selectedTab,
+                  icon: Icons.people_outline,
+                  label: 'People',
+                  onTap: onTab,
+                ),
+              ),
 
-          const SizedBox(width: 80),
+              const SizedBox(width: 80),
 
-          Expanded(
-            child: _NavItem(
-              index: 2,
-              selectedTab: selectedTab,
-              icon: Icons.calendar_month_outlined,
-              label: 'Planner',
-              onTap: onTab,
-            ),
+              Expanded(
+                child: _NavItem(
+                  index: 2,
+                  selectedTab: selectedTab,
+                  icon: Icons.calendar_month_outlined,
+                  label: 'Planner',
+                  onTap: onTab,
+                ),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: _NavItem(
+                  index: 3,
+                  selectedTab: selectedTab,
+                  icon: Icons.settings_outlined,
+                  label: 'Settings',
+                  onTap: onTab,
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: _NavItem(
-              index: 3,
-              selectedTab: selectedTab,
-              icon: Icons.settings_outlined,
-              label: 'Settings',
-              onTap: onTab,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -191,24 +208,26 @@ class _NavItem extends StatelessWidget {
     final selected = selectedTab == index;
     return InkWell(
       onTap: () => onTap(index),
-      child: SizedBox(
-        width: double.infinity,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
               icon,
               color: selected ? tokens.primary : tokens.inkMuted,
               size: 28,
-            ),
-            SizedBox(height: AppSpacing.space1),
-            Text(
-              label,
-              style: AppTypography.caption(
-                color: selected ? tokens.primary : tokens.inkMuted,
               ),
-            ),
-          ],
+              Text(
+                label,
+                style: AppTypography.caption(
+                  color: selected ? tokens.primary : tokens.inkMuted,
+                ),
+              ),
+            ],  
+          ),
         ),
       ),
     );
