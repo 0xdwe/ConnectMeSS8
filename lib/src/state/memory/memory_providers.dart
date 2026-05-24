@@ -5,6 +5,8 @@ import '../../models/social_models.dart';
 import '../app_state.dart';
 import '../firebase_providers.dart';
 import '../recommendation_engine.dart';
+import 'disk_to_firestore_migration.dart';
+import 'file_memory_store.dart';
 import 'firebase_memory_store.dart';
 import 'memory_document.dart';
 import 'memory_store.dart';
@@ -285,6 +287,49 @@ final memoryProvider =
   return empty;
 });
 
+/// One-shot disk-to-Firestore migration on first authenticated
+/// observe (Pass 4.2 #059, PRD Q6).
+///
+/// No-ops while signed out, when the sentinel is already set against
+/// a non-empty remote, or when there are no local source files. By
+/// the time this provider's future resolves, [memorySeedingProvider]
+/// is safe to read: any local-disk markdown has either been migrated
+/// into the user's Firestore collection or proven unrecoverable.
+///
+/// Why a fresh `FileMemoryStore` is constructed here instead of
+/// reading [memoryStoreProvider]: the provider returns the
+/// _target_ store (Firestore-backed once a user is signed in). The
+/// migration source is the legacy on-disk markdown adapter and must
+/// always be `FileMemoryStore`, regardless of what production
+/// memory writes go through today.
+///
+/// Returns the count of documents successfully migrated. Tests can
+/// `await container.read(diskToFirestoreMigrationProvider.future)`
+/// to drive the migration deterministically.
+final diskToFirestoreMigrationProvider = FutureProvider<int>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return 0;
+
+  final store = ref.watch(memoryStoreProvider);
+  if (store is _SignedOutMemoryStore) return 0;
+  // Migration only makes sense when the target is the Firestore
+  // adapter. Tests that override `memoryStoreProvider` with
+  // `InMemoryMemoryStore` skip migration entirely — they're not
+  // exercising the disk→Firestore boundary.
+  if (store is! FirebaseMemoryStore) return 0;
+
+  final firestore = ref.watch(firestoreProvider);
+  final migration = DiskToFirestoreMigration(
+    source: FileMemoryStore(),
+    target: store,
+    sentinel: FirestoreMigrationSentinel(
+      firestore: firestore,
+      uid: user.uid,
+    ),
+  );
+  return migration.ensureMigrated();
+});
+
 /// One-shot bootstrap that runs the seed migration on first observe.
 ///
 /// Filesystem-inferred state per PRD Q9: if the store is empty AND
@@ -300,9 +345,14 @@ final memoryProvider =
 /// memories collection is empty. The behavioral change from Pass 3
 /// is intentional: in Pass 3 the seed ran at install time against a
 /// device-local store; in Pass 4.2 the seed follows the user, not
-/// the install. Issue #059 introduces a separate one-shot migration
-/// for existing on-device markdown into the same per-user
-/// collection.
+/// the install.
+///
+/// **Migration takes priority over re-seeding (Pass 4.2, #059).**
+/// We `await` the disk-to-Firestore migration first. If the user has
+/// existing on-device markdown memories, those are restored into the
+/// remote collection. The non-empty-listAll guard below then sees
+/// the migrated docs and skips re-seeding, so a returning user is
+/// never given fresh seed docs on top of their actual history.
 final memorySeedingProvider = FutureProvider<void>((ref) async {
   // Bail out before touching the store if no user is signed in. The
   // sentinel store would throw on `listAll`, but bailing here avoids
@@ -314,6 +364,13 @@ final memorySeedingProvider = FutureProvider<void>((ref) async {
   // Defense-in-depth: if a test (or some race) leaves the sentinel in
   // place despite a signed-in user, skip seeding rather than throw.
   if (store is _SignedOutMemoryStore) return;
+
+  // Migration first. The non-empty listAll guard below makes this
+  // safe to skip if the store override doesn't go through Firestore
+  // — `diskToFirestoreMigrationProvider` itself returns 0 in that
+  // case so widget tests that override `memoryStoreProvider` are
+  // unaffected.
+  await ref.watch(diskToFirestoreMigrationProvider.future);
 
   final connections = ref.watch(
     appControllerProvider.select((state) => state.connections),

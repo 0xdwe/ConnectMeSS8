@@ -5,35 +5,35 @@
 **Pass 1 (home/people UI consistency)** — shipped, including review fixes.
 **Pass 2 (contact profile redesign)** — shipped, including review fixes.
 **Pass 3 (per-contact memory files with agentic AI)** — shipped on 2026-05-19. All 11 issues (#040–#050) merged to `main`.
-**Pass 4 begins.** Pass 4.1 (#052, Firebase Auth) shipped on 2026-05-21. Pass 4.2 in progress: #054, #055, #056, #057, #058 merged on 2026-05-24. Remaining: #059 (one-shot disk-to-Firestore migration), #060 (production cutover + offline two-device smoke), #061 (closeout), and the small #062 follow-up against #058 (recommendation-cache auth rebuild).
-**Test baseline** — default `flutter test` sweep on `main` after the unrelated `ui-login-page` and `fix-navbar` UI merges (commits `7694253`, `88ebfcc`): **262 passed, 33 failed**. The 33 failures are widget-test fixture drift from the UI merges (planner / settings / contact profile copy and layout changes) and are not Pass 4.2 regressions; tracked separately. Pre-Pass-4.2 baseline at `ac9e705` was 289 passed, 0 failed; the 32 of those 33 that the UI merges broke are the only delta. The Pass 4.2 work itself is green: `flutter test test/state/` shows 121 passing, including the new `test/state/firebase_providers_test.dart` regression test for the iOS-only currentUserProvider loop fix on `fix/current-user-provider-invalidation-loop`. Emulator-backed `flutter test integration_test` runs separately (see `integration_test/firebase_test_setup.dart`).
+**Pass 4 begins.** Pass 4.1 (#052, Firebase Auth) shipped on 2026-05-21. Pass 4.2 in progress (#054 → #058 merged 2026-05-24, #059 disk-to-Firestore migration shipped 2026-05-24).
+**Test baseline** — default `flutter test` sweep: **295 passed, 0 failed**. Emulator-backed `flutter test integration_test` runs separately (see `integration_test/firebase_test_setup.dart`).
 
 ## Pass 4 sub-pass plan
 
 The unified `AiUpdate` seam from Pass 3's Q1 was specifically shaped to make Pass 4 a one-adapter swap per concern. Sub-passes are independent except where noted; 4.1 is the load-bearing scaffolding for 4.2 and 4.4.
 
 - **Pass 4.1 — Firebase scaffolding + real Auth.** ✅ **Shipped (#052, commit `ac9e705`).** `flutterfire configure` against project `connect-me-e20b1` across android/ios/macos. `firebase_core` + `firebase_auth` deps. `firebaseAuthProvider` in `lib/src/state/firebase_providers.dart`. Auth screen sign-in/sign-up swap to FirebaseAuth. Settings sign-out signs out of Firebase first. 9 widget tests gained `firebaseAuthProvider` overrides via `MockFirebaseAuth` from `firebase_auth_mocks`.
-- **Pass 4.2 — `FirebaseMemoryStore` adapter.** In progress. Six of nine issues merged on 2026-05-24: #054 (Firestore rules + emulator + JS rules tests), #055 (rules CI + rules-only auto-deploy), #056 (Dart Firestore emulator scaffold), #057 (`FirebaseMemoryStore` adapter behind the seam), #058 (auth-aware `memoryStoreProvider` rebuild). Production `memoryStoreProvider` already returns `FirebaseMemoryStore` for signed-in users; the explicit cutover verification step is #060. Local `FileMemoryStore` remains as a tested debug/reference adapter and migration source. Remaining: #059 (one-shot disk-to-Firestore migration), #060 (production cutover + offline two-device smoke), #061 (closeout), plus #062 (recommendation-cache auth rebuild, follow-up against #058).
+- **Pass 4.2 — `FirebaseMemoryStore` adapter.** Not started. Third implementation of `MemoryStore`. Per-contact memory docs to Firestore keyed by `userId/contactId`. Atomic temp-then-rename contract carries forward as Firestore atomic writes. Real security rules replace the Pass 4.1 "test mode" rules. Production `memoryStoreProvider` swaps from `FileMemoryStore`; local store stays as offline cache or test-only.
 - **Pass 4.3 — `LlmAiUpdate` adapter.** Not started. Real LLM behind the unified `AiUpdate` seam. API key UX in settings (`flutter_secure_storage` for the key). Retry, timeout, cancellation. The Mock keyword list dies; the LLM populates `MemoryDocument.upcoming` for real, which lights up the engine logic from #049 + the wire-up in #051.
 - **Pass 4.4 — Cross-device sync + push.** Not started. Cloud Functions on Firestore writes; FCM for "we noticed you haven't talked to Mike" pushes. Last-writer-wins conflict resolution for the prototype.
 
-## Pass 4.1 real-device verification gate (#053)
+## Pass 4 verification before 4.2
 
-Before #060 cuts production over to Firestore, the running app should be verified on a device against the real Firebase project:
+Before 4.2 starts touching Firestore, the running app should be verified on a device against the real Firebase project:
 
 1. Run the app on a real (or simulated) device.
 2. Sign up with a fresh email + password (≥6 chars). The account should appear under Authentication in the Firebase console.
 3. Sign out from the settings tab.
 4. Sign back in. Wrong password should produce the inline "that password doesn't match" error.
-5. If anything fails (config files in the wrong place, bundle ID mismatch, network errors): file as a hotfix issue before #060.
+5. If anything fails (config files in the wrong place, bundle ID mismatch, network errors): file as a hotfix issue before 4.2.
 
-All of this works behind the existing test sweep with `MockFirebaseAuth`, so the gate is real-device testing rather than `flutter test`. **Status: pending.** #054–#058 landed before this gate on the assumption that the rules / adapter / provider work was reversible without touching production memory; the cutover (#060) should not land until the gate passes.
+All of this works behind the existing test sweep with `MockFirebaseAuth`, so the gate is real-device testing rather than `flutter test`.
 
-For emulator-backed Dart tests (Pass 4.2 emulator-backed tests, #056 onward) the canonical command is:
+For emulator-backed Dart tests (Pass 4.2, #056 + #057) the canonical command is:
 
     firebase emulators:exec --only firestore,auth --project connect-me-rules-test "flutter test integration_test -d macos"
 
-Default `flutter test` leaves headless tests untouched because emulator-backed tests live under `integration_test/`, which is a separate target from the `test/` tree. JDK 21+ on `PATH` is required for the emulator (`brew install openjdk@21`).
+Default `flutter test` leaves the 289-passing baseline untouched because emulator-backed tests live under `integration_test/`, which is a separate target from the `test/` tree. JDK 21+ on `PATH` is required for the emulator (`brew install openjdk@21`).
 
 ## Pass 3 summary
 
@@ -52,20 +52,6 @@ Bond-tier-weighted recency ranks recommendations with a 24h cooldown filter, top
 ### Pass 4 — done
 
 - **#052** — Pass 4.1: Firebase scaffolding + real Auth replaces mock sign-in/sign-up. `firebase_core` + `firebase_auth` deps; `flutterfire configure` against `connect-me-e20b1` across android/ios/macos; `firebaseAuthProvider` provides `FirebaseAuth.instance` (test override is `MockFirebaseAuth` from `firebase_auth_mocks`); auth screen handlers call FirebaseAuth with inline error messages keyed off Firebase error codes, written in the app's voice; settings sign-out signs out of Firebase first. (commit `ac9e705`)
-- **#054** — Firestore rules + emulator + JS rules tests. `firebase.json` configures auth(9099)/firestore(8080) emulators. `firestore/firestore.rules` enforces ownership and shape (`hasOnly`/`hasAll` on `{markdown, updatedAt, schemaVersion}`, `markdown is string`, `size() <= 65536`, `updatedAt is timestamp`, `schemaVersion is int`); 27 JS test cases in `firestore/rules.test.js` cover allow/deny including anon, cross-user, oversized, and sibling-path. (merge commit `83fad2a`)
-- **#055** — Rules CI + rules-only auto-deploy. PR workflow `.github/workflows/rules-tests.yml` runs JS rules tests on `firestore/**` changes. Main-branch workflow `.github/workflows/rules-deploy.yml` deploys only Firestore rules to `connect-me-e20b1` after tests pass, using `FIREBASE_SERVICE_ACCOUNT` secret. One-time setup checklist at `docs/operations/firebase-rules-deploy.md`. (merge commit `85127d0`)
-- **#056** — Dart Firestore emulator test scaffold. Helper at `integration_test/firebase_test_setup.dart` initializes Firebase, routes `useFirestoreEmulator(localhost, 8080)` and `useAuthEmulator(localhost, 9099)`, exposes idempotent `setUpEmulators()` / `tearDownEmulators()`. Substrate lives under `integration_test/` so default `flutter test` skips it. (merge commit `d5be288`)
-- **#057** — `FirebaseMemoryStore` adapter behind the seam. Third `MemoryStore` adapter at `lib/src/state/memory/firebase_memory_store.dart`, bound to one UID at construction, writes `{markdown, updatedAt: serverTimestamp, schemaVersion: 1}` at `users/{uid}/memories/{contactId}`. Emulator tests cover round-trip, missing, delete, listAll, schemaVersion, oversized→trim, oversized→exception, cross-user denial. (merge commit `938f4a0`)
-- **#058** — Auth-aware `memoryStoreProvider` rebuild. Production `memoryStoreProvider` watches `currentUserProvider`; signed-in users get `FirebaseMemoryStore(firestore: ..., uid: user.uid)`, signed-out access throws via `_SignedOutMemoryStore`. `currentUserProvider` and `firestoreProvider` added to `lib/src/state/firebase_providers.dart`. Auth swap rebuilds the store; `memoryProvider` and `memoryTopicsProvider` invalidate via the watch chain. (merge commit `69d346d`)
-- **Hotfix on `fix/current-user-provider-invalidation-loop` (commit `792fcdb`)** — `currentUserProvider` self-invalidate loop. Real `FirebaseAuth.authStateChanges()` replays the current user on every new subscriber; the original `listen((_) => ref.invalidateSelf())` rebuilt the provider, resubscribed, replayed, invalidated, looping forever. `memorySeedingProvider` watched it, so iPhone simulator launches showed an indefinite white screen behind `_MemorySeedingSplash`. Fixed by only invalidating when the emitted UID differs. Regression test at `test/state/firebase_providers_test.dart` reproduces with a custom fake that mimics the real replay-on-subscribe contract.
-
-### Pass 4 — in progress
-
-- **#053** — Pass 4.1 real-device verification gate. **Status: pending.** #054–#058 landed before this gate; the cutover (#060) should not land until the device smoke is captured.
-- **#059** — One-shot disk-to-Firestore migration. Unblocked. Updated AC: rules update for `users/{uid}` (currently default-denied), explicit ordering vs `memorySeedingProvider`.
-- **#060** — Production cutover + offline two-device smoke. Updated AC: cutover already wired in #058, net-new code is offline persistence config, two-device smoke needs platforms + evidence destination, plus rules-denial evidence.
-- **#061** — Pass 4.2 closeout + docs/progress update.
-- **#062** — #058 follow-up: recommendation-cache auth rebuild. `recommendationsProvider` does not currently watch `memoryStoreProvider` or `currentUserProvider`, so the cached list can survive a sign-out/sign-in-as-different-user. Bounded today only because `memories: const {}` is still passed to the engine; becomes a real cross-user leak once #051 lands.
 
 ### Pass 3 — done
 
@@ -81,16 +67,22 @@ Bond-tier-weighted recency ranks recommendations with a 24h cooldown filter, top
 - **#049** — Engine surfaces "just got back from <trip>" / "trip starts tomorrow" cards from `MemoryDocument.upcoming`. Mock leaves `Upcoming` empty by design; engine logic is fixture-tested. (commit `3284ac2`)
 - **#050** — `ContactInsight.summary` and `.why` deleted. Five additional dead fields and three dead widget classes (`RecommendedActionCard`, `CommunicationChannelsCard`, `InteractionFrequencyCard`) cleaned up. (commit `4ba3b69`)
 
+### Pre-Pass-3 done (carried forward)
+
+- **#001–#039** — earlier waves through the architecture-deepening review. See git history for details.
+
 ### Open and pickable
 
 - **#037** — Orphaned `ProfileScreen` and `HeatmapCard`. Pick one of two paths: delete the orphan code, or restore an entry point on the shell. Severity: nice-to-have. Not on the critical path.
 - **#039** — Architecture deferred cleanup candidates (`InteractionType` Flutter leak; by-id query providers shape). Both small refactors that earn their keep when their consumers move; not blocking.
-- **#051** — `recommendationsProvider` does not yet load `MemoryStore.listAll()` into the engine's `memories` parameter. The engine's Q12 upcoming-driven cards are fixture-tested but cannot fire in the running app until that wiring lands. Surfaces naturally during Pass 4.3 when `LlmAiUpdate` starts populating `MemoryDocument.upcoming` for real, but is independent and can ship sooner. AC updated 2026-05-24 to address Pass 4.2 (signed-out sentinel handling, FirebaseMemoryStore-backed Option C).
+- **#051** — `recommendationsProvider` does not yet load `MemoryStore.listAll()` into the engine's `memories` parameter. The engine's Q12 upcoming-driven cards are fixture-tested but cannot fire in the running app until that wiring lands. Surfaces naturally during Pass 4.3 when `LlmAiUpdate` starts populating `MemoryDocument.upcoming` for real, but is independent and can ship sooner.
 
-### Pre-Pass-4 done (carried forward)
+### Pass 4 — in progress
 
-- **#001–#039** — earlier waves through the architecture-deepening review. See git history for details.
-- **#040–#050** — Pass 3 issues. See "Pass 3 summary" below.
+- **Pass 4.2** — not started. `FirebaseMemoryStore` adapter. Per-contact memory docs to Firestore keyed by `userId/contactId`. Real security rules replace test mode.
+- **Pass 4.3** — not started. `LlmAiUpdate` adapter. API key UX. Real LLM populates `MemoryDocument.upcoming` for real (lights up #051).
+- **Pass 4.4** — not started. Cloud Functions + FCM for cross-device push. Multi-device conflict resolution.
+- **#055** (rules CI + rules-only auto-deploy) shipped on a feature branch. One-time setup checklist at `docs/operations/firebase-rules-deploy.md`.
 
 ## Test baseline progression
 
@@ -112,34 +104,25 @@ Bond-tier-weighted recency ranks recommendations with a 24h cooldown filter, top
 | `097e3d1` (Pass 3 #048 merged) | 281 passed, 0 failed | +6 dual-invalidation cache tests |
 | `3284ac2` (Pass 3 #049 merged) | 289 passed, 0 failed | +8 upcoming-driven card tests |
 | `4ba3b69` (Pass 3 #050 merged) | 289 passed, 0 failed | Test rewrites kept count even after cleanup |
-| `ac9e705` (Pass 4.1 #052 merged) | 289 passed, 0 failed | Firebase Auth swap; existing tests adapt via MockFirebaseAuth |
-| `83fad2a` (#054 merged) | (rules CI tests are JS, not in this sweep) | No `test/` tree change. |
-| `85127d0` (#055 merged) | (workflow files only) | No `test/` tree change. |
-| `d5be288` (#056 merged) | (integration_test scaffold) | No change to default `flutter test`. |
-| `938f4a0` (#057 merged) | (integration_test only) | Adapter tests live under `integration_test/`. |
-| `69d346d` (#058 merged) | 291 passed, 0 failed (estimate) | +2 headless `memory_store_provider_test.dart` cases (the third needs the emulator). Final number to be confirmed once the UI-merge regression at `7694253` is sorted. |
-| `7694253` (UI merges from `ui-login-page` + `fix-navbar`) | **262 passed, 33 failed** | Widget-test fixture drift from auth/shell/home/profile UI changes. Not Pass 4.2 work; tracked separately. |
-| `792fcdb` (currentUserProvider hotfix on `fix/current-user-provider-invalidation-loop`) | **265 passed, 32 failed** | +2 new `firebase_providers_test.dart` cases; +1 previously-failing widget test recovered (was masking the same loop). UI-merge regression remains. |
+| `ac9e705` (Pass 4.1 #052 merged) | **289 passed, 0 failed** | Firebase Auth swap; existing tests adapt via MockFirebaseAuth |
 
 ## Verification
 
-- `flutter analyze`: 1 pre-existing info lint at `lib/src/features/ai_update_screen.dart:116` (`use_build_context_synchronously`). Out of scope per the Pass 3 PRD. Plus a handful of new `withOpacity` deprecation infos and unused-field warnings introduced by the recent UI merges; not Pass 4.2 work.
-- `flutter test` (full sweep, `docs/pass4-2-review-fixes` branch off main `7694253`): **262 passed, 33 failed**. After merging the `currentUserProvider` hotfix: 265 passed, 32 failed. The 32 remaining failures are widget-test fixture drift from the unrelated UI merges; tracked as a separate hotfix.
-- `flutter test test/state/` (Pass 4.2 layer only, on the hotfix branch): **121 passed, 0 failed.**
-- All Pass 3 + Pass 4.1 + Pass 4.2 feature branches retained on the remote for traceability.
-- **Real-device verification of Pass 4.1 (#053) is pending.** Web (Chrome) launch verified on 2026-05-24 — the `currentUserProvider` loop only manifests on iOS / mobile Firebase platforms because of the SDK's replay-on-subscribe contract. Real iOS simulator verification is captured under #053.
+- `flutter analyze`: 1 pre-existing info lint at `lib/src/features/ai_update_screen.dart:116` (`use_build_context_synchronously`). Out of scope per the Pass 3 PRD.
+- `flutter test` (full sweep): **289 passed, 0 failed**.
+- All 11 Pass 3 feature branches plus the Pass 4.1 branch retained on the remote for traceability.
+- **Real-device verification of Pass 4.1 is pending** — see "Pass 4 verification before 4.2" above. Firebase Auth has not been exercised against a real device yet; the test sweep validates the Dart-side wiring through `MockFirebaseAuth`.
 
 ## Notes for the next session
 
-- **Pass 4.2 is six issues deep, three to go.** #054, #055, #056, #057, #058 merged on 2026-05-24. Production `memoryStoreProvider` already returns `FirebaseMemoryStore` for signed-in users via `lib/src/state/memory/memory_providers.dart`; #060's job is to enable explicit Firestore offline persistence and to capture real two-device smoke evidence. #053 (Pass 4.1 real-device verification) is still pending and should be cleared before #060.
-- **iOS hotfix on `fix/current-user-provider-invalidation-loop`.** `currentUserProvider` self-invalidate loop fixed; Chrome web was unaffected because the web Firebase SDK does not replay `authStateChanges()` on subscribe. The branch carries one regression test. Merge before #060.
-- **#059 has rules + ordering work hidden in the AC.** The migration's `migratedFromDiskAt` write to `users/{uid}` is currently default-denied (`firestore/firestore.rules` only matches `users/{uid}/memories/{contactId}`); rules + JS rules tests need to land with the migration. Migration also has to coordinate with `memorySeedingProvider` so seeding doesn't fill the remote first and starve the migration's empty-collection guard.
-- **#062 is the small remaining piece of the #058 review.** `recommendationsProvider` should `ref.watch(memoryStoreProvider)` (or `currentUserProvider`) so a sign-in-as-different-user can't serve user A's cached recommendations. Bounded today only because `memories: const {}` is still passed; becomes a real cross-user leak once #051 lands.
+- **Pass 4.1 is shipped behind a real-device verification gate.** Before starting Pass 4.2, run the app on iOS/Android/macOS and exercise sign-up, sign-out, sign-in, and a wrong-password attempt against the live `connect-me-e20b1` project. If any of those fail (config files mislocated, bundle ID mismatch, network errors), fix as a hotfix issue before touching Firestore.
+- **Pass 4.2 is the natural next move.** `FirebaseMemoryStore` adapter. Production `memoryStoreProvider` swaps from `FileMemoryStore`. The Pass 4.1 "test mode" Firestore rules need to flip to real rules (read/write to `users/{uid}/memories/{contactId}` only when `request.auth.uid == uid`). Local file store stays as offline cache or test-only.
+- **Pass 4.3 is independent of Pass 4.2** and could ship in parallel if the LLM API key UX is more interesting than the Firestore migration. The Pass 4.1 unified `AiUpdate` seam is what makes this a single-adapter swap.
+- **#051 wiring lights up best alongside Pass 4.3** because that's when `MemoryDocument.upcoming` actually gets populated. Independent though, and can ship sooner.
 - **The Mock topic extractor's keyword list is a known throwaway.** When `LlmAiUpdate` lands the keyword list goes away and the LLM does real semantic extraction. Don't grow the list further; let it die.
 - **The `## Upcoming` section in memory format is currently empty in production** because `MockAiUpdate` doesn't populate it (extracting "tomorrow" / "for a week" deterministically is too brittle for a mock). Demo paths can hand-edit a memory file under `<app_documents>/memories/` to see the engine's special cards fire.
-- **No background scheduler exists.** The Q2 dual-invalidation model assumes the user opens the app to trigger recompute. Push-style "we noticed you haven't talked to Mike" notifications are Pass 4.4 Firebase work.
-- **Firebase project ID: `connect-me-e20b1`.** Free trial credits in use. `connect-me-rules-test` is a separate emulator-only project namespace, not a typo.
-- **UI-merge regression on `main`.** The `ui-login-page` and `fix-navbar` merges (commits `7694253`, `88ebfcc`) brought 32 widget-test failures onto `main`. Out of scope for Pass 4.2; deserves its own hotfix issue.
+- **No background scheduler exists.** The Q2 dual-invalidation model assumes the user opens the app to trigger recompute. Push-style "we noticed you haven't talked to Mike" notifications are Pass 4.4 Firebase work, not Pass 3.
+- **Firebase project ID: `connect-me-e20b1`.** Free trial credits in use.
 
 ## Pass 3 grilling outcomes (Q1–Q13, locked)
 
