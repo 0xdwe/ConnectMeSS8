@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 class LinkedChainLogo extends StatelessWidget {
   const LinkedChainLogo({
     super.key,
-    this.size = 48,
-    this.color,
-    this.strokeWidth = 3.0,
+    this.size = 120,
+    this.color = Colors.white,
+    this.strokeWidth = 0.1, // 8% of size by default (thinner, cleaner)
   });
-  
+
   final double size;
-  final Color? color;
-  final double strokeWidth;
+  final Color color;
+  final double strokeWidth; // As ratio of size (0.0 to 1.0)
 
   @override
   Widget build(BuildContext context) {
@@ -18,23 +19,17 @@ class LinkedChainLogo extends StatelessWidget {
       width: size,
       height: size,
       child: CustomPaint(
-        painter: _LinkedChainPainter(
-          color: color ?? const Color(0xFF6B4EFF),
-          strokeWidth: strokeWidth * (size / 48), // Scale stroke width with size
-        ),
+        painter: _LinkedChainPainter(color, size * strokeWidth),
       ),
     );
   }
 }
 
 class _LinkedChainPainter extends CustomPainter {
-  _LinkedChainPainter({
-    required this.color,
-    required this.strokeWidth,
-  });
-  
   final Color color;
   final double strokeWidth;
+
+  _LinkedChainPainter(this.color, this.strokeWidth);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -43,52 +38,36 @@ class _LinkedChainPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
-    
-    // Calculate dimensions based on size
-    final centerX = size.width / 2;
-    final centerY = size.height / 2;
-    final radius = size.width * 0.35;
-    final offset = size.width * 0.15;
-    
-    // Left "C" (higher)
-    final leftCenter = Offset(centerX - offset, centerY - offset * 0.5);
-    const leftStartAngle = 0.8;  // ~45 degrees
-    const leftSweepAngle = 2.8;  // ~160 degrees
-    
-    // Right "C" (lower, interlocks with left)
-    final rightCenter = Offset(centerX + offset, centerY + offset * 0.3);
-    const rightStartAngle = 3.2;  // ~185 degrees
-    const rightSweepAngle = 2.6;  // ~150 degrees
-    
-    // Draw left chain link (higher)
+
+    final w = size.width;
+    final h = size.height;
+
+    // Left C - slightly higher
+    final leftRect = Rect.fromCircle(
+      center: Offset(w * 0.37, h * 0.45),
+      radius: w * 0.25,
+    );
+
     canvas.drawArc(
-      Rect.fromCircle(center: leftCenter, radius: radius),
-      leftStartAngle,
-      leftSweepAngle,
+      leftRect,
+      math.pi * 0.03,    // Start angle (36 degrees)
+      math.pi * 1.6,    // Sweep angle (288 degrees)
       false,
       paint,
     );
-    
-    // Draw right chain link (lower, interlocks)
+
+    // Right C - slightly lower, interlocking
+    final rightRect = Rect.fromCircle(
+      center: Offset(w * 0.64, h * 0.58),
+      radius: w * 0.25,
+    );
+
     canvas.drawArc(
-      Rect.fromCircle(center: rightCenter, radius: radius),
-      rightStartAngle,
-      rightSweepAngle,
+      rightRect,
+      -math.pi * 0.93,   // Start angle (-144 degrees)
+      math.pi * 1.6,    // Sweep angle (288 degrees)
       false,
       paint,
-    );
-    
-    // Optional: Add connecting line for chain effect
-    final connectionPaint = Paint()
-      ..color = color.withOpacity(0.6)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth * 0.7;
-    
-    // Draw subtle connection between links
-    canvas.drawLine(
-      Offset(leftCenter.dx + radius * 0.7, leftCenter.dy + radius * 0.3),
-      Offset(rightCenter.dx - radius * 0.7, rightCenter.dy - radius * 0.2),
-      connectionPaint,
     );
   }
 

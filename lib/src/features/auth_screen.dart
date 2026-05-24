@@ -251,14 +251,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   // App logo (smaller)
-                                  Container(
-                                    padding: EdgeInsets.all(AppSpacing.space3),
-                                    decoration: BoxDecoration(
-                                      color: Color(0xFFA0C4FF).withOpacity(0.2),
-                                      shape: BoxShape.circle,
+                                    Container(
+                                      padding: EdgeInsets.all(AppSpacing.space3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFA0C4FF).withOpacity(0.1),  // Soft blue background
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const LinkedChainLogo(
+                                        size: 48,
+                                        color: Color(0xFF6B4EFF), // ← ADD THIS: Purple color for the logo
+                                      ),
                                     ),
-                                    child: const LinkedChainLogo(size: 48),
-                                  ),
                                   
                                   SizedBox(height: AppSpacing.space5),
                                   
