@@ -79,8 +79,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        // Map Firebase error codes to inline field errors so the user
-        // sees the same UX shape as the local validators.
         switch (e.code) {
           case 'user-not-found':
           case 'invalid-email':
@@ -136,9 +134,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 email: email,
                 password: password,
               );
-      // Best-effort displayName — the AppController user record is
-      // populated from the form name regardless, so a failure here is
-      // not fatal.
       try {
         await cred.user?.updateDisplayName(name);
       } catch (_) {/* ignore */}
@@ -167,8 +162,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   String _firebaseAuthMessage(FirebaseAuthException e) {
-    // Translate Firebase codes into the app's voice (warm, never
-    // shaming, never technical).
     switch (e.code) {
       case 'user-not-found':
         return "We don't see an account with that email yet.";
@@ -207,72 +200,112 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     return Scaffold(
-      body: GradientScaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFA0C4FF), // Soft blue
+              Color(0xFFC4A0FF), // Soft purple
+            ],
+          ),
+        ),
         child: SafeArea(
           child: Padding(
             padding: EdgeInsets.all(AppSpacing.space5),
-            child: ListView(
+            child: Column(
               children: [
-                SizedBox(height: AppSpacing.space5),
+                // Spacer to push white card to center vertically
+                Spacer(),
+                
+                // White rounded rectangle as base
                 Container(
-                  padding: EdgeInsets.all(AppSpacing.space5),
+                  constraints: BoxConstraints(
+                    maxWidth: 500, // Max width for better readability on larger screens
+                  ),
                   decoration: BoxDecoration(
-                    color: tokens.primary,
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppRadius.xl * 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 30,
+                        offset: Offset(0, 10),
+                      ),
+                    ],
                   ),
-                  child: Icon(
-                    Icons.hub_outlined,
-                    color: tokens.primaryOn,
-                    size: 54,
+                  child: Padding(
+                    padding: EdgeInsets.all(AppSpacing.space5),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // App logo (smaller)
+                        Container(
+                          padding: EdgeInsets.all(AppSpacing.space3),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFA0C4FF).withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.hub_outlined,
+                            color: Color(0xFF6B4EFF),
+                            size: 48,
+                          ),
+                        ),
+                        
+                        SizedBox(height: AppSpacing.space4),
+                        
+                        // Mode selector (Login/Signup)
+                        _ModeSelector(
+                          mode: _mode,
+                          onChanged: _switchMode,
+                        ),
+                        
+                        SizedBox(height: AppSpacing.space5),
+                        
+                        // Content based on mode
+                        if (_mode == _AuthMode.login)
+                          _LoginForm(
+                            emailController: _loginEmail,
+                            passwordController: _loginPassword,
+                            emailError: _loginEmailError,
+                            passwordError: _loginPasswordError,
+                            busy: _busy,
+                            onSubmit: _submitLogin,
+                            onSwitch: () => _switchMode(_AuthMode.signup),
+                          )
+                        else
+                          _SignupForm(
+                            nameController: _signupName,
+                            emailController: _signupEmail,
+                            passwordController: _signupPassword,
+                            confirmController: _signupConfirm,
+                            nameError: _signupNameError,
+                            emailError: _signupEmailError,
+                            passwordError: _signupPasswordError,
+                            confirmError: _signupConfirmError,
+                            busy: _busy,
+                            onSubmit: _submitSignup,
+                            onSwitch: () => _switchMode(_AuthMode.login),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
+                
                 SizedBox(height: AppSpacing.space5),
-                Text(
-                  _mode == _AuthMode.login ? 'Welcome back.' : 'Join Connect Me.',
-                  style: AppTypography.display(),
-                ),
-                SizedBox(height: AppSpacing.space2),
-                Text(
-                  _mode == _AuthMode.login
-                      ? 'Log in to keep your connections close.'
-                      : 'Create an account to start tracking what matters.',
-                  style: AppTypography.body(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                SizedBox(height: AppSpacing.space5),
-                _ModeSelector(mode: _mode, onChanged: _switchMode),
-                SizedBox(height: AppSpacing.space5),
-                if (_mode == _AuthMode.login)
-                  _LoginForm(
-                    emailController: _loginEmail,
-                    passwordController: _loginPassword,
-                    emailError: _loginEmailError,
-                    passwordError: _loginPasswordError,
-                    busy: _busy,
-                    onSubmit: _submitLogin,
-                    onSwitch: () => _switchMode(_AuthMode.signup),
-                  )
-                else
-                  _SignupForm(
-                    nameController: _signupName,
-                    emailController: _signupEmail,
-                    passwordController: _signupPassword,
-                    confirmController: _signupConfirm,
-                    nameError: _signupNameError,
-                    emailError: _signupEmailError,
-                    passwordError: _signupPasswordError,
-                    confirmError: _signupConfirmError,
-                    busy: _busy,
-                    onSubmit: _submitSignup,
-                    onSwitch: () => _switchMode(_AuthMode.login),
-                  ),
-                SizedBox(height: AppSpacing.space4),
+                
+                // Powered by text outside the white box
                 Text(
                   'Powered by Firebase Auth.',
                   textAlign: TextAlign.center,
-                  style: AppTypography.caption(color: tokens.inkMuted),
+                  style: AppTypography.caption(
+                    color: Colors.white.withOpacity(0.9),
+                  ),
                 ),
+                
+                Spacer(),
               ],
             ),
           ),
@@ -292,7 +325,7 @@ class _ModeSelector extends StatelessWidget {
     final tokens = context.tokens;
     return Container(
       decoration: BoxDecoration(
-        color: tokens.surfaceSunken,
+        color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(AppRadius.xl),
       ),
       padding: EdgeInsets.all(AppSpacing.space1),
@@ -342,7 +375,7 @@ class _ModeChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: EdgeInsets.symmetric(vertical: AppSpacing.space3),
         decoration: BoxDecoration(
-          color: selected ? tokens.surfaceRaised : Colors.transparent,
+          color: selected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(AppRadius.xl),
           boxShadow: selected ? AppTokens.elevation1(dark) : null,
         ),
@@ -350,7 +383,7 @@ class _ModeChip extends StatelessWidget {
         child: Text(
           label,
           style: AppTypography.body(
-            color: selected ? tokens.primary : tokens.inkMuted,
+            color: selected ? Color(0xFF6B4EFF) : Colors.grey.shade600,
           ).copyWith(fontWeight: FontWeight.w600),
         ),
       ),
@@ -378,9 +411,33 @@ class _LoginForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Welcome back text
+        Text(
+          'Welcome back.',
+          style: AppTypography.display(
+            color: Colors.black,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        
+        SizedBox(height: AppSpacing.space2),
+        
+        // Subtitle text
+        Text(
+          'Log in to keep your connections close.',
+          style: AppTypography.body(
+            color: Colors.grey.shade600,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        
+        SizedBox(height: AppSpacing.space5),
+        
+        // Email field
         TextField(
           key: const Key('login-email-field'),
           controller: emailController,
@@ -390,9 +447,15 @@ class _LoginForm extends StatelessWidget {
             labelText: 'Email',
             hintText: 'you@example.com',
             errorText: emailError,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
           ),
         ),
+        
         SizedBox(height: AppSpacing.space4),
+        
+        // Password field
         TextField(
           key: const Key('login-password-field'),
           controller: passwordController,
@@ -400,24 +463,46 @@ class _LoginForm extends StatelessWidget {
           decoration: InputDecoration(
             labelText: 'Password',
             errorText: passwordError,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
           ),
         ),
+        
         SizedBox(height: AppSpacing.space5),
+        
+        // Login button
         FilledButton.icon(
           key: const Key('sign-in-button'),
           onPressed: busy ? null : onSubmit,
+          style: FilledButton.styleFrom(
+            backgroundColor: Color(0xFF6B4EFF),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+          ),
           icon: busy
               ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
               : const Icon(Icons.arrow_forward),
           label: Text(busy ? 'Signing in…' : 'Log in'),
         ),
+        
         SizedBox(height: AppSpacing.space3),
+        
+        // Sign up option
         TextButton(
           onPressed: busy ? null : onSwitch,
+          style: TextButton.styleFrom(
+            foregroundColor: Color(0xFF6B4EFF),
+          ),
           child: const Text("Don't have an account? Sign up"),
         ),
       ],
@@ -456,6 +541,26 @@ class _SignupForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text(
+          'Join Connect Me.',
+          style: AppTypography.display(
+            color: Colors.black,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        
+        SizedBox(height: AppSpacing.space2),
+        
+        Text(
+          'Create an account to start tracking what matters.',
+          style: AppTypography.body(
+            color: Colors.grey.shade600,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        
+        SizedBox(height: AppSpacing.space5),
+        
         TextField(
           key: const Key('signup-name-field'),
           controller: nameController,
@@ -463,9 +568,14 @@ class _SignupForm extends StatelessWidget {
           decoration: InputDecoration(
             labelText: 'Full name',
             errorText: nameError,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
           ),
         ),
+        
         SizedBox(height: AppSpacing.space4),
+        
         TextField(
           key: const Key('signup-email-field'),
           controller: emailController,
@@ -475,9 +585,14 @@ class _SignupForm extends StatelessWidget {
             labelText: 'Email',
             hintText: 'you@example.com',
             errorText: emailError,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
           ),
         ),
+        
         SizedBox(height: AppSpacing.space4),
+        
         TextField(
           key: const Key('signup-password-field'),
           controller: passwordController,
@@ -485,9 +600,14 @@ class _SignupForm extends StatelessWidget {
           decoration: InputDecoration(
             labelText: 'Password',
             errorText: passwordError,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
           ),
         ),
+        
         SizedBox(height: AppSpacing.space4),
+        
         TextField(
           key: const Key('signup-confirm-field'),
           controller: confirmController,
@@ -495,24 +615,44 @@ class _SignupForm extends StatelessWidget {
           decoration: InputDecoration(
             labelText: 'Confirm password',
             errorText: confirmError,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
           ),
         ),
+        
         SizedBox(height: AppSpacing.space5),
+        
         FilledButton.icon(
           key: const Key('sign-up-button'),
           onPressed: busy ? null : onSubmit,
+          style: FilledButton.styleFrom(
+            backgroundColor: Color(0xFF6B4EFF),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+          ),
           icon: busy
               ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
               : const Icon(Icons.check),
           label: Text(busy ? 'Creating account…' : 'Create account'),
         ),
+        
         SizedBox(height: AppSpacing.space3),
+        
         TextButton(
           onPressed: busy ? null : onSwitch,
+          style: TextButton.styleFrom(
+            foregroundColor: Color(0xFF6B4EFF),
+          ),
           child: const Text('Already have an account? Log in'),
         ),
       ],
