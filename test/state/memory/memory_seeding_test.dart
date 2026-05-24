@@ -5,12 +5,15 @@ import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../test_overrides.dart';
+
 void main() {
   group('memorySeedingProvider', () {
     test('writes one doc per seeded connection on an empty store',
         () async {
       final store = InMemoryMemoryStore();
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(store),
       ]);
       addTearDown(container.dispose);
@@ -38,6 +41,7 @@ void main() {
         () async {
       final store = InMemoryMemoryStore();
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(store),
       ]);
       addTearDown(container.dispose);
@@ -69,6 +73,7 @@ void main() {
       await store.save(preExisting);
 
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(store),
       ]);
       addTearDown(container.dispose);

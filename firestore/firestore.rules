@@ -1,0 +1,64 @@
+rules_version = '2';
+
+// Connect Me — per-contact memory rules.
+//
+// Memory documents live at:
+//   users/{uid}/memories/{contactId}
+//
+// A memory document is a single Firestore document with three fields:
+//   - markdown:      string, <= 64 KiB (65536 bytes)
+//   - updatedAt:     timestamp
+//   - schemaVersion: int
+//
+// Rules enforce two things in lock-step:
+//
+// 1. Ownership. Only the signed-in user whose UID matches the path can
+//    read, list, create, update, or delete documents under their own
+//    `users/{uid}/...` subtree. Other authenticated users and anonymous
+//    callers are denied at every operation.
+//
+// 2. Shape. Writes must contain exactly the three keys above, with the
+//    correct types, and `markdown` must fit inside the 64 KiB cap that
+//    the Pass 3 `FileMemoryStore` enforced client-side. Server-side
+//    enforcement keeps a buggy or malicious client from poisoning the
+//    document shape.
+//
+// Anything not matched below is denied by default.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Owner check shared across the memory collection.
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Shape check for a memory document payload. Used on both create
+    // and update so the contract is symmetric.
+    function isWellFormedMemory(data) {
+      return data.keys().hasOnly(['markdown', 'updatedAt', 'schemaVersion'])
+        && data.keys().hasAll(['markdown', 'updatedAt', 'schemaVersion'])
+        && data.markdown is string
+        && data.markdown.size() <= 65536
+        && data.updatedAt is timestamp
+        && data.schemaVersion is int;
+    }
+
+    match /users/{uid}/memories/{contactId} {
+      // `read` covers both `get` and `list`. The owner is the only
+      // caller that can scan their own memories collection.
+      allow read: if isOwner(uid);
+
+      allow create: if isOwner(uid)
+        && isWellFormedMemory(request.resource.data);
+
+      allow update: if isOwner(uid)
+        && isWellFormedMemory(request.resource.data);
+
+      allow delete: if isOwner(uid);
+    }
+
+    // Default deny — anything outside the explicit memory path is
+    // refused. Future Pass 4.x work (user document sentinel, etc.)
+    // will add narrowly scoped rules of its own.
+  }
+}

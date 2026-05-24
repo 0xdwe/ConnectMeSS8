@@ -44,9 +44,21 @@ dependencies:
   path_provider: ^2.1.4
   firebase_core: ^4.2.0
   firebase_auth: ^6.2.0
+  # Pass 4.2 (#056). Adapter, migration, and provider tests run against
+  # the Firestore emulator via `integration_test/firebase_test_setup.dart`.
+  # Production wiring of `cloud_firestore` lands in #060.
+  cloud_firestore: ^6.0.0
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  # Pass 4.2 (#057). Emulator-backed Firebase tests live under
+  # `integration_test/` because `flutter test` is a headless Dart VM
+  # that cannot load `firebase_core`'s native plugin channels. The
+  # `integration_test` package boots a real Flutter engine on a
+  # device target (e.g. `flutter test integration_test -d macos`),
+  # which is what the SDK needs to round-trip against the emulator.
+  integration_test:
     sdk: flutter
   # Transitive deps used directly by `test/flutter_test_config.dart` to
   # register a `PathProviderPlatform` test fake (see Pass 3 #041 — the

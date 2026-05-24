@@ -5,8 +5,8 @@
 **Pass 1 (home/people UI consistency)** — shipped, including review fixes.
 **Pass 2 (contact profile redesign)** — shipped, including review fixes.
 **Pass 3 (per-contact memory files with agentic AI)** — shipped on 2026-05-19. All 11 issues (#040–#050) merged to `main`.
-**Pass 4 begins.** Pass 4.1 (#052, Firebase Auth) shipped on 2026-05-21. Pass 4.2–4.4 not yet started.
-**Test baseline** — full sweep: **289 passed, 0 failed**.
+**Pass 4 begins.** Pass 4.1 (#052, Firebase Auth) shipped on 2026-05-21. Pass 4.2 in progress (#054 → #057 merged 2026-05-24).
+**Test baseline** — default `flutter test` sweep: **295 passed, 0 failed**. Emulator-backed `flutter test integration_test` runs separately (see `integration_test/firebase_test_setup.dart`).
 
 ## Pass 4 sub-pass plan
 
@@ -28,6 +28,12 @@ Before 4.2 starts touching Firestore, the running app should be verified on a de
 5. If anything fails (config files in the wrong place, bundle ID mismatch, network errors): file as a hotfix issue before 4.2.
 
 All of this works behind the existing test sweep with `MockFirebaseAuth`, so the gate is real-device testing rather than `flutter test`.
+
+For emulator-backed Dart tests (Pass 4.2, #056 + #057) the canonical command is:
+
+    firebase emulators:exec --only firestore,auth --project connect-me-rules-test "flutter test integration_test -d macos"
+
+Default `flutter test` leaves the 289-passing baseline untouched because emulator-backed tests live under `integration_test/`, which is a separate target from the `test/` tree. JDK 21+ on `PATH` is required for the emulator (`brew install openjdk@21`).
 
 ## Pass 3 summary
 
@@ -76,6 +82,7 @@ Bond-tier-weighted recency ranks recommendations with a 24h cooldown filter, top
 - **Pass 4.2** — not started. `FirebaseMemoryStore` adapter. Per-contact memory docs to Firestore keyed by `userId/contactId`. Real security rules replace test mode.
 - **Pass 4.3** — not started. `LlmAiUpdate` adapter. API key UX. Real LLM populates `MemoryDocument.upcoming` for real (lights up #051).
 - **Pass 4.4** — not started. Cloud Functions + FCM for cross-device push. Multi-device conflict resolution.
+- **#055** (rules CI + rules-only auto-deploy) shipped on a feature branch. One-time setup checklist at `docs/operations/firebase-rules-deploy.md`.
 
 ## Test baseline progression
 
