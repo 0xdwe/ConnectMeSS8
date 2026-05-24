@@ -67,7 +67,7 @@ bool _initialized = false;
 /// First call boots the SDK and routes Firestore + Auth at the
 /// emulator. Later calls short-circuit.
 ///
-/// Tests that call this helper must be tagged `emulator` so the
+/// Tests that call this helper live under `integration_test/` so the
 /// default `flutter test` sweep skips them.
 Future<void> setUpEmulators() async {
   if (_initialized) return;
