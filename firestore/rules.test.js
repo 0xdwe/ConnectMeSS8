@@ -81,6 +81,23 @@ async function seedMemory(uid, contactId, data = wellFormedMemory()) {
   });
 }
 
+function userDocRef(db, uid) {
+  return doc(db, 'users', uid);
+}
+
+function wellFormedUserDoc(overrides = {}) {
+  return {
+    migratedFromDiskAt: Timestamp.fromDate(new Date('2026-05-24T00:00:00Z')),
+    ...overrides,
+  };
+}
+
+async function seedUserDoc(uid, data = wellFormedUserDoc()) {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(userDocRef(ctx.firestore(), uid), data);
+  });
+}
+
 // Tests ---------------------------------------------------------------
 
 describe('users/{uid}/memories/{contactId} — ownership', () => {
@@ -150,12 +167,83 @@ describe('users/{uid}/memories/{contactId} — ownership', () => {
 
 describe('default deny outside scope', () => {
   test('owner is denied at a sibling path on their own user doc (e.g. notes)', async () => {
-    // Pass 4.2 only opens up users/{uid}/memories/{contactId}. Anything
-    // else under the same user — even though the user owns the parent
-    // path — should fall through to Firestore's default deny.
+    // Pass 4.2 only opens up users/{uid}/memories/{contactId} and the
+    // user doc itself. Anything else under the same user — even though
+    // the user owns the parent path — should fall through to
+    // Firestore's default deny.
     await assertFails(
       getDoc(doc(authedDb(ALICE), 'users', ALICE, 'notes', 'foo')),
     );
+  });
+});
+
+describe('users/{uid} — sentinel ownership', () => {
+  test('owner can read their own user doc', async () => {
+    await seedUserDoc(ALICE);
+    await assertSucceeds(getDoc(userDocRef(authedDb(ALICE), ALICE)));
+  });
+
+  test('owner can create their user doc with the sentinel', async () => {
+    await assertSucceeds(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), wellFormedUserDoc()),
+    );
+  });
+
+  test('owner can update the sentinel timestamp', async () => {
+    await seedUserDoc(ALICE);
+    await assertSucceeds(
+      setDoc(
+        userDocRef(authedDb(ALICE), ALICE),
+        wellFormedUserDoc({
+          migratedFromDiskAt: Timestamp.fromDate(new Date('2026-06-01T00:00:00Z')),
+        }),
+      ),
+    );
+  });
+
+  test('other authenticated user cannot read another user doc', async () => {
+    await seedUserDoc(ALICE);
+    await assertFails(getDoc(userDocRef(authedDb(BOB), ALICE)));
+  });
+
+  test('other authenticated user cannot write another user doc', async () => {
+    await assertFails(
+      setDoc(userDocRef(authedDb(BOB), ALICE), wellFormedUserDoc()),
+    );
+  });
+
+  test('anonymous read denied', async () => {
+    await seedUserDoc(ALICE);
+    await assertFails(getDoc(userDocRef(anonDb(), ALICE)));
+  });
+
+  test('anonymous write denied', async () => {
+    await assertFails(
+      setDoc(userDocRef(anonDb(), ALICE), wellFormedUserDoc()),
+    );
+  });
+
+  test('owner cannot write an unknown field', async () => {
+    await assertFails(
+      setDoc(
+        userDocRef(authedDb(ALICE), ALICE),
+        wellFormedUserDoc({ extra: 'not allowed' }),
+      ),
+    );
+  });
+
+  test('owner cannot write migratedFromDiskAt as the wrong type', async () => {
+    await assertFails(
+      setDoc(
+        userDocRef(authedDb(ALICE), ALICE),
+        { migratedFromDiskAt: 'not-a-timestamp' },
+      ),
+    );
+  });
+
+  test('owner cannot delete their own user doc (locked)', async () => {
+    await seedUserDoc(ALICE);
+    await assertFails(deleteDoc(userDocRef(authedDb(ALICE), ALICE)));
   });
 });
 

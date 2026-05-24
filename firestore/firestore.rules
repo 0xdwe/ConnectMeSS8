@@ -57,6 +57,26 @@ service cloud.firestore {
       allow delete: if isOwner(uid);
     }
 
+    // Per-user document. Pass 4.2 (#059) adds the disk→Firestore
+    // migration sentinel here at
+    //   users/{uid}.migratedFromDiskAt: timestamp
+    // The owner is the only caller that can read or write their
+    // own user doc. The shape check pins the only field Pass 4.2
+    // expects; later passes that add fields here update both this
+    // rule and the JS rules tests.
+    function isWellFormedUserDoc(data) {
+      return data.keys().hasOnly(['migratedFromDiskAt'])
+        && (!data.keys().hasAny(['migratedFromDiskAt'])
+            || data.migratedFromDiskAt is timestamp);
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && isWellFormedUserDoc(request.resource.data);
+      allow delete: if false;
+    }
+
     // Default deny — anything outside the explicit memory path is
     // refused. Future Pass 4.x work (user document sentinel, etc.)
     // will add narrowly scoped rules of its own.
