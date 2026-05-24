@@ -125,38 +125,45 @@ class _BottomNav extends StatelessWidget {
       shape: const CircularNotchedRectangle(),
       notchMargin: 6,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _NavItem(
-            index: 0,
-            selectedTab: selectedTab,
-            icon: Icons.home_outlined,
-            label: 'Home',
-            onTap: onTab,
+          Expanded(
+            child: _NavItem(
+              index: 0,
+              selectedTab: selectedTab,
+              icon: Icons.home_outlined,
+              label: 'Home',
+              onTap: onTab,
+            ),
           ),
-          _NavItem(
-            index: 1,
-            selectedTab: selectedTab,
-            icon: Icons.people_outline,
-            label: 'People',
-            onTap: onTab,
+          Expanded(
+            child: _NavItem(
+              index: 1,
+              selectedTab: selectedTab,
+              icon: Icons.people_outline,
+              label: 'People',
+              onTap: onTab,
+            ),
           ),
 
           const SizedBox(width: 80),
 
-          _NavItem(
-            index: 2,
-            selectedTab: selectedTab,
-            icon: Icons.calendar_month_outlined,
-            label: 'Planner',
-            onTap: onTab,
+          Expanded(
+            child: _NavItem(
+              index: 2,
+              selectedTab: selectedTab,
+              icon: Icons.calendar_month_outlined,
+              label: 'Planner',
+              onTap: onTab,
+            ),
           ),
-          _NavItem(
-            index: 3,
-            selectedTab: selectedTab,
-            icon: Icons.settings_outlined,
-            label: 'Settings',
-            onTap: onTab,
+          Expanded(
+            child: _NavItem(
+              index: 3,
+              selectedTab: selectedTab,
+              icon: Icons.settings_outlined,
+              label: 'Settings',
+              onTap: onTab,
+            ),
           ),
         ],
       ),
@@ -185,7 +192,7 @@ class _NavItem extends StatelessWidget {
     return InkWell(
       onTap: () => onTap(index),
       child: SizedBox(
-        width: 72,
+        width: double.infinity,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
