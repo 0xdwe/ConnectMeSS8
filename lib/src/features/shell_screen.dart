@@ -53,10 +53,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: Colors.white),
-            onPressed: () => showPlusSheet(context),
-          ),
-          IconButton(
             icon: CircleAvatar(
               radius: 18,
               backgroundColor: Colors.white,
@@ -77,15 +73,31 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
           child: _tabs[selectedTab],
         ),
       ),
-      bottomNavigationBar: BottomAppBar(
-        color: tokens.surfaceRaised,
-        elevation: 0,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        child: _BottomNav(
-          selectedTab: selectedTab,
-          onTab: ref.read(appControllerProvider.notifier).setTab,
+
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: Transform.translate(
+        offset: const Offset(0, 18),
+        child: SizedBox(
+          width: 72,
+          height: 72,
+          child: FloatingActionButton(
+            key: const Key('plus-action-button'),
+            shape: const CircleBorder(),
+            backgroundColor: tokens.primary,
+            elevation: 10,
+            onPressed: () => showPlusSheet(context),
+            child: const Icon(
+              Icons.add,
+              color: Colors.white,
+              size: 42,
+            ),
+          ),
         ),
+      ),
+
+      bottomNavigationBar: _BottomNav(
+        selectedTab: selectedTab,
+        onTab: ref.read(appControllerProvider.notifier).setTab,
       ),
     );
   }
