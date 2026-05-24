@@ -47,13 +47,23 @@ fits cleanest:
   call stays sync; the provider waits on the cache.
 - **C.** Keep the provider sync. Add a `MemoryStore.snapshot()`
   method that returns `Map<String, MemoryDocument>` from an
-  in-memory mirror updated on every `save`/`delete`. The
-  `FileMemoryStore` would maintain the mirror as a side-effect of
-  reads/writes.
+  in-memory mirror. For `FirebaseMemoryStore` (production after
+  Pass 4.2 #058) this means the adapter holds a `snapshots()`
+  listener on `users/{uid}/memories` and updates the mirror as
+  Firestore events arrive; for `InMemoryMemoryStore` and
+  `FileMemoryStore` (test/debug only after Pass 4.2) the mirror
+  is a side-effect of save/delete. Listener lifetime has to track
+  the store's lifetime so that auth-driven store rebuilds from
+  #058 don't leak subscriptions.
 
 Whichever shape: the existing dual-invalidation logic from #048
 must continue to work. Memory change still bumps `memoryEpoch`;
-6h elapsed still triggers recompute.
+6h elapsed still triggers recompute. Whichever shape also has to
+handle the signed-out sentinel from #058: when no user is signed
+in, `memoryStoreProvider` returns a store whose `listAll()`
+throws, so `recommendationsProvider` should treat that as "no
+memory map" (empty result) rather than letting the throw
+bubble up.
 
 ## Acceptance criteria
 
@@ -61,6 +71,8 @@ must continue to work. Memory change still bumps `memoryEpoch`;
       passes it to `rankRecommendations` (no more `const {}`).
 - [ ] Memory change still invalidates the cache on next read.
 - [ ] 6h elapsed still invalidates the cache on next read.
+- [ ] Signed-out users get an empty recommendation list instead of
+      a thrown `_SignedOutMemoryStore` error.
 - [ ] Production read path surfaces upcoming-driven cards when a
       contact's `MemoryDocument.upcoming` has an entry in the
       `[now - 3d, now + 1d]` window. (Demo path: hand-edit a memory
