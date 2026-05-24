@@ -52,6 +52,14 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Pass 4.2 (#057). Emulator-backed Firebase tests live under
+  # `integration_test/` because `flutter test` is a headless Dart VM
+  # that cannot load `firebase_core`'s native plugin channels. The
+  # `integration_test` package boots a real Flutter engine on a
+  # device target (e.g. `flutter test integration_test -d macos`),
+  # which is what the SDK needs to round-trip against the emulator.
+  integration_test:
+    sdk: flutter
   # Transitive deps used directly by `test/flutter_test_config.dart` to
   # register a `PathProviderPlatform` test fake (see Pass 3 #041 — the
   # production `memoryStoreProvider` is `FileMemoryStore` and needs the

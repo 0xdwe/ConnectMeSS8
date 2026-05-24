@@ -29,11 +29,11 @@ Before 4.2 starts touching Firestore, the running app should be verified on a de
 
 All of this works behind the existing test sweep with `MockFirebaseAuth`, so the gate is real-device testing rather than `flutter test`.
 
-For emulator-backed Dart tests (Pass 4.2, #056) the canonical command is:
+For emulator-backed Dart tests (Pass 4.2, #056 + #057) the canonical command is:
 
-    firebase emulators:exec --only firestore,auth --project connect-me-rules-test "flutter test --tags emulator --run-skipped"
+    firebase emulators:exec --only firestore,auth --project connect-me-rules-test "flutter test integration_test -d macos"
 
-Default `flutter test` (no `--tags`) leaves the 289-passing baseline untouched; the emulator-tagged smoke test reports as skipped (with the canonical command in the skip reason) when no emulator is running.
+Default `flutter test` leaves the 289-passing baseline untouched because emulator-backed tests live under `integration_test/`, which is a separate target from the `test/` tree. JDK 21+ on `PATH` is required for the emulator (`brew install openjdk@21`).
 
 ## Pass 3 summary
 
