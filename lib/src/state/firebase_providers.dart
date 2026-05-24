@@ -29,18 +29,32 @@ final firestoreProvider = Provider<FirebaseFirestore>(
 /// (Pass 4.2, #058).
 ///
 /// Synchronous read of `firebaseAuthProvider.currentUser`. Subscribes
-/// to `authStateChanges` once and invalidates itself on every event,
-/// which causes `memoryStoreProvider` and any other watcher to
-/// rebuild against the new user. Returning `User?` synchronously
+/// to `authStateChanges` and invalidates itself when the UID actually
+/// changes, which causes `memoryStoreProvider` and any other watcher
+/// to rebuild against the new user. Returning `User?` synchronously
 /// keeps consumers free of `AsyncValue` plumbing — a UID is either
 /// available right now or it isn't.
+///
+/// Real `FirebaseAuth.instance.authStateChanges()` replays the
+/// current user immediately on every new subscriber. Without the UID
+/// guard below, a naive `listen((_) => ref.invalidateSelf())` would
+/// loop: the provider rebuilds, subscribes, the stream replays the
+/// current user, the listener invalidates the provider, the provider
+/// rebuilds, etc. The seeding splash watches this provider, so that
+/// loop holds the splash open forever (white screen at launch). The
+/// guard skips the replay-on-subscribe and any redundant emission
+/// where the UID is unchanged from the value the synchronous build
+/// already returned.
 ///
 /// Swapping `firebaseAuthProvider`'s override (e.g. in tests with
 /// `container.updateOverrides`) also rebuilds this provider, since
 /// `firebaseAuthProvider` is a watched dep.
 final currentUserProvider = Provider<User?>((ref) {
   final auth = ref.watch(firebaseAuthProvider);
-  final sub = auth.authStateChanges().listen((_) => ref.invalidateSelf());
+  final initialUid = auth.currentUser?.uid;
+  final sub = auth.authStateChanges().listen((user) {
+    if (user?.uid != initialUid) ref.invalidateSelf();
+  });
   ref.onDispose(sub.cancel);
   return auth.currentUser;
 });
