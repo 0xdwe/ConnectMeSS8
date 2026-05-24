@@ -7,6 +7,8 @@ import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../test_overrides.dart';
+
 /// Mirrors the bootstrap path in `connect_me_app.dart`: a real
 /// `FileMemoryStore` rooted at a temp directory, plus the
 /// `memorySeedingProvider` driven by a `ProviderContainer`. Verifies
@@ -31,6 +33,7 @@ void main() {
         'connection', () async {
       final store = FileMemoryStore(directoryOverride: tempRoot);
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(store),
       ]);
       addTearDown(container.dispose);
@@ -67,6 +70,7 @@ void main() {
 
       final store = FileMemoryStore(directoryOverride: tempRoot);
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(store),
       ]);
       addTearDown(container.dispose);
