@@ -25,6 +25,27 @@ final firestoreProvider = Provider<FirebaseFirestore>(
   (ref) => FirebaseFirestore.instance,
 );
 
+/// Enables Firestore's local-disk persistent cache so writes issued
+/// while offline are accepted into the cache and replicated to the
+/// server once connectivity returns (Pass 4.2, #060 / PRD Q4).
+///
+/// Mobile platforms (iOS, Android) default to persistence enabled,
+/// but macOS and other desktop targets do not. This call makes the
+/// behavior explicit and uniform across every supported target so
+/// the offline two-device smoke evidence holds on macOS as well as
+/// on the simulators.
+///
+/// Must be called before any read or write on [firestore]; the
+/// underlying SDK throws if `settings` is assigned after the first
+/// use. Production calls this from `main()` immediately after
+/// `Firebase.initializeApp` and before any provider can resolve
+/// [firestoreProvider]. Extracted as a top-level function (rather
+/// than inlined in `main.dart`) so the intent has a name and the
+/// startup wiring stays one line.
+void enableFirestoreOfflinePersistence(FirebaseFirestore firestore) {
+  firestore.settings = const Settings(persistenceEnabled: true);
+}
+
 /// Currently signed-in [User], or null when signed out
 /// (Pass 4.2, #058).
 ///
