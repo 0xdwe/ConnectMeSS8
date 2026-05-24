@@ -15,6 +15,12 @@ Firebase emulator instead of `flutter test`.
 - `package-lock.json` — tracked so installs reproduce across the team.
 - `rules.test.js` — Jest suite covering the allow/deny matrix.
 
+## Prerequisites
+
+The Firebase emulator needs JDK 21 or newer. On macOS the easy path is
+`brew install openjdk@21` and follow Homebrew's `PATH` hint. If you see
+a JVM error when booting the emulator, this is almost always why.
+
 ## Running the tests locally
 
 The tests need the Firestore emulator running. The simplest way to do

@@ -148,6 +148,17 @@ describe('users/{uid}/memories/{contactId} — ownership', () => {
   });
 });
 
+describe('default deny outside scope', () => {
+  test('owner is denied at a sibling path on their own user doc (e.g. notes)', async () => {
+    // Pass 4.2 only opens up users/{uid}/memories/{contactId}. Anything
+    // else under the same user — even though the user owns the parent
+    // path — should fall through to Firestore's default deny.
+    await assertFails(
+      getDoc(doc(authedDb(ALICE), 'users', ALICE, 'notes', 'foo')),
+    );
+  });
+});
+
 describe('users/{uid}/memories/{contactId} — anonymous denial', () => {
   test('anonymous read on another user’s memory is denied', async () => {
     await seedMemory(ALICE, 'sarah');
