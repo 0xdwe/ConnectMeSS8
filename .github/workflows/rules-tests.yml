@@ -6,6 +6,9 @@ on:
       - 'firestore/**'
       - '.github/workflows/rules-tests.yml'
 
+permissions:
+  contents: read
+
 jobs:
   rules-tests:
     name: Firestore rules tests

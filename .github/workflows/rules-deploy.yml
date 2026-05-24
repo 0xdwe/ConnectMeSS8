@@ -11,6 +11,9 @@ concurrency:
   group: rules-deploy
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Firestore rules tests
@@ -79,3 +82,7 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
         run: firebase deploy --only firestore:rules --project connect-me-e20b1 --non-interactive
+
+      - name: Clean up service account credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
