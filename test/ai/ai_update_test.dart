@@ -7,9 +7,12 @@ import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../test_overrides.dart';
+
 ProviderContainer _container({InMemoryMemoryStore? store}) {
   final memoryStore = store ?? InMemoryMemoryStore();
   return ProviderContainer(overrides: [
+    ...signedInDemoOverrides(),
     memoryStoreProvider.overrideWithValue(memoryStore),
   ]);
 }
@@ -408,6 +411,7 @@ void main() {
         () async {
       final store = InMemoryMemoryStore();
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(store),
         aiUpdateProvider.overrideWith((ref) => MockAiUpdate(
               memoryStore: ref.watch(memoryStoreProvider),
@@ -450,6 +454,7 @@ void main() {
         () async {
       final store = InMemoryMemoryStore();
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(store),
         aiUpdateProvider.overrideWith((ref) => MockAiUpdate(
               memoryStore: ref.watch(memoryStoreProvider),
@@ -492,6 +497,7 @@ void main() {
         'after the in-memory delta throws', () async {
       final store = InMemoryMemoryStore();
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(store),
         aiUpdateProvider.overrideWith((ref) => MockAiUpdate(
               memoryStore: ref.watch(memoryStoreProvider),

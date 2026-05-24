@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../ai/ai_update.dart';
 import '../../models/social_models.dart';
 import '../app_state.dart';
+import '../firebase_providers.dart';
 import '../recommendation_engine.dart';
-import 'file_memory_store.dart';
+import 'firebase_memory_store.dart';
 import 'memory_document.dart';
 import 'memory_store.dart';
 
@@ -37,14 +38,68 @@ class MemoryEpochNotifier extends Notifier<DateTime?> {
 final memoryEpochProvider =
     NotifierProvider<MemoryEpochNotifier, DateTime?>(MemoryEpochNotifier.new);
 
-/// Active [MemoryStore] for the running app. Production returns the
-/// file-backed adapter writing to `<app_documents>/memories/` per
-/// PRD Q6. Tests override it with `InMemoryMemoryStore` (or a
-/// `FileMemoryStore` rooted at a temp directory) to install a
-/// pre-populated store or skip seeding.
-final memoryStoreProvider = Provider<MemoryStore>(
-  (ref) => FileMemoryStore(),
-);
+/// Active [MemoryStore] for the running app (Pass 4.2, #058).
+///
+/// Watches `currentUserProvider`. When a user is signed in, returns
+/// a `FirebaseMemoryStore` bound to that UID and the active
+/// `firestoreProvider`. When signed out (or while the auth stream is
+/// still loading), returns a [_SignedOutMemoryStore] sentinel whose
+/// every operation throws so accidental signed-out reads fail loudly
+/// in dev rather than silently appearing to work against an empty
+/// store.
+///
+/// Auth changes rebuild this provider, which in turn invalidates
+/// every downstream memory consumer ([memoryProvider],
+/// [memoryTopicsProvider], [recommendationsProvider], and the
+/// seeding bootstrap below). The previous user's store instance is
+/// discarded; a brand-new `FirebaseMemoryStore` is constructed for
+/// the next user. There is no path by which a signed-in store
+/// instance can outlive its UID.
+///
+/// Tests override this provider with `InMemoryMemoryStore` (or a
+/// pre-populated `FirebaseMemoryStore`) directly, in which case the
+/// auth-aware logic is bypassed entirely — the override always wins.
+/// The 14 widget tests already follow this pattern.
+final memoryStoreProvider = Provider<MemoryStore>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) {
+    return const _SignedOutMemoryStore();
+  }
+  final firestore = ref.watch(firestoreProvider);
+  return FirebaseMemoryStore(firestore: firestore, uid: user.uid);
+});
+
+/// Sentinel returned by [memoryStoreProvider] while signed out
+/// (Pass 4.2, #058). Every method throws [StateError] so a
+/// signed-out read surfaces immediately instead of silently
+/// returning empty data.
+///
+/// Production code paths that touch memory live behind the
+/// authenticated app shell, so this should never be hit in the
+/// running app. The sentinel exists for tests, for ordering bugs
+/// during sign-out, and as a defensive guard.
+class _SignedOutMemoryStore implements MemoryStore {
+  const _SignedOutMemoryStore();
+
+  static const String _msg =
+      'Memory is not available while signed out.';
+
+  @override
+  Future<MemoryDocument?> load(String contactId) =>
+      Future.error(StateError(_msg));
+
+  @override
+  Future<void> save(MemoryDocument doc) =>
+      Future.error(StateError(_msg));
+
+  @override
+  Future<void> delete(String contactId) =>
+      Future.error(StateError(_msg));
+
+  @override
+  Future<Map<String, MemoryDocument>> listAll() =>
+      Future.error(StateError(_msg));
+}
 
 /// Unified [AiUpdate] adapter (PRD Q1).
 ///
@@ -221,8 +276,28 @@ final memoryProvider =
 /// (becomes `summary`) and a small category-derived starter topics
 /// list. If the store is non-empty, do nothing — the seed has already
 /// run, or a test has pre-populated it.
+///
+/// **Auth-aware (Pass 4.2, #058).** No-ops while signed out. With
+/// the [memoryStoreProvider] now scoped per Firebase UID, seeding
+/// runs after the first sign-in for an account whose Firestore
+/// memories collection is empty. The behavioral change from Pass 3
+/// is intentional: in Pass 3 the seed ran at install time against a
+/// device-local store; in Pass 4.2 the seed follows the user, not
+/// the install. Issue #059 introduces a separate one-shot migration
+/// for existing on-device markdown into the same per-user
+/// collection.
 final memorySeedingProvider = FutureProvider<void>((ref) async {
+  // Bail out before touching the store if no user is signed in. The
+  // sentinel store would throw on `listAll`, but bailing here avoids
+  // even constructing the call.
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return;
+
   final store = ref.watch(memoryStoreProvider);
+  // Defense-in-depth: if a test (or some race) leaves the sentinel in
+  // place despite a signed-in user, skip seeding rather than throw.
+  if (store is _SignedOutMemoryStore) return;
+
   final connections = ref.watch(
     appControllerProvider.select((state) => state.connections),
   );

@@ -11,11 +11,14 @@ library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
+import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/firebase_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_document.dart';
+import 'package:connect_me/src/state/memory/memory_providers.dart';
 
 import '../../firebase_test_setup.dart';
 
@@ -243,5 +246,50 @@ void main() {
         'permission-denied',
       )),
     );
+  });
+
+  test(
+      'memoryStoreProvider rebuilds for a new user and the new store '
+      'sees an empty collection (Pass 4.2 #058)',
+      () async {
+    // Sign in as user A through the real (emulator) FirebaseAuth and
+    // build a ProviderContainer. memoryStoreProvider should hand out
+    // a UID-bound FirebaseMemoryStore for user A; saving a doc and
+    // re-listing through the provider should observe it.
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final userAUid = currentUid();
+    final storeA = container.read(memoryStoreProvider);
+    expect(storeA, isA<FirebaseMemoryStore>(),
+        reason: 'signed-in memoryStoreProvider must return the '
+            'Firestore-backed adapter.');
+
+    await storeA.save(_doc(contactId: 'a-only', displayName: 'A only'));
+    expect((await storeA.listAll()).keys, contains('a-only'));
+
+    // Switch to user B by signing out + back in anonymously. This
+    // emits on `authStateChanges`, which fires the listener inside
+    // `currentUserProvider` and invalidates it — the next read of
+    // memoryStoreProvider rebuilds with the new UID.
+    await FirebaseAuth.instance.signOut();
+    await FirebaseAuth.instance.signInAnonymously();
+    final userBUid = currentUid();
+    expect(userBUid, isNot(equals(userAUid)),
+        reason: 'anonymous sign-in must produce a fresh UID.');
+
+    // Pump a microtask so the StreamSubscription callback runs and
+    // the provider invalidation is observed.
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    final storeB = container.read(memoryStoreProvider);
+    expect(storeB, isA<FirebaseMemoryStore>());
+    expect(identical(storeA, storeB), isFalse,
+        reason: 'memoryStoreProvider must rebuild when the auth user '
+            'changes; user B must not share user A\'s store instance.');
+
+    expect(await storeB.listAll(), isEmpty,
+        reason: 'user B starts with an empty memories collection; '
+            'user A\'s data must not leak into user B\'s session.');
   });
 }

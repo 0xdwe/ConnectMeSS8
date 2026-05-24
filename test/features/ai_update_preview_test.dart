@@ -10,9 +10,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../test_overrides.dart';
+
 ProviderContainer _container({InMemoryMemoryStore? store}) {
   final memoryStore = store ?? InMemoryMemoryStore();
   return ProviderContainer(overrides: [
+    ...signedInDemoOverrides(),
     memoryStoreProvider.overrideWithValue(memoryStore),
   ]);
 }
@@ -404,6 +407,7 @@ void main() {
         // new topics, no new history bullet — to force the empty-
         // additions edge case.
         final stubContainer = ProviderContainer(overrides: [
+          ...signedInDemoOverrides(),
           memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
           aiUpdateProvider.overrideWith((ref) => _NoDeltaAiUpdate()),
         ]);
@@ -447,6 +451,7 @@ void main() {
         // memory; the user sees a retryable error.
         final store = InMemoryMemoryStore();
         final container = ProviderContainer(overrides: [
+          ...signedInDemoOverrides(),
           memoryStoreProvider.overrideWithValue(store),
           aiUpdateProvider.overrideWith((ref) => MockAiUpdate(
                 memoryStore: ref.watch(memoryStoreProvider),

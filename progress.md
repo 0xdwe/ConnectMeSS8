@@ -5,8 +5,8 @@
 **Pass 1 (home/people UI consistency)** — shipped, including review fixes.
 **Pass 2 (contact profile redesign)** — shipped, including review fixes.
 **Pass 3 (per-contact memory files with agentic AI)** — shipped on 2026-05-19. All 11 issues (#040–#050) merged to `main`.
-**Pass 4 begins.** Pass 4.1 (#052, Firebase Auth) shipped on 2026-05-21. Pass 4.2–4.4 not yet started.
-**Test baseline** — full sweep: **289 passed, 0 failed**.
+**Pass 4 begins.** Pass 4.1 (#052, Firebase Auth) shipped on 2026-05-21. Pass 4.2 in progress (#054 → #057 merged 2026-05-24).
+**Test baseline** — default `flutter test` sweep: **295 passed, 0 failed**. Emulator-backed `flutter test integration_test` runs separately (see `integration_test/firebase_test_setup.dart`).
 
 ## Pass 4 sub-pass plan
 
