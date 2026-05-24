@@ -9,6 +9,8 @@ import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
+import '../widgets/chain_logo.dart';
+
 
 enum _AuthMode { login, signup }
 
@@ -255,11 +257,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       color: Color(0xFFA0C4FF).withOpacity(0.2),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: Icon(
-                                      Icons.hub_outlined,
-                                      color: Color(0xFF6B4EFF),
-                                      size: 48,
-                                    ),
+                                    child: const LinkedChainLogo(size: 48),
                                   ),
                                   
                                   SizedBox(height: AppSpacing.space5),
