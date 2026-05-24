@@ -76,6 +76,7 @@ Bond-tier-weighted recency ranks recommendations with a 24h cooldown filter, top
 - **Pass 4.2** — not started. `FirebaseMemoryStore` adapter. Per-contact memory docs to Firestore keyed by `userId/contactId`. Real security rules replace test mode.
 - **Pass 4.3** — not started. `LlmAiUpdate` adapter. API key UX. Real LLM populates `MemoryDocument.upcoming` for real (lights up #051).
 - **Pass 4.4** — not started. Cloud Functions + FCM for cross-device push. Multi-device conflict resolution.
+- **#055** (rules CI + rules-only auto-deploy) shipped on a feature branch. One-time setup checklist at `docs/operations/firebase-rules-deploy.md`.
 
 ## Test baseline progression
 
