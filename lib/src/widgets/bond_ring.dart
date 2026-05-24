@@ -65,6 +65,7 @@ class BondRing extends StatefulWidget {
     this.size = 64,
     this.onTap,
     this.showAvatar = true,
+    this.strokeWidth = 3,
   }) : _connection = connection,
        _score = null,
        _label = null;
@@ -76,6 +77,7 @@ class BondRing extends StatefulWidget {
     required String label,
     this.size = 64,
     this.onTap,
+    this.strokeWidth = 3,
   }) : _connection = null,
        _score = score,
        _label = label,
@@ -87,6 +89,7 @@ class BondRing extends StatefulWidget {
   final double size;
   final VoidCallback? onTap;
   final bool showAvatar;
+  final double strokeWidth;
 
   // Convenience getters
   Connection? get connection => _connection;
@@ -199,7 +202,7 @@ class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin
                 painter: _RingPainter(
                   progress: 1.0,
                   color: tokens.border.withValues(alpha: 0.4),
-                  strokeWidth: 3,
+                  strokeWidth: widget.strokeWidth,
                 ),
               ),
               // Foreground arc (bond score fraction, animated)
@@ -208,7 +211,7 @@ class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin
                 painter: _RingPainter(
                   progress: _animation.value,
                   color: tierColor,
-                  strokeWidth: 3,
+                  strokeWidth: widget.strokeWidth,
                 ),
               ),
               // Avatar (only for Connection-based rings when showAvatar is true)
@@ -228,6 +231,7 @@ class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin
                   style: TextStyle(
                     fontSize: widget.size * 0.28,
                     fontWeight: FontWeight.w700,
+                    color: tokens.primary,
                   ),
                 ),
               // Trend arrow at 4 o'clock
