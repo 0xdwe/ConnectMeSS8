@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+		Required by firebase_auth on iOS Simulator. Without an explicit
+		keychain-access-group, anonymous sign-in fails with:
+			[firebase_auth/keychain-error] An error occurred when accessing the keychain.
+		See https://firebase.flutter.dev/docs/auth/usage#troubleshooting
+	-->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.connectme.connectMe</string>
+	</array>
+</dict>
+</plist>

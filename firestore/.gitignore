@@ -1,0 +1,3 @@
+# Local install output. `package-lock.json` is intentionally tracked
+# so the rules-test deps reproduce exactly across teammates.
+node_modules/
