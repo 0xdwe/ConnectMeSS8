@@ -14,8 +14,9 @@ Extend `firestore/firestore.rules` and `firestore/rules.test.js` to cover the ne
 
 - [ ] `firestore/firestore.rules` gains `match /users/{uid}/connections/{contactId}`.
 - [ ] Rules allow only the owner (`request.auth.uid == uid`) to read / list / create / update / delete.
-- [ ] Shape validation closes the field set: required `id is string`, `name is string`, `category is string`, `avatar is string`, `bondScore is int && bondScore >= 0 && bondScore <= 100`, `nextStep is string`, `lastContact is timestamp`, `knownSince is timestamp`, `preferredChannels is list`, `schemaVersion is int`, `updatedAt is timestamp`.
-- [ ] Optional fields handled with `data.x is type || !('x' in data.keys())` guards: `email`, `notes`, `isSample`.
+- [ ] Shape validation closes the field set: required `id is string`, `name is string`, `email is string`, `category is string`, `avatar is string`, `bondScore is int && bondScore >= 0 && bondScore <= 100`, `nextStep is string`, `lastContact is timestamp`, `notes is string`, `knownSince is timestamp`, `preferredChannels is list`, `schemaVersion is int`, `updatedAt is timestamp`.
+- [ ] Optional fields handled with `data.x is type || !('x' in data.keys())` guards: `isSample`. Required string fields `email` and `notes` allow empty strings per PRD §Q8.
+- [ ] On create and update, `request.resource.data.id == contactId` is enforced so the document key and the embedded id never diverge.
 - [ ] `hasOnly` closes the shape so unknown fields are rejected.
 - [ ] `firestore/rules.test.js` adds at least 12 cases for the connections collection: owner read, owner list, owner create, owner update, owner delete, anonymous denied (read + write), cross-user denied (read + write), oversized markdown N/A here but bondScore out-of-range rejected, missing required field rejected, unknown extra field rejected, wrong type rejected.
 - [ ] Existing tests stay green; total `npm test` count is at least the prior 38 plus the new connection cases.
