@@ -44,9 +44,17 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
         SizedBox(height: AppSpacing.space4),
         FilledButton(
           key: const Key('save-connection-button'),
-          onPressed: () {
-            ref.read(appControllerProvider.notifier).addConnection(name: name.text.trim().isEmpty ? 'New Connection' : name.text.trim(), email: email.text.trim().isEmpty ? 'new@email.com' : email.text.trim(), category: category!, notes: notes.text.trim());
-            Navigator.pop(context);
+          onPressed: () async {
+            try {
+              await ref.read(appControllerProvider.notifier).addConnection(name: name.text.trim().isEmpty ? 'New Connection' : name.text.trim(), email: email.text.trim().isEmpty ? 'new@email.com' : email.text.trim(), category: category!, notes: notes.text.trim());
+              if (context.mounted) Navigator.pop(context);
+            } catch (_) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Could not add connection. Try again.')),
+                );
+              }
+            }
           },
           child: const Text('Save Connection'),
         ),

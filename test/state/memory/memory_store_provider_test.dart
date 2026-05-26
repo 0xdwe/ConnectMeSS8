@@ -6,6 +6,8 @@ import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../test_overrides.dart';
+
 /// Tests for the auth-aware `memoryStoreProvider` (Pass 4.2 #058).
 ///
 /// These are pure Dart provider-shape tests. They do NOT exercise
@@ -183,6 +185,7 @@ void main() {
       ));
 
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(storeA),
       ]);
       addTearDown(container.dispose);
@@ -191,6 +194,7 @@ void main() {
       expect(docA.summary, 'Account A note');
 
       container.updateOverrides([
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(storeB),
       ]);
       // memoryProvider is auto-disposed and rebuilds on next read.

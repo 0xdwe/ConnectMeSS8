@@ -1,12 +1,12 @@
 import 'package:connect_me/src/models/social_models.dart';
 import 'package:connect_me/src/state/query_providers.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'test_helpers.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('contactByIdProvider', () {
     test('returns connection when ID exists', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       // Seeded state has 'david', 'emily', 'jessica', 'mike', 'sarah'
@@ -18,7 +18,7 @@ void main() {
     });
 
     test('returns null when ID does not exist', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       final contact = container.read(contactByIdProvider('nonexistent-id'));
@@ -29,7 +29,7 @@ void main() {
 
   group('eventByIdProvider', () {
     test('returns event when ID exists', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       // Seeded state has events 'e1', 'e2', 'e3', 'e4', 'e5'
@@ -41,7 +41,7 @@ void main() {
     });
 
     test('returns null when ID does not exist', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       final event = container.read(eventByIdProvider('nonexistent-event'));
@@ -52,7 +52,7 @@ void main() {
 
   group('interactionsByContactProvider', () {
     test('returns interactions for a specific contact', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       // Seeded state has interactions for 'sarah', 'mike', 'emily'
@@ -64,7 +64,7 @@ void main() {
     });
 
     test('returns empty list when contact has no interactions', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       final interactions = container.read(interactionsByContactProvider('david'));
@@ -73,7 +73,7 @@ void main() {
     });
 
     test('returns empty list for nonexistent contact', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       final interactions = container.read(interactionsByContactProvider('nonexistent'));
@@ -84,7 +84,7 @@ void main() {
 
   group('selectedDayEventsProvider', () {
     test('returns events for a specific date', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       // Seeded state has event 'e1' on 2026-04-28
@@ -98,7 +98,7 @@ void main() {
     });
 
     test('returns empty list when no events on date', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       final date = DateTime(2026, 6, 1);
@@ -108,7 +108,7 @@ void main() {
     });
 
     test('matches events regardless of time component', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       // Event is on 2026-04-28, query with different time
@@ -122,7 +122,7 @@ void main() {
 
   group('filteredContactsProvider', () {
     test('returns all connections when no filters applied', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       final filter = ContactFilter(
@@ -137,7 +137,7 @@ void main() {
     });
 
     test('filters by query string (case-insensitive)', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       final filter = ContactFilter(
@@ -152,7 +152,7 @@ void main() {
     });
 
     test('filters by category', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       final filter = ContactFilter(
@@ -167,7 +167,7 @@ void main() {
     });
 
     test('sorts by name', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       final filter = ContactFilter(
@@ -182,7 +182,7 @@ void main() {
     });
 
     test('sorts by lastContact (most recent first)', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       final filter = ContactFilter(
@@ -197,7 +197,7 @@ void main() {
     });
 
     test('sorts by bondScore (highest first)', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       final filter = ContactFilter(
@@ -213,7 +213,7 @@ void main() {
     });
 
     test('combines query and category filters', () {
-      final container = ProviderContainer();
+      final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
       final filter = ContactFilter(

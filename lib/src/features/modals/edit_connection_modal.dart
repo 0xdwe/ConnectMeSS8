@@ -110,11 +110,18 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
                 ),
               );
               if (confirmed == true && context.mounted) {
-                ref
-                    .read(appControllerProvider.notifier)
-                    .deleteConnection(widget.connection.id);
-                Navigator.pop(context);
-                Navigator.pop(context);
+                try {
+                  await ref
+                      .read(appControllerProvider.notifier)
+                      .deleteConnection(widget.connection.id);
+                  if (context.mounted) Navigator.pop(context);
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not delete contact. Try again.')),
+                    );
+                  }
+                }
               }
             },
             icon: const Icon(Icons.delete_outline),

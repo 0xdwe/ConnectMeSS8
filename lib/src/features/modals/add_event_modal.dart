@@ -236,44 +236,60 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
             SizedBox(height: AppSpacing.space4),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: tokens.primary),
-              onPressed: () {
+              onPressed: () async {
                 final cleanTitle = title.text.trim();
-                ref
-                    .read(appControllerProvider.notifier)
-                    .saveEvent(
-                      PlannerEvent(
-                        id: widget.event?.id ?? _uuid.v4(),
-                        title: cleanTitle.isEmpty ? 'New Event' : cleanTitle,
-                        contactId: contactId,
-                        category: category,
-                        date: date,
-                        note: note.text.trim(),
-                        eventType: eventType,
-                        isAllDay: isAllDay,
-                        startTimeMinutes: isAllDay
-                            ? null
-                            : _minutesFromTime(startTime),
-                        endTimeMinutes: isAllDay
-                            ? null
-                            : _minutesFromTime(endTime),
-                        isRecurring: isRecurring,
-                        recurrencePattern: isRecurring
-                            ? recurrencePattern
-                            : null,
-                      ),
+                try {
+                  await ref
+                      .read(appControllerProvider.notifier)
+                      .saveEvent(
+                        PlannerEvent(
+                          id: widget.event?.id ?? _uuid.v4(),
+                          title: cleanTitle.isEmpty ? 'New Event' : cleanTitle,
+                          contactId: contactId,
+                          category: category,
+                          date: date,
+                          note: note.text.trim(),
+                          eventType: eventType,
+                          isAllDay: isAllDay,
+                          startTimeMinutes: isAllDay
+                              ? null
+                              : _minutesFromTime(startTime),
+                          endTimeMinutes: isAllDay
+                              ? null
+                              : _minutesFromTime(endTime),
+                          isRecurring: isRecurring,
+                          recurrencePattern: isRecurring
+                              ? recurrencePattern
+                              : null,
+                        ),
+                      );
+                  if (context.mounted) Navigator.pop(context);
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not save event. Try again.')),
                     );
-                Navigator.pop(context);
+                  }
+                }
               },
               child: const Text('Save Event'),
             ),
             if (widget.event != null) ...[
               SizedBox(height: AppSpacing.space2),
               TextButton.icon(
-                onPressed: () {
-                  final deleted = ref
-                      .read(appControllerProvider.notifier)
-                      .deleteEvent(widget.event!.id);
-                  Navigator.pop(context, deleted);
+                onPressed: () async {
+                  try {
+                    final deleted = await ref
+                        .read(appControllerProvider.notifier)
+                        .deleteEvent(widget.event!.id);
+                    if (context.mounted) Navigator.pop(context, deleted);
+                  } catch (_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Could not delete event. Try again.')),
+                      );
+                    }
+                  }
                 },
                 icon: const Icon(Icons.delete_outline),
                 label: const Text('Delete Event'),

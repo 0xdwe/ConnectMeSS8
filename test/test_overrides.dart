@@ -1,17 +1,30 @@
+import 'package:connect_me/src/state/connections/batched_writes.dart';
+import 'package:connect_me/src/state/connections/batched_writes_providers.dart';
+import 'package:connect_me/src/state/connections/connection_providers.dart';
+import 'package:connect_me/src/state/connections/event_providers.dart';
+import 'package:connect_me/src/state/connections/in_memory_connection_store.dart';
+import 'package:connect_me/src/state/connections/in_memory_event_store.dart';
+import 'package:connect_me/src/state/connections/in_memory_interaction_store.dart';
+import 'package:connect_me/src/state/connections/in_memory_user_doc_store.dart';
+import 'package:connect_me/src/state/connections/interaction_providers.dart';
+import 'package:connect_me/src/state/connections/user_doc_store_providers.dart';
 import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Standard signed-in [firebaseAuthProvider] override for headless
-/// `flutter test` (Pass 4.2 #058).
+/// Standard signed-in [firebaseAuthProvider] override plus Pass 4.5
+/// store overrides for headless `flutter test`.
 ///
-/// Pass 4.2 made `memoryStoreProvider`, `memorySeedingProvider`, and
-/// any provider that reaches through them auth-aware. Tests that
-/// don't care about authentication still need a signed-in identity
-/// available, otherwise they hit `FirebaseAuth.instance` (no
-/// `Firebase.initializeApp` in headless tests). This helper returns
-/// the conventional override for "anything signed in is fine."
+/// Pass 4.2 (#058) made `memoryStoreProvider`, `memorySeedingProvider`,
+/// and any provider that reaches through them auth-aware. Pass 4.5
+/// (#070) extends that to `connectionStoreProvider`,
+/// `interactionStoreProvider`, `eventStoreProvider`,
+/// `userDocStoreProvider`, and `batchedWritesProvider` — all read by
+/// AppController. Tests that don't care about persistence still need
+/// every one of those overridden, or the signed-in default branch
+/// reaches for `FirebaseFirestore.instance` and crashes (no
+/// `Firebase.initializeApp` in headless tests).
 ///
 /// Usage:
 /// ```
@@ -27,6 +40,15 @@ import 'package:flutter_test/flutter_test.dart';
 /// `ProviderContainer(overrides: [...])` works either way and
 /// avoids an extra import path.
 List<dynamic> signedInDemoOverrides({String uid = 'demo-uid'}) {
+  final connections = InMemoryConnectionStore();
+  final interactions = InMemoryInteractionStore();
+  final events = InMemoryEventStore();
+  final userDoc = InMemoryUserDocStore();
+  final batched = InMemoryBatchedWrites(
+    connectionStore: connections,
+    interactionStore: interactions,
+    eventStore: events,
+  );
   return <dynamic>[
     firebaseAuthProvider.overrideWithValue(
       MockFirebaseAuth(
@@ -39,5 +61,10 @@ List<dynamic> signedInDemoOverrides({String uid = 'demo-uid'}) {
         ),
       ),
     ),
+    connectionStoreProvider.overrideWithValue(connections),
+    interactionStoreProvider.overrideWithValue(interactions),
+    eventStoreProvider.overrideWithValue(events),
+    userDocStoreProvider.overrideWithValue(userDoc),
+    batchedWritesProvider.overrideWithValue(batched),
   ];
 }

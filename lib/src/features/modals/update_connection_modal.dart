@@ -47,14 +47,22 @@ class _UpdateConnectionModalState extends ConsumerState<UpdateConnectionModal> {
         TextField(controller: note, decoration: const InputDecoration(labelText: 'Note'), minLines: 2, maxLines: 5),
         SizedBox(height: AppSpacing.space4),
         FilledButton(
-          onPressed: () {
-            ref.read(appControllerProvider.notifier).logInteraction(
-                  widget.connection.id,
-                  type,
-                  title.text.trim().isEmpty ? type.label : title.text.trim(),
-                  note.text.trim().isEmpty ? 'Manual update logged.' : note.text.trim(),
+          onPressed: () async {
+            try {
+              await ref.read(appControllerProvider.notifier).logInteraction(
+                    widget.connection.id,
+                    type,
+                    title.text.trim().isEmpty ? type.label : title.text.trim(),
+                    note.text.trim().isEmpty ? 'Manual update logged.' : note.text.trim(),
+                  );
+              if (context.mounted) Navigator.pop(context);
+            } catch (_) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Could not log update. Try again.')),
                 );
-            Navigator.pop(context);
+              }
+            }
           },
           child: const Text('Log update'),
         ),

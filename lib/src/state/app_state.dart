@@ -1,7 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/social_models.dart';
+import 'connections/batched_writes.dart';
+import 'connections/batched_writes_providers.dart';
+import 'connections/connection_providers.dart';
+import 'connections/connection_store.dart';
+import 'connections/event_providers.dart';
+import 'connections/event_store.dart';
+import 'connections/interaction_providers.dart';
+import 'connections/user_doc_store.dart';
+import 'connections/user_doc_store_providers.dart';
 import 'memory/memory_providers.dart';
 
 final appControllerProvider = NotifierProvider<AppController, AppState>(
@@ -263,6 +274,36 @@ class AppState {
   }
 }
 
+/// Source of truth for connections, interactions, events, categories
+/// and event types is now Firestore, mirrored locally by the four
+/// stores (`ConnectionStore`, `InteractionStore`, `EventStore`,
+/// `UserDocStore`) — Pass 4.5 #070, PRD §Q4.
+///
+/// AppController is the single write coordinator: every mutating
+/// method writes through the appropriate store(s) BEFORE updating
+/// `state`. The two multi-store operations
+/// ([deleteConnection], [applyAiUpdateResult]) go through
+/// [BatchedWrites] for atomic-across-collections semantics. On
+/// store failure, the in-memory `state` is not advanced — the
+/// existing `AiUpdate.commit` retryable error path runs, and the
+/// caller observes the thrown exception.
+///
+/// **Read paths.** AppController also owns the four snapshot
+/// listeners. On construction it subscribes to each store's
+/// `snapshot()` stream and projects new emissions into `state`.
+/// This keeps `state.connections` etc. consistent with the live
+/// Firestore mirror, including writes from another device.
+///
+/// **Sign-out hotfix removed.** The pre-Pass-4.5 `signOut` had a
+/// special "preserve user data" cascade because in-memory state
+/// was the only durable record. With Firestore as the source of
+/// truth, sign-out can revert to its trivial shape: flip
+/// `isAuthed`, reset the tab, drop in-memory connection /
+/// interaction / event / categories / eventTypes back to defaults.
+/// The auth-aware provider rebuilds tear down the snapshot
+/// listeners on the next sign-in / swap; AppController itself
+/// rebuilds on the auth swap (see `firebaseAuthProvider` watch
+/// in [build]).
 class AppController extends Notifier<AppState> {
   static const _uuid = Uuid();
   static const defaultEventTypes = [
@@ -275,8 +316,109 @@ class AppController extends Notifier<AppState> {
     'Coffee',
   ];
 
+  StreamSubscription<Map<String, Connection>>? _connectionsSub;
+  StreamSubscription<Map<String, CrmInteraction>>? _interactionsSub;
+  StreamSubscription<Map<String, PlannerEvent>>? _eventsSub;
+  StreamSubscription<UserDocSnapshot>? _userDocSub;
+
   @override
-  AppState build() => AppState.seeded();
+  AppState build() {
+    // Auth-aware rebuild cascades transitively: every store
+    // provider below watches `currentUserProvider`, so a sign-in /
+    // sign-out / swap rebuilds the store identities, which
+    // rebuilds this controller. The previous build's snapshot
+    // subscriptions cancel below before re-subscribing to the new
+    // stores. Mirrors the auth-aware shape from Pass 4.2 #058 —
+    // the controller's identity is per-UID transitively.
+
+    _connectionsSub?.cancel();
+    _interactionsSub?.cancel();
+    _eventsSub?.cancel();
+    _userDocSub?.cancel();
+    _connectionsSub = null;
+    _interactionsSub = null;
+    _eventsSub = null;
+    _userDocSub = null;
+
+    final connectionStore = ref.watch(connectionStoreProvider);
+    final interactionStore = ref.watch(interactionStoreProvider);
+    final eventStore = ref.watch(eventStoreProvider);
+    final userDocStore = ref.watch(userDocStoreProvider);
+
+    _connectionsSub = connectionStore.snapshot().listen(
+      (snapshot) {
+        // Snapshot ordering: keep insertion order from the map
+        // (Firestore returns documents in collection order). Tests
+        // can override with their own InMemory store and rely on
+        // its broadcast order.
+        state = state.copyWith(connections: snapshot.values.toList());
+      },
+      onError: (_) {
+        // Listener errors leave the last-known-good state in place.
+        // The store's snapshotSync mirror is also unchanged on
+        // error per PRD §Q6.
+      },
+    );
+
+    _interactionsSub = interactionStore.snapshot().listen(
+      (snapshot) {
+        // Newest-first ordering matches the prior in-memory
+        // shape (`addInteraction` prepended) so widgets that read
+        // `state.interactions` keep the same chronological feel.
+        final values = snapshot.values.toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+        state = state.copyWith(interactions: values);
+      },
+      onError: (_) {},
+    );
+
+    _eventsSub = eventStore.snapshot().listen(
+      (snapshot) {
+        // Date-sorted ascending matches the calendar UI's expected
+        // order. `restoreEvent` previously sorted; doing it here
+        // keeps the contract uniform regardless of write source.
+        final values = snapshot.values.toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+        state = state.copyWith(events: values);
+      },
+      onError: (_) {},
+    );
+
+    _userDocSub = userDocStore.snapshot().listen(
+      (snapshot) {
+        // Empty snapshots happen during sign-out / pre-seed. Fall
+        // back to the seed defaults so category / event-type
+        // pickers don't blank out for one frame.
+        final categories = snapshot.categories.isEmpty
+            ? UserDocDefaults.categories()
+            : snapshot.categories;
+        final eventTypes = snapshot.eventTypes.isEmpty
+            ? UserDocDefaults.eventTypes()
+            : snapshot.eventTypes;
+        state = state.copyWith(
+          categories: categories,
+          eventTypes: eventTypes,
+        );
+      },
+      onError: (_) {},
+    );
+
+    ref.onDispose(() {
+      _connectionsSub?.cancel();
+      _interactionsSub?.cancel();
+      _eventsSub?.cancel();
+      _userDocSub?.cancel();
+    });
+
+    // Initial state is the seeded value. The store snapshot
+    // listeners replace `state.connections` etc. with the live
+    // mirror as soon as they fire. Tests that override the stores
+    // with InMemory adapters still see seeded data because the
+    // initial state ships with the seed; the override starts empty
+    // unless the test populates it, in which case the snapshot
+    // overwrites the seed on the first emission.
+    return AppState.seeded();
+  }
 
   void signIn() => state = state.copyWith(isAuthed: true);
   void signUp({required String name, required String email}) {
@@ -290,47 +432,31 @@ class AppController extends Notifier<AppState> {
       ),
     );
   }
-  /// Hotfix: preserve user-added connections, interactions, and events
-  /// across sign-out so a single-device prototype run does not lose user
-  /// data. Sample seeded connections (and their related events and
-  /// interactions) are dropped because they are demo content, not user
-  /// data; they come back the next time the user signs in to a fresh
-  /// account via [AppState.seeded].
+
+  /// Sign out is now trivial: flip `isAuthed`, reset the tab, and
+  /// drop the in-memory mirrors back to defaults. Firestore is the
+  /// source of truth — the auth-aware provider rebuilds tear down
+  /// the snapshot listeners; the next sign-in re-subscribes against
+  /// the new UID and rebuilds `state` from the live mirror.
   ///
-  /// App-level preferences ([themeMode], [categories], [eventTypes],
-  /// [googleCalendarLinked]) are intentionally untouched because they
-  /// belong to the app, not the auth session. [lastAiSummary] is left
-  /// alone for the same reason — it is informational and not tied to
-  /// auth. The previous user identity ([state.user]) also lingers; the
-  /// next sign-in updates it via `signUp`, while `signIn` deliberately
-  /// leaves it as-is. The lingering name is the explicit single-device
-  /// prototype tradeoff and goes away once the next pass introduces
-  /// per-user state hydration.
-  ///
-  /// Proper cross-device persistence is the next pass (Firestore-backed
-  /// connection/interaction/event stores mirroring [memoryStoreProvider]).
+  /// The Pass 4.5 hotfix logic (preserve non-sample connections /
+  /// cascade sample drops to interactions and events) is REMOVED.
+  /// Hotfix-era data loss across the upgrade is documented in the
+  /// PRD §Q7; user-added data persisted via the post-#070 path
+  /// survives sign-out automatically because it lives in
+  /// Firestore.
   void signOut() {
-    final sampleIds = state.connections
-        .where((c) => c.isSample)
-        .map((c) => c.id)
-        .toSet();
     state = state.copyWith(
       isAuthed: false,
       selectedTab: 0,
-      connections: [
-        for (final connection in state.connections)
-          if (!connection.isSample) connection,
-      ],
-      interactions: [
-        for (final interaction in state.interactions)
-          if (!sampleIds.contains(interaction.contactId)) interaction,
-      ],
-      events: [
-        for (final event in state.events)
-          if (!sampleIds.contains(event.contactId)) event,
-      ],
+      connections: const <Connection>[],
+      interactions: const <CrmInteraction>[],
+      events: const <PlannerEvent>[],
+      categories: UserDocDefaults.categories(),
+      eventTypes: UserDocDefaults.eventTypes(),
     );
   }
+
   void setTab(int index) => state = state.copyWith(selectedTab: index);
 
   void setThemeMode(AppThemeMode mode) =>
@@ -361,12 +487,18 @@ class AppController extends Notifier<AppState> {
     );
   }
 
-  void addConnection({
+  /// Persist a new connection via [ConnectionStore.save]. The
+  /// snapshot listener in [build] picks up the write and updates
+  /// `state.connections`.
+  ///
+  /// Returns the constructed [Connection] so callers can reference
+  /// the newly assigned id without re-reading state.
+  Future<Connection> addConnection({
     required String name,
     required String email,
     required String category,
     required String notes,
-  }) {
+  }) async {
     final connection = Connection(
       id: _uuid.v4(),
       name: name,
@@ -380,68 +512,77 @@ class AppController extends Notifier<AppState> {
       knownSince: DateTime.now(),
       preferredChannels: const ['Text'],
     );
-    state = state.copyWith(connections: [connection, ...state.connections]);
+    await ref.read(connectionStoreProvider).save(connection);
+    return connection;
   }
 
-  void updateConnection(Connection connection) {
-    state = state.copyWith(
-      connections: [
-        for (final item in state.connections)
-          if (item.id == connection.id) connection else item,
-      ],
+  Future<void> updateConnection(Connection connection) async {
+    await ref.read(connectionStoreProvider).save(connection);
+  }
+
+  /// Atomically delete a connection plus its dependent interactions
+  /// and events. Memory cascade fires after the batch commits.
+  /// On batch failure, in-memory state is not advanced — the caller
+  /// sees the thrown exception from [BatchedWrites].
+  Future<void> deleteConnection(String contactId) async {
+    final batched = ref.read(batchedWritesProvider);
+    await batched.commitDeleteConnection(
+      contactId: contactId,
+      interactions: state.interactions,
+      events: state.events,
     );
+    // Memory cascade: the memory store has its own write contract
+    // (Pass 4.2). Fire after the multi-store batch commits — if the
+    // batch failed, the memory delete should not run. Best-effort
+    // (matches the pre-Pass-4.5 fire-and-forget shape); rollback
+    // for memory is outside the Firestore-batch boundary.
+    try {
+      await ref.read(memoryStoreProvider).delete(contactId);
+    } catch (_) {
+      // Memory is informational; a transient failure here does not
+      // reverse the connection delete.
+    }
   }
 
-  void deleteConnection(String contactId) {
-    state = state.copyWith(
-      connections: [
-        for (final connection in state.connections)
-          if (connection.id != contactId) connection,
-      ],
-      events: [
-        for (final event in state.events)
-          if (event.contactId != contactId) event,
-      ],
-      interactions: [
-        for (final interaction in state.interactions)
-          if (interaction.contactId != contactId) interaction,
-      ],
-    );
-    // Cascade memory delete (PRD Q3). Fire-and-forget for this slice;
-    // rollback-on-failure is part of the all-or-nothing contract that
-    // #046 owns.
-    // TODO(#046): revert in-memory delete if MemoryStore.delete fails.
-    ref.read(memoryStoreProvider).delete(contactId);
-  }
-
-  void removeSampleConnections() {
-    final sampleIds = state.connections
+  /// Drop every sample connection and the interactions / events
+  /// tied to those connections. Used in onboarding's "Start fresh"
+  /// path before the user has built their own list.
+  ///
+  /// Implementation: composes one Firestore batch covering every
+  /// sample connection plus its dependent interactions and events,
+  /// committed atomically via [BatchedWrites.commitRemoveSampleConnections]
+  /// (Pass 4.5 #070 review C2). On batch failure, in-memory state
+  /// is not advanced — the caller sees the thrown exception.
+  /// Memory cascade fires per-id post-batch best-effort.
+  Future<void> removeSampleConnections() async {
+    final samples = state.connections
         .where((c) => c.isSample)
-        .map((c) => c.id)
-        .toSet();
-    
-    state = state.copyWith(
-      connections: [
-        for (final connection in state.connections)
-          if (!connection.isSample) connection,
-      ],
-      events: [
-        for (final event in state.events)
-          if (!sampleIds.contains(event.contactId)) event,
-      ],
-      interactions: [
-        for (final interaction in state.interactions)
-          if (!sampleIds.contains(interaction.contactId)) interaction,
-      ],
+        .toList(growable: false);
+    if (samples.isEmpty) return;
+    final batched = ref.read(batchedWritesProvider);
+    await batched.commitRemoveSampleConnections(
+      connections: samples,
+      interactions: state.interactions,
+      events: state.events,
     );
+    // Memory cascade: same shape as [deleteConnection] — best-effort,
+    // post-batch, per-id (memory store has its own write contract).
+    for (final sample in samples) {
+      try {
+        await ref.read(memoryStoreProvider).delete(sample.id);
+      } catch (_) {
+        // Informational; a transient failure here does not reverse
+        // the connection deletes.
+      }
+    }
   }
 
-  void logInteraction(
+  Future<void> logInteraction(
     String contactId,
     InteractionType type,
     String title,
     String note,
-  ) {
+  ) async {
     final interaction = CrmInteraction(
       id: _uuid.v4(),
       contactId: contactId,
@@ -450,17 +591,17 @@ class AppController extends Notifier<AppState> {
       note: note,
       date: DateTime.now(),
     );
-    state = state.copyWith(interactions: [interaction, ...state.interactions]);
+    await ref.read(interactionStoreProvider).save(interaction);
   }
 
-  void addEvent(
+  Future<void> addEvent(
     String title,
     String contactId,
     String category,
     DateTime date,
     String note,
-  ) {
-    saveEvent(
+  ) async {
+    await saveEvent(
       PlannerEvent(
         id: _uuid.v4(),
         title: title,
@@ -472,105 +613,127 @@ class AppController extends Notifier<AppState> {
     );
   }
 
-  void saveEvent(PlannerEvent event) {
-    final exists = state.events.any((item) => item.id == event.id);
-    state = state.copyWith(
-      events: exists
-          ? [
-              for (final item in state.events)
-                if (item.id == event.id) event else item,
-            ]
-          : [...state.events, event],
-    );
+  Future<void> saveEvent(PlannerEvent event) async {
+    await ref.read(eventStoreProvider).save(event);
   }
 
-  PlannerEvent? deleteEvent(String eventId) {
+  /// Delete an event and return the deleted record so the UI can
+  /// offer a snackbar undo. Reads from the in-memory mirror to find
+  /// the prior record before the snapshot listener removes it.
+  Future<PlannerEvent?> deleteEvent(String eventId) async {
     PlannerEvent? deleted;
-    final remaining = <PlannerEvent>[];
     for (final event in state.events) {
       if (event.id == eventId) {
         deleted = event;
-      } else {
-        remaining.add(event);
+        break;
       }
     }
-    state = state.copyWith(events: remaining);
+    if (deleted == null) return null;
+    await ref.read(eventStoreProvider).delete(eventId);
     return deleted;
   }
 
-  void restoreEvent(PlannerEvent event) {
-    state = state.copyWith(
-      events: [...state.events, event]
-        ..sort((a, b) => a.date.compareTo(b.date)),
-    );
+  Future<void> restoreEvent(PlannerEvent event) async {
+    await ref.read(eventStoreProvider).save(event);
   }
 
-  void addCategory(String category) {
-    if (category.trim().isEmpty || state.categories.contains(category.trim())) {
+  Future<void> addCategory(String category) async {
+    final clean = category.trim();
+    if (clean.isEmpty || state.categories.contains(clean)) {
       return;
     }
-    state = state.copyWith(categories: [...state.categories, category.trim()]);
+    final next = <String>[...state.categories, clean];
+    await ref.read(userDocStoreProvider).saveCategories(next);
   }
 
-  void addEventType(String eventType) {
+  Future<void> addEventType(String eventType) async {
     final clean = eventType.trim();
     if (clean.isEmpty || state.eventTypes.contains(clean)) return;
-    state = state.copyWith(eventTypes: [...state.eventTypes, clean]);
+    final next = <String>[...state.eventTypes, clean];
+    await ref.read(userDocStoreProvider).saveEventTypes(next);
   }
 
-  void renameEventType(String oldValue, String newValue) {
+  /// Rename an event type. Cascades to every event that referenced
+  /// the old type. The user-doc list update lives in
+  /// [UserDocStore]; the event cascade goes through
+  /// [EventStore.save] per affected event. The two writes are NOT
+  /// in the same Firestore batch — the user-doc and event
+  /// collections live under different document paths but the
+  /// updates are compatible (a stale event tagged with the old
+  /// name is recoverable from the client). This matches the
+  /// AC text: "user-doc + cascade".
+  Future<void> renameEventType(String oldValue, String newValue) async {
     final clean = newValue.trim();
     if (clean.isEmpty || state.eventTypes.contains(clean)) return;
-    state = state.copyWith(
-      eventTypes: [
-        for (final item in state.eventTypes)
-          if (item == oldValue) clean else item,
-      ],
-      events: [
-        for (final event in state.events)
-          if (event.eventType == oldValue)
-            event.copyWith(eventType: clean)
-          else
-            event,
-      ],
-    );
+    final next = <String>[
+      for (final item in state.eventTypes)
+        if (item == oldValue) clean else item,
+    ];
+    await ref.read(userDocStoreProvider).saveEventTypes(next);
+    final eventStore = ref.read(eventStoreProvider);
+    for (final event in state.events) {
+      if (event.eventType == oldValue) {
+        await eventStore.save(event.copyWith(eventType: clean));
+      }
+    }
   }
 
-  void deleteEventType(String eventType) {
+  Future<void> deleteEventType(String eventType) async {
     if (defaultEventTypes.contains(eventType)) return;
-    state = state.copyWith(
-      eventTypes: [
-        for (final item in state.eventTypes)
-          if (item != eventType) item,
-      ],
-      events: [
-        for (final event in state.events)
-          if (event.eventType == eventType)
-            event.copyWith(eventType: 'Plan')
-          else
-            event,
-      ],
-    );
+    final next = <String>[
+      for (final item in state.eventTypes)
+        if (item != eventType) item,
+    ];
+    await ref.read(userDocStoreProvider).saveEventTypes(next);
+    final eventStore = ref.read(eventStoreProvider);
+    for (final event in state.events) {
+      if (event.eventType == eventType) {
+        await eventStore.save(event.copyWith(eventType: 'Plan'));
+      }
+    }
   }
 
-  /// Applies a previously-produced [AiUpdateResult] to in-memory state:
-  /// appends interactions, bumps `bondScore`, updates `lastContact`,
-  /// sets `lastAiSummary`. Public so the unified `AiUpdate.commit`
-  /// adapter can call it after persisting the memory document.
-  void applyAiUpdateResult(AiUpdateResult result) {
-    final updatedConnections = state.connections.map((connection) {
-      if (connection.id != result.contactId) return connection;
-      final nextScore = (connection.bondScore + 3).clamp(0, 100);
-      return connection.copyWith(
-        nextStep: result.nextStep ?? connection.nextStep,
-        lastContact: DateTime.now(),
-        bondScore: nextScore,
-      );
-    }).toList();
-    state = state.copyWith(
-      interactions: [...result.interactions, ...state.interactions],
-      connections: updatedConnections,
-      lastAiSummary: result.summary,
+  /// Apply a previously-produced [AiUpdateResult] to Firestore via
+  /// the multi-store atomic batch (PRD §Q4 #070).
+  ///
+  /// The batch writes the new interaction AND the bumped
+  /// connection in one Firestore commit. On commit failure the
+  /// caller observes the thrown exception; in-memory state is not
+  /// advanced because the snapshot listeners only update on
+  /// successful writes.
+  ///
+  /// `lastAiSummary` updates locally because it is informational UI
+  /// state, not a stored Firestore field.
+  Future<void> applyAiUpdateResult(AiUpdateResult result) async {
+    final connection = state.connections.firstWhere(
+      (c) => c.id == result.contactId,
+      orElse: () => throw StateError(
+        'applyAiUpdateResult: contactId ${result.contactId} not found',
+      ),
     );
+    final nextScore = (connection.bondScore + 3).clamp(0, 100);
+    final updatedConnection = connection.copyWith(
+      nextStep: result.nextStep ?? connection.nextStep,
+      lastContact: DateTime.now(),
+      bondScore: nextScore,
+    );
+
+    if (result.interactions.length != 1) {
+      throw StateError(
+        'applyAiUpdateResult expects exactly one interaction, '
+        'got ${result.interactions.length}',
+      );
+    }
+    final interaction = result.interactions.single;
+
+    await ref.read(batchedWritesProvider).commitAiUpdate(
+          interaction: interaction,
+          updatedConnection: updatedConnection,
+        );
+
+    // lastAiSummary is informational; not part of the persisted
+    // Firestore shape. Update only after a successful batch commit
+    // so a failed batch leaves the prior summary in place.
+    state = state.copyWith(lastAiSummary: result.summary);
   }
 }
