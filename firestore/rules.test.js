@@ -98,6 +98,42 @@ async function seedUserDoc(uid, data = wellFormedUserDoc()) {
   });
 }
 
+function connectionDocRef(db, uid, contactId) {
+  return doc(db, 'users', uid, 'connections', contactId);
+}
+
+function connectionsCollectionRef(db, uid) {
+  return collection(db, 'users', uid, 'connections');
+}
+
+function wellFormedConnection(overrides = {}) {
+  return {
+    id: 'sarah',
+    name: 'Sarah Chen',
+    category: 'Friend',
+    avatar: 'sarah',
+    bondScore: 85,
+    nextStep: 'Send the article on neural rendering',
+    lastContact: Timestamp.fromDate(new Date('2026-05-20T00:00:00Z')),
+    knownSince: Timestamp.fromDate(new Date('2024-01-15T00:00:00Z')),
+    preferredChannels: ['imessage', 'email'],
+    schemaVersion: 1,
+    updatedAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+    // Optional fields included by default; specific tests omit them.
+    email: 'sarah@example.com',
+    notes: 'Knows the team at Anthropic.',
+    isSample: false,
+    ...overrides,
+  };
+}
+
+async function seedConnection(uid, contactId, data) {
+  const payload = data ?? wellFormedConnection({ id: contactId });
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(connectionDocRef(ctx.firestore(), uid, contactId), payload);
+  });
+}
+
 // Tests ---------------------------------------------------------------
 
 describe('users/{uid}/memories/{contactId} — ownership', () => {
@@ -389,6 +425,462 @@ describe('users/{uid}/memories/{contactId} — shape validation', () => {
         memoryDocRef(authedDb(ALICE), ALICE, 'sarah'),
         wellFormedMemory({ markdown: ['list', 'instead', 'of', 'string'] }),
       ),
+    );
+  });
+});
+
+describe('users/{uid}/connections/{contactId} — ownership', () => {
+  test('owner can read own connection doc', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertSucceeds(
+      getDoc(connectionDocRef(authedDb(ALICE), ALICE, 'sarah')),
+    );
+  });
+
+  test('owner can list own connections collection', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await seedConnection(ALICE, 'mike');
+    await assertSucceeds(
+      getDocs(connectionsCollectionRef(authedDb(ALICE), ALICE)),
+    );
+  });
+
+  test('owner can create well-formed own connection doc', async () => {
+    await assertSucceeds(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection(),
+      ),
+    );
+  });
+
+  test('owner can update own connection doc with well-formed payload', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertSucceeds(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({
+          name: 'Sarah Chen',
+          bondScore: 88,
+          nextStep: 'Schedule the next call',
+        }),
+      ),
+    );
+  });
+
+  test('owner can delete own connection doc', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertSucceeds(
+      deleteDoc(connectionDocRef(authedDb(ALICE), ALICE, 'sarah')),
+    );
+  });
+
+  test('other authenticated user cannot read another user’s connection doc', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertFails(
+      getDoc(connectionDocRef(authedDb(BOB), ALICE, 'sarah')),
+    );
+  });
+
+  test('other authenticated user cannot list another user’s connections collection', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertFails(
+      getDocs(connectionsCollectionRef(authedDb(BOB), ALICE)),
+    );
+  });
+
+  test('other authenticated user cannot create at another user’s connection path', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(BOB), ALICE, 'sarah'),
+        wellFormedConnection(),
+      ),
+    );
+  });
+
+  test('other authenticated user cannot update another user’s connection doc', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(BOB), ALICE, 'sarah'),
+        wellFormedConnection({ nextStep: 'Hijacked' }),
+      ),
+    );
+  });
+
+  test('other authenticated user cannot delete another user’s connection doc', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertFails(
+      deleteDoc(connectionDocRef(authedDb(BOB), ALICE, 'sarah')),
+    );
+  });
+});
+
+describe('users/{uid}/connections/{contactId} — anonymous denial', () => {
+  test('anonymous read on another user’s connection is denied', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertFails(
+      getDoc(connectionDocRef(anonDb(), ALICE, 'sarah')),
+    );
+  });
+
+  test('anonymous list on another user’s connections collection is denied', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertFails(
+      getDocs(connectionsCollectionRef(anonDb(), ALICE)),
+    );
+  });
+
+  test('anonymous create is denied', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(anonDb(), ALICE, 'sarah'),
+        wellFormedConnection(),
+      ),
+    );
+  });
+
+  test('anonymous update is denied', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertFails(
+      setDoc(
+        connectionDocRef(anonDb(), ALICE, 'sarah'),
+        wellFormedConnection({ nextStep: 'Anonymous edit.' }),
+      ),
+    );
+  });
+
+  test('anonymous delete is denied', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertFails(
+      deleteDoc(connectionDocRef(anonDb(), ALICE, 'sarah')),
+    );
+  });
+});
+
+describe('users/{uid}/connections/{contactId} — shape validation', () => {
+  // ---- Required-field omissions -----------------------------------
+
+  test('create denied when id is missing', async () => {
+    const payload = wellFormedConnection();
+    delete payload.id;
+    await assertFails(
+      setDoc(connectionDocRef(authedDb(ALICE), ALICE, 'sarah'), payload),
+    );
+  });
+
+  test('create denied when name is missing', async () => {
+    const payload = wellFormedConnection();
+    delete payload.name;
+    await assertFails(
+      setDoc(connectionDocRef(authedDb(ALICE), ALICE, 'sarah'), payload),
+    );
+  });
+
+  test('create denied when category is missing', async () => {
+    const payload = wellFormedConnection();
+    delete payload.category;
+    await assertFails(
+      setDoc(connectionDocRef(authedDb(ALICE), ALICE, 'sarah'), payload),
+    );
+  });
+
+  test('create denied when bondScore is missing', async () => {
+    const payload = wellFormedConnection();
+    delete payload.bondScore;
+    await assertFails(
+      setDoc(connectionDocRef(authedDb(ALICE), ALICE, 'sarah'), payload),
+    );
+  });
+
+  test('create denied when preferredChannels is missing', async () => {
+    const payload = wellFormedConnection();
+    delete payload.preferredChannels;
+    await assertFails(
+      setDoc(connectionDocRef(authedDb(ALICE), ALICE, 'sarah'), payload),
+    );
+  });
+
+  test('create denied when schemaVersion is missing', async () => {
+    const payload = wellFormedConnection();
+    delete payload.schemaVersion;
+    await assertFails(
+      setDoc(connectionDocRef(authedDb(ALICE), ALICE, 'sarah'), payload),
+    );
+  });
+
+  // ---- Unknown / extra field --------------------------------------
+
+  test('create denied when extra unknown key is present', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ rogueField: 'not allowed' }),
+      ),
+    );
+  });
+
+  test('update denied when payload introduces an extra field', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ extra: 'still not allowed' }),
+      ),
+    );
+  });
+
+  // ---- bondScore range --------------------------------------------
+
+  test('create denied when bondScore is below zero', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ bondScore: -1 }),
+      ),
+    );
+  });
+
+  test('create denied when bondScore is above one hundred', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ bondScore: 101 }),
+      ),
+    );
+  });
+
+  test('create allowed when bondScore is exactly zero', async () => {
+    await assertSucceeds(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ bondScore: 0 }),
+      ),
+    );
+  });
+
+  test('create allowed when bondScore is exactly one hundred', async () => {
+    await assertSucceeds(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ bondScore: 100 }),
+      ),
+    );
+  });
+
+  test('create denied when bondScore is not an int (string)', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ bondScore: '85' }),
+      ),
+    );
+  });
+
+  // ---- Wrong-type required fields ---------------------------------
+
+  test('create denied when name is not a string', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ name: 12345 }),
+      ),
+    );
+  });
+
+  test('create denied when lastContact is not a timestamp', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ lastContact: '2026-05-20T00:00:00Z' }),
+      ),
+    );
+  });
+
+  test('create denied when knownSince is not a timestamp', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ knownSince: '2024-01-15' }),
+      ),
+    );
+  });
+
+  test('create denied when preferredChannels is not a list', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ preferredChannels: 'imessage' }),
+      ),
+    );
+  });
+
+  test('create denied when schemaVersion is not an int', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ schemaVersion: '1' }),
+      ),
+    );
+  });
+
+  test('create denied when updatedAt is not a timestamp', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ updatedAt: '2026-05-26T00:00:00Z' }),
+      ),
+    );
+  });
+
+  // ---- Optional fields: present-and-typed-or-absent ---------------
+
+  test('create allowed when optional isSample is absent', async () => {
+    const payload = wellFormedConnection();
+    delete payload.isSample;
+    await assertSucceeds(
+      setDoc(connectionDocRef(authedDb(ALICE), ALICE, 'sarah'), payload),
+    );
+  });
+
+  test('create denied when required email is absent (PRD §Q8: required-with-empty-string)', async () => {
+    const payload = wellFormedConnection();
+    delete payload.email;
+    await assertFails(
+      setDoc(connectionDocRef(authedDb(ALICE), ALICE, 'sarah'), payload),
+    );
+  });
+
+  test('create denied when required notes is absent (PRD §Q8: required-with-empty-string)', async () => {
+    const payload = wellFormedConnection();
+    delete payload.notes;
+    await assertFails(
+      setDoc(connectionDocRef(authedDb(ALICE), ALICE, 'sarah'), payload),
+    );
+  });
+
+  test('create allowed when email and notes are empty strings (PRD §Q8)', async () => {
+    await assertSucceeds(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ email: '', notes: '' }),
+      ),
+    );
+  });
+
+  test('create denied when email is wrong type', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ email: 12345 }),
+      ),
+    );
+  });
+
+  test('create denied when notes is wrong type', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ notes: ['array', 'instead'] }),
+      ),
+    );
+  });
+
+  test('create denied when isSample is wrong type', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ isSample: 'true' }),
+      ),
+    );
+  });
+
+  // ---- S4 (review fix): wrong-type matrix for remaining required strings
+
+  test('create denied when id is not a string', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ id: 12345 }),
+      ),
+    );
+  });
+
+  test('create denied when category is not a string', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ category: 99 }),
+      ),
+    );
+  });
+
+  test('create denied when avatar is not a string', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ avatar: false }),
+      ),
+    );
+  });
+
+  test('create denied when nextStep is not a string', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ nextStep: 42 }),
+      ),
+    );
+  });
+
+  // ---- S3 (review fix): data.id must equal the {contactId} path ---
+
+  test('create denied when data.id does not match the {contactId} path', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ id: 'mike' }),
+      ),
+    );
+  });
+
+  test('update denied when data.id is mutated to a different value than {contactId}', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ id: 'mike', nextStep: 'Hijacked' }),
+      ),
+    );
+  });
+
+  test('create allowed when data.id matches the {contactId} path (explicit invariant)', async () => {
+    await assertSucceeds(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ id: 'sarah' }),
+      ),
+    );
+  });
+
+  // ---- Update-time shape enforcement ------------------------------
+
+  test('update denied when bondScore goes out of range', async () => {
+    await seedConnection(ALICE, 'sarah');
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ bondScore: 250 }),
+      ),
+    );
+  });
+
+  test('update denied when required field is dropped', async () => {
+    await seedConnection(ALICE, 'sarah');
+    const payload = wellFormedConnection();
+    delete payload.preferredChannels;
+    await assertFails(
+      setDoc(connectionDocRef(authedDb(ALICE), ALICE, 'sarah'), payload),
     );
   });
 });

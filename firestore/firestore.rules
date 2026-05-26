@@ -57,6 +57,70 @@ service cloud.firestore {
       allow delete: if isOwner(uid);
     }
 
+    // Shape check for a connection document payload. Pass 4.5 (#066)
+    // adds the connections collection at
+    //   users/{uid}/connections/{contactId}
+    //
+    // Required fields are pinned by `hasAll` plus per-field type
+    // checks. The Dart `Connection` model declares `email` and
+    // `notes` as required non-nullable strings, so the rules treat
+    // them the same way — empty strings are allowed (PRD §Q8) but
+    // the keys must always be present. Only `isSample` is genuinely
+    // optional, using the "present-and-typed-or-absent" pattern.
+    // The closed shape (`hasOnly`) keeps a buggy or malicious
+    // client from poisoning the document with unknown fields.
+    // `bondScore` is range-clamped 0..100 server-side mirroring the
+    // client clamp in `applyAiUpdateResult`
+    // (lib/src/state/app_state.dart).
+    function isWellFormedConnection(data) {
+      return data.keys().hasOnly([
+          'id', 'name', 'email', 'category', 'avatar', 'bondScore',
+          'nextStep', 'lastContact', 'notes', 'knownSince',
+          'preferredChannels', 'schemaVersion', 'updatedAt',
+          'isSample'
+        ])
+        && data.keys().hasAll([
+          'id', 'name', 'email', 'category', 'avatar', 'bondScore',
+          'nextStep', 'lastContact', 'notes', 'knownSince',
+          'preferredChannels', 'schemaVersion', 'updatedAt'
+        ])
+        && data.id is string
+        && data.name is string
+        && data.email is string
+        && data.category is string
+        && data.avatar is string
+        && data.bondScore is int
+        && data.bondScore >= 0
+        && data.bondScore <= 100
+        && data.nextStep is string
+        && data.lastContact is timestamp
+        && data.notes is string
+        && data.knownSince is timestamp
+        && data.preferredChannels is list
+        && data.schemaVersion is int
+        && data.updatedAt is timestamp
+        && (!('isSample' in data.keys()) || data.isSample is bool);
+    }
+
+    match /users/{uid}/connections/{contactId} {
+      // `read` covers both `get` and `list`.
+      allow read: if isOwner(uid);
+
+      // S3 (review fix): `data.id` mirrors the document key. Pinning
+      // them equal on every write prevents a client from writing
+      // `{id: 'alice', ...}` to `connections/sarah` and surfacing a
+      // mismatched Connection.id in the Dart adapter.
+      allow create: if isOwner(uid)
+        && isWellFormedConnection(request.resource.data)
+        && request.resource.data.id == contactId;
+
+      allow update: if isOwner(uid)
+        && isWellFormedConnection(request.resource.data)
+        && request.resource.data.id == contactId;
+
+      allow delete: if isOwner(uid);
+    }
+
     // Per-user document. Pass 4.2 (#059) adds the disk→Firestore
     // migration sentinel here at
     //   users/{uid}.migratedFromDiskAt: timestamp
