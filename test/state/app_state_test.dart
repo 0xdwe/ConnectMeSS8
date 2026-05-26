@@ -220,4 +220,143 @@ void main() {
     expect(adapter, isA<AiUpdate>());
     expect(adapter, isA<MockAiUpdate>());
   });
+
+  group('signOut preserves user data (hotfix)', () {
+    test('preserves user-added connection across sign-out', () {
+      final container = _container();
+      addTearDown(container.dispose);
+
+      final controller = container.read(appControllerProvider.notifier);
+      controller.signIn();
+      controller.addConnection(
+        name: 'Riley Park',
+        email: 'riley@example.com',
+        category: 'Work',
+        notes: 'Met at conference',
+      );
+      final addedId = container
+          .read(appControllerProvider)
+          .connections
+          .firstWhere((c) => c.name == 'Riley Park')
+          .id;
+
+      controller.signOut();
+
+      final state = container.read(appControllerProvider);
+      expect(
+        state.connections.any((c) => c.id == addedId),
+        isTrue,
+        reason: 'user-added connection must survive sign-out',
+      );
+    });
+
+    test('drops sample connections on sign-out', () {
+      final container = _container();
+      addTearDown(container.dispose);
+
+      final controller = container.read(appControllerProvider.notifier);
+      controller.signIn();
+      controller.signOut();
+
+      final state = container.read(appControllerProvider);
+      expect(
+        state.connections.where((c) => c.isSample),
+        isEmpty,
+        reason: 'sample seeded connections should be cleared on sign-out',
+      );
+    });
+
+    test('drops events and interactions tied to sample contacts', () {
+      final container = _container();
+      addTearDown(container.dispose);
+
+      final controller = container.read(appControllerProvider.notifier);
+      final sampleIds = container
+          .read(appControllerProvider)
+          .connections
+          .where((c) => c.isSample)
+          .map((c) => c.id)
+          .toSet();
+
+      controller.signIn();
+      controller.signOut();
+
+      final state = container.read(appControllerProvider);
+      expect(
+        state.events.any((e) => sampleIds.contains(e.contactId)),
+        isFalse,
+        reason: 'events for sample contacts must be dropped',
+      );
+      expect(
+        state.interactions.any((i) => sampleIds.contains(i.contactId)),
+        isFalse,
+        reason: 'interactions for sample contacts must be dropped',
+      );
+    });
+
+    test('preserves events and interactions tied to user-added connection',
+        () {
+      final container = _container();
+      addTearDown(container.dispose);
+
+      final controller = container.read(appControllerProvider.notifier);
+      controller.signIn();
+      controller.addConnection(
+        name: 'Taylor Reed',
+        email: 'taylor@example.com',
+        category: 'Friends',
+        notes: '',
+      );
+      final addedId = container
+          .read(appControllerProvider)
+          .connections
+          .firstWhere((c) => c.name == 'Taylor Reed')
+          .id;
+
+      controller.logInteraction(
+        addedId,
+        InteractionType.relationshipNote,
+        'Coffee',
+        'Caught up over coffee',
+      );
+      controller.addEvent(
+        'Lunch with Taylor',
+        addedId,
+        'Friends',
+        DateTime(2026, 6, 1),
+        'Try the new place',
+      );
+
+      controller.signOut();
+
+      final state = container.read(appControllerProvider);
+      expect(
+        state.interactions.any((i) => i.contactId == addedId),
+        isTrue,
+        reason: 'user interaction tied to kept connection must survive',
+      );
+      expect(
+        state.events.any((e) => e.contactId == addedId),
+        isTrue,
+        reason: 'user event tied to kept connection must survive',
+      );
+    });
+
+    test('flips isAuthed to false and resets selectedTab to 0', () {
+      final container = _container();
+      addTearDown(container.dispose);
+
+      final controller = container.read(appControllerProvider.notifier);
+      controller.signIn();
+      controller.setTab(3);
+      expect(container.read(appControllerProvider).isAuthed, isTrue);
+      expect(container.read(appControllerProvider).selectedTab, 3);
+
+      controller.signOut();
+
+      final state = container.read(appControllerProvider);
+      expect(state.isAuthed, isFalse);
+      expect(state.selectedTab, 0);
+    });
+  });
 }
