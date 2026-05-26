@@ -167,7 +167,11 @@ class FirebaseEventStore implements EventStore {
   // Encode / decode
   // ---------------------------------------------------------------
 
-  Map<String, dynamic> _encode(PlannerEvent e) {
+  Map<String, dynamic> _encode(PlannerEvent e) => encode(e);
+
+  /// Public encoder used by [save] and by [ConnectionSeeder] (#069).
+  /// Pure — does not read `_firestore` or `_uid`.
+  static Map<String, dynamic> encode(PlannerEvent e) {
     // Nullable fields are written only when present so the
     // present-and-typed-or-absent rule guards apply uniformly. The
     // FieldValue.delete() pattern would also work but adds

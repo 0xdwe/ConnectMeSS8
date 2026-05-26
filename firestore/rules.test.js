@@ -1853,3 +1853,170 @@ describe('users/{uid}/events/{eventId} — shape validation', () => {
     );
   });
 });
+
+describe('users/{uid} — Pass 4.5 #069 seeder sentinels', () => {
+  // The Pass 4.2 user-doc rules block had only `migratedFromDiskAt`.
+  // Pass 4.5 #069 extends `isWellFormedUserDoc` with five seeder
+  // timestamps and two list-typed user-data fields (categories,
+  // eventTypes). All optional, all owner-only.
+
+  test('owner can write connectionsSeededAt sentinel', async () => {
+    await assertSucceeds(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        connectionsSeededAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+      }),
+    );
+  });
+
+  test('owner can write interactionsSeededAt sentinel', async () => {
+    await assertSucceeds(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        interactionsSeededAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+      }),
+    );
+  });
+
+  test('owner can write eventsSeededAt sentinel', async () => {
+    await assertSucceeds(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        eventsSeededAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+      }),
+    );
+  });
+
+  test('owner can write categoriesSeededAt sentinel + categories list together', async () => {
+    await assertSucceeds(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        categoriesSeededAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+        categories: ['Family', 'Friends', 'Work'],
+      }),
+    );
+  });
+
+  test('owner can write eventTypesSeededAt sentinel + eventTypes list together', async () => {
+    await assertSucceeds(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        eventTypesSeededAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+        eventTypes: ['Plan', 'Reminder', 'Birthday'],
+      }),
+    );
+  });
+
+  test('owner can write all five sentinels at once', async () => {
+    const t = Timestamp.fromDate(new Date('2026-05-26T00:00:00Z'));
+    await assertSucceeds(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        connectionsSeededAt: t,
+        interactionsSeededAt: t,
+        eventsSeededAt: t,
+        categoriesSeededAt: t,
+        eventTypesSeededAt: t,
+        categories: ['Family'],
+        eventTypes: ['Plan'],
+      }),
+    );
+  });
+
+  test('owner can update an existing sentinel value (re-seed scenario)', async () => {
+    await seedUserDoc(ALICE, {
+      connectionsSeededAt: Timestamp.fromDate(new Date('2026-05-20T00:00:00Z')),
+    });
+    await assertSucceeds(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        connectionsSeededAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+      }),
+    );
+  });
+
+  // ---- Cross-user denial ------------------------------------------
+
+  test('cross-user write of connectionsSeededAt is denied', async () => {
+    await assertFails(
+      setDoc(userDocRef(authedDb(BOB), ALICE), {
+        connectionsSeededAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+      }),
+    );
+  });
+
+  test('cross-user write of categories is denied', async () => {
+    await assertFails(
+      setDoc(userDocRef(authedDb(BOB), ALICE), {
+        categoriesSeededAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+        categories: ['Hijacked'],
+      }),
+    );
+  });
+
+  test('anonymous write of connectionsSeededAt is denied', async () => {
+    await assertFails(
+      setDoc(userDocRef(anonDb(), ALICE), {
+        connectionsSeededAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+      }),
+    );
+  });
+
+  // ---- Wrong-type rejection ---------------------------------------
+
+  test('connectionsSeededAt as a non-timestamp is rejected', async () => {
+    await assertFails(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        connectionsSeededAt: '2026-05-26T00:00:00Z',
+      }),
+    );
+  });
+
+  test('interactionsSeededAt as a non-timestamp is rejected', async () => {
+    await assertFails(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        interactionsSeededAt: 1234567890,
+      }),
+    );
+  });
+
+  test('categories as a non-list is rejected', async () => {
+    await assertFails(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        categoriesSeededAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+        categories: 'Family',
+      }),
+    );
+  });
+
+  test('eventTypes as a non-list is rejected', async () => {
+    await assertFails(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        eventTypesSeededAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+        eventTypes: { wrong: 'shape' },
+      }),
+    );
+  });
+
+  // ---- Unknown field rejection ------------------------------------
+
+  test('unknown user-doc field is rejected', async () => {
+    await assertFails(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        connectionsSeededAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+        rogueField: 'not allowed',
+      }),
+    );
+  });
+
+  // ---- Coexistence with Pass 4.2 #059 sentinel --------------------
+
+  test('migratedFromDiskAt and the new seeder sentinels coexist', async () => {
+    const t = Timestamp.fromDate(new Date('2026-05-26T00:00:00Z'));
+    await assertSucceeds(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        migratedFromDiskAt: t,
+        connectionsSeededAt: t,
+        interactionsSeededAt: t,
+        eventsSeededAt: t,
+        categoriesSeededAt: t,
+        eventTypesSeededAt: t,
+        categories: ['Family'],
+        eventTypes: ['Plan'],
+      }),
+    );
+  });
+});

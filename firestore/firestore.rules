@@ -261,17 +261,48 @@ service cloud.firestore {
       allow delete: if isOwner(uid);
     }
 
-    // Per-user document. Pass 4.2 (#059) adds the disk→Firestore
+    // Per-user document. Pass 4.2 (#059) added the disk→Firestore
     // migration sentinel here at
     //   users/{uid}.migratedFromDiskAt: timestamp
+    // Pass 4.5 (#069) extends the same shape with five seeder
+    // sentinels marking which collections / user-doc fields have
+    // been initialized on first authenticated launch:
+    //   users/{uid}.connectionsSeededAt: timestamp
+    //   users/{uid}.interactionsSeededAt: timestamp
+    //   users/{uid}.eventsSeededAt: timestamp
+    //   users/{uid}.categoriesSeededAt: timestamp
+    //   users/{uid}.eventTypesSeededAt: timestamp
+    // Plus two list-typed user-data fields (Pass 4.5 §Q12) seeded
+    // at the same time as their corresponding sentinels:
+    //   users/{uid}.categories: list<string>
+    //   users/{uid}.eventTypes: list<string>
     // The owner is the only caller that can read or write their
-    // own user doc. The shape check pins the only field Pass 4.2
-    // expects; later passes that add fields here update both this
-    // rule and the JS rules tests.
+    // own user doc.
     function isWellFormedUserDoc(data) {
-      return data.keys().hasOnly(['migratedFromDiskAt'])
-        && (!data.keys().hasAny(['migratedFromDiskAt'])
-            || data.migratedFromDiskAt is timestamp);
+      return data.keys().hasOnly([
+          'migratedFromDiskAt',
+          'connectionsSeededAt',
+          'interactionsSeededAt',
+          'eventsSeededAt',
+          'categoriesSeededAt',
+          'eventTypesSeededAt',
+          'categories',
+          'eventTypes'
+        ])
+        && (!('migratedFromDiskAt' in data.keys())
+            || data.migratedFromDiskAt is timestamp)
+        && (!('connectionsSeededAt' in data.keys())
+            || data.connectionsSeededAt is timestamp)
+        && (!('interactionsSeededAt' in data.keys())
+            || data.interactionsSeededAt is timestamp)
+        && (!('eventsSeededAt' in data.keys())
+            || data.eventsSeededAt is timestamp)
+        && (!('categoriesSeededAt' in data.keys())
+            || data.categoriesSeededAt is timestamp)
+        && (!('eventTypesSeededAt' in data.keys())
+            || data.eventTypesSeededAt is timestamp)
+        && (!('categories' in data.keys()) || data.categories is list)
+        && (!('eventTypes' in data.keys()) || data.eventTypes is list);
     }
 
     match /users/{uid} {

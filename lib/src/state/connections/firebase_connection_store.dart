@@ -199,7 +199,14 @@ class FirebaseConnectionStore implements ConnectionStore {
   // Encode / decode
   // ---------------------------------------------------------------
 
-  Map<String, dynamic> _encode(Connection c) {
+  Map<String, dynamic> _encode(Connection c) => encode(c);
+
+  /// Public encoder used by [save] and by [ConnectionSeeder] (#069).
+  /// Pure — does not read `_firestore` or `_uid`. Exposed so the
+  /// seeder can reuse the canonical document shape without
+  /// duplicating field lists, and so the encoder can be tested in
+  /// isolation if needed.
+  static Map<String, dynamic> encode(Connection c) {
     return <String, dynamic>{
       'id': c.id,
       'name': c.name,
