@@ -3,36 +3,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/social_models.dart';
 import '../firebase_providers.dart';
 import 'connection_store.dart';
-import 'in_memory_connection_store.dart';
+import 'firebase_connection_store.dart';
 
-/// Active [ConnectionStore] for the running app (Pass 4.5 #064).
+/// Active [ConnectionStore] for the running app (Pass 4.5 #064/#065).
 ///
 /// Watches `currentUserProvider`. While signed out (or while the
 /// auth stream is still loading), returns a [_SignedOutConnectionStore]
 /// sentinel whose async surface throws so accidental signed-out
-/// reads fail loudly. The signed-in path returns an
-/// [InMemoryConnectionStore] for now; #065 swaps the production
-/// override to a Firestore-backed adapter without changing this
-/// provider's shape.
+/// reads fail loudly. The signed-in path returns a
+/// [FirebaseConnectionStore] bound to the current `user.uid` and
+/// the active `firestoreProvider`.
 ///
 /// Auth changes rebuild this provider, which discards the previous
-/// user's store identity. Tests and widget tests override this
-/// provider directly with their own [ConnectionStore], in which case
-/// the auth-aware logic is bypassed entirely (the override always
-/// wins).
+/// user's store identity. The provider's `onDispose` calls
+/// `store.dispose()` so the [FirebaseConnectionStore]'s snapshot
+/// listener (PRD §Q6) is torn down before the next user's store is
+/// constructed. Tests and widget tests override this provider
+/// directly with their own [ConnectionStore], in which case the
+/// auth-aware logic is bypassed entirely (the override always wins).
 ///
 /// `AppController` does not yet read this provider. The wiring lands
-/// in #070; Pass 4.5 keeps the read paths additive until then.
+/// in #070; Pass 4.5 keeps the read paths additive until then —
+/// flipping the signed-in branch to [FirebaseConnectionStore] in
+/// #065 is safe because no production code path resolves this
+/// provider yet.
 final connectionStoreProvider = Provider<ConnectionStore>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) {
     return const _SignedOutConnectionStore();
   }
-  // #065 will swap this branch for a `FirebaseConnectionStore` bound
-  // to `user.uid` and `firestoreProvider`. Returning an in-memory
-  // store today keeps the seam unblocked for #066–#068 tests without
-  // pulling in the Firestore SDK.
-  final ConnectionStore store = InMemoryConnectionStore();
+  final firestore = ref.watch(firestoreProvider);
+  final store = FirebaseConnectionStore(
+    firestore: firestore,
+    uid: user.uid,
+  );
   ref.onDispose(store.dispose);
   return store;
 });
