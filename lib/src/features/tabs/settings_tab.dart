@@ -153,12 +153,22 @@ class SettingsTab extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
-              ref.read(appControllerProvider.notifier).removeSampleConnections();
+            onPressed: () async {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sample friends removed')),
-              );
+              try {
+                await ref.read(appControllerProvider.notifier).removeSampleConnections();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Sample friends removed')),
+                  );
+                }
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not remove sample friends. Try again.')),
+                  );
+                }
+              }
             },
             style: FilledButton.styleFrom(
               backgroundColor: tokens.danger,

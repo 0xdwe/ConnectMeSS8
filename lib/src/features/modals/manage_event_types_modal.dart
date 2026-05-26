@@ -91,9 +91,17 @@ class _ManageEventTypesModalState extends ConsumerState<ManageEventTypesModal> {
                   ),
                 ),
                 IconButton.filled(
-                  onPressed: () {
-                    controller.addEventType(eventType.text);
-                    eventType.clear();
+                  onPressed: () async {
+                    try {
+                      await controller.addEventType(eventType.text);
+                      eventType.clear();
+                    } catch (_) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Could not add event type. Try again.')),
+                        );
+                      }
+                    }
                   },
                   icon: const Icon(Icons.add),
                 ),
@@ -115,9 +123,19 @@ class _ManageEventTypesModalState extends ConsumerState<ManageEventTypesModal> {
                     ? Wrap(
                         children: [
                           IconButton(
-                            onPressed: () {
-                              controller.renameEventType(type, editValue.text);
-                              setState(() => editing = null);
+                            onPressed: () async {
+                              try {
+                                await controller.renameEventType(type, editValue.text);
+                                if (context.mounted) {
+                                  setState(() => editing = null);
+                                }
+                              } catch (_) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Could not rename event type. Try again.')),
+                                  );
+                                }
+                              }
                             },
                             icon: const Icon(Icons.check),
                           ),
@@ -150,7 +168,17 @@ class _ManageEventTypesModalState extends ConsumerState<ManageEventTypesModal> {
                             onPressed:
                                 AppController.defaultEventTypes.contains(type)
                                 ? null
-                                : () => controller.deleteEventType(type),
+                                : () async {
+                                    try {
+                                      await controller.deleteEventType(type);
+                                    } catch (_) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Could not delete event type. Try again.')),
+                                        );
+                                      }
+                                    }
+                                  },
                             icon: const Icon(Icons.delete_outline),
                           ),
                         ],

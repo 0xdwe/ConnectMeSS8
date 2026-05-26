@@ -199,7 +199,7 @@ class MockAiUpdate implements AiUpdate {
       if (failOnApply) {
         throw const AiUpdateFailure('test-injected apply failure');
       }
-      appController.applyAiUpdateResult(result);
+      await appController.applyAiUpdateResult(result);
     } catch (e) {
       if (memory != null) {
         try {

@@ -117,11 +117,11 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
     if (deleted != null && context.mounted) _showUndo(context, deleted);
   }
 
-  void _deleteWithUndo(BuildContext context, String eventId) {
-    final deleted = ref
+  Future<void> _deleteWithUndo(BuildContext context, String eventId) async {
+    final deleted = await ref
         .read(appControllerProvider.notifier)
         .deleteEvent(eventId);
-    if (deleted != null) _showUndo(context, deleted);
+    if (deleted != null && context.mounted) _showUndo(context, deleted);
   }
 
   void _showUndo(BuildContext context, PlannerEvent deleted) {

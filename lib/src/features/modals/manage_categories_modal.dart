@@ -36,9 +36,17 @@ class _ManageCategoriesModalState extends ConsumerState<ManageCategoriesModal> {
         TextField(controller: category, decoration: const InputDecoration(labelText: 'New category')),
         SizedBox(height: AppSpacing.space4),
         FilledButton(
-          onPressed: () {
-            ref.read(appControllerProvider.notifier).addCategory(category.text);
-            category.clear();
+          onPressed: () async {
+            try {
+              await ref.read(appControllerProvider.notifier).addCategory(category.text);
+              category.clear();
+            } catch (_) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Could not add category. Try again.')),
+                );
+              }
+            }
           },
           child: const Text('Add category'),
         ),

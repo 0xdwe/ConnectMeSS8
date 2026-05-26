@@ -3,6 +3,7 @@ import 'package:connect_me/src/state/memory/memory_document.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:connect_me/src/state/memory/memory_store.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../test_overrides.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -18,6 +19,7 @@ void main() {
       await store.save(stored);
 
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(store),
       ]);
       addTearDown(container.dispose);
@@ -31,6 +33,7 @@ void main() {
         () async {
       final store = InMemoryMemoryStore();
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(store),
       ]);
       addTearDown(container.dispose);
@@ -46,6 +49,7 @@ void main() {
         () async {
       final store = InMemoryMemoryStore();
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(store),
       ]);
       addTearDown(container.dispose);
@@ -58,6 +62,7 @@ void main() {
     test('lazy creation persists via store.save', () async {
       final store = InMemoryMemoryStore();
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(store),
       ]);
       addTearDown(container.dispose);
@@ -76,6 +81,7 @@ void main() {
     test('returns the override instance', () {
       final store = InMemoryMemoryStore();
       final container = ProviderContainer(overrides: [
+        ...signedInDemoOverrides(),
         memoryStoreProvider.overrideWithValue(store),
       ]);
       addTearDown(container.dispose);
