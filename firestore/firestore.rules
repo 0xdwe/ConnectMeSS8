@@ -187,6 +187,80 @@ service cloud.firestore {
       allow delete: if isOwner(uid);
     }
 
+    // Shape check for an event document payload. Pass 4.5 (#068)
+    // adds the events collection at
+    //   users/{uid}/events/{eventId}
+    //
+    // Required fields are pinned by `hasAll` plus per-field type
+    // checks. The Dart `PlannerEvent` model declares `title`,
+    // `category`, `note`, `eventType` as required non-nullable
+    // strings, so the rules treat them the same way — empty strings
+    // are allowed (PRD §Q8) but the keys must always be present.
+    // Genuinely optional fields are `contactId`,
+    // `startTimeMinutes`, `endTimeMinutes`, `recurrencePattern`,
+    // using the "present-and-typed-or-absent" pattern.
+    //
+    // `eventType` is intentionally NOT validated against an enum
+    // set per PRD §Q8. The eventTypes list is per-user data
+    // (Pass 4.5 Q12) and bad client data is recoverable
+    // client-side. Only the type is enforced.
+    //
+    // `recurrencePattern` IS validated against the
+    // [RecurrencePattern] Dart enum string set since the values
+    // are app-defined.
+    //
+    // The closed shape (`hasOnly`) keeps a buggy or malicious
+    // client from poisoning the document with unknown fields.
+    function isWellFormedEvent(data) {
+      return data.keys().hasOnly([
+          'id', 'title', 'category', 'date', 'note', 'eventType',
+          'isAllDay', 'isRecurring', 'schemaVersion', 'updatedAt',
+          'contactId', 'startTimeMinutes', 'endTimeMinutes',
+          'recurrencePattern'
+        ])
+        && data.keys().hasAll([
+          'id', 'title', 'category', 'date', 'note', 'eventType',
+          'isAllDay', 'isRecurring', 'schemaVersion', 'updatedAt'
+        ])
+        && data.id is string
+        && data.title is string
+        && data.category is string
+        && data.date is timestamp
+        && data.note is string
+        && data.eventType is string
+        && data.isAllDay is bool
+        && data.isRecurring is bool
+        && data.schemaVersion is int
+        && data.updatedAt is timestamp
+        && (!('contactId' in data.keys()) || data.contactId is string)
+        && (!('startTimeMinutes' in data.keys())
+            || data.startTimeMinutes is int)
+        && (!('endTimeMinutes' in data.keys())
+            || data.endTimeMinutes is int)
+        && (!('recurrencePattern' in data.keys())
+            || (data.recurrencePattern is string
+                && data.recurrencePattern in
+                  ['daily', 'weekly', 'monthly', 'yearly']));
+    }
+
+    match /users/{uid}/events/{eventId} {
+      // `read` covers both `get` and `list`.
+      allow read: if isOwner(uid);
+
+      // `data.id` must mirror the document key on every write.
+      // Same invariant as connections (#066) and interactions
+      // (#067).
+      allow create: if isOwner(uid)
+        && isWellFormedEvent(request.resource.data)
+        && request.resource.data.id == eventId;
+
+      allow update: if isOwner(uid)
+        && isWellFormedEvent(request.resource.data)
+        && request.resource.data.id == eventId;
+
+      allow delete: if isOwner(uid);
+    }
+
     // Per-user document. Pass 4.2 (#059) adds the disk→Firestore
     // migration sentinel here at
     //   users/{uid}.migratedFromDiskAt: timestamp

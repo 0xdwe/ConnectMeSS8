@@ -169,6 +169,42 @@ async function seedInteraction(uid, interactionId, data) {
   });
 }
 
+function eventDocRef(db, uid, eventId) {
+  return doc(db, 'users', uid, 'events', eventId);
+}
+
+function eventsCollectionRef(db, uid) {
+  return collection(db, 'users', uid, 'events');
+}
+
+function wellFormedEvent(overrides = {}) {
+  return {
+    id: 'e-1',
+    title: "Sarah's birthday",
+    category: 'birthdays',
+    date: Timestamp.fromDate(new Date('2026-06-15T00:00:00Z')),
+    note: 'Send a card',
+    eventType: 'Birthday',
+    isAllDay: true,
+    isRecurring: false,
+    schemaVersion: 1,
+    updatedAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+    // Optional fields included by default; specific tests omit them.
+    contactId: 'sarah',
+    ...overrides,
+  };
+}
+
+async function seedEvent(uid, eventId, data) {
+  const payload = data ?? wellFormedEvent({ id: eventId });
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(
+      eventDocRef(ctx.firestore(), uid, eventId),
+      payload,
+    );
+  });
+}
+
 // Tests ---------------------------------------------------------------
 
 describe('users/{uid}/memories/{contactId} — ownership', () => {
@@ -1337,6 +1373,483 @@ describe('users/{uid}/interactions/{interactionId} — shape validation', () => 
     delete payload.title;
     await assertFails(
       setDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1'), payload),
+    );
+  });
+});
+
+describe('users/{uid}/events/{eventId} — ownership', () => {
+  test('owner can read own event doc', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await assertSucceeds(
+      getDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1')),
+    );
+  });
+
+  test('owner can list own events collection', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await seedEvent(ALICE, 'e-2');
+    await assertSucceeds(
+      getDocs(eventsCollectionRef(authedDb(ALICE), ALICE)),
+    );
+  });
+
+  test('owner can create well-formed own event doc', async () => {
+    await assertSucceeds(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent(),
+      ),
+    );
+  });
+
+  test('owner can update own event doc with well-formed payload', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await assertSucceeds(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ note: 'Updated note' }),
+      ),
+    );
+  });
+
+  test('owner can delete own event doc', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await assertSucceeds(
+      deleteDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1')),
+    );
+  });
+
+  test('other authenticated user cannot read another user’s event doc', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await assertFails(
+      getDoc(eventDocRef(authedDb(BOB), ALICE, 'e-1')),
+    );
+  });
+
+  test('other authenticated user cannot list another user’s events collection', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await assertFails(
+      getDocs(eventsCollectionRef(authedDb(BOB), ALICE)),
+    );
+  });
+
+  test('other authenticated user cannot create at another user’s event path', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(BOB), ALICE, 'e-1'),
+        wellFormedEvent(),
+      ),
+    );
+  });
+
+  test('other authenticated user cannot update another user’s event doc', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(BOB), ALICE, 'e-1'),
+        wellFormedEvent({ note: 'Hijacked' }),
+      ),
+    );
+  });
+
+  test('other authenticated user cannot delete another user’s event doc', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await assertFails(
+      deleteDoc(eventDocRef(authedDb(BOB), ALICE, 'e-1')),
+    );
+  });
+});
+
+describe('users/{uid}/events/{eventId} — anonymous denial', () => {
+  test('anonymous read on another user’s event is denied', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await assertFails(
+      getDoc(eventDocRef(anonDb(), ALICE, 'e-1')),
+    );
+  });
+
+  test('anonymous list is denied', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await assertFails(
+      getDocs(eventsCollectionRef(anonDb(), ALICE)),
+    );
+  });
+
+  test('anonymous create is denied', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(anonDb(), ALICE, 'e-1'),
+        wellFormedEvent(),
+      ),
+    );
+  });
+
+  test('anonymous update is denied', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await assertFails(
+      setDoc(
+        eventDocRef(anonDb(), ALICE, 'e-1'),
+        wellFormedEvent({ note: 'Anon edit' }),
+      ),
+    );
+  });
+
+  test('anonymous delete is denied', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await assertFails(
+      deleteDoc(eventDocRef(anonDb(), ALICE, 'e-1')),
+    );
+  });
+});
+
+describe('users/{uid}/events/{eventId} — shape validation', () => {
+  // ---- Required-field omissions -----------------------------------
+
+  test('create denied when id is missing', async () => {
+    const payload = wellFormedEvent();
+    delete payload.id;
+    await assertFails(
+      setDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1'), payload),
+    );
+  });
+
+  test('create denied when title is missing', async () => {
+    const payload = wellFormedEvent();
+    delete payload.title;
+    await assertFails(
+      setDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1'), payload),
+    );
+  });
+
+  test('create denied when category is missing', async () => {
+    const payload = wellFormedEvent();
+    delete payload.category;
+    await assertFails(
+      setDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1'), payload),
+    );
+  });
+
+  test('create denied when date is missing', async () => {
+    const payload = wellFormedEvent();
+    delete payload.date;
+    await assertFails(
+      setDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1'), payload),
+    );
+  });
+
+  test('create denied when note is missing', async () => {
+    const payload = wellFormedEvent();
+    delete payload.note;
+    await assertFails(
+      setDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1'), payload),
+    );
+  });
+
+  test('create denied when eventType is missing', async () => {
+    const payload = wellFormedEvent();
+    delete payload.eventType;
+    await assertFails(
+      setDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1'), payload),
+    );
+  });
+
+  test('create denied when isAllDay is missing', async () => {
+    const payload = wellFormedEvent();
+    delete payload.isAllDay;
+    await assertFails(
+      setDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1'), payload),
+    );
+  });
+
+  test('create denied when isRecurring is missing', async () => {
+    const payload = wellFormedEvent();
+    delete payload.isRecurring;
+    await assertFails(
+      setDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1'), payload),
+    );
+  });
+
+  test('create denied when schemaVersion is missing', async () => {
+    const payload = wellFormedEvent();
+    delete payload.schemaVersion;
+    await assertFails(
+      setDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1'), payload),
+    );
+  });
+
+  test('create allowed when title and note are empty strings (PRD §Q8)', async () => {
+    await assertSucceeds(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ title: '', note: '' }),
+      ),
+    );
+  });
+
+  // ---- Unknown / extra field --------------------------------------
+
+  test('create denied when extra unknown key is present', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ rogueField: 'not allowed' }),
+      ),
+    );
+  });
+
+  test('update denied when payload introduces an extra field', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ extra: 'still not allowed' }),
+      ),
+    );
+  });
+
+  // ---- eventType is NOT validated server-side (PRD §Q8) -----------
+
+  test('create allowed for any eventType string (per-user data)', async () => {
+    // PRD §Q8 explicitly chooses NOT to validate eventType against
+    // an enum set since the eventTypes list is per-user data
+    // (Pass 4.5 Q12). Bad client data is recoverable client-side.
+    for (const t of ['Birthday', 'Coffee', 'Custom', 'My Made-Up Type']) {
+      await assertSucceeds(
+        setDoc(
+          eventDocRef(authedDb(ALICE), ALICE, `e-${t}`),
+          wellFormedEvent({ id: `e-${t}`, eventType: t }),
+        ),
+      );
+    }
+  });
+
+  test('create denied when eventType is the wrong primitive', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ eventType: 42 }),
+      ),
+    );
+  });
+
+  // ---- recurrencePattern enum validation --------------------------
+
+  test('create allowed for every RecurrencePattern enum value', async () => {
+    for (const p of ['daily', 'weekly', 'monthly', 'yearly']) {
+      await assertSucceeds(
+        setDoc(
+          eventDocRef(authedDb(ALICE), ALICE, `e-${p}`),
+          wellFormedEvent({
+            id: `e-${p}`,
+            isRecurring: true,
+            recurrencePattern: p,
+          }),
+        ),
+      );
+    }
+  });
+
+  test('create denied when recurrencePattern is not in the enum set', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({
+          isRecurring: true,
+          recurrencePattern: 'biweekly',
+        }),
+      ),
+    );
+  });
+
+  test('create denied when recurrencePattern is the wrong primitive', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({
+          isRecurring: true,
+          recurrencePattern: 7,
+        }),
+      ),
+    );
+  });
+
+  // ---- Optional-field permutations --------------------------------
+
+  test('create allowed when contactId is absent (free-floating event)', async () => {
+    const payload = wellFormedEvent();
+    delete payload.contactId;
+    await assertSucceeds(
+      setDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1'), payload),
+    );
+  });
+
+  test('create allowed when all-day event omits time minutes', async () => {
+    const payload = wellFormedEvent({ isAllDay: true });
+    expect(payload.startTimeMinutes).toBeUndefined();
+    expect(payload.endTimeMinutes).toBeUndefined();
+    await assertSucceeds(
+      setDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1'), payload),
+    );
+  });
+
+  test('create allowed when timed event includes both start and end minutes', async () => {
+    await assertSucceeds(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({
+          isAllDay: false,
+          startTimeMinutes: 540,
+          endTimeMinutes: 600,
+        }),
+      ),
+    );
+  });
+
+  test('create allowed when non-recurring event omits recurrencePattern', async () => {
+    const payload = wellFormedEvent({ isRecurring: false });
+    expect(payload.recurrencePattern).toBeUndefined();
+    await assertSucceeds(
+      setDoc(eventDocRef(authedDb(ALICE), ALICE, 'e-1'), payload),
+    );
+  });
+
+  test('create denied when contactId is the wrong primitive', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ contactId: 99 }),
+      ),
+    );
+  });
+
+  test('create denied when startTimeMinutes is the wrong primitive', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ startTimeMinutes: '540' }),
+      ),
+    );
+  });
+
+  test('create denied when endTimeMinutes is the wrong primitive', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ endTimeMinutes: '600' }),
+      ),
+    );
+  });
+
+  // ---- Wrong-type required fields ---------------------------------
+
+  test('create denied when id is not a string', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ id: 12345 }),
+      ),
+    );
+  });
+
+  test('create denied when title is not a string', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ title: 42 }),
+      ),
+    );
+  });
+
+  test('create denied when category is not a string', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ category: 99 }),
+      ),
+    );
+  });
+
+  test('create denied when note is not a string', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ note: ['array'] }),
+      ),
+    );
+  });
+
+  test('create denied when date is not a timestamp', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ date: '2026-06-15' }),
+      ),
+    );
+  });
+
+  test('create denied when isAllDay is not a bool', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ isAllDay: 'true' }),
+      ),
+    );
+  });
+
+  test('create denied when isRecurring is not a bool', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ isRecurring: 1 }),
+      ),
+    );
+  });
+
+  test('create denied when schemaVersion is not an int', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ schemaVersion: '1' }),
+      ),
+    );
+  });
+
+  test('create denied when updatedAt is not a timestamp', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ updatedAt: '2026-05-26T00:00:00Z' }),
+      ),
+    );
+  });
+
+  // ---- data.id must equal the {eventId} path ----------------------
+
+  test('create denied when data.id does not match the {eventId} path', async () => {
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ id: 'e-other' }),
+      ),
+    );
+  });
+
+  test('update denied when data.id is mutated to a different value', async () => {
+    await seedEvent(ALICE, 'e-1');
+    await assertFails(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ id: 'e-other', note: 'Hijacked' }),
+      ),
+    );
+  });
+
+  test('create allowed when data.id matches the path (explicit invariant)', async () => {
+    await assertSucceeds(
+      setDoc(
+        eventDocRef(authedDb(ALICE), ALICE, 'e-1'),
+        wellFormedEvent({ id: 'e-1' }),
+      ),
     );
   });
 });
