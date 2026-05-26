@@ -121,6 +121,72 @@ service cloud.firestore {
       allow delete: if isOwner(uid);
     }
 
+    // Shape check for an interaction document payload. Pass 4.5
+    // (#067) adds the interactions collection at
+    //   users/{uid}/interactions/{interactionId}
+    //
+    // Required fields are pinned by `hasAll` plus per-field type
+    // checks. The Dart `CrmInteraction` model declares `title` and
+    // `note` as required non-nullable strings, so the rules treat
+    // them the same way — empty strings are allowed (PRD §Q8) but
+    // the keys must always be present. Genuinely optional fields
+    // are `attachments` (default `const []`) and `source` (default
+    // `InteractionSource.manual`), using the
+    // "present-and-typed-or-absent" pattern.
+    //
+    // Enum string sets come from the Dart enums in
+    // `lib/src/models/social_models.dart`:
+    //   - InteractionType: interaction, personalDetail, preference,
+    //     reminder, sharedActivity, relationshipNote
+    //   - InteractionSource: manual, aiSuggested
+    //
+    // The closed shape (`hasOnly`) keeps a buggy or malicious
+    // client from poisoning the document with unknown fields.
+    function isWellFormedInteraction(data) {
+      return data.keys().hasOnly([
+          'id', 'contactId', 'type', 'title', 'note', 'date',
+          'schemaVersion', 'updatedAt',
+          'attachments', 'source'
+        ])
+        && data.keys().hasAll([
+          'id', 'contactId', 'type', 'title', 'note', 'date',
+          'schemaVersion', 'updatedAt'
+        ])
+        && data.id is string
+        && data.contactId is string
+        && data.type is string
+        && data.type in [
+          'interaction', 'personalDetail', 'preference',
+          'reminder', 'sharedActivity', 'relationshipNote'
+        ]
+        && data.title is string
+        && data.note is string
+        && data.date is timestamp
+        && data.schemaVersion is int
+        && data.updatedAt is timestamp
+        && (!('attachments' in data.keys()) || data.attachments is list)
+        && (!('source' in data.keys())
+            || (data.source is string
+                && data.source in ['manual', 'aiSuggested']));
+    }
+
+    match /users/{uid}/interactions/{interactionId} {
+      // `read` covers both `get` and `list`.
+      allow read: if isOwner(uid);
+
+      // `data.id` must mirror the document key on every write.
+      // Same invariant as connections (#066).
+      allow create: if isOwner(uid)
+        && isWellFormedInteraction(request.resource.data)
+        && request.resource.data.id == interactionId;
+
+      allow update: if isOwner(uid)
+        && isWellFormedInteraction(request.resource.data)
+        && request.resource.data.id == interactionId;
+
+      allow delete: if isOwner(uid);
+    }
+
     // Per-user document. Pass 4.2 (#059) adds the disk→Firestore
     // migration sentinel here at
     //   users/{uid}.migratedFromDiskAt: timestamp

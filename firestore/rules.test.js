@@ -134,6 +134,41 @@ async function seedConnection(uid, contactId, data) {
   });
 }
 
+function interactionDocRef(db, uid, interactionId) {
+  return doc(db, 'users', uid, 'interactions', interactionId);
+}
+
+function interactionsCollectionRef(db, uid) {
+  return collection(db, 'users', uid, 'interactions');
+}
+
+function wellFormedInteraction(overrides = {}) {
+  return {
+    id: 'i-1',
+    contactId: 'sarah',
+    type: 'interaction',
+    title: 'Coffee chat',
+    note: 'Discussed the migration project',
+    date: Timestamp.fromDate(new Date('2026-05-20T15:00:00Z')),
+    schemaVersion: 1,
+    updatedAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
+    // Optional fields included by default; specific tests omit them.
+    attachments: ['notes.md'],
+    source: 'manual',
+    ...overrides,
+  };
+}
+
+async function seedInteraction(uid, interactionId, data) {
+  const payload = data ?? wellFormedInteraction({ id: interactionId });
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(
+      interactionDocRef(ctx.firestore(), uid, interactionId),
+      payload,
+    );
+  });
+}
+
 // Tests ---------------------------------------------------------------
 
 describe('users/{uid}/memories/{contactId} — ownership', () => {
@@ -881,6 +916,427 @@ describe('users/{uid}/connections/{contactId} — shape validation', () => {
     delete payload.preferredChannels;
     await assertFails(
       setDoc(connectionDocRef(authedDb(ALICE), ALICE, 'sarah'), payload),
+    );
+  });
+});
+
+describe('users/{uid}/interactions/{interactionId} — ownership', () => {
+  test('owner can read own interaction doc', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertSucceeds(
+      getDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1')),
+    );
+  });
+
+  test('owner can list own interactions collection', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await seedInteraction(ALICE, 'i-2');
+    await assertSucceeds(
+      getDocs(interactionsCollectionRef(authedDb(ALICE), ALICE)),
+    );
+  });
+
+  test('owner can create well-formed own interaction doc', async () => {
+    await assertSucceeds(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction(),
+      ),
+    );
+  });
+
+  test('owner can update own interaction doc with well-formed payload', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertSucceeds(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({
+          title: 'Coffee chat',
+          note: 'Updated note',
+        }),
+      ),
+    );
+  });
+
+  test('owner can delete own interaction doc', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertSucceeds(
+      deleteDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1')),
+    );
+  });
+
+  test('other authenticated user cannot read another user’s interaction doc', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertFails(
+      getDoc(interactionDocRef(authedDb(BOB), ALICE, 'i-1')),
+    );
+  });
+
+  test('other authenticated user cannot list another user’s interactions collection', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertFails(
+      getDocs(interactionsCollectionRef(authedDb(BOB), ALICE)),
+    );
+  });
+
+  test('other authenticated user cannot create at another user’s interaction path', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(BOB), ALICE, 'i-1'),
+        wellFormedInteraction(),
+      ),
+    );
+  });
+
+  test('other authenticated user cannot update another user’s interaction doc', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(BOB), ALICE, 'i-1'),
+        wellFormedInteraction({ note: 'Hijacked' }),
+      ),
+    );
+  });
+
+  test('other authenticated user cannot delete another user’s interaction doc', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertFails(
+      deleteDoc(interactionDocRef(authedDb(BOB), ALICE, 'i-1')),
+    );
+  });
+});
+
+describe('users/{uid}/interactions/{interactionId} — anonymous denial', () => {
+  test('anonymous read on another user’s interaction is denied', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertFails(
+      getDoc(interactionDocRef(anonDb(), ALICE, 'i-1')),
+    );
+  });
+
+  test('anonymous list is denied', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertFails(
+      getDocs(interactionsCollectionRef(anonDb(), ALICE)),
+    );
+  });
+
+  test('anonymous create is denied', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(anonDb(), ALICE, 'i-1'),
+        wellFormedInteraction(),
+      ),
+    );
+  });
+
+  test('anonymous update is denied', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertFails(
+      setDoc(
+        interactionDocRef(anonDb(), ALICE, 'i-1'),
+        wellFormedInteraction({ note: 'Anon edit' }),
+      ),
+    );
+  });
+
+  test('anonymous delete is denied', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertFails(
+      deleteDoc(interactionDocRef(anonDb(), ALICE, 'i-1')),
+    );
+  });
+});
+
+describe('users/{uid}/interactions/{interactionId} — shape validation', () => {
+  // ---- Required-field omissions -----------------------------------
+
+  test('create denied when id is missing', async () => {
+    const payload = wellFormedInteraction();
+    delete payload.id;
+    await assertFails(
+      setDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1'), payload),
+    );
+  });
+
+  test('create denied when contactId is missing', async () => {
+    const payload = wellFormedInteraction();
+    delete payload.contactId;
+    await assertFails(
+      setDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1'), payload),
+    );
+  });
+
+  test('create denied when type is missing', async () => {
+    const payload = wellFormedInteraction();
+    delete payload.type;
+    await assertFails(
+      setDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1'), payload),
+    );
+  });
+
+  test('create denied when title is missing (PRD §Q8: required-with-empty-string)', async () => {
+    const payload = wellFormedInteraction();
+    delete payload.title;
+    await assertFails(
+      setDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1'), payload),
+    );
+  });
+
+  test('create denied when note is missing (PRD §Q8: required-with-empty-string)', async () => {
+    const payload = wellFormedInteraction();
+    delete payload.note;
+    await assertFails(
+      setDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1'), payload),
+    );
+  });
+
+  test('create denied when date is missing', async () => {
+    const payload = wellFormedInteraction();
+    delete payload.date;
+    await assertFails(
+      setDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1'), payload),
+    );
+  });
+
+  test('create denied when schemaVersion is missing', async () => {
+    const payload = wellFormedInteraction();
+    delete payload.schemaVersion;
+    await assertFails(
+      setDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1'), payload),
+    );
+  });
+
+  test('create allowed when title and note are empty strings (PRD §Q8)', async () => {
+    await assertSucceeds(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ title: '', note: '' }),
+      ),
+    );
+  });
+
+  // ---- Unknown / extra field --------------------------------------
+
+  test('create denied when extra unknown key is present', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ rogueField: 'not allowed' }),
+      ),
+    );
+  });
+
+  test('update denied when payload introduces an extra field', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ extra: 'still not allowed' }),
+      ),
+    );
+  });
+
+  // ---- type enum validation ---------------------------------------
+
+  test('create allowed for every InteractionType enum value', async () => {
+    for (const t of [
+      'interaction',
+      'personalDetail',
+      'preference',
+      'reminder',
+      'sharedActivity',
+      'relationshipNote',
+    ]) {
+      await assertSucceeds(
+        setDoc(
+          interactionDocRef(authedDb(ALICE), ALICE, `i-${t}`),
+          wellFormedInteraction({ id: `i-${t}`, type: t }),
+        ),
+      );
+    }
+  });
+
+  test('create denied when type is not in the InteractionType enum set', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ type: 'gossip' }),
+      ),
+    );
+  });
+
+  test('create denied when type is the wrong primitive (int)', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ type: 7 }),
+      ),
+    );
+  });
+
+  // ---- source enum validation -------------------------------------
+
+  test('create allowed when source is omitted (genuinely optional)', async () => {
+    const payload = wellFormedInteraction();
+    delete payload.source;
+    await assertSucceeds(
+      setDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1'), payload),
+    );
+  });
+
+  test('create allowed for every InteractionSource enum value', async () => {
+    for (const s of ['manual', 'aiSuggested']) {
+      await assertSucceeds(
+        setDoc(
+          interactionDocRef(authedDb(ALICE), ALICE, `i-${s}`),
+          wellFormedInteraction({ id: `i-${s}`, source: s }),
+        ),
+      );
+    }
+  });
+
+  test('create denied when source is not in the InteractionSource enum set', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ source: 'imported' }),
+      ),
+    );
+  });
+
+  // ---- attachments optional + type guard --------------------------
+
+  test('create allowed when attachments is omitted (genuinely optional)', async () => {
+    const payload = wellFormedInteraction();
+    delete payload.attachments;
+    await assertSucceeds(
+      setDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1'), payload),
+    );
+  });
+
+  test('create denied when attachments is the wrong primitive (string)', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ attachments: 'note.md' }),
+      ),
+    );
+  });
+
+  // ---- Wrong-type required fields ---------------------------------
+
+  test('create denied when id is not a string', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ id: 12345 }),
+      ),
+    );
+  });
+
+  test('create denied when contactId is not a string', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ contactId: 99 }),
+      ),
+    );
+  });
+
+  test('create denied when title is not a string', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ title: 42 }),
+      ),
+    );
+  });
+
+  test('create denied when note is not a string', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ note: ['array'] }),
+      ),
+    );
+  });
+
+  test('create denied when date is not a timestamp', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ date: '2026-05-20' }),
+      ),
+    );
+  });
+
+  test('create denied when schemaVersion is not an int', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ schemaVersion: '1' }),
+      ),
+    );
+  });
+
+  test('create denied when updatedAt is not a timestamp', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ updatedAt: '2026-05-26T00:00:00Z' }),
+      ),
+    );
+  });
+
+  // ---- data.id must equal the {interactionId} path ----------------
+
+  test('create denied when data.id does not match the {interactionId} path', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ id: 'i-other' }),
+      ),
+    );
+  });
+
+  test('update denied when data.id is mutated to a different value', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ id: 'i-other', note: 'Hijacked' }),
+      ),
+    );
+  });
+
+  test('create allowed when data.id matches the path (explicit invariant)', async () => {
+    await assertSucceeds(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ id: 'i-1' }),
+      ),
+    );
+  });
+
+  // ---- Update-time shape enforcement ------------------------------
+
+  test('update denied when type is invalid', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ type: 'gossip' }),
+      ),
+    );
+  });
+
+  test('update denied when required field is dropped', async () => {
+    await seedInteraction(ALICE, 'i-1');
+    const payload = wellFormedInteraction();
+    delete payload.title;
+    await assertFails(
+      setDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1'), payload),
     );
   });
 });
