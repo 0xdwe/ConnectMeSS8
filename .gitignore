@@ -12,6 +12,9 @@
 .swiftpm/
 migrate_working_dir/
 
+# Local agent runtime / state stores (subagent-runs etc.)
+/data/
+
 # IntelliJ related
 *.iml
 *.ipr
