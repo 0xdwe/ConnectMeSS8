@@ -176,7 +176,11 @@ class FirebaseInteractionStore implements InteractionStore {
   // Encode / decode
   // ---------------------------------------------------------------
 
-  Map<String, dynamic> _encode(CrmInteraction i) {
+  Map<String, dynamic> _encode(CrmInteraction i) => encode(i);
+
+  /// Public encoder used by [save] and by [ConnectionSeeder] (#069).
+  /// Pure — does not read `_firestore` or `_uid`.
+  static Map<String, dynamic> encode(CrmInteraction i) {
     return <String, dynamic>{
       'id': i.id,
       'contactId': i.contactId,

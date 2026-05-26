@@ -1,4 +1,4 @@
-# #069 ConnectionSeeder + onboarding "Start with samples / Start fresh" + empty-state UX
+# #069 ConnectionSeeder service + sentinel rules + headless tests
 
 Labels: issue, needs-triage
 
@@ -8,31 +8,31 @@ docs/prd/2026-05-26-connection-persistence-pass-4-5-prd.md
 
 ## What to build
 
-One-shot seeder that initializes the user's `connections`, `interactions`, `events`, `categories`, and `eventTypes` collections / fields on first authenticated launch. The word "seeder" is intentional — Pass 4.2's migration was a real disk → cloud copy, while Pass 4.5's data was never on disk (PRD Q7).
+One-shot seeder service that initializes the user's `connections`, `interactions`, `events` collections and `categories` / `eventTypes` fields on first authenticated launch. The word "seeder" is intentional — Pass 4.2's migration was a real disk → cloud copy, while Pass 4.5's data was never on disk (PRD Q7).
 
-Onboarding asks the user once at sign-up: "Start with sample contacts" (Mike, Sarah, Emily, David + their interactions and events) or "Start fresh" (empty connection/interaction/event collections, but the seeded `categories` and `eventTypes` are still written because they're useful even for fresh-start users — PRD Q12).
-
-Empty-state UX on the People tab and Home recommendations list lands here so a "Start fresh" user doesn't see a confusing blank screen.
-
-A one-time "data persistence has been upgraded" notice fires on the first Pass 4.5 launch for accounts that pre-existed the Pass 4.5 build, hinting that any hotfix-era user-added contacts are not in the cloud (PRD Q7's accepted data-loss decision).
+**Scope: infrastructure only.** This issue ships the seeder as a parameterized API (`ConnectionSeeder.run(choice: SeederChoice.samples | .fresh)`), the five sentinel-field additions to Firestore rules, the JS rules tests, and the headless tests. The UI that drives the seeder choice (onboarding modal, empty-state UX, persistence-upgraded notice) is filed separately as #074 — those decisions involve product copy and UX placement that benefit from explicit review.
 
 ## Acceptance criteria
 
-- [ ] `ConnectionSeeder` in `lib/src/state/connections/connection_seeder.dart` runs only when signed in AND the user's `users/{uid}/connections` collection is empty AND `connectionsSeededAt` is unset.
-- [ ] Seeder writes the seeded sample list (Mike / Sarah / Emily / David from `AppState.seeded()`) when the user picked "Start with samples"; sentinel-only no-op when picked "Start fresh".
-- [ ] Same shape for `interactions` (sample-only) and `events` (sample-only).
-- [ ] `categories` and `eventTypes` lists on `users/{uid}` get the seeded defaults regardless of sample-vs-fresh choice.
-- [ ] Sentinels written on `users/{uid}`: `connectionsSeededAt`, `interactionsSeededAt`, `eventsSeededAt`, `categoriesSeededAt`, `eventTypesSeededAt` (all timestamps).
-- [ ] `firestore/firestore.rules` `match /users/{uid}` block gains the five new optional timestamp fields (alongside the existing `migratedFromDiskAt`). `firestore/rules.test.js` covers them.
-- [ ] Onboarding prompt: a modal or full-screen step on the auth screen's `_AuthMode.signup` flow, AFTER `signUp()` succeeds and BEFORE the first navigation to the shell. Two-button choice; user's choice persisted to a Riverpod state and consumed by the seeder.
-- [ ] Onboarding prompt does NOT fire on `_AuthMode.login`.
-- [ ] Empty-state UI on the People tab when `connections` is empty AND seeder has completed: short copy + "Add your first contact" CTA.
-- [ ] Empty-state UI on Home recommendations when no recommendations: calmer placeholder copy.
-- [ ] One-time "persistence upgraded" notice fires when both: (a) `connectionsSeededAt` was just written this session, AND (b) the auth account already existed before this build (heuristic: Firebase Auth `creationTime` is older than this build's release date, OR a fallback flag like `data/persistence_v45_seen` to ensure the notice fires at most once per device per account).
-- [ ] Headless tests cover seeder branching (samples vs fresh), idempotency (re-running is a no-op), sentinel-only behavior on fresh, and ordering (seeder runs before any AppController-driven mutation that would race it).
-- [ ] Emulator-backed tests verify the actual Firestore writes for both samples and fresh paths.
-- [ ] Onboarding prompt and empty-state widgets have widget tests.
-- [ ] `flutter analyze` clean. `flutter test test/state/` stays above baseline.
+- [ ] `SeederChoice` enum in `lib/src/state/connections/connection_seeder.dart` with values `samples` and `fresh`.
+- [ ] `ConnectionSeeder` class with `Future<SeederResult> run({required SeederChoice choice})`. Result carries `didSeed` (true if any documents were written), `didNoOp` (true if all sentinels already set), and the per-collection counts.
+- [ ] Seeder runs only when signed in AND the user's `users/{uid}/connections` collection is empty AND `connectionsSeededAt` is unset.
+- [ ] When `choice == SeederChoice.samples`: writes the seeded sample list (David / Emily / Jessica / Mike / Sarah from `AppState.seeded()`) to `users/{uid}/connections`, the seeded interactions to `users/{uid}/interactions`, and the seeded events to `users/{uid}/events`.
+- [ ] When `choice == SeederChoice.fresh`: connections / interactions / events collections stay empty (sentinel-only).
+- [ ] `categories` and `eventTypes` lists on `users/{uid}` get the seeded defaults regardless of `choice` (PRD Q12 — useful for fresh-start users too).
+- [ ] Sentinels written on `users/{uid}` (timestamps): `connectionsSeededAt`, `interactionsSeededAt`, `eventsSeededAt`, `categoriesSeededAt`, `eventTypesSeededAt`.
+- [ ] Seeder is idempotent: re-running with the same UID is a no-op (`didNoOp == true`).
+- [ ] Seeder uses Firestore `WriteBatch` for atomic writes within each collection so a partial network failure cannot leave a half-seeded state with the sentinel set.
+- [ ] `firestore/firestore.rules` `match /users/{uid}` block extends `isWellFormedUserDoc(data)` to allow the five new optional timestamp fields alongside the existing `migratedFromDiskAt`.
+- [ ] `firestore/rules.test.js` adds at least 8 cases for the new sentinel fields (positive write of each + cross-user denial of each + wrong-type rejection).
+- [ ] Headless tests in `test/state/connections/connection_seeder_test.dart` cover: samples branch writes the expected counts, fresh branch is sentinel-only, idempotent re-run is a no-op, partial-state recovery (one sentinel set, others not) does not double-seed.
+- [ ] Emulator-backed test in `integration_test/state/connections/connection_seeder_test.dart` writes both branches against the real Firestore emulator and verifies the documents land at the expected paths. (Run deferred to #073.)
+- [ ] Production wiring (auto-trigger off auth + choice) does NOT land here. AppController and the auth screen are unchanged. The seeder is callable but no production path calls it yet — #074 wires the trigger.
+- [ ] `flutter analyze` clean. `flutter test test/state/` stays at or above baseline.
+
+## Why narrowed from the original scope
+
+The original #069 bundled three concerns: backend seeder, signup-time onboarding modal, empty-state UI + persistence-upgraded notice. Three different review surfaces (data, UX, copy) made one merge too thick. Splitting keeps each issue focused and reviewable. The UI half is filed as #074.
 
 ## Blocked by
 
