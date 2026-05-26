@@ -290,7 +290,47 @@ class AppController extends Notifier<AppState> {
       ),
     );
   }
-  void signOut() => state = AppState.seeded();
+  /// Hotfix: preserve user-added connections, interactions, and events
+  /// across sign-out so a single-device prototype run does not lose user
+  /// data. Sample seeded connections (and their related events and
+  /// interactions) are dropped because they are demo content, not user
+  /// data; they come back the next time the user signs in to a fresh
+  /// account via [AppState.seeded].
+  ///
+  /// App-level preferences ([themeMode], [categories], [eventTypes],
+  /// [googleCalendarLinked]) are intentionally untouched because they
+  /// belong to the app, not the auth session. [lastAiSummary] is left
+  /// alone for the same reason — it is informational and not tied to
+  /// auth. The previous user identity ([state.user]) also lingers; the
+  /// next sign-in updates it via `signUp`, while `signIn` deliberately
+  /// leaves it as-is. The lingering name is the explicit single-device
+  /// prototype tradeoff and goes away once the next pass introduces
+  /// per-user state hydration.
+  ///
+  /// Proper cross-device persistence is the next pass (Firestore-backed
+  /// connection/interaction/event stores mirroring [memoryStoreProvider]).
+  void signOut() {
+    final sampleIds = state.connections
+        .where((c) => c.isSample)
+        .map((c) => c.id)
+        .toSet();
+    state = state.copyWith(
+      isAuthed: false,
+      selectedTab: 0,
+      connections: [
+        for (final connection in state.connections)
+          if (!connection.isSample) connection,
+      ],
+      interactions: [
+        for (final interaction in state.interactions)
+          if (!sampleIds.contains(interaction.contactId)) interaction,
+      ],
+      events: [
+        for (final event in state.events)
+          if (!sampleIds.contains(event.contactId)) event,
+      ],
+    );
+  }
   void setTab(int index) => state = state.copyWith(selectedTab: index);
 
   void setThemeMode(AppThemeMode mode) =>
