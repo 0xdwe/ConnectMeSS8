@@ -43,3 +43,4 @@ Status transitions:
 | 0003 | [Single-device prototype scope; cross-device evidence deferred](./0003-single-device-prototype-scope.md) | accepted |
 | 0004 | [Firestore is the source of truth (post-Pass 4.5)](./0004-firestore-is-source-of-truth.md) | accepted |
 | 0005 | [`AppController` stays as the write coordinator](./0005-app-controller-as-write-coordinator.md) | accepted |
+| 0006 | [Defer the `FirestoreSnapshotMirror` extraction](./0006-defer-firestore-snapshot-mirror.md) | accepted |
