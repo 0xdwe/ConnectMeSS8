@@ -8,7 +8,7 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/crm_widgets.dart';
-import '../modals/edit_user_profile_modal.dart';
+import '../edit_profile_screen.dart';
 import '../modals/manage_categories_modal.dart';
 import '../modals/manage_event_types_modal.dart';
 import '../modals/theme_modal.dart';
@@ -19,106 +19,156 @@ class SettingsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
-    final headerStyle = AppTypography.h2(color: tokens.inkMuted);
+    final themeMode = ref.watch(
+      appControllerProvider.select((state) => state.themeMode),
+    );
+
+    String themeModeLabel;
+    switch (themeMode) {
+      case AppThemeMode.light:
+        themeModeLabel = 'Light';
+        break;
+      case AppThemeMode.dark:
+        themeModeLabel = 'Dark';
+        break;
+      case AppThemeMode.system:
+        themeModeLabel = 'System';
+        break;
+    }
+
     return ListView(
       key: const Key('settings-tab'),
       padding: EdgeInsets.fromLTRB(
+        AppSpacing.space5,
         AppSpacing.space6,
-        AppSpacing.space6,
-        AppSpacing.space6,
+        AppSpacing.space5,
         AppSpacing.pageBottomPadding,
       ),
       children: [
-        Text('Account', style: headerStyle),
-        SizedBox(height: AppSpacing.space3),
+        // ─── ACCOUNT ─────────────────────────────────────
+        _SectionHeader(label: 'ACCOUNT'),
+        SizedBox(height: AppSpacing.space2),
         CardBox(
           padding: EdgeInsets.zero,
+          border: Border.all(color: tokens.border, width: 1),
           child: Column(
             children: [
-              _Row(
+              _SettingsRow(
                 icon: Icons.person_outline,
+                iconColor: const Color(0xFF5B8DEF),
                 label: 'Edit Profile',
-                onTap: () => showEditUserProfileModal(context),
+                onTap: () => EditProfileScreen.navigateTo(context),
               ),
-              _Row(
+              Divider(color: tokens.border, height: 1, indent: 68),
+              _SettingsRow(
                 icon: Icons.notifications_none,
+                iconColor: const Color(0xFFF5A623),
                 label: 'Notifications',
                 onTap: () => _info(context, 'Notifications mock settings'),
               ),
-              _Row(
+              Divider(color: tokens.border, height: 1, indent: 68),
+              _SettingsRow(
                 icon: Icons.shield_outlined,
+                iconColor: const Color(0xFF34B5E4),
                 label: 'Privacy & Security',
                 onTap: () => _info(context, 'Privacy controls placeholder'),
               ),
-              _Row(
+              Divider(color: tokens.border, height: 1, indent: 68),
+              _SettingsRow(
                 icon: Icons.delete_outline,
+                iconColor: const Color(0xFFE04B4B),
                 label: 'Remove sample friends',
                 onTap: () => _confirmRemoveSamples(context, ref),
               ),
             ],
           ),
         ),
-        SizedBox(height: AppSpacing.space5),
-        Text('Customization', style: headerStyle),
-        SizedBox(height: AppSpacing.space3),
+
+        SizedBox(height: AppSpacing.space6),
+
+        // ─── CUSTOMIZATION ───────────────────────────────
+        _SectionHeader(label: 'CUSTOMIZATION'),
+        SizedBox(height: AppSpacing.space2),
         CardBox(
           padding: EdgeInsets.zero,
+          border: Border.all(color: tokens.border, width: 1),
           child: Column(
             children: [
-              _Row(
+              _SettingsRow(
                 icon: Icons.palette_outlined,
+                iconColor: tokens.primary,
                 label: 'Theme',
+                trailing: themeModeLabel,
                 onTap: () => showThemeModal(context),
               ),
-              _Row(
+              Divider(color: tokens.border, height: 1, indent: 68),
+              _SettingsRow(
                 icon: Icons.sell_outlined,
+                iconColor: const Color(0xFF9B59B6),
                 label: 'Manage Categories',
                 onTap: () => showManageCategoriesModal(context),
               ),
-              _Row(
+              Divider(color: tokens.border, height: 1, indent: 68),
+              _SettingsRow(
                 icon: Icons.event_note_outlined,
+                iconColor: const Color(0xFF2EAD84),
                 label: 'Manage Event Types',
                 onTap: () => showManageEventTypesModal(context),
               ),
             ],
           ),
         ),
-        SizedBox(height: AppSpacing.space5),
-        Text('About', style: headerStyle),
-        SizedBox(height: AppSpacing.space3),
+
+        SizedBox(height: AppSpacing.space6),
+
+        // ─── ABOUT ───────────────────────────────────────
+        _SectionHeader(label: 'ABOUT'),
+        SizedBox(height: AppSpacing.space2),
         CardBox(
           padding: EdgeInsets.zero,
-          child: _Row(
+          border: Border.all(color: tokens.border, width: 1),
+          child: _SettingsRow(
             icon: Icons.info_outline,
+            iconColor: const Color(0xFF5B8DEF),
             label: 'About Connect Me',
             onTap: () =>
                 _info(context, 'Connect Me v3.0\nMaking relationships matter'),
           ),
         ),
+
         SizedBox(height: AppSpacing.space8),
+
+        // ─── SIGN OUT ────────────────────────────────────
         Center(
-          child: Text(
-            'Connect Me v3.0\nMaking relationships matter',
-            textAlign: TextAlign.center,
-            style: AppTypography.bodyLg(color: tokens.inkMuted),
+          child: TextButton.icon(
+            style: TextButton.styleFrom(
+              foregroundColor: tokens.danger,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            icon: Icon(Icons.logout, size: 18, color: tokens.danger),
+            onPressed: () async {
+              try {
+                await ref.read(firebaseAuthProvider).signOut();
+              } catch (_) {}
+              if (!context.mounted) return;
+              ref.read(appControllerProvider.notifier).signOut();
+              context.go('/auth');
+            },
+            label: Text(
+              'Sign out',
+              style: AppTypography.body(color: tokens.danger).copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ),
-        SizedBox(height: AppSpacing.space5),
-        TextButton(
-          onPressed: () async {
-            // Sign out of Firebase first; the AppController reset is
-            // local state and survives if the network call hiccups.
-            try {
-              await ref.read(firebaseAuthProvider).signOut();
-            } catch (_) {
-              // Best-effort — a failure here doesn't block the local
-              // sign-out. The user can retry from /auth.
-            }
-            if (!context.mounted) return;
-            ref.read(appControllerProvider.notifier).signOut();
-            context.go('/auth');
-          },
-          child: const Text('Sign out'),
+        SizedBox(height: AppSpacing.space3),
+        Center(
+          child: Text(
+            'Connect Me v3.0',
+            textAlign: TextAlign.center,
+            style: AppTypography.caption(color: tokens.inkMuted),
+          ),
         ),
       ],
     );
@@ -181,21 +231,94 @@ class SettingsTab extends ConsumerWidget {
   }
 }
 
-class _Row extends StatelessWidget {
-  const _Row({required this.icon, required this.label, required this.onTap});
-  final IconData icon;
+// ─── Section header (e.g. "ACCOUNT", "CUSTOMIZATION", "ABOUT") ──────────
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label});
   final String label;
-  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-    leading: Icon(icon, size: 32),
-    title: Text(
-      label,
-      style: AppTypography.h2(),
-    ),
-    trailing: const Icon(Icons.chevron_right, size: 32),
-    minVerticalPadding: 22,
-    onTap: onTap,
-  );
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        label,
+        style: AppTypography.caption(color: tokens.primary).copyWith(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Settings row with colored icon circle, label, optional trailing ─────
+class _SettingsRow extends StatelessWidget {
+  const _SettingsRow({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.onTap,
+    this.trailing,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final VoidCallback onTap;
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Row(
+          children: [
+            // Colored icon in a soft-tint circle
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 14),
+            // Label
+            Expanded(
+              child: Text(
+                label,
+                style: AppTypography.body(color: tokens.ink).copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            // Optional trailing text (e.g. "Light" for theme)
+            if (trailing != null) ...[
+              Text(
+                trailing!,
+                style: AppTypography.caption(color: tokens.inkMuted).copyWith(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(width: 4),
+            ],
+            // Chevron
+            Icon(
+              Icons.chevron_right,
+              color: tokens.inkSubtle,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

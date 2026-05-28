@@ -295,16 +295,34 @@ class RecommendationCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  connection.name,
-                  style: AppTypography.h2(color: tokens.ink),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        connection.name,
+                        style: AppTypography.h2(color: tokens.ink),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    CircleAvatar(
+                      radius: 4,
+                      backgroundColor: categoryColor(connection.category, tokens),
+                    ),
+                  ],
                 ),
                 SizedBox(height: AppSpacing.space2),
                 Text(
                   recommendation.reason,
-                  style: AppTypography.body(color: tokens.inkMuted),
+                  style: AppTypography.bodyLg(color: tokens.ink),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: AppSpacing.space2),
+                Text(
+                  recommendation.insight,
+                  style: AppTypography.body(color: tokens.inkMuted),
                 ),
               ],
             ),
@@ -329,10 +347,10 @@ class RecommendationCard extends StatelessWidget {
                 ),
               ),
               SizedBox(height: AppSpacing.space3),
-              BondRing.fromScore(
-                score: connection.bondScore,
-                label: connection.name,
-                size: 44,
+              BondRing(
+                connection: connection,
+                size: 56,
+                showAvatar: false,
               ),
             ],
           ),
@@ -349,20 +367,8 @@ Color _recommendationPriorityColor(int score, AppTokens tokens) =>
 
 /// Returns the category-color mapping per DESIGN.md.
 Color categoryColor(String category, AppTokens tokens) {
-  switch (category) {
-    case 'Family':
-      return tokens.categoryFamily;
-    case 'Friends':
-      return tokens.categoryFriends;
-    case 'College':
-      return tokens.categoryCollege;
-    case 'High School':
-      return tokens.categoryHighSchool;
-    case 'Work':
-      return tokens.categoryWork;
-    default:
-      return tokens.inkMuted;
-  }
+  // Swapped to a single elegant premium unified purple color scheme
+  return tokens.primary;
 }
 
 class HeatmapCard extends StatelessWidget {
@@ -502,6 +508,22 @@ class SectionTitle extends StatelessWidget {
             return titleWidget;
           }
 
+          final width = constraints.maxWidth;
+          final isNarrow = width < _stackBelowWidth;
+          final isLongTitle = title.length > _shortTitleMaxChars;
+
+          if (isNarrow && isLongTitle) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                titleWidget,
+                const SizedBox(height: 8),
+                action!,
+              ],
+            );
+          }
+
           return Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -620,15 +642,18 @@ class ConnectionScoreHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final semanticLabel = 'Connection score: $score';
+    final tier = BondTier.from(score);
+    final semanticLabel = 'Connection score: $score, ${tier.label}';
 
-    return Semantics(
-      label: semanticLabel,
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSpacing.space5,
-          vertical: AppSpacing.space6,
-        ),
+    return CardBox(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.space5,
+        vertical: AppSpacing.space6,
+      ),
+      child: Semantics(
+        container: true,
+        excludeSemantics: true, // Excludes inner BondRing semantics to avoid duplication
+        label: semanticLabel,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -639,7 +664,7 @@ class ConnectionScoreHero extends StatelessWidget {
             SizedBox(height: AppSpacing.space4),
             BondRing.fromScore(
               score: score,
-              label: 'Connection score',
+              label: 'Bond score',
               size: 176,
               strokeWidth: 11,
             ),

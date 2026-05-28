@@ -38,7 +38,7 @@ void main() {
       final dotFinder = find.byWidgetPredicate(
         (w) =>
             w is CircleAvatar &&
-            w.backgroundColor == tokens.categoryFamily &&
+            w.backgroundColor == tokens.primary &&
             (w.radius ?? 0) <= 6,
       );
       expect(dotFinder, findsOneWidget);

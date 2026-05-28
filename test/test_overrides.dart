@@ -7,6 +7,7 @@ import 'package:connect_me/src/state/connections/in_memory_event_store.dart';
 import 'package:connect_me/src/state/connections/in_memory_interaction_store.dart';
 import 'package:connect_me/src/state/connections/in_memory_user_doc_store.dart';
 import 'package:connect_me/src/state/connections/interaction_providers.dart';
+import 'package:connect_me/src/state/connections/connection_seeder.dart';
 import 'package:connect_me/src/state/connections/user_doc_store_providers.dart';
 import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
@@ -41,8 +42,20 @@ import 'package:flutter_test/flutter_test.dart';
 /// avoids an extra import path.
 List<dynamic> signedInDemoOverrides({String uid = 'demo-uid'}) {
   final connections = InMemoryConnectionStore();
+  for (final c in SeederSampleSource.connections()) {
+    connections.save(c);
+  }
+
   final interactions = InMemoryInteractionStore();
+  for (final i in SeederSampleSource.interactions()) {
+    interactions.save(i);
+  }
+
   final events = InMemoryEventStore();
+  for (final e in SeederSampleSource.events()) {
+    events.save(e);
+  }
+
   final userDoc = InMemoryUserDocStore();
   final batched = InMemoryBatchedWrites(
     connectionStore: connections,

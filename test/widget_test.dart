@@ -1,6 +1,7 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
 import 'package:connect_me/src/features/contact_profile_screen.dart';
 import 'package:connect_me/src/features/modals/update_person_picker_modal.dart';
+import 'package:connect_me/src/features/modals/add_event_modal.dart';
 import 'package:connect_me/src/features/tabs/planner_tab.dart';
 import 'package:connect_me/src/features/tabs/settings_tab.dart';
 import 'package:connect_me/src/state/firebase_providers.dart';
@@ -8,11 +9,36 @@ import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
+import 'test_overrides.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:connect_me/src/state/connections/connection_providers.dart';
+import 'package:connect_me/src/state/connections/event_providers.dart';
+import 'package:connect_me/src/state/connections/interaction_providers.dart';
+import 'package:connect_me/src/state/connections/user_doc_store_providers.dart';
+import 'package:connect_me/src/state/connections/batched_writes_providers.dart';
+import 'package:connect_me/src/state/connections/in_memory_connection_store.dart';
+import 'package:connect_me/src/state/connections/in_memory_event_store.dart';
+import 'package:connect_me/src/state/connections/in_memory_interaction_store.dart';
+import 'package:connect_me/src/state/connections/in_memory_user_doc_store.dart';
+import 'package:connect_me/src/state/connections/batched_writes.dart';
+import 'package:connect_me/src/models/social_models.dart';
 
 Future<void> pumpConnectMe(WidgetTester tester) async {
+  await tester.binding.setSurfaceSize(const Size(800, 1200));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+
+  final connections = InMemoryConnectionStore();
+  final interactions = InMemoryInteractionStore();
+  final events = InMemoryEventStore();
+  final userDoc = InMemoryUserDocStore();
+  final batched = InMemoryBatchedWrites(
+    connectionStore: connections,
+    interactionStore: interactions,
+    eventStore: events,
+  );
+
   // #041: production memoryStoreProvider returns FileMemoryStore. Real
   // file I/O can't run under pumpAndSettle's fake async, so widget
   // tests override to InMemoryMemoryStore.
@@ -32,6 +58,11 @@ Future<void> pumpConnectMe(WidgetTester tester) async {
             ),
           ),
         ),
+        connectionStoreProvider.overrideWithValue(connections),
+        interactionStoreProvider.overrideWithValue(interactions),
+        eventStoreProvider.overrideWithValue(events),
+        userDocStoreProvider.overrideWithValue(userDoc),
+        batchedWritesProvider.overrideWithValue(batched),
       ],
       child: const ConnectMeApp(),
     ),
@@ -96,7 +127,7 @@ void main() {
     await tester.tap(find.text('People'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('people-tab')), findsOneWidget);
-    await tester.tap(find.text('Plan'));
+    await tester.tap(find.text('Planner'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('planner-tab')), findsOneWidget);
   });
@@ -238,8 +269,12 @@ void main() {
     addTearDown(restoreTestWindow);
 
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(home: ContactProfileScreen(contactId: 'jessica')),
+      ProviderScope(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+        ],
+        child: const MaterialApp(home: ContactProfileScreen(contactId: 'jessica')),
       ),
     );
     await tester.pumpAndSettle();
@@ -255,8 +290,15 @@ void main() {
   });
 
   testWidgets('profile can be edited from settings', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     await tester.pumpWidget(
       ProviderScope(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+        ],
         child: MaterialApp(
           theme: AppTheme.data(false),
           home: const Scaffold(body: SettingsTab()),
@@ -293,6 +335,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+        ],
         child: MaterialApp(
           theme: AppTheme.data(false),
           home: const Scaffold(body: SettingsTab()),
@@ -313,8 +359,91 @@ void main() {
   });
 
   testWidgets('planner opens existing event in edit mode', (tester) async {
+    final now = DateTime.now();
+    final eventsStore = InMemoryEventStore();
+    final connectionsStore = InMemoryConnectionStore();
+    final interactionStore = InMemoryInteractionStore();
+    final userDocStore = InMemoryUserDocStore();
+    final batchedWrites = InMemoryBatchedWrites(
+      connectionStore: connectionsStore,
+      interactionStore: interactionStore,
+      eventStore: eventsStore,
+    );
+    
+    await eventsStore.save(PlannerEvent(
+      id: 'e1',
+      title: 'Coffee with Sarah',
+      contactId: 'sarah',
+      category: 'Friends',
+      date: DateTime(2026, 4, 28),
+      note: 'Google Calendar mock sync',
+      eventType: 'Coffee',
+      isAllDay: false,
+      startTimeMinutes: 10 * 60,
+      endTimeMinutes: 11 * 60 + 30,
+    ));
+    await eventsStore.save(PlannerEvent(
+      id: 'e2',
+      title: 'Team Meeting',
+      contactId: 'emily',
+      category: 'Work',
+      date: DateTime(2026, 4, 30),
+      note: 'Discuss launch',
+      eventType: 'Meeting',
+      isAllDay: false,
+      startTimeMinutes: 14 * 60,
+      endTimeMinutes: 15 * 60 + 30,
+    ));
+
+    await connectionsStore.save(Connection(
+      id: 'sarah',
+      name: 'Sarah Johnson',
+      email: 'sarah.j@email.com',
+      category: 'Friends',
+      avatar: '👱‍♀️',
+      bondScore: 92,
+      nextStep: 'Coffee catch-up',
+      lastContact: now.subtract(const Duration(days: 7)),
+      notes: 'Coffee with Sarah scheduled.',
+      knownSince: DateTime(2020, 6, 1),
+      preferredChannels: const ['Text', 'Instagram', 'Coffee'],
+      isSample: true,
+    ));
+    await connectionsStore.save(Connection(
+      id: 'emily',
+      name: 'Emily Rodriguez',
+      email: 'emily.r@email.com',
+      category: 'Work',
+      avatar: '👩‍💼',
+      bondScore: 85,
+      nextStep: 'Ask about first week in new role',
+      lastContact: now.subtract(const Duration(days: 5)),
+      notes: 'First week at new role. Keep momentum going.',
+      knownSince: DateTime(2023, 9, 1),
+      preferredChannels: const ['Slack', 'Email', 'Text'],
+      isSample: true,
+    ));
+
     await tester.pumpWidget(
       ProviderScope(
+        overrides: [
+          firebaseAuthProvider.overrideWithValue(
+            MockFirebaseAuth(
+              signedIn: true,
+              mockUser: MockUser(
+                uid: 'demo-uid',
+                isAnonymous: false,
+                email: 'demo@example.com',
+                displayName: 'Demo',
+              ),
+            ),
+          ),
+          eventStoreProvider.overrideWithValue(eventsStore),
+          connectionStoreProvider.overrideWithValue(connectionsStore),
+          interactionStoreProvider.overrideWithValue(interactionStore),
+          userDocStoreProvider.overrideWithValue(userDocStore),
+          batchedWritesProvider.overrideWithValue(batchedWrites),
+        ],
         child: MaterialApp(
           theme: AppTheme.data(false),
           home: const Scaffold(body: PlannerTab()),
@@ -325,12 +454,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Coffee with Sarah'),
       120,
-      scrollable: find
-          .descendant(
-            of: find.byKey(const Key('planner-tab')),
-            matching: find.byType(Scrollable),
-          )
-          .first,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.ensureVisible(find.text('Coffee with Sarah').first);
     await tester.pumpAndSettle();
@@ -339,6 +463,155 @@ void main() {
 
     expect(find.text('Edit Event'), findsOneWidget);
     expect(find.text('Delete Event'), findsOneWidget);
+  });
+
+  testWidgets('planner search dialog filters and opens event', (tester) async {
+    final now = DateTime.now();
+    final eventsStore = InMemoryEventStore();
+    final connectionsStore = InMemoryConnectionStore();
+    final interactionStore = InMemoryInteractionStore();
+    final userDocStore = InMemoryUserDocStore();
+    final batchedWrites = InMemoryBatchedWrites(
+      connectionStore: connectionsStore,
+      interactionStore: interactionStore,
+      eventStore: eventsStore,
+    );
+    
+    await eventsStore.save(PlannerEvent(
+      id: 'e1',
+      title: 'Coffee with Sarah',
+      contactId: 'sarah',
+      category: 'Friends',
+      date: DateTime(2026, 4, 28),
+      note: 'Google Calendar mock sync',
+      eventType: 'Coffee',
+      isAllDay: false,
+      startTimeMinutes: 10 * 60,
+      endTimeMinutes: 11 * 60 + 30,
+    ));
+
+    await connectionsStore.save(Connection(
+      id: 'sarah',
+      name: 'Sarah Johnson',
+      email: 'sarah.j@email.com',
+      category: 'Friends',
+      avatar: '👱‍♀️',
+      bondScore: 92,
+      nextStep: 'Coffee catch-up',
+      lastContact: now.subtract(const Duration(days: 7)),
+      notes: 'Coffee with Sarah scheduled.',
+      knownSince: DateTime(2020, 6, 1),
+      preferredChannels: const ['Text', 'Instagram', 'Coffee'],
+      isSample: true,
+    ));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          firebaseAuthProvider.overrideWithValue(
+            MockFirebaseAuth(
+              signedIn: true,
+              mockUser: MockUser(
+                uid: 'demo-uid',
+                isAnonymous: false,
+                email: 'demo@example.com',
+                displayName: 'Demo',
+              ),
+            ),
+          ),
+          eventStoreProvider.overrideWithValue(eventsStore),
+          connectionStoreProvider.overrideWithValue(connectionsStore),
+          interactionStoreProvider.overrideWithValue(interactionStore),
+          userDocStoreProvider.overrideWithValue(userDocStore),
+          batchedWritesProvider.overrideWithValue(batchedWrites),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.data(false),
+          home: const Scaffold(body: PlannerTab()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Tap search icon in top header bar
+    await tester.tap(find.byIcon(Icons.search));
+    await tester.pumpAndSettle();
+
+    // Verify empty state is displayed initially inside the dialog
+    expect(find.text('Start typing to search events'), findsOneWidget);
+    expect(find.text('Search by title or contact name'), findsOneWidget);
+
+    // Enter query in search text field
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search by event title or contact...'),
+      'Sarah',
+    );
+    await tester.pumpAndSettle();
+
+    // Verify that the empty state is hidden and the event is displayed
+    expect(find.text('Start typing to search events'), findsNothing);
+    expect(find.text('Coffee with Sarah'), findsOneWidget);
+
+    // Tap on the event card inside search results list
+    await tester.tap(find.text('Coffee with Sarah'));
+    await tester.pumpAndSettle();
+
+    // Verify that it opens the edit event modal successfully
+    expect(find.text('Edit Event'), findsOneWidget);
+    expect(find.text('Delete Event'), findsOneWidget);
+  });
+
+  testWidgets('planner add event modal displays premium cards', (tester) async {
+    final eventsStore = InMemoryEventStore();
+    final connectionsStore = InMemoryConnectionStore();
+    final interactionStore = InMemoryInteractionStore();
+    final userDocStore = InMemoryUserDocStore();
+    final batchedWrites = InMemoryBatchedWrites(
+      connectionStore: connectionsStore,
+      interactionStore: interactionStore,
+      eventStore: eventsStore,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          firebaseAuthProvider.overrideWithValue(
+            MockFirebaseAuth(
+              signedIn: true,
+              mockUser: MockUser(
+                uid: 'demo-uid',
+                isAnonymous: false,
+                email: 'demo@example.com',
+                displayName: 'Demo',
+              ),
+            ),
+          ),
+          eventStoreProvider.overrideWithValue(eventsStore),
+          connectionStoreProvider.overrideWithValue(connectionsStore),
+          interactionStoreProvider.overrideWithValue(interactionStore),
+          userDocStoreProvider.overrideWithValue(userDocStore),
+          batchedWritesProvider.overrideWithValue(batchedWrites),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.data(false),
+          home: Scaffold(
+            body: AddEventModal(initialDate: DateTime(2026, 4, 27)),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify all the premium card sections and labels from our mockup
+    expect(find.text('Add Event'), findsOneWidget);
+    expect(find.text('TITLE'), findsOneWidget);
+    expect(find.text('EVENT TYPE'), findsOneWidget);
+    expect(find.text('LINK TO CONTACT (OPTIONAL)'), findsOneWidget);
+    expect(find.text('CATEGORY'), findsOneWidget);
+    expect(find.text('NOTE'), findsOneWidget);
+    expect(find.text('All Day'), findsOneWidget);
+    expect(find.text('Repeat'), findsOneWidget);
+    expect(find.text('Save Event'), findsOneWidget);
   });
 
 }
