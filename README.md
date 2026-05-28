@@ -4,9 +4,11 @@ A Flutter app for relationship maintenance, designed for busy professionals and 
 
 ## Project documentation
 
-Four files at the project root are the canonical living docs. Everything else is per-task or historical.
+Six files at the project root are the canonical living docs. Everything else is per-task or historical.
 
 - `README.md` — this file
+- `AGENTS.md` — onboarding for AI coding agents (read this first if you are one)
+- `CONTEXT.md` — domain glossary, named seams, source-of-truth contracts
 - `PRODUCT.md` — product principles and audience
 - `DESIGN.md` — design system, tokens, typography
 - `progress.md` — active worklog
@@ -15,10 +17,12 @@ Four files at the project root are the canonical living docs. Everything else is
 
 ```
 docs/
+  adr/        # Architecture Decision Records (cross-pass decisions, numbered)
   prd/        # Product Requirement Documents, one per feature
   issues/     # Atomic issue specs (numbered, kebab-case)
   reviews/    # Subagent reviews, audits, and research output (dated)
   context/    # Per-task agent scratchpads (dated)
+  operations/ # Ops runbooks (rules deploy, etc.)
   archive/    # Superseded snapshots and per-task closeouts (dated)
 ```
 
@@ -30,7 +34,7 @@ When a subagent produces a `.md` file mid-task (review, research brief, context 
 - `docs/context/<YYYY-MM-DD>-<topic>.md` — per-task context handoffs and scratchpads
 - `docs/archive/<YYYY-MM-DD>-<topic>.md` — completion reports, implementation summaries, and stale snapshots kept for historical reference
 
-Only the four canonical docs above belong at the project root. PRDs and issues live under `docs/prd/` and `docs/issues/`.
+Only the six canonical docs above belong at the project root. PRDs and issues live under `docs/prd/` and `docs/issues/`. ADRs live under `docs/adr/`.
 
 ## Getting started with Flutter
 
