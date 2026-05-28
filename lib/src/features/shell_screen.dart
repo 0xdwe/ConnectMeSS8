@@ -7,6 +7,7 @@ import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
+import '../widgets/user_avatar.dart';
 import 'modals/plus_sheet.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/people_tab.dart';
@@ -28,8 +29,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     final selectedTab = ref.watch(
       appControllerProvider.select((state) => state.selectedTab),
     );
-    final userAvatar = ref.watch(
-      appControllerProvider.select((state) => state.user.avatar),
+    final user = ref.watch(
+      appControllerProvider.select((state) => state.user),
     );
     return Scaffold(
       backgroundColor: tokens.surface,
@@ -53,13 +54,11 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
         ),
         actions: [
           IconButton(
-            icon: CircleAvatar(
+            icon: UserAvatar(
+              user: user,
               radius: 18,
+              glyphSize: 14,
               backgroundColor: Colors.white,
-              child: Text(
-                userAvatar,
-                style: AppTypography.body(color: const Color(0xFF6D4CFF)),
-              ),
             ),
             onPressed: () => context.push('/settings'),
           ),

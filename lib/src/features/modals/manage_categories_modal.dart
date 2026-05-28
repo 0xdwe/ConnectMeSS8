@@ -3,54 +3,257 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/app_state.dart';
 import '../../theme/app_spacing.dart';
+import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 
+/// Shows the custom designed bottom sheet modal for managing category items.
+/// Configured with top rounded corners and premium raised backdrop color.
 Future<void> showManageCategoriesModal(BuildContext context) {
-  return showModalBottomSheet<void>(context: context, isScrollControlled: true, builder: (_) => const ManageCategoriesModal());
+  final tokens = context.tokens;
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: tokens.surfaceRaised,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (_) => const ManageCategoriesModal(),
+  );
 }
 
 class ManageCategoriesModal extends ConsumerStatefulWidget {
   const ManageCategoriesModal({super.key});
 
   @override
-  ConsumerState<ManageCategoriesModal> createState() => _ManageCategoriesModalState();
+  ConsumerState<ManageCategoriesModal> createState() =>
+      _ManageCategoriesModalState();
 }
 
 class _ManageCategoriesModalState extends ConsumerState<ManageCategoriesModal> {
   final category = TextEditingController();
 
   @override
+  void dispose() {
+    category.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(appControllerProvider.select((state) => state.categories));
+    final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Unified premium coloring for all category chips
+    final chipBgColor = dark ? tokens.primary.withOpacity(0.18) : const Color(0xFFEBE8FF);
+    final chipTextColor = dark ? tokens.primaryTint : const Color(0xFF4F40C7);
+
+    final categories = ref.watch(
+      appControllerProvider.select((state) => state.categories),
+    );
+
     return Padding(
       padding: EdgeInsets.only(
-        left: AppSpacing.space5,
-        right: AppSpacing.space5,
-        top: AppSpacing.space4,
-        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.space5,
+        left: AppSpacing.space6,
+        right: AppSpacing.space6,
+        top: 14,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.space6,
       ),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Manage categories', style: AppTypography.h1()),
-        Wrap(spacing: 8, children: categories.map((item) => Chip(label: Text(item))).toList()),
-        SizedBox(height: AppSpacing.space2),
-        TextField(controller: category, decoration: const InputDecoration(labelText: 'New category')),
-        SizedBox(height: AppSpacing.space4),
-        FilledButton(
-          onPressed: () async {
-            try {
-              await ref.read(appControllerProvider.notifier).addCategory(category.text);
-              category.clear();
-            } catch (_) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Could not add category. Try again.')),
-                );
-              }
-            }
-          },
-          child: const Text('Add category'),
-        ),
-      ]),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 38,
+              height: 4,
+              decoration: BoxDecoration(
+                color: tokens.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Header Row with close action
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Manage Categories',
+                  style: AppTypography.h1(color: tokens.ink).copyWith(
+                    fontSize: 22,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                color: tokens.inkSubtle,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // CURRENT CATEGORIES Section
+          Text(
+            'CURRENT CATEGORIES',
+            style: AppTypography.caption(color: tokens.primary).copyWith(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Category Chips wrap
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: categories.map((item) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: chipBgColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item,
+                      style: AppTypography.body().copyWith(
+                        color: chipTextColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () async {
+                        try {
+                          await ref
+                              .read(appControllerProvider.notifier)
+                              .deleteCategory(item);
+                        } catch (_) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Could not delete category.'),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: Icon(
+                        Icons.close,
+                        color: chipTextColor.withOpacity(0.8),
+                        size: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 28),
+
+          // CREATE NEW Section
+          Text(
+            'CREATE NEW',
+            style: AppTypography.caption(color: tokens.inkSubtle).copyWith(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Text Field rounded container (enlarged vertical padding for premium feel)
+          Container(
+            decoration: BoxDecoration(
+              color: dark ? tokens.surfaceRaised : const Color(0xFFF6F5FB),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: tokens.border),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: TextField(
+              controller: category,
+              style: AppTypography.body(color: tokens.ink),
+              decoration: InputDecoration(
+                hintText: 'e.g. Hiking Club',
+                hintStyle: AppTypography.body(color: tokens.inkMuted),
+                border: InputBorder.none,
+                isDense: true,
+                suffixIcon: Icon(
+                  Icons.edit_outlined,
+                  color: tokens.inkSubtle,
+                  size: 18,
+                ),
+                suffixIconConstraints: const BoxConstraints(
+                  minWidth: 24,
+                  minHeight: 24,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
+
+          // Add Category pilled action button with Shadow (taller height)
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: tokens.primary.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: tokens.primary,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+              onPressed: () async {
+                if (category.text.trim().isEmpty) return;
+                try {
+                  await ref
+                      .read(appControllerProvider.notifier)
+                      .addCategory(category.text);
+                  category.clear();
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Could not add category. Try again.'),
+                      ),
+                    );
+                  }
+                }
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add, color: Colors.white, size: 20),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Add Category',
+                    style: AppTypography.body(color: Colors.white).copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
+      ),
     );
   }
 }

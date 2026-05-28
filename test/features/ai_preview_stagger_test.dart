@@ -1,4 +1,5 @@
 import 'package:connect_me/src/features/ai_update_screen.dart';
+import '../test_overrides.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
@@ -11,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// don't stall on real disk I/O via the production `FileMemoryStore`.
 ProviderContainer _container() {
   return ProviderContainer(overrides: [
+    ...signedInDemoOverrides(),
     memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
   ]);
 }

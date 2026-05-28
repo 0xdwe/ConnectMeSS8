@@ -13,6 +13,9 @@ import 'connections/event_store.dart';
 import 'connections/interaction_providers.dart';
 import 'connections/user_doc_store.dart';
 import 'connections/user_doc_store_providers.dart';
+import 'connections/connection_seeder.dart';
+import 'connections/firebase_connection_store.dart';
+import 'firebase_providers.dart';
 import 'memory/memory_providers.dart';
 
 final appControllerProvider = NotifierProvider<AppController, AppState>(
@@ -345,6 +348,17 @@ class AppController extends Notifier<AppState> {
     final eventStore = ref.watch(eventStoreProvider);
     final userDocStore = ref.watch(userDocStoreProvider);
 
+    final user = ref.watch(currentUserProvider);
+    if (user != null && connectionStore is FirebaseConnectionStore) {
+      final firestore = ref.watch(firestoreProvider);
+      Future(() async {
+        try {
+          final seeder = ConnectionSeeder(firestore: firestore, uid: user.uid);
+          await seeder.run(choice: SeederChoice.samples);
+        } catch (_) {}
+      });
+    }
+
     _connectionsSub = connectionStore.snapshot().listen(
       (snapshot) {
         // Snapshot ordering: keep insertion order from the map
@@ -643,6 +657,15 @@ class AppController extends Notifier<AppState> {
       return;
     }
     final next = <String>[...state.categories, clean];
+    await ref.read(userDocStoreProvider).saveCategories(next);
+  }
+
+  Future<void> deleteCategory(String category) async {
+    final clean = category.trim();
+    if (!state.categories.contains(clean)) {
+      return;
+    }
+    final next = state.categories.where((c) => c != clean).toList();
     await ref.read(userDocStoreProvider).saveCategories(next);
   }
 

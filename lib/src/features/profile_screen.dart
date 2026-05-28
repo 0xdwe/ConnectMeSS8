@@ -6,7 +6,8 @@ import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
-import 'modals/edit_user_profile_modal.dart';
+import '../widgets/user_avatar.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -25,7 +26,7 @@ class ProfileScreen extends ConsumerWidget {
         foregroundColor: tokens.ink,
         actions: [
           IconButton(
-            onPressed: () => showEditUserProfileModal(context),
+            onPressed: () => EditProfileScreen.navigateTo(context),
             icon: const Icon(Icons.edit),
           ),
         ],
@@ -41,13 +42,11 @@ class ProfileScreen extends ConsumerWidget {
             ),
             child: Column(
               children: [
-                CircleAvatar(
+                UserAvatar(
+                  user: user,
                   radius: 66,
+                  glyphSize: 54,
                   backgroundColor: tokens.primaryTint,
-                  child: Text(
-                    user.avatar,
-                    style: AppTypography.glyph(54),
-                  ),
                 ),
                 SizedBox(height: AppSpacing.space5),
                 Text(
