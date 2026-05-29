@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../../models/social_models.dart';
 import 'connection_store.dart';
 
@@ -74,6 +76,32 @@ class InMemoryConnectionStore implements ConnectionStore {
   Future<void> clear() async {
     _store.clear();
     _publish();
+  }
+
+  /// Test-only synchronous seeding hatch.
+  ///
+  /// Populates the underlying map without setting [snapshotSync]'s
+  /// mirror, so subsequent subscribers to [snapshot] do NOT receive
+  /// a replay event. This is what makes the hatch safe to call
+  /// from `signedInDemoOverrides()` during `ProviderContainer`
+  /// setup: AppController's snapshot subscription will not fire an
+  /// initial event that mutates `state.connections` mid-load and
+  /// invalidates downstream FutureProviders (the regression on
+  /// PR #1 / commit 3412a76 that affected
+  /// `test/state/memory/`).
+  ///
+  /// Tests that need `state.connections` populated rely on
+  /// `AppState.seeded()` — the controller's initial build value —
+  /// which already carries the same sample contacts. Tests that
+  /// need the store's mirror populated (e.g. cross-instance write
+  /// scenarios) should call [save] directly and `await` it.
+  ///
+  /// Not part of the [ConnectionStore] interface.
+  @visibleForTesting
+  void seedSync(Iterable<Connection> connections) {
+    for (final connection in connections) {
+      _store[connection.id] = connection;
+    }
   }
 
   void _publish() {
