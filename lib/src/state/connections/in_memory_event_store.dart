@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../../models/social_models.dart';
 import 'event_store.dart';
 
@@ -64,6 +66,16 @@ class InMemoryEventStore implements EventStore {
   Future<void> clear() async {
     _store.clear();
     _publish();
+  }
+
+  /// Test-only synchronous seeding hatch. See
+  /// [InMemoryConnectionStore.seedSync] for the rationale; this is
+  /// the same pattern for events.
+  @visibleForTesting
+  void seedSync(Iterable<PlannerEvent> events) {
+    for (final event in events) {
+      _store[event.id] = event;
+    }
   }
 
   void _publish() {

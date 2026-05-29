@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../../models/social_models.dart';
 import 'interaction_store.dart';
 
@@ -70,6 +72,16 @@ class InMemoryInteractionStore implements InteractionStore {
   Future<void> clear() async {
     _store.clear();
     _publish();
+  }
+
+  /// Test-only synchronous seeding hatch. See
+  /// [InMemoryConnectionStore.seedSync] for the rationale; this is
+  /// the same pattern for interactions.
+  @visibleForTesting
+  void seedSync(Iterable<CrmInteraction> interactions) {
+    for (final interaction in interactions) {
+      _store[interaction.id] = interaction;
+    }
   }
 
   void _publish() {
