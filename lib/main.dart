@@ -14,6 +14,13 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // Activate App Check before the first Firebase AI Logic call ships
+  // so Gemini inference cannot be abused by anyone with a leaked
+  // firebase_options.dart. Debug provider in dev (token logs to
+  // console; paste into Firebase Console → App Check → Manage debug
+  // tokens). Play Integrity / DeviceCheck on release-mobile. See
+  // Pass 4.3 (#077 / PRD Q3).
+  await activateAppCheck();
   // Configure Firestore offline persistence before any provider can
   // resolve `firestoreProvider`. The SDK throws if `settings` is
   // assigned after the first read/write, so this call sits between

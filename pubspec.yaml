@@ -53,6 +53,16 @@ dependencies:
   # for attachments sent to Gemini via Firebase AI Logic. Runs under
   # `flutter test` without platform channels.
   image: ^4.5.4
+  # Pass 4.3 (#077). Firebase AI Logic SDK — calls Gemini Developer
+  # API on the user's behalf via Firebase Auth + App Check. The
+  # `LlmAiUpdate` adapter (#080) consumes this; #077 only wires the
+  # provider so production keeps using `MockAiUpdate` until #081.
+  firebase_ai: ^3.12.1
+  # Pass 4.3 (#077). App Check protects Firebase AI Logic calls so
+  # Gemini inference cannot be abused by anyone with a leaked
+  # firebase_options.dart. Debug provider in dev; Play Integrity /
+  # DeviceCheck on release-mobile per PRD Q3.
+  firebase_app_check: ^0.4.4+1
 
 dev_dependencies:
   flutter_test:

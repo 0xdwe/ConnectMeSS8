@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_ai/firebase_ai.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 /// Active [FirebaseAuth] instance (Pass 4.1, #052).
 ///
 /// Production resolves to `FirebaseAuth.instance`. Tests override
@@ -45,6 +47,90 @@ final firestoreProvider = Provider<FirebaseFirestore>(
 void enableFirestoreOfflinePersistence(FirebaseFirestore firestore) {
   firestore.settings = const Settings(persistenceEnabled: true);
 }
+
+/// Activates Firebase App Check before any AI Logic call ships
+/// (Pass 4.3, #077 / PRD Q3).
+///
+/// App Check protects Firebase AI Logic (and any future Cloud
+/// Functions or Firestore reads scoped behind it) from being abused
+/// by anyone with a leaked `firebase_options.dart`. Without it, the
+/// 9,400 NTD prototype credit is not safe.
+///
+/// Provider matrix per PRD §Q3:
+/// - debug builds (`kDebugMode`) — debug provider on every platform.
+///   The first launch logs a debug token to the Flutter console; the
+///   developer pastes it into Firebase Console → App Check → Manage
+///   debug tokens. Tests do not call this function.
+/// - release Android — Play Integrity.
+/// - release iOS — DeviceCheck. App Attest is deferred (PRD §Q3).
+/// - other release targets (web, macOS, Linux) — debug provider
+///   with a console warning. None of those are launch targets per
+///   ADR-0003 single-device prototype scope. Promoting any of them
+///   requires registering a real attestation provider here AND in
+///   the Firebase console.
+///
+/// Throws synchronously on activation failure — `main.dart`'s
+/// `await` lets the failure surface at launch rather than letting
+/// AI Logic ship without protection. Do not swallow the throw at
+/// the call site; doing so silently disables the credit-protection
+/// guard.
+///
+/// Must be called between `Firebase.initializeApp` and the first
+/// `FirebaseAI` call. Mirrors [enableFirestoreOfflinePersistence]'s
+/// boundary-function shape so `main.dart` stays one line per
+/// concern.
+Future<void> activateAppCheck() async {
+  // Treat "production attestation" as the launch matrix from ADR-0003:
+  // signed Android + signed iOS only. Everything else (web, macOS,
+  // Linux, debug) routes through the debug provider so a release
+  // build on a non-launch target does not crash on missing
+  // attestation infrastructure.
+  final isMobileLaunchTarget = !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  if (kDebugMode || !isMobileLaunchTarget) {
+    if (!kDebugMode) {
+      debugPrint(
+        'App Check: non-mobile release target detected; using debug '
+        'provider. Promote to a real attestation provider before '
+        'shipping web/macOS/Linux as a launch target. See PRD §Q3.',
+      );
+    }
+    await FirebaseAppCheck.instance.activate(
+      providerAndroid: const AndroidDebugProvider(),
+      providerApple: const AppleDebugProvider(),
+      // 'debug' is not a valid reCAPTCHA v3 site key; reaching this
+      // line on a real release web build will fail at runtime, which
+      // is the intended outcome until web becomes a launch target
+      // and a real key is registered.
+      providerWeb: ReCaptchaV3Provider('debug'),
+    );
+    return;
+  }
+  await FirebaseAppCheck.instance.activate(
+    providerAndroid: const AndroidPlayIntegrityProvider(),
+    providerApple: const AppleDeviceCheckProvider(),
+    providerWeb: ReCaptchaV3Provider('debug'),
+  );
+}
+
+/// Active [FirebaseAI] handle (Pass 4.3, #077).
+///
+/// Production resolves to `FirebaseAI.googleAI()` — the Gemini
+/// Developer API backend on Firebase AI Logic per PRD §Q1 §Q2.
+/// Tests do not need to override this provider unless they
+/// specifically exercise [LlmAiUpdate]; the production
+/// `aiUpdateProvider` continues to bind `MockAiUpdate` until #081.
+///
+/// `googleAI()` consumes Firebase Auth and App Check via
+/// `FirebaseApp.getService` internally, so the call site does not
+/// have to thread either explicitly. The instance is cached per
+/// app identity by the SDK, so re-reading this provider after an
+/// auth swap is cheap.
+final firebaseAiProvider = Provider<FirebaseAI>(
+  (ref) => FirebaseAI.googleAI(),
+);
 
 /// Currently signed-in [User], or null when signed out
 /// (Pass 4.2, #058).
