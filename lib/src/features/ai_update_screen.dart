@@ -165,7 +165,16 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
       // belt-and-braces re-set keeps this path correct even if the
       // adapter throws AiUpdateCancelled for some other reason
       // (e.g. token completed before run started).
-      if (mounted && currentState != AiUpdateState.inputting) {
+      //
+      // Reviewer NICE-TO-HAVE (#081 round 1): only collapse the
+      // loading view if THIS submit's completer is still the
+      // active one. Without the guard, a second submit kicked off
+      // after the first was cancelled could see its loading view
+      // collapsed when the original cancelled future finally
+      // resolves. Microtask-tight in practice but cheap to harden.
+      if (mounted &&
+          identical(_cancelCompleter, cancelCompleter) &&
+          currentState != AiUpdateState.inputting) {
         setState(() => currentState = AiUpdateState.inputting);
       }
     } on AiUpdateFailure catch (e) {
@@ -433,7 +442,14 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
   /// adapter via [_cancelCompleter]. Cancel is reachable even when
   /// the spinner is mid-animation.
   Widget _buildLoadingView(AppTokens tokens, Connection person) {
-    final firstName = person.name.split(' ').first;
+    // Reviewer NICE-TO-HAVE (#081 round 1): the seed always has a
+    // non-empty trimmed name, but a malformed contact (empty or
+    // leading-whitespace name) would otherwise produce "Reading
+    // what you've shared with …" with no name. Falling back to
+    // the full name is harmless and correct for any production
+    // case we've actually observed.
+    final rawFirst = person.name.split(' ').first;
+    final firstName = rawFirst.trim().isEmpty ? person.name : rawFirst;
     return Center(
       child: Padding(
         padding: EdgeInsets.all(AppSpacing.space8),
