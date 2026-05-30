@@ -44,6 +44,16 @@ abstract interface class AiUpdate {
   /// silently with no snackbar. [MockAiUpdate] ignores the token —
   /// its run is fast enough that mid-run cancellation has no
   /// observable effect.
+  ///
+  /// **Trade-off in [LlmAiUpdate]:** cancellation stops the adapter's
+  /// `await` on the in-flight Gemini request, but it does NOT abort
+  /// the underlying HTTP call — Firebase AI Logic's SDK does not
+  /// expose a cancel hook on `GenerativeModel.generateContent`, and
+  /// Dart `Future` has no platform-cancellation primitive. The
+  /// orphan request continues in the background and may consume the
+  /// project's token budget before settling. The user-visible
+  /// experience (modal closes, no result observed) is correct; the
+  /// cost-tracking implication is documented.
   Future<AiUpdateResult> run({
     required Connection contact,
     required String userInput,

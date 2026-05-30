@@ -204,6 +204,18 @@ class LlmAiUpdate implements AiUpdate {
         : cancelToken.then<Never>((_) => throw const AiUpdateCancelled());
     Future<T> raceWithCancel<T>(Future<T> work) {
       if (cancelToken == null) return work;
+      // Absorb errors on the orphan future when cancel wins the
+      // race. Without this, an in-flight Gemini call that throws
+      // *after* cancellation already returned would surface as an
+      // unhandled-async-error in the current zone (test failure or
+      // production noise).
+      // Attach an error-absorbing listener on the orphan future so
+      // an in-flight Gemini call that throws *after* cancellation
+      // already returned does not surface as an unhandled-async-
+      // error in the current zone (test failure or production
+      // noise).
+      // ignore: unawaited_futures
+      work.then<void>((_) {}, onError: (Object _) {});
       return Future.any<T>([
         work,
         cancelOnFire,
@@ -555,7 +567,15 @@ class LlmAiUpdate implements AiUpdate {
       // depending on where the user is sitting).
       final hasTimezone = iso.endsWith('Z') ||
           RegExp(r'[+-]\d{2}:?\d{2}$').hasMatch(iso);
-      final normalized = hasTimezone ? iso : '${iso}T00:00:00Z';
+      // If the LLM ever emits a T-suffixed iso without TZ
+      // (e.g. "2026-09-01T10:00:00"), append just "Z". Otherwise
+      // append a full midnight-UTC suffix (e.g. "2026-09-01" →
+      // "2026-09-01T00:00:00Z"). The schema asks for YYYY-MM-DD
+      // only, so the T-suffixed case is defensive.
+      final hasTime = iso.contains('T');
+      final normalized = hasTimezone
+          ? iso
+          : (hasTime ? '${iso}Z' : '${iso}T00:00:00Z');
       final parsed = DateTime.tryParse(normalized);
       startDate = parsed ?? now;
       description = entry.label;
