@@ -35,11 +35,31 @@ abstract interface class AiUpdate {
   /// The result is **not** persisted — callers commit separately via
   /// [commit] (or by reading `aiUpdateProvider` and calling commit on
   /// the same instance).
+  ///
+  /// [cancelToken] (Pass 4.3 §Q8 / #080) is an optional Future the
+  /// caller can complete to abort an in-flight run; production wires
+  /// it from the AI Update modal's Cancel button (#081). Adapters
+  /// that race against `cancelToken` throw [AiUpdateCancelled]
+  /// (a sibling of [AiUpdateFailure]); the modal handles cancellation
+  /// silently with no snackbar. [MockAiUpdate] ignores the token —
+  /// its run is fast enough that mid-run cancellation has no
+  /// observable effect.
+  ///
+  /// **Trade-off in [LlmAiUpdate]:** cancellation stops the adapter's
+  /// `await` on the in-flight Gemini request, but it does NOT abort
+  /// the underlying HTTP call — Firebase AI Logic's SDK does not
+  /// expose a cancel hook on `GenerativeModel.generateContent`, and
+  /// Dart `Future` has no platform-cancellation primitive. The
+  /// orphan request continues in the background and may consume the
+  /// project's token budget before settling. The user-visible
+  /// experience (modal closes, no result observed) is correct; the
+  /// cost-tracking implication is documented.
   Future<AiUpdateResult> run({
     required Connection contact,
     required String userInput,
     required MemoryDocument currentMemory,
     required List<AttachmentRef> attachments,
+    Future<void>? cancelToken,
   });
 
   /// Persists a previously-produced [AiUpdateResult]: writes the new
@@ -107,6 +127,7 @@ class MockAiUpdate implements AiUpdate {
     required String userInput,
     required MemoryDocument currentMemory,
     required List<AttachmentRef> attachments,
+    Future<void>? cancelToken,
   }) async {
     if (failOnRun) {
       throw const AiUpdateFailure('test-injected run failure');

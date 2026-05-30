@@ -21,6 +21,7 @@ library;
 
 import '../models/social_models.dart';
 import '../state/memory/memory_document.dart';
+import 'attachment_preparer.dart';
 
 /// How many recent interactions are sent to the model alongside the
 /// MemoryDocument. PRD §Q5 chose 5 — enough for tonal continuity,
@@ -88,6 +89,25 @@ String _interactionLine(CrmInteraction i) {
   return '- $date — ${i.type.name} — "$title"';
 }
 
+/// Human-readable label for a name-only attachment entry. Used in
+/// the prompt's attachments section so the model knows whether the
+/// entry is a non-image, an image past the per-call cap, or an
+/// image whose bytes couldn't be resolved.
+String _nameOnlyLabel(AttachmentDegradeReason reason) {
+  switch (reason) {
+    case AttachmentDegradeReason.notAnImage:
+      return 'non-image, name only';
+    case AttachmentDegradeReason.perCallImageCap:
+      return 'image, name only — over per-call image cap';
+    case AttachmentDegradeReason.fileNotFound:
+      return 'image, name only — file unavailable';
+    case AttachmentDegradeReason.readError:
+      return 'image, name only — file empty';
+    case AttachmentDegradeReason.decodeError:
+      return 'image, name only — could not decode';
+  }
+}
+
 /// Pure function: returns the per-call user message for one AI
 /// Update run.
 ///
@@ -103,6 +123,20 @@ String _interactionLine(CrmInteraction i) {
 ///    the adapter at the multipart layer) and non-image set
 ///    (always names only).
 /// 6. User input.
+///
+/// When [prepared] is provided (the Pass 4.3 #079 attachment
+/// preparer's output), the attachment section reflects what
+/// actually made it into the multipart request: images that
+/// successfully decoded land as "image, included" and everything
+/// else as "name only" with the preparer's degrade reason. This
+/// keeps the prompt text from claiming "image included" for an
+/// image whose bytes never reached Gemini (PRD §Q7 + reviewer
+/// blocker on #080).
+///
+/// When [prepared] is null, the builder falls back to a pure
+/// extension-based classification on [attachments] for callers
+/// that don't run images through the preparer (notably the #082
+/// integration tests at the schema level).
 String buildLlmAiUpdateUserMessage({
   required DateTime today,
   required Connection contact,
@@ -110,6 +144,7 @@ String buildLlmAiUpdateUserMessage({
   required List<CrmInteraction> recentInteractions,
   required List<AttachmentRef> attachments,
   required String userInput,
+  PreparedAttachments? prepared,
 }) {
   final buffer = StringBuffer();
 
@@ -150,16 +185,32 @@ String buildLlmAiUpdateUserMessage({
   }
   buffer.writeln();
 
-  final split = _splitAttachments(attachments);
-  if (split.images.isEmpty && split.nonImages.isEmpty) {
-    buffer.writeln('Attachments: none.');
-  } else {
-    buffer.writeln('Attachments:');
-    for (final img in split.images) {
-      buffer.writeln('- ${img.name} (image, included)');
+  if (prepared != null) {
+    if (prepared.images.isEmpty && prepared.nameOnly.isEmpty) {
+      buffer.writeln('Attachments: none.');
+    } else {
+      buffer.writeln('Attachments:');
+      for (final img in prepared.images) {
+        buffer.writeln('- ${img.name} (image, included)');
+      }
+      for (final entry in prepared.nameOnly) {
+        buffer.writeln(
+          '- ${entry.name} (${_nameOnlyLabel(entry.softFailReason)})',
+        );
+      }
     }
-    for (final other in split.nonImages) {
-      buffer.writeln('- ${other.name} (non-image, name only)');
+  } else {
+    final split = _splitAttachments(attachments);
+    if (split.images.isEmpty && split.nonImages.isEmpty) {
+      buffer.writeln('Attachments: none.');
+    } else {
+      buffer.writeln('Attachments:');
+      for (final img in split.images) {
+        buffer.writeln('- ${img.name} (image, included)');
+      }
+      for (final other in split.nonImages) {
+        buffer.writeln('- ${other.name} (non-image, name only)');
+      }
     }
   }
   buffer.writeln();

@@ -523,6 +523,7 @@ class _NoDeltaAiUpdate implements AiUpdate {
     required String userInput,
     required MemoryDocument currentMemory,
     required List<AttachmentRef> attachments,
+    Future<void>? cancelToken,
   }) async {
     return AiUpdateResult(
       summary: 'No-op',

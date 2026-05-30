@@ -1,7 +1,9 @@
+import 'package:connect_me/src/ai/attachment_preparer.dart';
 import 'package:connect_me/src/ai/llm_ai_update_user_message.dart';
 import 'package:connect_me/src/models/social_models.dart';
 import 'package:connect_me/src/state/memory/memory_document.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:typed_data';
 
 Connection _connection({
   String id = 'sarah',
@@ -415,6 +417,81 @@ void main() {
         userInput: '',
       );
       expect(out, contains('User input:\n(empty)'));
+    });
+  });
+
+  group('prepared-attachments override (Pass 4.3 #080 BLOCKER 4)', () {
+    test('uses prepared.images and prepared.nameOnly when provided', () {
+      // Reviewer BLOCKER 4: when the adapter has run images through
+      // the #079 preparer, the prompt's attachments section must
+      // reflect what's actually in the multipart payload. Image
+      // refs that soft-failed land in nameOnly with a degrade
+      // reason that informs the model.
+      final prepared = PreparedAttachments(
+        images: [
+          PreparedImageAttachment(
+            name: 'good.jpg',
+            bytes: Uint8List.fromList([0xFF, 0xD8, 0xFF]),
+            width: 800,
+            height: 600,
+          ),
+        ],
+        nameOnly: const [
+          PreparedAttachment(
+            name: 'broken.jpg',
+            softFailReason: AttachmentDegradeReason.decodeError,
+          ),
+          PreparedAttachment(
+            name: 'overflow.jpg',
+            softFailReason: AttachmentDegradeReason.perCallImageCap,
+          ),
+          PreparedAttachment(
+            name: 'doc.pdf',
+            softFailReason: AttachmentDegradeReason.notAnImage,
+          ),
+        ],
+      );
+
+      final out = buildLlmAiUpdateUserMessage(
+        today: DateTime.utc(2026, 5, 27),
+        contact: _connection(),
+        memory: _emptyMemory(),
+        recentInteractions: const [],
+        attachments: const [
+          AttachmentRef(name: 'good.jpg', path: '/tmp/g.jpg'),
+          AttachmentRef(name: 'broken.jpg', path: '/tmp/b.jpg'),
+          AttachmentRef(name: 'overflow.jpg', path: '/tmp/o.jpg'),
+          AttachmentRef(name: 'doc.pdf', path: '/tmp/d.pdf'),
+        ],
+        userInput: '',
+        prepared: prepared,
+      );
+
+      // Image that survived the preparer is labelled "included."
+      expect(out, contains('- good.jpg (image, included)'));
+      // Soft-failed image gets a clarifying degrade label so the
+      // model knows we tried.
+      expect(out, contains('- broken.jpg (image, name only — could not decode)'));
+      expect(out, contains('- overflow.jpg (image, name only — over per-call image cap)'));
+      // Non-image attachment retains its existing label.
+      expect(out, contains('- doc.pdf (non-image, name only)'));
+    });
+
+    test('emits "Attachments: none." when prepared has no entries', () {
+      const prepared = PreparedAttachments(
+        images: [],
+        nameOnly: [],
+      );
+      final out = buildLlmAiUpdateUserMessage(
+        today: DateTime.utc(2026, 5, 27),
+        contact: _connection(),
+        memory: _emptyMemory(),
+        recentInteractions: const [],
+        attachments: const [],
+        userInput: '',
+        prepared: prepared,
+      );
+      expect(out, contains('Attachments: none.'));
     });
   });
 }
