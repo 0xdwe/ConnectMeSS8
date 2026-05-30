@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../ai/ai_update.dart';
+import '../../ai/llm_ai_update.dart';
 import '../../models/social_models.dart';
 import '../app_state.dart';
 import '../firebase_providers.dart';
@@ -103,31 +104,96 @@ class _SignedOutMemoryStore implements MemoryStore {
       Future.error(StateError(_msg));
 }
 
-/// Unified [AiUpdate] adapter (PRD Q1).
+/// Unified [AiUpdate] adapter (PRD Pass 4.3 §Q9 / #081).
 ///
-/// Production returns a [MockAiUpdate] wired to the active store and
-/// the live [AppController]. Tests override either this provider
-/// directly (to install a stub) or [memoryStoreProvider] alone (since
-/// the production adapter reads whatever store override is in place).
+/// Production now binds [LlmAiUpdate] for signed-in users (the
+/// real Gemini-backed adapter). [MockAiUpdate] remains as a
+/// deterministic test fixture; tests reach for it by overriding
+/// this provider directly with a `MockAiUpdate(...)` instance.
 ///
-/// `ref.read` for the controller — the adapter just needs a handle and
-/// does not need to react to AppState changes. `ref.watch` for the
-/// store so swapping the store override in tests takes effect.
+/// Signed-out users hit the [_SignedOutAiUpdate] sentinel whose
+/// every call throws [StateError]. This mirrors the
+/// [_SignedOutMemoryStore] guard from Pass 4.2 #058 — the AI
+/// Update flow lives behind the authenticated app shell, so this
+/// branch should never be reached in production. The sentinel
+/// exists for tests, for ordering bugs around sign-out, and as a
+/// defensive guard.
 ///
-/// The `onMemoryWritten` callback bumps [memoryEpochProvider] after a
-/// successful save so [recommendationsProvider] sees the
-/// memory-change half of the PRD Q2 invalidation on the very next
-/// read.
+/// `recentInteractionsLookup` reads from the live
+/// [AppController.state.interactions] filtered by contactId,
+/// most-recent-first, capped at
+/// [_aiUpdateRecentInteractionsCap]. The cap keeps prompt size
+/// bounded for deep-history contacts; #078 builds the prompt
+/// section, this is just the source.
+///
+/// `onMemoryWritten` continues to bump [memoryEpochProvider] so
+/// `recommendationsProvider` sees the memory-change half of the
+/// PRD Q2 dual invalidation. Both adapters honor the hook.
 final aiUpdateProvider = Provider<AiUpdate>((ref) {
-  return MockAiUpdate(
-    memoryStore: ref.watch(memoryStoreProvider),
-    appController: ref.read(appControllerProvider.notifier),
+  final user = ref.watch(currentUserProvider);
+  if (user == null) {
+    return const _SignedOutAiUpdate();
+  }
+  final memoryStore = ref.watch(memoryStoreProvider);
+  final firebaseAi = ref.watch(firebaseAiProvider);
+  final appController = ref.read(appControllerProvider.notifier);
+  return LlmAiUpdate(
+    firebaseAi: firebaseAi,
+    memoryStore: memoryStore,
+    appController: appController,
+    recentInteractionsLookup: (contactId) {
+      // Most-recent-first slice of [AppState.interactions] bounded
+      // at the cap below. AppController stores interactions in
+      // insertion order; we sort by date desc to be explicit and
+      // robust to future changes in storage order.
+      final all = ref
+          .read(appControllerProvider)
+          .interactions
+          .where((i) => i.contactId == contactId)
+          .toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
+      if (all.length > _aiUpdateRecentInteractionsCap) {
+        return all.sublist(0, _aiUpdateRecentInteractionsCap);
+      }
+      return all;
+    },
     onMemoryWritten: () {
       final clock = ref.read(clockProvider);
       ref.read(memoryEpochProvider.notifier).bump(clock());
     },
   );
 });
+
+/// Cap on how many recent CrmInteractions ride along in the LLM
+/// prompt (PRD §Q5 prompt-size budget). Tens of recent updates
+/// already saturate Gemini's context with the existing memory
+/// markdown; this is the practical horizon for prompt freshness.
+const int _aiUpdateRecentInteractionsCap = 10;
+
+/// Sentinel returned by [aiUpdateProvider] while signed out
+/// (Pass 4.3 #081). Every method throws [StateError] so a signed-
+/// out AI Update attempt surfaces immediately instead of silently
+/// hitting the SDK or running the Mock.
+class _SignedOutAiUpdate implements AiUpdate {
+  const _SignedOutAiUpdate();
+
+  static const String _msg =
+      'AI Update is not available while signed out.';
+
+  @override
+  Future<AiUpdateResult> run({
+    required Connection contact,
+    required String userInput,
+    required MemoryDocument currentMemory,
+    required List<AttachmentRef> attachments,
+    Future<void>? cancelToken,
+  }) =>
+      Future.error(StateError(_msg));
+
+  @override
+  Future<void> commit(AiUpdateResult result) =>
+      Future.error(StateError(_msg));
+}
 
 /// Freshness window for the [recommendationsProvider] cache (PRD Q2).
 ///

@@ -14,6 +14,16 @@ ProviderContainer _container({InMemoryMemoryStore? store}) {
   return ProviderContainer(overrides: [
     ...signedInDemoOverrides(),
     memoryStoreProvider.overrideWithValue(memoryStore),
+    // Pass 4.3 #081: pin MockAiUpdate after the production cutover
+    // to LlmAiUpdate. Mock's deterministic shape is what every test
+    // below asserts on; the cutover would otherwise route to a
+    // null-firebaseAi LlmAiUpdate that throws at the first run().
+    aiUpdateProvider.overrideWith(
+      (ref) => MockAiUpdate(
+        memoryStore: memoryStore,
+        appController: ref.read(appControllerProvider.notifier),
+      ),
+    ),
   ]);
 }
 

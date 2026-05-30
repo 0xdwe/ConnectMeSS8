@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:uuid/uuid.dart';
 
 import '../models/social_models.dart';
@@ -15,6 +17,24 @@ class AiUpdateFailure implements Exception {
   final String message;
   @override
   String toString() => 'AiUpdateFailure: $message';
+}
+
+/// Marker exception thrown when the user cancels an in-flight AI
+/// Update before the result is committed (PRD Pass 4.3 §Q8 group 3 /
+/// #080).
+///
+/// Sibling of [AiUpdateFailure] rather than a subtype — cancellation
+/// is not an error and the modal handles it as a silent close (no
+/// snackbar). The two exception types are exhaustive at the call
+/// site so nothing slips through generic `catch (e)`.
+///
+/// Lives in this file (rather than next to [LlmAiUpdate]) so
+/// [MockAiUpdate] can throw it without an upward import. Both
+/// adapters honor the `cancelToken` parameter on [AiUpdate.run].
+class AiUpdateCancelled implements Exception {
+  const AiUpdateCancelled();
+  @override
+  String toString() => 'AiUpdateCancelled';
 }
 
 /// Unified AI-update seam (PRD Q1).
@@ -97,6 +117,7 @@ class MockAiUpdate implements AiUpdate {
     this.failOnRun = false,
     this.failOnSave = false,
     this.failOnApply = false,
+    this.slowRunDuration,
   });
 
   final MemoryStore memoryStore;
@@ -119,6 +140,16 @@ class MockAiUpdate implements AiUpdate {
   /// memory save succeeds, exercising the rollback path. Test-only.
   final bool failOnApply;
 
+  /// Test-only delay before [run] returns. Used by widget tests in
+  /// #081 to exercise the modal's loading view + Cancel affordance
+  /// without booting Gemini. Production never sets this; the Mock's
+  /// run is otherwise instantaneous.
+  ///
+  /// While the delay is in flight, the run races against the
+  /// supplied `cancelToken` (if any) and throws [AiUpdateCancelled]
+  /// if cancellation wins.
+  final Duration? slowRunDuration;
+
   static const _uuid = Uuid();
 
   @override
@@ -131,6 +162,40 @@ class MockAiUpdate implements AiUpdate {
   }) async {
     if (failOnRun) {
       throw const AiUpdateFailure('test-injected run failure');
+    }
+    final delay = slowRunDuration;
+    if (delay != null) {
+      // Race the delay against the cancel token. If the token
+      // completes first, throw [AiUpdateCancelled] and short-
+      // circuit before producing a result — mirrors the
+      // [LlmAiUpdate] cancel contract from #080. Production never
+      // sets `slowRunDuration`, so production cancel is a no-op
+      // (the run finishes faster than any user can tap Cancel).
+      //
+      // We use a cancellable Timer here rather than
+      // [Future.any]/[Future.delayed] so the pending timer is torn
+      // down when cancel wins; otherwise widget tests under
+      // fake_async report "a Timer is still pending" after the
+      // widget tree disposes.
+      final completer = Completer<void>();
+      final timer = Timer(delay, () {
+        if (!completer.isCompleted) completer.complete();
+      });
+      final tokenSub = cancelToken?.then((_) {
+        if (!completer.isCompleted) {
+          timer.cancel();
+          completer.completeError(const AiUpdateCancelled());
+        }
+      });
+      try {
+        await completer.future;
+      } finally {
+        timer.cancel();
+        // Detach the token-listener Future from any further effect
+        // on this completer; the local completer is already settled
+        // and the next run allocates a fresh one.
+        tokenSub?.ignore();
+      }
     }
     final type = _categorize(userInput);
     final title = _titleFor(type);

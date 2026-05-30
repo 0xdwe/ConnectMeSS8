@@ -109,11 +109,25 @@ Future<void> _settle() async {
 }
 
 ProviderContainer _container({_FakeClock? clock}) {
+  final memoryStore = InMemoryMemoryStore();
   return ProviderContainer(overrides: [
     firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
-    memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+    memoryStoreProvider.overrideWithValue(memoryStore),
     ..._seededPassFourFiveOverrides().overrides,
     if (clock != null) clockProvider.overrideWithValue(clock.call),
+    // Pass 4.3 #081: production aiUpdateProvider now constructs
+    // LlmAiUpdate which would reach Firebase AI Logic. Pin Mock to
+    // preserve the deterministic shape these tests assert on.
+    aiUpdateProvider.overrideWith(
+      (ref) => MockAiUpdate(
+        memoryStore: memoryStore,
+        appController: ref.read(appControllerProvider.notifier),
+        onMemoryWritten: () {
+          final c = ref.read(clockProvider);
+          ref.read(memoryEpochProvider.notifier).bump(c());
+        },
+      ),
+    ),
   ]);
 }
 
@@ -316,6 +330,19 @@ void main() {
         memoryStoreProvider.overrideWithValue(store),
         ..._seededPassFourFiveOverrides().overrides,
         clockProvider.overrideWithValue(clock.call),
+        // Pass 4.3 #081: pin Mock as the active adapter; this test
+        // asserts memoryEpoch bump from a successful commit, which
+        // requires the onMemoryWritten hook to land.
+        aiUpdateProvider.overrideWith(
+          (ref) => MockAiUpdate(
+            memoryStore: store,
+            appController: ref.read(appControllerProvider.notifier),
+            onMemoryWritten: () {
+              final c = ref.read(clockProvider);
+              ref.read(memoryEpochProvider.notifier).bump(c());
+            },
+          ),
+        ),
       ]);
       addTearDown(container.dispose);
 
@@ -377,6 +404,15 @@ void main() {
         firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
         memoryStoreProvider.overrideWithValue(storeA),
         ..._seededPassFourFiveOverrides().overrides,
+        // Pass 4.3 #081: pin Mock; this test doesn't read the
+        // adapter directly but a future provider walk could touch
+        // it via aiUpdateProvider construction.
+        aiUpdateProvider.overrideWith(
+          (ref) => MockAiUpdate(
+            memoryStore: ref.watch(memoryStoreProvider),
+            appController: ref.read(appControllerProvider.notifier),
+          ),
+        ),
       ]);
       addTearDown(container.dispose);
 
@@ -386,6 +422,12 @@ void main() {
         firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
         memoryStoreProvider.overrideWithValue(storeB),
         ..._seededPassFourFiveOverrides().overrides,
+        aiUpdateProvider.overrideWith(
+          (ref) => MockAiUpdate(
+            memoryStore: ref.watch(memoryStoreProvider),
+            appController: ref.read(appControllerProvider.notifier),
+          ),
+        ),
       ]);
 
       final listB = container.read(recommendationsProvider);

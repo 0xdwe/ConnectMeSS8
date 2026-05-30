@@ -14,9 +14,21 @@ import '../test_overrides.dart';
 
 ProviderContainer _container({InMemoryMemoryStore? store}) {
   final memoryStore = store ?? InMemoryMemoryStore();
+  // Pass 4.3 #081: production aiUpdateProvider now constructs
+  // LlmAiUpdate which would reach Firebase AI Logic. These tests
+  // predate the cutover and rely on MockAiUpdate's deterministic
+  // keyword extractor; override the provider to pin Mock as the
+  // active adapter and reuse the same memoryStore + AppController
+  // the screen reads.
   return ProviderContainer(overrides: [
     ...signedInDemoOverrides(),
     memoryStoreProvider.overrideWithValue(memoryStore),
+    aiUpdateProvider.overrideWith(
+      (ref) => MockAiUpdate(
+        memoryStore: memoryStore,
+        appController: ref.read(appControllerProvider.notifier),
+      ),
+    ),
   ]);
 }
 

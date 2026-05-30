@@ -74,6 +74,17 @@ ProviderContainer _container({
     eventStoreProvider.overrideWithValue(events),
     userDocStoreProvider.overrideWithValue(userDoc),
     batchedWritesProvider.overrideWithValue(batched),
+    // Pass 4.3 #081: production aiUpdateProvider now constructs
+    // LlmAiUpdate which would reach Firebase AI Logic. These tests
+    // predate the cutover and rely on MockAiUpdate's deterministic
+    // shape; pin Mock as the active adapter, sharing the same
+    // memoryStore + AppController the rest of the container reads.
+    aiUpdateProvider.overrideWith(
+      (ref) => MockAiUpdate(
+        memoryStore: memory,
+        appController: ref.read(appControllerProvider.notifier),
+      ),
+    ),
   ]);
 }
 

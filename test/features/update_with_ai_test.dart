@@ -1,6 +1,8 @@
+import 'package:connect_me/src/ai/ai_update.dart';
 import 'package:connect_me/src/app/connect_me_app.dart';
 import 'package:connect_me/src/features/ai_update_screen.dart';
 import 'package:connect_me/src/models/social_models.dart';
+import 'package:connect_me/src/state/app_state.dart';
 import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
@@ -10,14 +12,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../test_overrides.dart';
+
 /// #042: AiUpdateScreen now reads `memoryProvider(contactId).future`
 /// before running AI, which routes through `memoryStoreProvider`. The
 /// production override is `FileMemoryStore` and would do real disk
 /// I/O under `pumpAndSettle`; widget tests install an in-memory store.
+///
+/// Pass 4.3 #081: production aiUpdateProvider now constructs
+/// LlmAiUpdate; pin MockAiUpdate as the active adapter so the
+/// existing state-machine tests keep their deterministic shape.
 Widget _wrapScreen({required String contactId, List<AttachmentRef>? initialAttachments}) {
+  final memoryStore = InMemoryMemoryStore();
   return ProviderScope(
     overrides: [
-      memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+      ...signedInDemoOverrides(),
+      memoryStoreProvider.overrideWithValue(memoryStore),
+      aiUpdateProvider.overrideWith(
+        (ref) => MockAiUpdate(
+          memoryStore: memoryStore,
+          appController: ref.read(appControllerProvider.notifier),
+        ),
+      ),
     ],
     child: MaterialApp(
       theme: AppTheme.data(false),
