@@ -42,19 +42,6 @@ import 'llm_ai_update_response.dart';
 import 'llm_ai_update_schema.dart';
 import 'llm_ai_update_user_message.dart';
 
-/// Marker exception thrown when the user cancels an in-flight AI
-/// Update before the result is committed (PRD §Q8 group 3).
-///
-/// Sibling of [AiUpdateFailure] rather than a subtype — cancellation
-/// is not an error and the modal handles it as a silent close (no
-/// snackbar). The two exception types are exhaustive at the call
-/// site so nothing slips through generic `catch (e)`.
-class AiUpdateCancelled implements Exception {
-  const AiUpdateCancelled();
-  @override
-  String toString() => 'AiUpdateCancelled';
-}
-
 /// Default per-call timeout for Gemini's `generateContent` (PRD §Q6
 /// 20-second decision). Exposed as a constant so #082 integration
 /// tests can probe the timing without re-deriving the bound.

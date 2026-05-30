@@ -119,16 +119,20 @@ Future<void> activateAppCheck() async {
 ///
 /// Production resolves to `FirebaseAI.googleAI()` — the Gemini
 /// Developer API backend on Firebase AI Logic per PRD §Q1 §Q2.
-/// Tests do not need to override this provider unless they
-/// specifically exercise [LlmAiUpdate]; the production
-/// `aiUpdateProvider` continues to bind `MockAiUpdate` until #081.
+/// Production callers should treat the value as non-null; the
+/// nullable shape exists so headless tests (notably
+/// `test/state/memory/ai_update_provider_test.dart`) can override
+/// with `null` to construct an [LlmAiUpdate] without booting
+/// Firebase. The adapter carries `firebaseAi` as nullable already,
+/// and the failure-path tests in #080 already exercise the null
+/// branch.
 ///
 /// `googleAI()` consumes Firebase Auth and App Check via
 /// `FirebaseApp.getService` internally, so the call site does not
 /// have to thread either explicitly. The instance is cached per
 /// app identity by the SDK, so re-reading this provider after an
 /// auth swap is cheap.
-final firebaseAiProvider = Provider<FirebaseAI>(
+final firebaseAiProvider = Provider<FirebaseAI?>(
   (ref) => FirebaseAI.googleAI(),
 );
 

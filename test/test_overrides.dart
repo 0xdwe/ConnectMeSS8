@@ -66,6 +66,14 @@ List<dynamic> signedInDemoOverrides({String uid = 'demo-uid'}) {
         ),
       ),
     ),
+    // Pass 4.3 #081: aiUpdateProvider now constructs LlmAiUpdate for
+    // signed-in users, which reaches firebaseAiProvider. The real
+    // factory boots the SDK against FirebaseApp.instance which is
+    // not initialized in headless tests; override to null so the
+    // adapter is constructed with `firebaseAi: null`. Tests that
+    // exercise an AI run override `aiUpdateProvider` directly with
+    // a Mock and never reach this slot.
+    firebaseAiProvider.overrideWithValue(null),
     connectionStoreProvider.overrideWithValue(connections),
     interactionStoreProvider.overrideWithValue(interactions),
     eventStoreProvider.overrideWithValue(events),

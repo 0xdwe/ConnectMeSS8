@@ -1,5 +1,7 @@
+import 'package:connect_me/src/ai/ai_update.dart';
 import 'package:connect_me/src/features/ai_update_screen.dart';
 import '../test_overrides.dart';
+import 'package:connect_me/src/state/app_state.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
@@ -11,9 +13,19 @@ import 'package:flutter_test/flutter_test.dart';
 /// before running AI. Override `memoryStoreProvider` so widget tests
 /// don't stall on real disk I/O via the production `FileMemoryStore`.
 ProviderContainer _container() {
+  final memoryStore = InMemoryMemoryStore();
+  // Pass 4.3 #081: production aiUpdateProvider now constructs
+  // LlmAiUpdate; these tests rely on MockAiUpdate's deterministic
+  // append behavior so the stagger fixture is stable.
   return ProviderContainer(overrides: [
     ...signedInDemoOverrides(),
-    memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+    memoryStoreProvider.overrideWithValue(memoryStore),
+    aiUpdateProvider.overrideWith(
+      (ref) => MockAiUpdate(
+        memoryStore: memoryStore,
+        appController: ref.read(appControllerProvider.notifier),
+      ),
+    ),
   ]);
 }
 

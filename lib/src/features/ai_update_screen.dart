@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show File;
 
 import 'package:file_selector/file_selector.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../ai/ai_update.dart';
 import '../models/social_models.dart';
 import '../state/app_state.dart';
 import '../state/memory/memory_document.dart';
@@ -36,6 +38,13 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
   // without depending on `MockAiUpdate`'s internal append shape.
   // Cleared alongside `previewResult` on cancel/save.
   MemoryDocument? priorMemory;
+  // Cancellation token (Pass 4.3 #081). Allocated on each `submit()`
+  // and completed by `cancel()` while the screen is in the
+  // [AiUpdateState.generating] state. The adapter races its in-
+  // flight Gemini call against this future and throws
+  // [AiUpdateCancelled] when cancellation wins. Reset to null
+  // before the next run so a stale completer can't fire mid-future.
+  Completer<void>? _cancelCompleter;
   List<TextEditingController> titleControllers = [];
   List<TextEditingController> noteControllers = [];
   // Animation controllers for the staggered preview entrance. There are
@@ -80,6 +89,8 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
   }
 
   Future<void> submit() async {
+    final cancelCompleter = Completer<void>();
+    _cancelCompleter = cancelCompleter;
     setState(() => currentState = AiUpdateState.generating);
     try {
       final connection = ref
@@ -92,6 +103,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
             userInput: input.text.trim(),
             currentMemory: memory,
             attachments: attachments,
+            cancelToken: cancelCompleter.future,
           );
       
       // Initialize controllers for editable fields
@@ -145,13 +157,62 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
           controller.value = 1.0;
         }
       }
-    } catch (e) {
-      setState(() => currentState = AiUpdateState.inputting);
+    } on AiUpdateCancelled {
+      // PRD §Q8 group 3 / #080: cancellation is not an error.
+      // Return to the input view with the user's text + attachments
+      // intact and surface no snackbar. The cancel handler already
+      // transitioned the state when it completed the token, but a
+      // belt-and-braces re-set keeps this path correct even if the
+      // adapter throws AiUpdateCancelled for some other reason
+      // (e.g. token completed before run started).
+      if (mounted && currentState != AiUpdateState.inputting) {
+        setState(() => currentState = AiUpdateState.inputting);
+      }
+    } on AiUpdateFailure catch (e) {
+      // PRD §Q8: surface the adapter's tailored copy directly. The
+      // adapter is responsible for choosing the right message per
+      // failure class (transient, App Check, quota, content policy,
+      // all-attachments-unreadable). The modal stays voice-neutral
+      // here — the message is the contract.
       if (mounted) {
+        setState(() => currentState = AiUpdateState.inputting);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text(e.message)),
         );
       }
+    } catch (e) {
+      // Catch-all for non-AiUpdate exceptions (e.g. a programming
+      // error in the seam). Warm app-voice fallback so the user
+      // sees something helpful instead of a raw stack-trace string.
+      if (mounted) {
+        setState(() => currentState = AiUpdateState.inputting);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Couldn't run AI update — try again. ($e)")),
+        );
+      }
+    } finally {
+      // Drop the completer reference so the next submit allocates a
+      // fresh one. Note: completing an already-completed Completer
+      // throws, so cancel() guards on `isCompleted`.
+      if (identical(_cancelCompleter, cancelCompleter)) {
+        _cancelCompleter = null;
+      }
+    }
+  }
+
+  /// Cancel handler invoked from the loading view's Cancel button
+  /// (Pass 4.3 #081). Completes [_cancelCompleter] so the in-flight
+  /// `aiUpdateProvider.run()` race throws [AiUpdateCancelled] and
+  /// returns control to the catch arm in [submit]. The user's typed
+  /// text and attached files are NOT cleared — cancel returns to the
+  /// input view exactly as the user left it.
+  void cancelGenerating() {
+    final completer = _cancelCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
+    }
+    if (mounted) {
+      setState(() => currentState = AiUpdateState.inputting);
     }
   }
 
@@ -307,7 +368,9 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
       ),
       body: currentState == AiUpdateState.previewing
           ? _buildPreviewView(tokens, person)
-          : _buildInputView(tokens, person),
+          : currentState == AiUpdateState.generating
+              ? _buildLoadingView(tokens, person)
+              : _buildInputView(tokens, person),
     );
   }
 
@@ -362,6 +425,40 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
         ),
       ])),
     ]);
+  }
+
+  /// Loading view shown while [aiUpdateProvider.run] is in flight
+  /// (Pass 4.3 #081 / PRD §Q10). Centered spinner, warm copy that
+  /// names the contact, and a Cancel affordance that races the
+  /// adapter via [_cancelCompleter]. Cancel is reachable even when
+  /// the spinner is mid-animation.
+  Widget _buildLoadingView(AppTokens tokens, Connection person) {
+    final firstName = person.name.split(' ').first;
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(AppSpacing.space8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              key: const Key('ai-loading-spinner'),
+            ),
+            SizedBox(height: AppSpacing.space5),
+            Text(
+              "Reading what you've shared with $firstName…",
+              style: AppTypography.bodyLg(color: tokens.inkMuted),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: AppSpacing.space6),
+            OutlinedButton(
+              key: const Key('ai-loading-cancel-button'),
+              onPressed: cancelGenerating,
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildPreviewView(AppTokens tokens, Connection person) {
