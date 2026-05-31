@@ -155,8 +155,17 @@ Future<void> activateAppCheck() async {
 
 /// Active [FirebaseAI] handle (Pass 4.3, #077).
 ///
-/// Production resolves to `FirebaseAI.googleAI()` — the Gemini
-/// Developer API backend on Firebase AI Logic per PRD §Q1 §Q2.
+/// Production resolves to `FirebaseAI.vertexAI()` — the Vertex AI
+/// backend on Firebase AI Logic, region `us-central1`. Originally
+/// pinned to `googleAI()` per PRD §Q1 (Gemini Developer API for the
+/// free tier), pivoted to Vertex AI on 2026-05-31 after the
+/// Developer API's prepay credit was exhausted on the connect-me-e20b1
+/// project. Vertex AI charges to Google Cloud Blaze billing where the
+/// 9,400 NTD prototype credit lives, and the SDK call surface is
+/// identical above this line (same `generativeModel`,
+/// `generateContent`, schema-constrained output). See PRD §Q1
+/// addendum dated 2026-05-31.
+///
 /// Production callers should treat the value as non-null; the
 /// nullable shape exists so headless tests (notably
 /// `test/state/memory/ai_update_provider_test.dart`) can override
@@ -165,13 +174,13 @@ Future<void> activateAppCheck() async {
 /// and the failure-path tests in #080 already exercise the null
 /// branch.
 ///
-/// `googleAI()` consumes Firebase Auth and App Check via
+/// `vertexAI()` consumes Firebase Auth and App Check via
 /// `FirebaseApp.getService` internally, so the call site does not
 /// have to thread either explicitly. The instance is cached per
 /// app identity by the SDK, so re-reading this provider after an
 /// auth swap is cheap.
 final firebaseAiProvider = Provider<FirebaseAI?>(
-  (ref) => FirebaseAI.googleAI(),
+  (ref) => FirebaseAI.vertexAI(),
 );
 
 /// Currently signed-in [User], or null when signed out
