@@ -99,6 +99,34 @@ void main() {
       );
     });
   });
+
+  group('activateAppCheck — prototype no-op gate', () {
+    test(
+        'is a no-op when kAppCheckEnforcementEnabled is false so a '
+        'headless test environment does not need Firebase.initializeApp',
+        () async {
+      // PRD §Q3 / Path B (2026-05-30): for prototype scope we leave
+      // App Check enforcement OFF and short-circuit activateAppCheck
+      // before it touches the SDK. Without the gate, calling
+      // activateAppCheck in a headless test would throw because
+      // FirebaseAppCheck.instance reaches for FirebaseApp.instance,
+      // which has no [DEFAULT] app initialized.
+      //
+      // Asserting the constant is false pins the prototype-scope
+      // default; flipping it to true at launch is a one-line edit.
+      // The function-completes-without-throw assertion proves the
+      // short-circuit actually fires.
+      expect(
+        kAppCheckEnforcementEnabled,
+        isFalse,
+        reason:
+            'Prototype scope keeps App Check enforcement OFF per '
+            'PRD §Q3 / Path B. Flip to true at launch when registering '
+            'a real attestation provider in the Firebase console.',
+      );
+      await activateAppCheck();
+    });
+  });
 }
 
 /// Test double for `FirebaseAuth` that replays `currentUser` on

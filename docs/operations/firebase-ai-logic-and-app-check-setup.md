@@ -2,6 +2,14 @@ Labels: docs
 
 # Firebase AI Logic + App Check setup
 
+## Pass 4.3 / Path B (2026-05-30): App Check is OFF for prototype scope
+
+As of `lib/src/state/firebase_providers.dart`'s `kAppCheckEnforcementEnabled = false`, `activateAppCheck()` short-circuits before touching the SDK. AI Logic calls go out without an attestation token; the project's AI Logic enforcement is also OFF in the Firebase console, so requests are accepted.
+
+This is the explicit choice made on 2026-05-30 after observing a 403 ("App attestation failed.") on iOS in development. The iOS app `1:588203814855:ios:9d121a9af9dac9406a73e2` is unregistered with any App Check provider; activating the debug provider against an unregistered app produces the 403. PRD §Q3 explicitly permits prototype scope to keep enforcement off.
+
+**The rest of this doc applies when flipping `kAppCheckEnforcementEnabled` to `true` at launch.** Until then, the per-device debug token registration and the AI Logic enforcement steps below are deferred.
+
 ## Why this exists
 
 Pass 4.3 introduces `LlmAiUpdate`, the production adapter for the AI Update flow that calls Gemini through Firebase AI Logic on the user's behalf (PRD `2026-05-27-llm-ai-update-pass-4-3-prd.md`). The first time this code runs against the live `connect-me-e20b1` project, two things must already be configured: AI Logic must be enabled in the Firebase console, and App Check debug tokens must be registered for the device(s) running the app. This doc covers the one-time setup so the SDK call site lights up cleanly.
