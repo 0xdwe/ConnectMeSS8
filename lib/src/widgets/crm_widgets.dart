@@ -18,6 +18,19 @@ class AppSurface extends StatelessWidget {
       ColoredBox(color: context.tokens.surface, child: child);
 }
 
+/// Parse the memory.history field into display-friendly lines.
+List<String> _parseMemoryHistoryLines(MemoryDocument memory) {
+  final lines = <String>[];
+  for (final raw in memory.history.split('\n')) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) continue;
+    // Drop leading '- ' bullets if present.
+    final line = trimmed.startsWith('- ') ? trimmed.substring(2).trim() : trimmed;
+    lines.add(line);
+  }
+  return lines;
+}
+
 class AppHeader extends StatelessWidget {
   const AppHeader({
     super.key,
@@ -174,83 +187,166 @@ class CardBox extends StatelessWidget {
   }
 }
 
-class ContactListCard extends StatelessWidget {
+class ContactListCard extends StatefulWidget {
   const ContactListCard({
     super.key,
     required this.connection,
     required this.onTap,
   });
+
   final Connection connection;
   final VoidCallback onTap;
 
   @override
+  State<ContactListCard> createState() => _ContactListCardState();
+}
+
+class _ContactListCardState extends State<ContactListCard> {
+  bool hovering = false;
+
+  @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return CardBox(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.space4,
-        vertical: AppSpacing.space3,
-      ),
-      child: InkWell(
-        onTap: onTap,
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: tokens.primaryTint,
-              child: Text(
-                connection.avatar,
-                style: AppTypography.glyph(26),
-              ),
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => hovering = true),
+      onExit: (_) => setState(() => hovering = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        transform: Matrix4.identity()
+          ..translate(0.0, hovering ? -3.0 : 0.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: hovering ? 0.10 : 0.04),
+              blurRadius: hovering ? 18 : 8,
+              offset: Offset(0, hovering ? 8 : 3),
             ),
-            SizedBox(width: AppSpacing.space4),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          connection.name,
-                          style: AppTypography.h2(),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      SizedBox(width: AppSpacing.space2),
-                      CircleAvatar(
-                        radius: 4,
-                        backgroundColor: categoryColor(connection.category, tokens),
-                      ),
-                      if (connection.isSample) ...[
-                        SizedBox(width: AppSpacing.space2),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.space2,
-                            vertical: AppSpacing.space1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: tokens.surfaceSunken,
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                          ),
-                          child: Text(
-                            'Sample',
-                            style: AppTypography.caption(color: tokens.inkSubtle),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  Text(
-                    connection.email,
-                    style: AppTypography.body(color: tokens.inkMuted),
-                  ),
-                ],
-              ),
-            ),
-            BondRing(connection: connection, size: 48, showAvatar: false),
           ],
         ),
+        child: CardBox(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.space5,
+            vertical: AppSpacing.space5,
+          ),
+          border: Border.all(
+            color: hovering
+                ? tokens.primary.withValues(alpha: 0.18)
+                : Colors.transparent,
+          ),
+          onTap: widget.onTap,
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: tokens.primaryTint,
+                child: Text(
+                  widget.connection.avatar,
+                  style: AppTypography.glyph(26),
+                ),
+              ),
+              SizedBox(width: AppSpacing.space5),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.connection.name,
+                      style: AppTypography.h2(),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      widget.connection.email,
+                      style: AppTypography.caption(color: tokens.inkMuted),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.only(top: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: tokens.surfaceSunken,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        widget.connection.category,
+                        style: AppTypography.caption(color: tokens.ink),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ConnectionScoreRing(
+                score: widget.connection.bondScore,
+                size: 58,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ConnectionScoreRing extends StatelessWidget {
+  const ConnectionScoreRing({
+    super.key,
+    required this.score,
+    this.size = 58,
+  });
+
+  final int score;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    const purple = Color(0xFF7C3AED);
+    const green = Color(0xFF22C55E);
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CircularProgressIndicator(
+            value: 1,
+            strokeWidth: 4,
+            color: const Color(0xFFEDE9FE),
+          ),
+
+          CircularProgressIndicator(
+            value: score / 100,
+            strokeWidth: 4,
+            strokeCap: StrokeCap.round,
+            color: purple,
+          ),
+
+          Text(
+            '$score',
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF111827),
+            ),
+          ),
+
+          Positioned(
+            right: 3,
+            bottom: 6,
+            child: Text(
+              '↗',
+              style: TextStyle(
+                color: green,
+                fontSize: size * 0.22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -852,7 +948,7 @@ class _AiInsightsCardState extends State<AiInsightsCard> {
 /// Internal body of the AI Insights card. Extracted so that both the
 /// animated and non-animated builds in `_AiInsightsCardState.build` can
 /// share the same subtree.
-class _AiInsightsBody extends StatelessWidget {
+class _AiInsightsBody extends StatefulWidget {
   const _AiInsightsBody({
     required this.connection,
     required this.insight,
@@ -870,8 +966,16 @@ class _AiInsightsBody extends StatelessWidget {
   final AppTokens tokens;
 
   @override
+  State<_AiInsightsBody> createState() => _AiInsightsBodyState();
+}
+
+class _AiInsightsBodyState extends State<_AiInsightsBody> {
+  String? _selectedTopic;
+
+  @override
   Widget build(BuildContext context) {
-    final topics = topicsForContact(connection, memory);
+    final topics = topicsForContact(widget.connection, widget.memory);
+    final tokens = widget.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -907,7 +1011,7 @@ class _AiInsightsBody extends StatelessWidget {
                     ),
                     SizedBox(height: AppSpacing.space1),
                     Text(
-                      _bondEncouragement(tier),
+                      _bondEncouragement(widget.tier),
                       style: AppTypography.body(
                         color: _recommendationBodyColor,
                       ),
@@ -940,8 +1044,8 @@ class _AiInsightsBody extends StatelessWidget {
         ),
         SizedBox(height: AppSpacing.space2),
         Text(
-          (memorySummary != null && memorySummary!.trim().isNotEmpty)
-              ? memorySummary!
+          (widget.memorySummary != null && widget.memorySummary!.trim().isNotEmpty)
+              ? widget.memorySummary!
               : '',
           style: AppTypography.body(color: tokens.inkMuted),
         ),
@@ -973,12 +1077,12 @@ class _AiInsightsBody extends StatelessWidget {
             for (final topic in topics)
               _TopicPill(
                 topic: topic,
-                onTap: () => _showTopicSuggestionsSheet(
-                  context,
-                  connection.category,
-                  topic,
-                  connection.name,
-                ),
+                isSelected: _selectedTopic == topic,
+                onTap: () {
+                  setState(() {
+                    _selectedTopic = _selectedTopic == topic ? null : topic;
+                  });
+                },
               ),
           ],
         ),
@@ -987,15 +1091,125 @@ class _AiInsightsBody extends StatelessWidget {
           'Click any topic to see AI suggestions.',
           style: AppTypography.caption(color: tokens.inkSubtle),
         ),
+        SizedBox(height: AppSpacing.space3),
+        if (_selectedTopic != null)
+          _InlineTopicDetails(
+            topic: _selectedTopic!,
+            category: widget.connection.category,
+            contactName: widget.connection.name,
+            contactId: widget.connection.id,
+            memory: widget.memory,
+          ),
       ],
     );
   }
 }
 
+class _InlineTopicDetails extends StatelessWidget {
+  const _InlineTopicDetails({
+    required this.topic,
+    required this.category,
+    required this.contactName,
+    required this.contactId,
+    required this.memory,
+  });
+
+  final String topic;
+  final String category;
+  final String contactName;
+  final String contactId;
+  final MemoryDocument? memory;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final suggestions = suggestionsForTopic(category, topic, contactName);
+    return Container(
+      width: double.infinity,
+      margin: EdgeInsets.only(top: AppSpacing.space3),
+      padding: EdgeInsets.all(AppSpacing.space5),
+      decoration: BoxDecoration(
+        color: tokens.recommendationSurface,
+        border: Border.all(color: tokens.recommendationBorder, width: 1.2),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lightbulb_outline, color: tokens.secondary, size: 18),
+              SizedBox(width: AppSpacing.space3),
+              Expanded(child: Text(topic, style: AppTypography.h2().copyWith(fontWeight: FontWeight.w700, color: _recommendationTitleColor))),
+            ],
+          ),
+          SizedBox(height: AppSpacing.space3),
+          Text('Conversation Starter:', style: AppTypography.h2(color: _recommendationTitleColor).copyWith(fontSize: 14)),
+          SizedBox(height: AppSpacing.space2),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(AppSpacing.space3),
+            decoration: BoxDecoration(
+              color: tokens.surfaceRaised,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              boxShadow: [BoxShadow(color: tokens.border.withOpacity(0.04), blurRadius: 6)],
+            ),
+            child: Text(suggestions.isNotEmpty ? suggestions.first : 'Ask an open question about how they\'ve been', style: AppTypography.body(color: _recommendationBodyColor)),
+          ),
+          SizedBox(height: AppSpacing.space3),
+          Text('Past Conversations:', style: AppTypography.h2(color: _recommendationTitleColor).copyWith(fontSize: 14)),
+          SizedBox(height: AppSpacing.space2),
+          if (memory != null && memory!.history.trim().isNotEmpty)
+            for (final line in _parseMemoryHistoryLines(memory!).take(3))
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.space1),
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(AppSpacing.space3),
+                  decoration: BoxDecoration(
+                    color: tokens.recommendationSurface,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Text(line, style: AppTypography.body(color: _recommendationBodyColor)),
+                ),
+              )
+          else
+            Text('No recent conversations recorded.', style: AppTypography.body(color: tokens.inkSubtle)),
+          SizedBox(height: AppSpacing.space3),
+          Text('Current Context:', style: AppTypography.h2(color: _recommendationTitleColor).copyWith(fontSize: 14)),
+          SizedBox(height: AppSpacing.space2),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(AppSpacing.space3),
+            decoration: BoxDecoration(
+              color: tokens.surfaceRaised,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Text((memory != null && memory!.summary.trim().isNotEmpty) ? memory!.summary : 'No current context available.', style: AppTypography.body(color: _recommendationBodyColor)),
+          ),
+          SizedBox(height: AppSpacing.space3),
+          Text('Related News:', style: AppTypography.h2(color: _recommendationTitleColor).copyWith(fontSize: 14)),
+          SizedBox(height: AppSpacing.space2),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(AppSpacing.space3),
+            decoration: BoxDecoration(
+              color: tokens.recommendationSurface,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Text('Mother\'s Day coming up May 11th', style: AppTypography.body(color: _recommendationBodyColor)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _TopicPill extends StatelessWidget {
-  const _TopicPill({required this.topic, required this.onTap});
+  const _TopicPill({required this.topic, required this.onTap, this.isSelected = false});
   final String topic;
   final VoidCallback onTap;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1014,13 +1228,22 @@ class _TopicPill extends StatelessWidget {
             vertical: AppSpacing.space2,
           ),
           decoration: BoxDecoration(
-            color: tokens.topicAccent,
+            color: isSelected ? const Color(0xFF9D6BFF) : tokens.topicAccent,
             borderRadius: BorderRadius.circular(AppRadius.pill),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF9D6BFF).withOpacity(0.22),
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           child: Text(
             topic,
-            style: AppTypography.body(color: tokens.primaryOn)
-                .copyWith(fontWeight: FontWeight.w600),
+            style: AppTypography.body(color: isSelected ? tokens.primaryOn : tokens.primaryOn)
+                .copyWith(fontWeight: FontWeight.w700),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1037,6 +1260,8 @@ void _showTopicSuggestionsSheet(
   String category,
   String topic,
   String contactName,
+  String contactId,
+  MemoryDocument? memory,
 ) {
   final tokens = context.tokens;
   final suggestions = suggestionsForTopic(category, topic, contactName);
@@ -1093,27 +1318,102 @@ void _showTopicSuggestionsSheet(
                 ],
               ),
               SizedBox(height: AppSpacing.space4),
-              for (final suggestion in suggestions)
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.space3),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.arrow_forward,
-                        size: 16,
-                        color: sheetTokens.inkMuted,
+              // Conversation Starter
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.space2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Conversation Starter:', style: AppTypography.h2()),
+                    SizedBox(height: AppSpacing.space2),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(AppSpacing.space3),
+                      decoration: BoxDecoration(
+                        color: sheetTokens.recommendationSurface,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                       ),
-                      SizedBox(width: AppSpacing.space3),
-                      Expanded(
-                        child: Text(
-                          suggestion,
-                          style: AppTypography.body(),
-                        ),
+                      child: Text(
+                        suggestions.isNotEmpty ? suggestions.first : 'Ask an open question about how they\'ve been',
+                        style: AppTypography.body(color: sheetTokens.ink),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+              ),
+              SizedBox(height: AppSpacing.space3),
+              // Past Conversations (from memory.history) — show up to 3 bullets
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.space2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Past Conversations:', style: AppTypography.h2()),
+                    SizedBox(height: AppSpacing.space2),
+                    if (memory != null && memory.history.trim().isNotEmpty)
+                      for (final line in _parseMemoryHistoryLines(memory).take(3))
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: AppSpacing.space1),
+                          child: Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.all(AppSpacing.space3),
+                            decoration: BoxDecoration(
+                              color: sheetTokens.surfaceRaised,
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                            child: Text(line, style: AppTypography.body()),
+                          ),
+                        )
+                    else
+                      Text('No recent conversations recorded.', style: AppTypography.body(color: sheetTokens.inkSubtle)),
+                  ],
+                ),
+              ),
+              SizedBox(height: AppSpacing.space3),
+              // Current Context (memory.summary)
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.space2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Current Context:', style: AppTypography.h2()),
+                    SizedBox(height: AppSpacing.space2),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(AppSpacing.space3),
+                      decoration: BoxDecoration(
+                        color: sheetTokens.surfaceRaised,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Text(
+                        (memory != null && memory.summary.trim().isNotEmpty) ? memory.summary : 'No current context available.',
+                        style: AppTypography.body(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: AppSpacing.space3),
+              // Related News — placeholder static item for now
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.space2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Related News:', style: AppTypography.h2()),
+                    SizedBox(height: AppSpacing.space2),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(AppSpacing.space3),
+                      decoration: BoxDecoration(
+                        color: sheetTokens.recommendationSurface,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Text('Mother\'s Day coming up May 11th', style: AppTypography.body(color: sheetTokens.ink)),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
