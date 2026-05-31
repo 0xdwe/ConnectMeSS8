@@ -390,7 +390,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
         SizedBox(height: AppSpacing.space2),
         Text('Tell AI anything', style: AppTypography.h2()),
         SizedBox(height: AppSpacing.space2),
-        Text('Text, images, files. Mock AI categorizes info into correct basket and updates history/dashboard.', style: AppTypography.body(color: tokens.inkMuted)),
+        Text('Text, images, files. AI categorizes info into the right basket and updates history/dashboard.', style: AppTypography.body(color: tokens.inkMuted)),
         SizedBox(height: AppSpacing.space4),
         TextField(key: const Key('ai-input-field'), controller: input, minLines: 4, maxLines: 12, decoration: const InputDecoration(hintText: 'Example: Sam said today is first day at job. Ask how it went tomorrow.')),
         SizedBox(height: AppSpacing.space3),

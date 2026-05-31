@@ -9,6 +9,7 @@ import 'package:connect_me/src/state/app_state.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_document.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
+import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -39,6 +40,7 @@ LlmAiUpdate _adapter(
   bool failOnNetwork = false,
   bool failOnQuota = false,
   bool failOnContentPolicy = false,
+  bool failOnAppCheck = false,
   bool cancelMidRun = false,
   bool failOnSave = false,
   bool failOnApply = false,
@@ -55,6 +57,7 @@ LlmAiUpdate _adapter(
     failOnNetwork: failOnNetwork,
     failOnQuota: failOnQuota,
     failOnContentPolicy: failOnContentPolicy,
+    failOnAppCheck: failOnAppCheck,
     cancelMidRun: cancelMidRun,
     failOnSave: failOnSave,
     failOnApply: failOnApply,
@@ -161,6 +164,85 @@ void main() {
             (e) => e.message.toLowerCase(),
             'message',
             contains('rephras'),
+          ),
+        ),
+      );
+    });
+
+    test(
+        'classifyFirebaseException maps firebase_app_check exceptions to '
+        'the PRD §Q8 "sign out and back in" copy', () {
+      // The end-to-end test above uses the failOnAppCheck top-level
+      // shortcut. This unit test pins the production catch arm's
+      // classifier directly so a regression in the routing logic
+      // (e.g. plugin name typo) is caught even when the shortcut
+      // path stays correct.
+      final mapped = debugClassifyFirebaseException(
+        FirebaseException(
+          plugin: 'firebase_app_check',
+          code: 'unknown',
+          message: 'App attestation failed.',
+        ),
+      );
+      expect(mapped, isA<AiUpdateFailure>());
+      expect(
+        mapped!.message.toLowerCase(),
+        allOf(contains('unavailable'), contains('sign out')),
+      );
+    });
+
+    test(
+        'classifyFirebaseException returns null for unknown plugins '
+        'so the retry loop treats them as transient', () {
+      // Unknown FirebaseException plugins (e.g. firebase_core) fall
+      // through to the transient retry path. The classifier returns
+      // null so the calling catch arm assigns lastError and continues
+      // the loop — same shape as a TimeoutException.
+      final mapped = debugClassifyFirebaseException(
+        FirebaseException(
+          plugin: 'firebase_core',
+          code: 'unknown',
+          message: 'something else',
+        ),
+      );
+      expect(mapped, isNull);
+    });
+
+    test(
+        'failOnAppCheck routes through PRD §Q8 "sign out and back in" '
+        'copy (Pass 4.3 hotfix — debug-token 403)', () async {
+      // Real-world hit: on iOS, the firebase_app_check debug provider
+      // exchanges a per-device debug token for a real attestation.
+      // If that token is not registered in the Firebase console for
+      // project connect-me-e20b1, the exchange returns HTTP 403
+      // "App attestation failed" / PERMISSION_DENIED, which surfaces
+      // as a `FirebaseException(plugin: 'firebase_app_check')`. The
+      // first build of #081 fell through to the warm catch-all
+      // because LlmAiUpdate's typed catches only knew about
+      // `FirebaseAIException` (a sibling type). This test pins the
+      // routing so a future regression is caught headlessly.
+      final container = _container();
+      addTearDown(container.dispose);
+      final adapter = _adapter(container, failOnAppCheck: true);
+      final sarah =
+          _connection(container.read(appControllerProvider), 'sarah');
+      final memory = await container.read(memoryProvider('sarah').future);
+
+      await expectLater(
+        () => adapter.run(
+          contact: sarah,
+          userInput: 'anything',
+          currentMemory: memory,
+          attachments: const [],
+        ),
+        throwsA(
+          isA<AiUpdateFailure>().having(
+            (e) => e.message.toLowerCase(),
+            'message',
+            allOf(
+              contains('unavailable'),
+              contains('sign out'),
+            ),
           ),
         ),
       );
