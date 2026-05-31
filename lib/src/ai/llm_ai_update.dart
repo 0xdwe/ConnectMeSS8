@@ -28,6 +28,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_ai/firebase_ai.dart';
+import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -71,6 +72,7 @@ class LlmAiUpdate implements AiUpdate {
     this.failOnNetwork = false,
     this.failOnQuota = false,
     this.failOnContentPolicy = false,
+    this.failOnAppCheck = false,
     this.cancelMidRun = false,
     this.failOnSave = false,
     this.failOnApply = false,
@@ -136,6 +138,15 @@ class LlmAiUpdate implements AiUpdate {
   /// Permanent; user-actionable.
   final bool failOnContentPolicy;
 
+  /// Throws a real [FirebaseException] with `plugin:
+  /// 'firebase_app_check'` from inside the SDK retry loop. Used by
+  /// tests to prove the App Check failure routing surfaces the
+  /// PRD §Q8 "sign out and back in" copy. Real-world hit (Pass 4.3
+  /// hotfix): debug-token exchange returning HTTP 403 "App
+  /// attestation failed" when the iOS device's debug token has
+  /// not been registered in the Firebase console.
+  final bool failOnAppCheck;
+
   /// Throws [AiUpdateCancelled] mid-run. Used by tests to prove the
   /// cancellation path leaves memory + state untouched.
   final bool cancelMidRun;
@@ -179,6 +190,18 @@ class LlmAiUpdate implements AiUpdate {
       throw const AiUpdateFailure(
         "That content couldn't be processed. Try rephrasing, or "
         'removing an attachment.',
+      );
+    }
+    if (failOnAppCheck) {
+      // Pass 4.3 hotfix: surface the App Check rejection through
+      // the PRD §Q8 "sign out and back in" copy. Production routes
+      // here via the FirebaseException catch arm in
+      // _generateAndParseWithRetry; the knob short-circuits at the
+      // top of run() because the test path uses firebaseAi: null
+      // and never reaches the SDK call site.
+      throw const AiUpdateFailure(
+        'AI service unavailable. Please retry, or sign out and '
+        'back in.',
       );
     }
 
@@ -387,6 +410,21 @@ class LlmAiUpdate implements AiUpdate {
             'removing an attachment.',
           );
         }
+        lastError = e;
+      } on FirebaseException catch (e) {
+        // Errors from sibling Firebase plugins (firebase_app_check,
+        // firebase_core) surface here. Routing lives in the
+        // [debugClassifyFirebaseException] helper below so the
+        // mapping can be unit-tested without booting the SDK.
+        final mapped = debugClassifyFirebaseException(e);
+        if (mapped != null) {
+          throw mapped;
+        }
+        // Other plugins falling through this arm are treated as
+        // transient and retried once — a defensive default; we
+        // have no specific routing for firebase_core / firestore
+        // errors raised here, and an unknown Firebase error is
+        // closer to a network blip than a permanent failure.
         lastError = e;
       } on TimeoutException catch (e) {
         lastError = e;
@@ -648,6 +686,34 @@ AiUpdateResult debugProjectLlmResponseOntoAiUpdateResult({
     userInput: '',
     now: now,
   );
+}
+
+/// Maps a [FirebaseException] surfaced by a sibling Firebase plugin
+/// (e.g. `firebase_app_check`) into the appropriate user-facing
+/// [AiUpdateFailure], or `null` if the exception should be treated
+/// as transient and retried by the caller.
+///
+/// Exposed as `@visibleForTesting` so the routing table can be unit
+/// tested without booting `FirebaseAI`. The production catch arm in
+/// `LlmAiUpdate._generateAndParseWithRetry` calls this helper, so a
+/// regression in the routing logic (e.g. a typo in the plugin name)
+/// fails the headless test rather than only surfacing in production.
+///
+/// Currently maps:
+/// - `plugin: 'firebase_app_check'` → PRD §Q8 "sign out and back in"
+///   copy. Triggered in production when the iOS debug-token
+///   exchange returns 403 ("App attestation failed") because the
+///   per-device debug token has not been registered in the
+///   Firebase console for project `connect-me-e20b1`.
+@visibleForTesting
+AiUpdateFailure? debugClassifyFirebaseException(FirebaseException e) {
+  if (e.plugin == 'firebase_app_check') {
+    return const AiUpdateFailure(
+      'AI service unavailable. Please retry, or sign out and '
+      'back in.',
+    );
+  }
+  return null;
 }
 
 /// Default closure-of-prepareAttachments that satisfies the seam's
