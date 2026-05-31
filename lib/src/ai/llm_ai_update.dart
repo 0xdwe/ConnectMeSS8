@@ -48,11 +48,19 @@ import 'llm_ai_update_user_message.dart';
 /// tests can probe the timing without re-deriving the bound.
 const Duration kLlmAiUpdateDefaultTimeout = Duration(seconds: 20);
 
-/// Default model. Aligned to the Firebase-recommended current-gen
-/// Flash-Lite at the time of #076 verification. Configurable via
-/// the [LlmAiUpdate] constructor so dogfooding can swap to Flash or
-/// Pro per call without a code change.
-const String kLlmAiUpdateDefaultModel = 'gemini-3.1-flash-lite';
+/// Default model. Pivoted to `gemini-2.5-flash-lite` on 2026-05-31
+/// after the original choice (`gemini-3.1-flash-lite`) returned
+/// `Publisher Model ... was not found or your project does not
+/// have access to it` from Vertex AI — 3.1 is published on the
+/// Gemini Developer API but had not reached Vertex AI for project
+/// `connect-me-e20b1` at the time of the pivot. 2.5 Flash-Lite is
+/// GA on Vertex AI, has the same Flash-Lite cost / latency tier,
+/// and supports the same schema-constrained structured output and
+/// vision capabilities.
+///
+/// Configurable via the [LlmAiUpdate] constructor so dogfooding
+/// can swap to Flash or Pro per call without a code change.
+const String kLlmAiUpdateDefaultModel = 'gemini-2.5-flash-lite';
 
 /// Production [AiUpdate] adapter that calls Gemini via Firebase AI
 /// Logic. See module doc for the contract.

@@ -17,7 +17,7 @@ Map<String, dynamic> _validBase() => <String, dynamic>{
       'bondScoreDelta': 2,
       'nextStep': 'Send the article she mentioned',
       'promptVersion': 1,
-      'modelName': 'gemini-3.1-flash-lite',
+      'modelName': 'gemini-2.5-flash-lite',
     };
 
 void main() {
@@ -29,7 +29,7 @@ void main() {
       expect(r.bondScoreDelta, 2);
       expect(r.nextStep, 'Send the article she mentioned');
       expect(r.promptVersion, 1);
-      expect(r.modelName, 'gemini-3.1-flash-lite');
+      expect(r.modelName, 'gemini-2.5-flash-lite');
       expect(r.memoryUpdate.summary, isNull);
       expect(r.memoryUpdate.topicsToAdd, ['oat milk']);
       expect(r.memoryUpdate.upcomingToAdd, isEmpty);
