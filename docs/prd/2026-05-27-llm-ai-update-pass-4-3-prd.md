@@ -71,6 +71,8 @@ OpenAI and OpenRouter are out of scope for Pass 4.3. OpenRouter remains a future
 
 The backend is the Gemini Developer API path exposed by Firebase AI Logic, not Vertex AI. Vertex AI's regional/IAM/audit features are unnecessary for a final-project prototype.
 
+**Addendum 2026-05-31 — pivoted to Vertex AI.** First real call against `connect-me-e20b1` returned `"Your prepayment credits are depleted. Please go to AI Studio at https://ai.studio/projects to manage your project and billing."` The Gemini Developer API backend bills against AI Studio prepay (separate billing pool from the Cloud project's Blaze credit), and that pool was empty. Switched to `FirebaseAI.vertexAI()` (`us-central1`), which bills against the Google Cloud Blaze account where the prototype's 9,400 NTD credit lives. The SDK call surface above the line is identical: same `generativeModel(model: ...)`, same `generateContent`, same schema-constrained output. Vertex AI API was enabled in the Firebase console as part of the pivot. The model decision below is unchanged.
+
 The default model is the current-generation Gemini Flash-Lite recommended by Firebase docs and the Firebase console at implementation time. During grilling the target was updated away from Gemini 2.0 Flash because 2.0 Flash and Flash-Lite shut down on June 1, 2026. Expected default: `gemini-3.1-flash-lite`.
 
 The model name is configurable on the adapter. If dogfooding shows weak narrative quality, the app can move to Flash or Pro without changing the `AiUpdate` seam.
