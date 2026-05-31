@@ -48,6 +48,29 @@ void enableFirestoreOfflinePersistence(FirebaseFirestore firestore) {
   firestore.settings = const Settings(persistenceEnabled: true);
 }
 
+/// Master switch for App Check enforcement (Pass 4.3 / Path B,
+/// 2026-05-30).
+///
+/// Prototype scope per ADR-0003 keeps this `false` so [activateAppCheck]
+/// short-circuits before touching the SDK. With enforcement off,
+/// AI Logic accepts requests without an attestation token and the
+/// `firebase_app_check` plugin never tries to mint one — which
+/// avoids the iOS-debug-token 403 ("App attestation failed")
+/// observed against an unregistered iOS app.
+///
+/// Flip this to `true` at launch when:
+///   1. Each launch-target app has been registered with a real
+///      attestation provider in the Firebase console (App Attest /
+///      DeviceCheck for iOS, Play Integrity for Android).
+///   2. AI Logic enforcement has been turned ON in the Firebase
+///      console for project `connect-me-e20b1`.
+///
+/// PRD §Q3 explicitly allows enforcement off for prototype scope:
+/// "App Check is the right way to protect AI Logic. Defer
+/// registration to launch; for prototype scope, AI Logic
+/// enforcement stays OFF."
+const bool kAppCheckEnforcementEnabled = false;
+
 /// Activates Firebase App Check before any AI Logic call ships
 /// (Pass 4.3, #077 / PRD Q3).
 ///
@@ -80,6 +103,21 @@ void enableFirestoreOfflinePersistence(FirebaseFirestore firestore) {
 /// boundary-function shape so `main.dart` stays one line per
 /// concern.
 Future<void> activateAppCheck() async {
+  if (!kAppCheckEnforcementEnabled) {
+    // Prototype-scope short-circuit (Path B, 2026-05-30). Skipping
+    // FirebaseAppCheck.instance.activate() means the SDK never
+    // attempts the debug-token exchange that 403s when the iOS
+    // app is not registered in the Firebase console. AI Logic
+    // calls go out without an attestation token; the project's
+    // AI Logic enforcement is also OFF, so requests are accepted.
+    // Flip [kAppCheckEnforcementEnabled] to true at launch.
+    debugPrint(
+      'App Check: prototype-scope no-op (kAppCheckEnforcementEnabled '
+      'is false). Flip to true at launch.',
+    );
+    return;
+  }
+
   // Treat "production attestation" as the launch matrix from ADR-0003:
   // signed Android + signed iOS only. Everything else (web, macOS,
   // Linux, debug) routes through the debug provider so a release
