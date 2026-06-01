@@ -38,6 +38,7 @@ import '../state/memory/memory_document.dart';
 import '../state/memory/memory_store.dart';
 import 'ai_update.dart';
 import 'attachment_preparer.dart';
+import 'bond_score_curve.dart';
 import 'llm_ai_update_prompt.dart';
 import 'llm_ai_update_response.dart';
 import 'llm_ai_update_schema.dart';
@@ -552,6 +553,14 @@ class LlmAiUpdate implements AiUpdate {
       interactions: [interaction],
       nextStep: llmResult.nextStep,
       memoryDocument: newMemory,
+      // Pass 4.3 PRD §Q6 addendum / #085: the LLM judges
+      // interactionDepth on the input's own merits; code applies
+      // the diminishing-returns curve here so the same depth moves
+      // a low-bond contact much more than a high-bond contact.
+      bondScoreDelta: applyBondScoreCurve(
+        depth: llmResult.interactionDepth,
+        currentBond: contact.bondScore,
+      ),
     );
   }
 

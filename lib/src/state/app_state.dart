@@ -734,7 +734,8 @@ class AppController extends Notifier<AppState> {
         'applyAiUpdateResult: contactId ${result.contactId} not found',
       ),
     );
-    final nextScore = (connection.bondScore + 3).clamp(0, 100);
+    final nextScore =
+        (connection.bondScore + result.bondScoreDelta).clamp(0, 100);
     final updatedConnection = connection.copyWith(
       nextStep: result.nextStep ?? connection.nextStep,
       lastContact: DateTime.now(),

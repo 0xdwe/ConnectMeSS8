@@ -6,6 +6,7 @@ import '../models/social_models.dart';
 import '../state/app_state.dart';
 import '../state/memory/memory_document.dart';
 import '../state/memory/memory_store.dart';
+import 'bond_score_curve.dart';
 
 /// Marker exception for engine-level [AiUpdate] failures (PRD Q4).
 ///
@@ -246,6 +247,16 @@ class MockAiUpdate implements AiUpdate {
       nextStep:
           type == InteractionType.reminder ? 'Follow up this week' : null,
       memoryDocument: newMemory,
+      // Pass 4.3 PRD §Q6 addendum / #085: parity with LlmAiUpdate.
+      // Mock pretends the LLM judged interactionDepth=50 (a
+      // "substantive" middle-of-the-rubric value) and applies the
+      // same curve as production. Real LLM output varies; the
+      // fixed depth keeps Mock-driven tests deterministic while
+      // still exercising the wiring end-to-end.
+      bondScoreDelta: applyBondScoreCurve(
+        depth: 50,
+        currentBond: contact.bondScore,
+      ),
     );
   }
 

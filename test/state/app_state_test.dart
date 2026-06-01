@@ -207,7 +207,11 @@ void main() {
 
     // bondScore bumped via the multi-store batch.
     final updatedMike = state.connections.firstWhere((c) => c.id == 'mike');
-    expect(updatedMike.bondScore, priorScore + 3);
+    // Pass 4.3 PRD §Q6 addendum / #085: MockAiUpdate uses depth=50
+    // and the diminishing-returns curve. Mike's seed bond is 68 →
+    // floor(50 × 32 / 160) = 10. The post-update score is
+    // priorScore + 10, not the legacy +3.
+    expect(updatedMike.bondScore, priorScore + 10);
   });
 
   test('contactInsightFor returns relationship metadata', () async {
@@ -836,4 +840,149 @@ void main() {
       expect(state.interactions.length, priorInteractionCount);
     },
   );
+
+  group('applyAiUpdateResult — PRD §Q6 addendum / #085 curve wiring', () {
+    test('bondScoreDelta=0 leaves bondScore unchanged', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      await _seedConnections(connections);
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      final mike = (await connections.load('mike'))!;
+      final priorScore = mike.bondScore;
+
+      // Construct an AiUpdateResult with bondScoreDelta=0 directly.
+      // Models the LLM judging interactionDepth=0 ("trivial") at any
+      // bond — score should not move.
+      final result = AiUpdateResult(
+        summary: 'No-op',
+        contactId: 'mike',
+        interactions: [
+          CrmInteraction(
+            id: 'noop-test',
+            contactId: 'mike',
+            type: InteractionType.interaction,
+            title: 'Brief check-in',
+            note: 'Hi',
+            date: DateTime(2026, 6, 1),
+            source: InteractionSource.aiSuggested,
+          ),
+        ],
+      );
+
+      await container
+          .read(appControllerProvider.notifier)
+          .applyAiUpdateResult(result);
+      await _settle();
+
+      final updatedMike = container
+          .read(appControllerProvider)
+          .connections
+          .firstWhere((c) => c.id == 'mike');
+      expect(updatedMike.bondScore, priorScore);
+    });
+
+    test('bondScoreDelta=10 increases bondScore by exactly 10', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      await _seedConnections(connections);
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      final mike = (await connections.load('mike'))!;
+      final priorScore = mike.bondScore;
+
+      final result = AiUpdateResult(
+        summary: 'Curve-driven',
+        contactId: 'mike',
+        interactions: [
+          CrmInteraction(
+            id: 'delta10-test',
+            contactId: 'mike',
+            type: InteractionType.interaction,
+            title: 'Substantive',
+            note: 'A real conversation.',
+            date: DateTime(2026, 6, 1),
+            source: InteractionSource.aiSuggested,
+          ),
+        ],
+        bondScoreDelta: 10,
+      );
+
+      await container
+          .read(appControllerProvider.notifier)
+          .applyAiUpdateResult(result);
+      await _settle();
+
+      final updatedMike = container
+          .read(appControllerProvider)
+          .connections
+          .firstWhere((c) => c.id == 'mike');
+      expect(updatedMike.bondScore, priorScore + 10);
+    });
+
+    test('large delta clamps to 100 (never exceeds the upper bound)',
+        () async {
+      // Defensive: the AppController-side clamp must hold even when
+      // the curve plus current bond would naturally exceed 100. The
+      // curve helper alone cannot guarantee the post-add bound.
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      await _seedConnections(connections);
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // David seeds at 95 in AppState.seeded(). Picking a delta of
+      // 20 → 95 + 20 = 115, which must clamp to 100.
+      final david = (await connections.load('david'))!;
+      expect(david.bondScore, 95);
+
+      final result = AiUpdateResult(
+        summary: 'Big delta',
+        contactId: 'david',
+        interactions: [
+          CrmInteraction(
+            id: 'clamp-test',
+            contactId: 'david',
+            type: InteractionType.interaction,
+            title: 'Major moment',
+            note: 'David just got engaged.',
+            date: DateTime(2026, 6, 1),
+            source: InteractionSource.aiSuggested,
+          ),
+        ],
+        bondScoreDelta: 20,
+      );
+
+      await container
+          .read(appControllerProvider.notifier)
+          .applyAiUpdateResult(result);
+      await _settle();
+
+      final updatedDavid = container
+          .read(appControllerProvider)
+          .connections
+          .firstWhere((c) => c.id == 'david');
+      expect(updatedDavid.bondScore, 100);
+    });
+  });
 }

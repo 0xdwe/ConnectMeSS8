@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connect_me/src/ai/ai_update.dart';
 import 'package:connect_me/src/ai/attachment_preparer.dart';
+import 'package:connect_me/src/ai/bond_score_curve.dart';
 import 'package:connect_me/src/ai/llm_ai_update.dart';
 import 'package:connect_me/src/ai/llm_ai_update_response.dart';
 import 'package:connect_me/src/models/social_models.dart';
@@ -647,7 +648,7 @@ void main() {
             'PREFERS OAT MILK',
           ],
         ),
-        bondScoreDelta: 1,
+        interactionDepth: 50,
       );
 
       final result = debugProjectLlmResponseOntoAiUpdateResult(
@@ -696,7 +697,7 @@ void main() {
             ),
           ],
         ),
-        bondScoreDelta: 3,
+        interactionDepth: 75,
       );
 
       final result = debugProjectLlmResponseOntoAiUpdateResult(
@@ -741,7 +742,7 @@ void main() {
             ),
           ],
         ),
-        bondScoreDelta: 2,
+        interactionDepth: 50,
       );
 
       final now = DateTime.utc(2026, 5, 27);
@@ -782,7 +783,7 @@ void main() {
           summary: null,
           newHistoryBullet: '- 2026-05-27 — Routine.',
         ),
-        bondScoreDelta: 1,
+        interactionDepth: 25,
       );
 
       final result = debugProjectLlmResponseOntoAiUpdateResult(
@@ -795,6 +796,226 @@ void main() {
       );
 
       expect(result.memoryDocument!.summary, 'original summary');
+    });
+
+    test('projection populates bondScoreDelta via the curve at low bond '
+        '(#085 Slice 4b)', () {
+      // Build a custom contact at bond=20 to hit the low-bond anchor.
+      // Sarah seeds at 92 in AppState.seeded(); we override directly
+      // rather than depending on the seed so the test pins the
+      // formula — not the seed value.
+      final container = _container();
+      addTearDown(container.dispose);
+      final adapter = _adapter(container);
+      final memory = MemoryDocument(
+        contactId: 'low-bond',
+        displayName: 'Low Bond',
+        lastUpdated: DateTime.utc(2026, 5, 19),
+      );
+      final lowBondContact = Connection(
+        id: 'low-bond',
+        name: 'Low Bond',
+        email: 'lb@example.com',
+        category: 'Friends',
+        avatar: '👤',
+        bondScore: 20,
+        nextStep: '',
+        lastContact: DateTime.utc(2026, 5, 1),
+        notes: '',
+        knownSince: DateTime.utc(2024, 1, 1),
+        preferredChannels: const ['Text'],
+      );
+      final llmResult = LlmAiUpdateResponse(
+        interactionType: InteractionType.sharedActivity,
+        interactionTitle: 'Day-long trip',
+        interactionNote: 'Spent the whole day together.',
+        memoryUpdate: LlmMemoryUpdate(
+          summary: 'Strong shared experience.',
+          newHistoryBullet: '- 2026-05-27 — Day-long trip.',
+        ),
+        interactionDepth: 100,
+      );
+
+      final result = debugProjectLlmResponseOntoAiUpdateResult(
+        adapter: adapter,
+        llmResult: llmResult,
+        contact: lowBondContact,
+        currentMemory: memory,
+        attachments: const [],
+        now: DateTime.utc(2026, 5, 27),
+      );
+
+      // Anchor: depth=100, bond=20 → floor(100 × 80 / 160) = 50.
+      expect(result.bondScoreDelta, 50);
+    });
+
+    test('projection populates bondScoreDelta via the curve at high bond '
+        '(#085 Slice 4b)', () {
+      final container = _container();
+      addTearDown(container.dispose);
+      final adapter = _adapter(container);
+      final memory = MemoryDocument(
+        contactId: 'high-bond',
+        displayName: 'High Bond',
+        lastUpdated: DateTime.utc(2026, 5, 19),
+      );
+      final highBondContact = Connection(
+        id: 'high-bond',
+        name: 'High Bond',
+        email: 'hb@example.com',
+        category: 'Friends',
+        avatar: '👤',
+        bondScore: 90,
+        nextStep: '',
+        lastContact: DateTime.utc(2026, 5, 1),
+        notes: '',
+        knownSince: DateTime.utc(2024, 1, 1),
+        preferredChannels: const ['Text'],
+      );
+      final llmResult = LlmAiUpdateResponse(
+        interactionType: InteractionType.sharedActivity,
+        interactionTitle: 'Day-long trip',
+        interactionNote: 'Spent the whole day together.',
+        memoryUpdate: LlmMemoryUpdate(
+          summary: 'Continued strong bond.',
+          newHistoryBullet: '- 2026-05-27 — Day-long trip.',
+        ),
+        interactionDepth: 100,
+      );
+
+      final result = debugProjectLlmResponseOntoAiUpdateResult(
+        adapter: adapter,
+        llmResult: llmResult,
+        contact: highBondContact,
+        currentMemory: memory,
+        attachments: const [],
+        now: DateTime.utc(2026, 5, 27),
+      );
+
+      // Anchor: depth=100, bond=90 → floor(100 × 10 / 160) = 6.
+      expect(result.bondScoreDelta, 6);
+    });
+
+    test('projection emits bondScoreDelta=0 when LLM judged depth=0 '
+        '(#085 Slice 4b)', () {
+      final container = _container();
+      addTearDown(container.dispose);
+      final adapter = _adapter(container);
+      final sarah =
+          _connection(container.read(appControllerProvider), 'sarah');
+      final memory = MemoryDocument(
+        contactId: 'sarah',
+        displayName: 'Sarah Johnson',
+        lastUpdated: DateTime.utc(2026, 5, 19),
+      );
+      final llmResult = LlmAiUpdateResponse(
+        interactionType: InteractionType.interaction,
+        interactionTitle: 'Hi',
+        interactionNote: 'Brief hello.',
+        memoryUpdate: LlmMemoryUpdate(
+          summary: null,
+          newHistoryBullet: '- 2026-05-27 — Hi.',
+        ),
+        interactionDepth: 0,
+      );
+
+      final result = debugProjectLlmResponseOntoAiUpdateResult(
+        adapter: adapter,
+        llmResult: llmResult,
+        contact: sarah,
+        currentMemory: memory,
+        attachments: const [],
+        now: DateTime.utc(2026, 5, 27),
+      );
+
+      expect(result.bondScoreDelta, 0);
+    });
+  });
+
+  group('Bond Score curve (PRD §Q6 addendum / #085)', () {
+    // Diminishing-returns formula: floor(depth × (100 − currentBond) / 160).
+    // Anchored at the 2026-06-01 grilling decision: same input moves a
+    // low-bond contact much more than a high-bond contact. The reference
+    // table lives in docs/issues/085-apply-llm-bondscoredelta.md.
+
+    test('bond=20, depth=100 → +50 (low-bond anchor)', () {
+      expect(
+        debugApplyBondScoreCurve(depth: 100, currentBond: 20),
+        50,
+      );
+    });
+
+    test('bond=90, depth=100 → +6 (high-bond anchor)', () {
+      expect(
+        debugApplyBondScoreCurve(depth: 100, currentBond: 90),
+        6,
+      );
+    });
+
+    test('bond=20, depth=0 → +0 (LLM judged trivial; no movement)', () {
+      expect(
+        debugApplyBondScoreCurve(depth: 0, currentBond: 20),
+        0,
+      );
+    });
+
+    test('bond=100, depth=anything → +0 (capped relationship)', () {
+      expect(debugApplyBondScoreCurve(depth: 0, currentBond: 100), 0);
+      expect(debugApplyBondScoreCurve(depth: 50, currentBond: 100), 0);
+      expect(debugApplyBondScoreCurve(depth: 100, currentBond: 100), 0);
+    });
+
+    test('bond=50, depth=50 → +15 (middle cell, floor of 15.625)', () {
+      // 50 × (100 − 50) / 160 = 2500 / 160 = 15.625 → floor = 15.
+      // Note: the issue file's reference table shows +16 for this cell
+      // because the table uses round() informally; the contract is
+      // floor() per the formula in the PRD addendum.
+      expect(
+        debugApplyBondScoreCurve(depth: 50, currentBond: 50),
+        15,
+      );
+    });
+
+    test('bond=80, depth=10 → +1 (small input at high bond barely moves)',
+        () {
+      // 10 × 20 / 160 = 200 / 160 = 1.25 → floor = 1.
+      expect(
+        debugApplyBondScoreCurve(depth: 10, currentBond: 80),
+        1,
+      );
+    });
+
+    test('depth above 100 is clamped before applying the curve', () {
+      // Schema validation should reject this upstream, but the helper
+      // is defensive: a bad input never produces a bigger delta than
+      // depth=100 would.
+      expect(
+        debugApplyBondScoreCurve(depth: 200, currentBond: 20),
+        debugApplyBondScoreCurve(depth: 100, currentBond: 20),
+      );
+    });
+
+    test('depth below 0 is clamped to 0 (no negative deltas ever)', () {
+      expect(
+        debugApplyBondScoreCurve(depth: -5, currentBond: 20),
+        0,
+      );
+    });
+
+    test('currentBond outside 0..100 is clamped before the curve runs',
+        () {
+      // Defensive: AppController already clamps post-write, but the
+      // helper should not amplify a corrupted input. Below-zero bond
+      // produces depth's full effect (treated as 0); above-100 produces
+      // 0 (treated as 100).
+      expect(
+        debugApplyBondScoreCurve(depth: 100, currentBond: -10),
+        debugApplyBondScoreCurve(depth: 100, currentBond: 0),
+      );
+      expect(
+        debugApplyBondScoreCurve(depth: 100, currentBond: 150),
+        0,
+      );
     });
   });
 }

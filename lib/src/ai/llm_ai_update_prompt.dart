@@ -18,8 +18,8 @@
 ///   `llm_ai_update_user_message.dart` assembles those.
 /// - §Q6 — voice and behavior rules. ConnectMe's anti-shame guardrail
 ///   (no numeric day counts) is encoded directly in the prompt rather
-///   than enforced downstream. The bondScoreDelta calibration rubric
-///   lives here too.
+///   than enforced downstream. The interactionDepth rubric (2026-06-01
+///   addendum, #085) lives here too.
 /// - §Q7 — image vision rules (the model can see attached images;
 ///   never invent details from them).
 library;
@@ -27,7 +27,15 @@ library;
 /// Active prompt version. Increment when [kLlmAiUpdatePromptV1]
 /// changes materially. Travels alongside every produced
 /// [AiUpdateResult] via the metadata field on the response model.
-const int kLlmAiUpdatePromptVersion = 1;
+///
+/// v1: original Pass 4.3 prompt with `bondScoreDelta: 0..5` rubric.
+/// v2 (2026-06-01, #085): replaces the 0..5 rubric with an
+/// `interactionDepth: 0..100` judgment that code converts to a
+/// Bond Score delta via the diminishing-returns curve in
+/// `applyBondScoreCurve`. The model no longer knows the contact's
+/// current Bond Score; that decoupling is the whole point of the
+/// addendum.
+const int kLlmAiUpdatePromptVersion = 2;
 
 /// Pass 4.3 v1 system prompt for ConnectMe's AI Update flow.
 ///
@@ -83,10 +91,20 @@ schema; violating these rules causes the update to be rejected):
 - nextStep: one concrete, gentle suggestion ≤80 chars for the
   user's next interaction. Phrased as something the user could
   do, not something they should feel guilty about not doing.
-- bondScoreDelta: 0 for trivial updates, 1-2 for normal check-ins,
-  3-4 for meaningful catch-ups, 5 only for major moments
-  (engagement, new baby, big move). Default toward smaller
-  numbers.
+- interactionDepth: judge how content-rich and significant the
+  user's input is, on a 0..100 scale. The anchors are:
+    0  — trivial / small talk / no new info.
+    25 — brief interaction with some content.
+    50 — a real conversation with new context.
+    75 — significant news, plans, or shared activity.
+    100 — deep day-long bonding or a major life moment
+          (engagement, new baby, big move, loss).
+  Code applies a diminishing-returns curve client-side to convert
+  this number into a Bond Score change. Do NOT try to estimate
+  that change yourself — you don't know the contact's current
+  Bond Score, and the curve is calibrated to translate the same
+  depth differently at low vs. high relationship strength. Just
+  judge the input on its own merits.
 
 Image attachments:
 - If the user attaches images, you can see them. Use them to
@@ -97,7 +115,7 @@ Image attachments:
 
 Failure modes:
 - If the user input is empty AND no images are attached, return
-  bondScoreDelta=0, nextStep=null, summary=null, and empty arrays
+  interactionDepth=0, nextStep=null, summary=null, and empty arrays
   for topicsToAdd / preferencesToAdd / upcomingToAdd. The
   newHistoryBullet should record the timestamp with a generic
   "checked in" note. Do NOT invent content.
