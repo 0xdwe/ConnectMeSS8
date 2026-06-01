@@ -273,6 +273,11 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
       // interaction title/note in this slice; the memory append is
       // produced by `AiUpdate.run` and committed as-is.
       memoryDocument: previewResult!.memoryDocument,
+      // Pass 4.3 #085 (2026-06-01 stall regression): forward the
+      // curve's bondScoreDelta from the run() result. Without this,
+      // the constructor default of 0 takes over and the contact's
+      // Bond Score stalls regardless of what the LLM judged.
+      bondScoreDelta: previewResult!.bondScoreDelta,
     );
 
     try {

@@ -238,6 +238,72 @@ void main() {
       final stored = await store.load('mike');
       expect(stored?.history ?? '', preHistory);
     });
+
+    testWidgets(
+        'preview-and-save preserves bondScoreDelta end-to-end '
+        '(Pass 4.3 #085 stall regression, 2026-06-01)',
+        (tester) async {
+      // The 2026-06-01 stall report had LlmAiUpdate emit
+      // bondScoreDelta=23 but applyAiUpdateResult log delta=0.
+      // Root cause: AiUpdateScreen.save() rebuilds AiUpdateResult
+      // from the preview without forwarding bondScoreDelta, so the
+      // constructor's default of 0 takes over. This test pumps the
+      // full preview-then-save flow with MockAiUpdate (whose run
+      // populates bondScoreDelta via applyBondScoreCurve) and
+      // asserts the contact's bondScore actually moved by the
+      // curve's output, not 0.
+      final store = InMemoryMemoryStore();
+      final container = _container(store: store);
+      addTearDown(container.dispose);
+
+      // Mike's seed bond is 68; MockAiUpdate uses depth=50, so the
+      // expected delta is floor(50 * 32 / 160) = 10.
+      final priorBond = container
+          .read(appControllerProvider)
+          .connections
+          .firstWhere((c) => c.id == 'mike')
+          .bondScore;
+      expect(priorBond, 68, reason: 'seed sanity');
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.data(false),
+            home: const AiUpdateScreen(
+              contactId: 'mike',
+              initialAttachments: [],
+            ),
+          ),
+        ),
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('ai-input-field')),
+        'Caught up over coffee, talked about the new job.',
+      );
+      await tester.tap(find.byKey(const Key('run-ai-button')));
+      await tester.pumpAndSettle();
+
+      // Save through the preview path — this is the surface that
+      // rebuilds AiUpdateResult and historically dropped the field.
+      await tester.tap(find.byKey(const Key('save-button')));
+      await tester.pumpAndSettle();
+
+      final after = container
+          .read(appControllerProvider)
+          .connections
+          .firstWhere((c) => c.id == 'mike');
+      expect(
+        after.bondScore,
+        priorBond + 10,
+        reason:
+            'preview-then-save must forward bondScoreDelta from the '
+            'run() result through to applyAiUpdateResult; the curve '
+            'produced +10 for Mike (bond=68, depth=50) and the score '
+            'must reflect it.',
+      );
+    });
   });
 
   group('AI Update Preview "About <Name>" memory delta section', () {
