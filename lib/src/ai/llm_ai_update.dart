@@ -547,6 +547,21 @@ class LlmAiUpdate implements AiUpdate {
       lastUpdated: now,
     );
 
+    final bondScoreDelta = applyBondScoreCurve(
+      depth: llmResult.interactionDepth,
+      currentBond: contact.bondScore,
+    );
+    // Pass 4.3 #085 dogfooding visibility: log the LLM's depth
+      // judgment + the curve output so a "stall" (bond didn't move)
+      // can be diagnosed against the rubric calibration without
+      // adding a UI surface. Removable once the rubric is
+      // calibrated against real Gemini output.
+    debugPrint(
+      'LlmAiUpdate: interactionDepth=${llmResult.interactionDepth} '
+      'currentBond=${contact.bondScore} '
+      'bondScoreDelta=$bondScoreDelta',
+    );
+
     return AiUpdateResult(
       summary: 'AI updated context for ${contact.name}.',
       contactId: contact.id,
@@ -557,10 +572,7 @@ class LlmAiUpdate implements AiUpdate {
       // interactionDepth on the input's own merits; code applies
       // the diminishing-returns curve here so the same depth moves
       // a low-bond contact much more than a high-bond contact.
-      bondScoreDelta: applyBondScoreCurve(
-        depth: llmResult.interactionDepth,
-        currentBond: contact.bondScore,
-      ),
+      bondScoreDelta: bondScoreDelta,
     );
   }
 
