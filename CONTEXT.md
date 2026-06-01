@@ -35,7 +35,7 @@ A per-contact narrative document. Pass 3's central artifact. Markdown with YAML 
 MemoryDocument is the LLM-readable shape of a relationship; CrmInteraction is the timeline event shape; both reference the same Connection.
 
 ### Bond Score
-A 0..100 integer on each Connection that represents relationship strength. Stored, not derived (PRD §Q11 of Pass 4.5). Mutated by `applyAiUpdateResult` (+3, clamped). The seeded values (95/85/73/68/92) have no derivation rule. The `BondRing` widget visualizes it as a ring with a tier color.
+A 0..100 integer on each Connection that represents relationship strength. Stored, not derived (PRD §Q11 of Pass 4.5). Mutated by `applyAiUpdateResult` using the diminishing-returns curve `floor(interactionDepth × (100 − currentBond) / 160)`, where `interactionDepth` is the LLM's 0..100 judgment of how content-rich the AI Update input was (Pass 4.3 PRD §Q6 / #085). Same input moves a low-bond contact much more than a high-bond contact. The seeded values (95/85/73/68/92) have no derivation rule. The `BondRing` widget visualizes it as a ring with a tier color.
 
 ### Bond Tier
 A coarse bucketing of Bond Score for visual purposes: high / medium / low. Used by `BondRing` for ring color and by the recommendation engine for ranking (high-tier connections weight higher).
