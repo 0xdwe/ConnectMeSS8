@@ -327,6 +327,7 @@ class AiUpdateResult {
     required this.interactions,
     this.nextStep,
     this.memoryDocument,
+    this.bondScoreDelta = 0,
   });
   final String summary;
   final String contactId;
@@ -338,4 +339,14 @@ class AiUpdateResult {
   /// memory delta) still works; #042 unified `AiUpdate.run` always
   /// populates it.
   final MemoryDocument? memoryDocument;
+
+  /// Bond Score delta to apply on commit (Pass 4.3 PRD §Q6 addendum /
+  /// #085). Computed by adapters from the LLM's interactionDepth
+  /// judgment via `applyBondScoreCurve`. Defaults to 0 so legacy
+  /// callers that construct AiUpdateResult without the field continue
+  /// to compile — a 0 delta means "no Bond Score movement", matching
+  /// the trivial-input semantics. AppController.applyAiUpdateResult
+  /// reads this field and adds it to the contact's current bondScore,
+  /// clamped to 0..100.
+  final int bondScoreDelta;
 }

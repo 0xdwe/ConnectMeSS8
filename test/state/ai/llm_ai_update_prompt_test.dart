@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('llm_ai_update_prompt', () {
     test('exposes a non-empty versioned system prompt', () {
-      expect(kLlmAiUpdatePromptVersion, 1);
+      expect(kLlmAiUpdatePromptVersion, 2);
       expect(kLlmAiUpdatePromptV1, isNotEmpty);
     });
 
@@ -23,19 +23,41 @@ void main() {
       expect(lowered, contains('never invent'));
     });
 
-    test('encodes the bondScoreDelta calibration rubric', () {
-      // PRD §Q6: 0 trivial, 1-2 normal, 3-4 meaningful, 5 major.
-      // Every band should be visible to the model.
-      expect(kLlmAiUpdatePromptV1, contains('bondScoreDelta'));
-      expect(kLlmAiUpdatePromptV1, contains('0 for trivial'));
-      expect(kLlmAiUpdatePromptV1, contains('1-2 for normal'));
-      expect(kLlmAiUpdatePromptV1, contains('3-4 for meaningful'));
-      expect(kLlmAiUpdatePromptV1, contains('5 only for major moments'));
+    test('encodes the interactionDepth 0..100 rubric (PRD §Q6 addendum)',
+        () {
+      // PRD §Q6 addendum (2026-06-01) / #085: the LLM judges depth on
+      // a 0..100 scale with five anchors. Code applies the
+      // diminishing-returns curve client-side; the model does NOT
+      // know the contact's current Bond Score and must not estimate
+      // a delta itself. Each anchor should be visible in the prompt
+      // so a future regression in the rubric paragraph fails this
+      // test rather than only surfacing in dogfooding.
+      expect(kLlmAiUpdatePromptV1, contains('interactionDepth'));
+      expect(kLlmAiUpdatePromptV1, contains('0'));
+      expect(kLlmAiUpdatePromptV1, contains('25'));
+      expect(kLlmAiUpdatePromptV1, contains('50'));
+      expect(kLlmAiUpdatePromptV1, contains('75'));
+      expect(kLlmAiUpdatePromptV1, contains('100'));
+      // Spot-check the qualitative anchors. Substring matches keep
+      // the test resilient to minor wording tweaks while still
+      // catching anchor drift.
+      final lowered = kLlmAiUpdatePromptV1.toLowerCase();
+      expect(lowered, contains('trivial'));
+      expect(lowered, contains('real conversation'));
+      expect(lowered, contains('significant'));
+      expect(lowered, contains('deep'));
+    });
+
+    test('does NOT mention the legacy bondScoreDelta field', () {
+      // The 0..5 rubric was discarded in the 2026-06-01 grilling.
+      // A prompt that still mentions bondScoreDelta would confuse
+      // the model since the schema field is now interactionDepth.
+      expect(kLlmAiUpdatePromptV1, isNot(contains('bondScoreDelta')));
     });
 
     test('specifies the empty-input fallback contract', () {
-      // PRD §Q6: empty input + no images → bondScoreDelta=0, no
-      // invented content, generic bullet.
+      // PRD §Q6 addendum: empty input + no images → interactionDepth=0,
+      // no invented content, generic bullet.
       final lowered = kLlmAiUpdatePromptV1.toLowerCase();
       expect(lowered, contains('input is empty'));
       expect(lowered, contains('do not invent'));

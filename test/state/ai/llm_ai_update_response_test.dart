@@ -14,7 +14,7 @@ Map<String, dynamic> _validBase() => <String, dynamic>{
         'preferencesToAdd': <String>[],
         'upcomingToAdd': <Map<String, dynamic>>[],
       },
-      'bondScoreDelta': 2,
+      'interactionDepth': 50,
       'nextStep': 'Send the article she mentioned',
       'promptVersion': 1,
       'modelName': 'gemini-2.5-flash-lite',
@@ -26,7 +26,7 @@ void main() {
       final r = LlmAiUpdateResponse.fromJson(_validBase());
       expect(r.interactionType, InteractionType.sharedActivity);
       expect(r.interactionTitle, 'Coffee at Brew & Co');
-      expect(r.bondScoreDelta, 2);
+      expect(r.interactionDepth, 50);
       expect(r.nextStep, 'Send the article she mentioned');
       expect(r.promptVersion, 1);
       expect(r.modelName, 'gemini-2.5-flash-lite');
@@ -52,34 +52,34 @@ void main() {
       expect(round.interactionType, original.interactionType);
       expect(round.interactionTitle, original.interactionTitle);
       expect(round.interactionNote, original.interactionNote);
-      expect(round.bondScoreDelta, original.bondScoreDelta);
+      expect(round.interactionDepth, original.interactionDepth);
       expect(round.nextStep, original.nextStep);
       expect(round.memoryUpdate.newHistoryBullet,
           original.memoryUpdate.newHistoryBullet);
     });
   });
 
-  group('bondScoreDelta clamp', () {
+  group('interactionDepth clamp', () {
     test('clamps below zero up to zero', () {
-      final json = _validBase()..['bondScoreDelta'] = -3;
-      expect(LlmAiUpdateResponse.fromJson(json).bondScoreDelta, 0);
+      final json = _validBase()..['interactionDepth'] = -3;
+      expect(LlmAiUpdateResponse.fromJson(json).interactionDepth, 0);
     });
 
-    test('clamps above five down to five', () {
-      final json = _validBase()..['bondScoreDelta'] = 12;
-      expect(LlmAiUpdateResponse.fromJson(json).bondScoreDelta, 5);
+    test('clamps above one hundred down to one hundred', () {
+      final json = _validBase()..['interactionDepth'] = 250;
+      expect(LlmAiUpdateResponse.fromJson(json).interactionDepth, 100);
     });
 
-    test('preserves in-range values', () {
-      for (final v in const [0, 1, 2, 3, 4, 5]) {
-        final json = _validBase()..['bondScoreDelta'] = v;
-        expect(LlmAiUpdateResponse.fromJson(json).bondScoreDelta, v);
+    test('preserves in-range values across the 0..100 spectrum', () {
+      for (final v in const [0, 25, 50, 75, 100]) {
+        final json = _validBase()..['interactionDepth'] = v;
+        expect(LlmAiUpdateResponse.fromJson(json).interactionDepth, v);
       }
     });
 
     test('accepts num that is integral (some SDKs return doubles)', () {
-      final json = _validBase()..['bondScoreDelta'] = 3.0;
-      expect(LlmAiUpdateResponse.fromJson(json).bondScoreDelta, 3);
+      final json = _validBase()..['interactionDepth'] = 75.0;
+      expect(LlmAiUpdateResponse.fromJson(json).interactionDepth, 75);
     });
   });
 
@@ -350,8 +350,8 @@ void main() {
       );
     });
 
-    test('rejects non-int bondScoreDelta', () {
-      final json = _validBase()..['bondScoreDelta'] = 'three';
+    test('rejects non-int interactionDepth', () {
+      final json = _validBase()..['interactionDepth'] = 'deep';
       expect(
         () => LlmAiUpdateResponse.fromJson(json),
         throwsA(isA<LlmResponseParseException>()),

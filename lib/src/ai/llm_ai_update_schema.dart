@@ -106,12 +106,17 @@ final Schema kLlmAiUpdateResponseSchema = Schema.object(
       },
       optionalProperties: const ['summary'],
     ),
-    'bondScoreDelta': Schema.integer(
+    'interactionDepth': Schema.integer(
       description:
-          'Bond-score change in 0..5 per the PRD §Q6 rubric: 0 '
-          'trivial, 1-2 normal, 3-4 meaningful, 5 only for major '
-          'life moments. Clamped client-side; defaults toward '
-          'smaller numbers.',
+          'How content-rich the user input is, on a 0..100 scale. '
+          'Anchors: 0 = trivial / small talk / no new info; '
+          '25 = brief interaction with some content; '
+          '50 = a real conversation with new context; '
+          '75 = significant news, plans, or shared activity; '
+          '100 = deep day-long bonding or major life moment. '
+          'Code applies a diminishing-returns curve client-side to '
+          'translate this into the actual Bond Score delta; do NOT '
+          'try to estimate the delta yourself.',
     ),
     'nextStep': Schema.string(
       description:

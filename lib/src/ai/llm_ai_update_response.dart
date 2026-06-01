@@ -16,7 +16,7 @@
 /// without booting the Firebase AI Logic SDK and lets #078 ship
 /// before #077's SDK wiring.
 ///
-/// `bondScoreDelta` is clamped 0..5 at decode time. The model is
+/// `interactionDepth` is clamped 0..100 at decode time. The model is
 /// instructed (in the prompt) to stay in that range and the schema
 /// will reject out-of-range values, but the clamp is belt-and-braces
 /// — a single LLM hiccup will not move bond score wildly.
@@ -165,7 +165,7 @@ class LlmAiUpdateResponse {
     required this.interactionTitle,
     required this.interactionNote,
     required this.memoryUpdate,
-    required this.bondScoreDelta,
+    required this.interactionDepth,
     this.nextStep,
     this.promptVersion,
     this.modelName,
@@ -176,9 +176,15 @@ class LlmAiUpdateResponse {
   final String interactionNote;
   final LlmMemoryUpdate memoryUpdate;
 
-  /// Clamped 0..5 at decode time. The model picks per the prompt
-  /// rubric; the clamp is belt-and-braces against a single hiccup.
-  final int bondScoreDelta;
+  /// Clamped 0..100 at decode time. The LLM judges the input's depth
+  /// on its own merits per the prompt rubric (0=trivial, 25=brief,
+  /// 50=substantive, 75=significant, 100=deep day-long bonding).
+  /// `LlmAiUpdate._projectOntoAiUpdateResult` runs the diminishing-
+  /// returns curve in `applyBondScoreCurve` to translate this into
+  /// the actual Bond Score delta. The clamp is belt-and-braces
+  /// against a single hiccup. See PRD §Q6 addendum (2026-06-01) and
+  /// `docs/issues/085-apply-llm-bondscoredelta.md`.
+  final int interactionDepth;
   final String? nextStep;
 
   /// Echoed back from the request for traceability. Optional on the
@@ -191,7 +197,7 @@ class LlmAiUpdateResponse {
         'interactionTitle': interactionTitle,
         'interactionNote': interactionNote,
         'memoryUpdate': memoryUpdate.toJson(),
-        'bondScoreDelta': bondScoreDelta,
+        'interactionDepth': interactionDepth,
         if (nextStep != null) 'nextStep': nextStep,
         if (promptVersion != null) 'promptVersion': promptVersion,
         if (modelName != null) 'modelName': modelName,
@@ -217,8 +223,8 @@ class LlmAiUpdateResponse {
       throw const LlmResponseParseException('memoryUpdate is required');
     }
     final memory = LlmMemoryUpdate.fromJson(memoryRaw);
-    final delta = _requireInt(json, 'bondScoreDelta');
-    final clampedDelta = delta < 0 ? 0 : (delta > 5 ? 5 : delta);
+    final depth = _requireInt(json, 'interactionDepth');
+    final clampedDepth = depth < 0 ? 0 : (depth > 100 ? 100 : depth);
     final nextStep = json['nextStep'] as String?;
     if (nextStep != null && nextStep.length > 80) {
       throw LlmResponseParseException(
@@ -232,7 +238,7 @@ class LlmAiUpdateResponse {
       interactionTitle: title,
       interactionNote: note,
       memoryUpdate: memory,
-      bondScoreDelta: clampedDelta,
+      interactionDepth: clampedDepth,
       nextStep: nextStep,
       promptVersion: promptVersion,
       modelName: modelName,

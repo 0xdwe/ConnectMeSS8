@@ -548,4 +548,75 @@ void main() {
       );
     });
   });
+
+  group('AiUpdateResult.bondScoreDelta (PRD §Q6 addendum / #085)', () {
+    test('defaults to 0 so existing tests that omit the field stay valid',
+        () {
+      // Backward-compatible default: legacy callers that construct
+      // AiUpdateResult without the field continue to compile and
+      // produce no Bond Score movement, mirroring "trivial input"
+      // semantics. Adapters that DO populate it (Mock, Llm) override
+      // explicitly.
+      final result = AiUpdateResult(
+        summary: 'no delta supplied',
+        contactId: 'mike',
+        interactions: const [],
+      );
+      expect(result.bondScoreDelta, 0);
+    });
+
+    test('round-trips an explicitly-supplied delta', () {
+      final result = AiUpdateResult(
+        summary: 'with delta',
+        contactId: 'mike',
+        interactions: const [],
+        bondScoreDelta: 17,
+      );
+      expect(result.bondScoreDelta, 17);
+    });
+  });
+
+  group('MockAiUpdate.run populates bondScoreDelta via the curve '
+      '(#085 Slice 4c)', () {
+    test('Mike at bond 68 with depth=50 → +10 (floor(50 × 32 / 160))',
+        () async {
+      final container = _container();
+      addTearDown(container.dispose);
+      final mike =
+          _connection(container.read(appControllerProvider), 'mike');
+      final memory = await container.read(memoryProvider('mike').future);
+
+      final result = await container.read(aiUpdateProvider).run(
+            contact: mike,
+            userInput: 'Caught up over coffee.',
+            currentMemory: memory,
+            attachments: const [],
+          );
+
+      // Mike's seed bond is 68. Depth=50 → 50 × 32 / 160 = 10.
+      expect(result.bondScoreDelta, 10);
+    });
+
+    test('Sarah at bond 92 with depth=50 → +2 (floor(50 × 8 / 160))',
+        () async {
+      final container = _container();
+      addTearDown(container.dispose);
+      final sarah =
+          _connection(container.read(appControllerProvider), 'sarah');
+      final memory = await container.read(memoryProvider('sarah').future);
+
+      final result = await container.read(aiUpdateProvider).run(
+            contact: sarah,
+            userInput: 'Talked about her trip plans.',
+            currentMemory: memory,
+            attachments: const [],
+          );
+
+      // Sarah's seed bond is 92. Depth=50 → 50 × 8 / 160 = 2.
+      // Diminishing returns: same depth that moved Mike (bond 68)
+      // by +10 only nudges Sarah by +2 because she's already a
+      // strong-tier connection.
+      expect(result.bondScoreDelta, 2);
+    });
+  });
 }
