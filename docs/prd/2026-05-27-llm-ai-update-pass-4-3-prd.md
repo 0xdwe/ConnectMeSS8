@@ -127,7 +127,15 @@ The prompt tells Gemini not to invent facts. If it cannot extract a specific det
 
 Summary rewrites are gated to material changes only. Normal interactions append a History bullet and deltas but leave the Summary unchanged.
 
-`bondScoreDelta` uses a rubric: 0 for trivial/empty updates, 1-2 for normal check-ins, 3-4 for meaningful catch-ups, and 5 only for major life moments.
+**Addendum 2026-06-01 — Bond Score curve.** The original rubric was `bondScoreDelta: integer 0..5` (0=trivial, 5=major life moment). Real dogfooding revealed the rubric was wrong-shaped: every committed update silently mapped to +3 in `applyAiUpdateResult` (the field was emitted, parsed, then discarded), and even after wiring it through, the 0..5 range failed the user's intuition that a deep day-long update at low bond (e.g. bond=20) should move the score by ~+50, while the same update at high bond (e.g. bond=90) should only move it by ~+5.
+
+The redesigned rubric splits two concerns:
+1. **LLM emits `interactionDepth: integer 0..100`** judging the input on its own merits. Anchors: 0=trivial, 25=brief with content, 50=substantive conversation, 75=significant news, 100=deep day-long bonding or major life moment.
+2. **Code applies the diminishing-returns curve** in `LlmAiUpdate._projectOntoAiUpdateResult`: `delta = floor(depth × (100 − currentBond) / 160)`.
+
+Reference cells: bond=20/depth=100 → +50; bond=90/depth=100 → +6; bond=100/anything → +0; depth=0/any → +0. No `+1` floor at non-zero depth (diminishing returns means small inputs at high bond can produce +0). Bond Tier crossings are silent on the profile; recommendations re-rank on the next read via the existing memory-change cache invalidation.
+
+The delta is invisible in the AI Update preview — user sees the score move on the profile after commit. Surfacing the math in the preview was rejected in the 2026-06-01 grilling (PRD addendum question 4). See `docs/issues/085-apply-llm-bondscoredelta.md` for the full design and the implementation contract. `kLlmAiUpdatePromptVersion` bumps from 1 to 2 with this rubric change.
 
 ### Q7 — Image vision support
 
