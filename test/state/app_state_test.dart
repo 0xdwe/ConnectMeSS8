@@ -528,6 +528,68 @@ void main() {
     );
   });
 
+  test('saveEvent normalizes stale optional fields before EventStore save',
+      () async {
+    final events = InMemoryEventStore();
+    final container = _container(eventStore: events);
+    addTearDown(container.dispose);
+
+    container.read(appControllerProvider);
+
+    final controller = container.read(appControllerProvider.notifier);
+    await controller.saveEvent(
+      PlannerEvent(
+        id: 'stale-event',
+        title: 'All-day reminder',
+        category: 'Friends',
+        date: DateTime(2026, 6, 2),
+        note: 'Stale fields should be cleared',
+        isAllDay: true,
+        startTimeMinutes: 9 * 60,
+        endTimeMinutes: 10 * 60,
+        isRecurring: false,
+        recurrencePattern: RecurrencePattern.weekly,
+      ),
+    );
+    await _settle();
+
+    final saved = (await events.load('stale-event'))!;
+    expect(saved.startTimeMinutes, isNull);
+    expect(saved.endTimeMinutes, isNull);
+    expect(saved.recurrencePattern, isNull);
+  });
+
+  test('restoreEvent normalizes stale optional fields before EventStore save',
+      () async {
+    final events = InMemoryEventStore();
+    final container = _container(eventStore: events);
+    addTearDown(container.dispose);
+
+    container.read(appControllerProvider);
+
+    final controller = container.read(appControllerProvider.notifier);
+    await controller.restoreEvent(
+      PlannerEvent(
+        id: 'restored-stale-event',
+        title: 'Restored all-day reminder',
+        category: 'Friends',
+        date: DateTime(2026, 6, 2),
+        note: 'Stale fields should be cleared',
+        isAllDay: true,
+        startTimeMinutes: 9 * 60,
+        endTimeMinutes: 10 * 60,
+        isRecurring: false,
+        recurrencePattern: RecurrencePattern.weekly,
+      ),
+    );
+    await _settle();
+
+    final saved = (await events.load('restored-stale-event'))!;
+    expect(saved.startTimeMinutes, isNull);
+    expect(saved.endTimeMinutes, isNull);
+    expect(saved.recurrencePattern, isNull);
+  });
+
   test('event type management protects defaults and updates custom types',
       () async {
     final container = _container();
