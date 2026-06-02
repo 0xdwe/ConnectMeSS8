@@ -33,8 +33,8 @@ List<Recommendation> rankRecommendations({
   //    entry's endDate (or startDate if no endDate) falls in the
   //    window [now - 3d, now + 1d]. These cards rank ABOVE the
   //    bond-tier-weighted ranking and reduce the remaining slot count
-  //    accordingly — we'd rather surface "Sam just got back from
-  //    USA" than a third drifting reminder.
+  //    accordingly — we'd rather surface "Wondering how Sam's
+  //    USA trip went?" than a third drifting reminder.
   //
   //    The Mock updater never populates `upcoming` (extracting
   //    "tomorrow" / "for a week" deterministically is too brittle).
@@ -72,12 +72,14 @@ List<Recommendation> rankRecommendations({
     final tier = BondTier.from(connection.bondScore);
     final weight = _tierWeight(tier);
     final score = daysSince * weight;
-    scored.add(_Scored(
-      connection: connection,
-      tier: tier,
-      daysSince: daysSince,
-      score: score,
-    ));
+    scored.add(
+      _Scored(
+        connection: connection,
+        tier: tier,
+        daysSince: daysSince,
+        score: score,
+      ),
+    );
   }
   scored.sort((a, b) => b.score.compareTo(a.score));
   final ranked = scored.take(remainingSlots).map(_toRecommendation);
@@ -91,10 +93,10 @@ List<Recommendation> rankRecommendations({
 }
 
 double _tierWeight(BondTier tier) => switch (tier) {
-      BondTier.drifting => 1.5,
-      BondTier.steady => 1.0,
-      BondTier.close => 0.8,
-    };
+  BondTier.drifting => 1.5,
+  BondTier.steady => 1.0,
+  BondTier.close => 0.8,
+};
 
 class _Scored {
   const _Scored({
@@ -130,26 +132,25 @@ String _recencyBucket(int days) {
 /// Question-shaped, second-person, never imperative, never shame.
 /// PRODUCT.md voice: "Wondering how Mike's job hunt went?"
 String _reasonFor(BondTier tier, String name) => switch (tier) {
-      BondTier.close => "Wondering how $name has been?",
-      BondTier.steady => "Want to check in on $name?",
-      BondTier.drifting => "Curious how $name is doing?",
-    };
+  BondTier.close => "Wondering how $name has been?",
+  BondTier.steady => "Want to check in on $name?",
+  BondTier.drifting => "Curious how $name is doing?",
+};
 
 String _insightFor(BondTier tier, String bucket) => switch (tier) {
-      BondTier.close => 'You two talk often — last chat was $bucket.',
-      BondTier.steady => 'Last chat was $bucket.',
-      BondTier.drifting =>
-        "It's been $bucket — a quick hello goes a long way.",
-    };
+  BondTier.close => 'You two talk often — last chat was $bucket.',
+  BondTier.steady => 'Last chat was $bucket.',
+  BondTier.drifting => "It's been $bucket — a quick hello goes a long way.",
+};
 
 /// Priority field is filled deterministically from tier so the
 /// existing UI keeps compiling. UI-side rendering of priority is out
 /// of scope for #047.
 String _priorityFor(BondTier tier) => switch (tier) {
-      BondTier.drifting => 'high priority',
-      BondTier.steady => 'medium priority',
-      BondTier.close => 'low priority',
-    };
+  BondTier.drifting => 'high priority',
+  BondTier.steady => 'medium priority',
+  BondTier.close => 'low priority',
+};
 
 // ---------------------------------------------------------------------------
 // Upcoming-driven cards (PRD Q12 / #049).
@@ -183,10 +184,8 @@ Recommendation? _upcomingRecommendation(
   }
   final isPostTrip = !effective.isAfter(now); // effective ≤ now
   final reason = isPostTrip
-      ? '${connection.name} just got back from ${entry.description} — '
-          'ask how it went'
-      : "${connection.name}'s ${entry.description} starts tomorrow — "
-          'wish them well';
+      ? "Wondering how ${connection.name}'s ${entry.description} went?"
+      : "${connection.name}'s ${entry.description} is coming up.";
   final insight = isPostTrip
       ? 'They might have stories to share.'
       : 'A short note before they head out goes a long way.';

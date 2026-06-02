@@ -94,10 +94,11 @@ void main() {
         now: now,
       );
 
-      expect(
-        ranked.map((r) => r.contactId).toList(),
-        ['drifting', 'steady', 'close'],
-      );
+      expect(ranked.map((r) => r.contactId).toList(), [
+        'drifting',
+        'steady',
+        'close',
+      ]);
     });
 
     test('24h cooldown filters connections with daysSinceContact < 1', () {
@@ -200,10 +201,16 @@ void main() {
 
       final digit = RegExp(r'\d');
       for (final rec in ranked) {
-        expect(rec.reason, isNot(matches(digit)),
-            reason: 'reason must not contain digits: ${rec.reason}');
-        expect(rec.insight, isNot(matches(digit)),
-            reason: 'insight must not contain digits: ${rec.insight}');
+        expect(
+          rec.reason,
+          isNot(matches(digit)),
+          reason: 'reason must not contain digits: ${rec.reason}',
+        );
+        expect(
+          rec.insight,
+          isNot(matches(digit)),
+          reason: 'insight must not contain digits: ${rec.insight}',
+        );
       }
     });
 
@@ -288,8 +295,11 @@ void main() {
       for (final rec in ranked) {
         final blob = '${rec.reason} ${rec.insight}'.toLowerCase();
         for (final phrase in denylist) {
-          expect(blob, isNot(contains(phrase)),
-              reason: 'guilt phrase "$phrase" must not appear in: $blob');
+          expect(
+            blob,
+            isNot(contains(phrase)),
+            reason: 'guilt phrase "$phrase" must not appear in: $blob',
+          );
         }
       }
     });
@@ -330,8 +340,11 @@ void main() {
         now: now,
       );
 
-      expect(ranked.map((r) => r.contactId).toList(),
-          ['drifting', 'steady', 'close']);
+      expect(ranked.map((r) => r.contactId).toList(), [
+        'drifting',
+        'steady',
+        'close',
+      ]);
       expect(ranked.first.priority, 'high priority');
       expect(ranked[1].priority, 'medium priority');
       expect(ranked[2].priority, 'low priority');
@@ -350,19 +363,20 @@ void main() {
     final now = DateTime(2026, 5, 19, 12, 0, 0);
 
     Connection sam({DateTime? lastContact}) => _connection(
-          id: 'sam',
-          name: 'Sam',
-          bondScore: 70,
-          lastContact: lastContact ?? now.subtract(const Duration(days: 5)),
-        );
+      id: 'sam',
+      name: 'Sam',
+      bondScore: 70,
+      lastContact: lastContact ?? now.subtract(const Duration(days: 5)),
+    );
 
     MemoryDocument memoryWith(
       String contactId, {
       required UpcomingEntry entry,
-    }) =>
-        MemoryDocument.empty(contactId: contactId, displayName: contactId,
-                now: now)
-            .copyWith(upcoming: [entry]);
+    }) => MemoryDocument.empty(
+      contactId: contactId,
+      displayName: contactId,
+      now: now,
+    ).copyWith(upcoming: [entry]);
 
     test('post-trip card surfaces when endDate equals now', () {
       final memory = memoryWith(
@@ -381,10 +395,7 @@ void main() {
       );
       expect(ranked, hasLength(1));
       expect(ranked.first.contactId, 'sam');
-      expect(
-        ranked.first.reason,
-        contains('just got back from USA trip'),
-      );
+      expect(ranked.first.reason, equals("Wondering how Sam's USA trip went?"));
     });
 
     test('post-trip card surfaces when endDate is 3 days ago', () {
@@ -402,7 +413,7 @@ void main() {
         memories: {'sam': memory},
         now: now,
       );
-      expect(ranked.first.reason, contains('just got back from Iceland'));
+      expect(ranked.first.reason, equals("Wondering how Sam's Iceland went?"));
     });
 
     test('pre-trip card surfaces when startDate is 1 day in the future', () {
@@ -419,17 +430,13 @@ void main() {
         memories: {'sam': memory},
         now: now,
       );
-      expect(ranked.first.reason, contains('Tokyo starts tomorrow'));
-      expect(ranked.first.reason, contains("Sam's"));
+      expect(ranked.first.reason, equals("Sam's Tokyo is coming up."));
     });
 
     test('entry without endDate uses startDate as effective date', () {
       final memory = memoryWith(
         'sam',
-        entry: UpcomingEntry(
-          startDate: now,
-          description: 'workshop',
-        ),
+        entry: UpcomingEntry(startDate: now, description: 'workshop'),
       );
       final ranked = rankRecommendations(
         connections: [sam()],
@@ -438,7 +445,7 @@ void main() {
         now: now,
       );
       // startDate == now is at the post-trip boundary (effective <= now).
-      expect(ranked.first.reason, contains('just got back from workshop'));
+      expect(ranked.first.reason, equals("Wondering how Sam's workshop went?"));
     });
 
     test('entry outside the [now-3d, now+1d] window does not surface', () {
@@ -465,8 +472,8 @@ void main() {
         memories: {'sam': farPast},
         now: now,
       );
-      expect(pastRanked.first.reason, isNot(contains('got back')));
-      expect(pastRanked.first.reason, isNot(contains('starts tomorrow')));
+      expect(pastRanked.first.reason, isNot(contains('Wondering how')));
+      expect(pastRanked.first.reason, isNot(contains('is coming up')));
 
       // Far-future sam: same.
       final futureRanked = rankRecommendations(
@@ -475,8 +482,8 @@ void main() {
         memories: {'sam': farFuture},
         now: now,
       );
-      expect(futureRanked.first.reason, isNot(contains('got back')));
-      expect(futureRanked.first.reason, isNot(contains('starts tomorrow')));
+      expect(futureRanked.first.reason, isNot(contains('Wondering how')));
+      expect(futureRanked.first.reason, isNot(contains('is coming up')));
     });
 
     test('upcoming card outranks the bond-tier ranking', () {
@@ -505,29 +512,32 @@ void main() {
       );
 
       expect(ranked.first.contactId, 'sam');
-      expect(ranked.first.reason, contains('just got back'));
+      expect(ranked.first.reason, contains('Wondering how'));
       expect(ranked[1].contactId, 'mike');
     });
 
     test('one upcoming card per contact — the first matching entry wins', () {
-      final memory = memoryWith(
-        'sam',
-        entry: UpcomingEntry(
-          startDate: now.subtract(const Duration(days: 5)),
-          endDate: now.subtract(const Duration(days: 1)),
-          description: 'Iceland',
-        ),
-      ).copyWith(upcoming: [
-        UpcomingEntry(
-          startDate: now.subtract(const Duration(days: 5)),
-          endDate: now.subtract(const Duration(days: 1)),
-          description: 'Iceland',
-        ),
-        UpcomingEntry(
-          startDate: now.add(const Duration(days: 1)),
-          description: 'Tokyo',
-        ),
-      ]);
+      final memory =
+          memoryWith(
+            'sam',
+            entry: UpcomingEntry(
+              startDate: now.subtract(const Duration(days: 5)),
+              endDate: now.subtract(const Duration(days: 1)),
+              description: 'Iceland',
+            ),
+          ).copyWith(
+            upcoming: [
+              UpcomingEntry(
+                startDate: now.subtract(const Duration(days: 5)),
+                endDate: now.subtract(const Duration(days: 1)),
+                description: 'Iceland',
+              ),
+              UpcomingEntry(
+                startDate: now.add(const Duration(days: 1)),
+                description: 'Tokyo',
+              ),
+            ],
+          );
       final ranked = rankRecommendations(
         connections: [sam()],
         interactions: const [],
@@ -540,40 +550,51 @@ void main() {
       expect(ranked.first.reason, contains('Iceland'));
     });
 
-    test('no regression: empty upcoming on every contact still ranks normally',
-        () {
-      // PRD Q12 explicitly: no regression in #047 ranking when no
-      // Upcoming entries exist.
-      final connections = [
-        _connection(
+    test(
+      'no regression: empty upcoming on every contact still ranks normally',
+      () {
+        // PRD Q12 explicitly: no regression in #047 ranking when no
+        // Upcoming entries exist.
+        final connections = [
+          _connection(
             id: 'drifting',
             name: 'D',
             bondScore: 30,
-            lastContact: now.subtract(const Duration(days: 10))),
-        _connection(
+            lastContact: now.subtract(const Duration(days: 10)),
+          ),
+          _connection(
             id: 'steady',
             name: 'S',
             bondScore: 60,
-            lastContact: now.subtract(const Duration(days: 12))),
-        _connection(
+            lastContact: now.subtract(const Duration(days: 12)),
+          ),
+          _connection(
             id: 'close',
             name: 'C',
             bondScore: 90,
-            lastContact: now.subtract(const Duration(days: 14))),
-      ];
-      final memories = {
-        for (final c in connections)
-          c.id:
-              MemoryDocument.empty(contactId: c.id, displayName: c.name, now: now),
-      };
-      final ranked = rankRecommendations(
-        connections: connections,
-        interactions: const [],
-        memories: memories,
-        now: now,
-      );
-      expect(ranked.map((r) => r.contactId).toList(),
-          ['drifting', 'steady', 'close']);
-    });
+            lastContact: now.subtract(const Duration(days: 14)),
+          ),
+        ];
+        final memories = {
+          for (final c in connections)
+            c.id: MemoryDocument.empty(
+              contactId: c.id,
+              displayName: c.name,
+              now: now,
+            ),
+        };
+        final ranked = rankRecommendations(
+          connections: connections,
+          interactions: const [],
+          memories: memories,
+          now: now,
+        );
+        expect(ranked.map((r) => r.contactId).toList(), [
+          'drifting',
+          'steady',
+          'close',
+        ]);
+      },
+    );
   });
 }

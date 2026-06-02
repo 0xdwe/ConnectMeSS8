@@ -13,6 +13,7 @@ import 'package:connect_me/src/state/connections/interaction_providers.dart';
 import 'package:connect_me/src/state/connections/user_doc_store_providers.dart';
 import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
+import 'package:connect_me/src/state/memory/memory_document.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,15 +27,32 @@ class _FakeClock {
   DateTime call() => now;
 }
 
+class _CountingMemoryStore extends InMemoryMemoryStore {
+  int listAllCalls = 0;
+
+  @override
+  Future<Map<String, MemoryDocument>> listAll() async {
+    listAllCalls++;
+    return super.listAll();
+  }
+}
+
+class _FailingListAllMemoryStore extends InMemoryMemoryStore {
+  @override
+  Future<Map<String, MemoryDocument>> listAll() async {
+    throw StateError('boom');
+  }
+}
+
 MockFirebaseAuth _mockSignedInAuth() => MockFirebaseAuth(
-      signedIn: true,
-      mockUser: MockUser(
-        isAnonymous: false,
-        uid: 'rec-test-user',
-        email: 'rec@example.com',
-        displayName: 'Rec Test',
-      ),
-    );
+  signedIn: true,
+  mockUser: MockUser(
+    isAnonymous: false,
+    uid: 'rec-test-user',
+    email: 'rec@example.com',
+    displayName: 'Rec Test',
+  ),
+);
 
 /// Pass 4.5 #070 — AppController now reads connection / interaction
 /// / event / user-doc stores. Recommendations tests don't exercise
@@ -108,36 +126,40 @@ Future<void> _settle() async {
   }
 }
 
-ProviderContainer _container({_FakeClock? clock}) {
-  final memoryStore = InMemoryMemoryStore();
-  return ProviderContainer(overrides: [
-    firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
-    memoryStoreProvider.overrideWithValue(memoryStore),
-    ..._seededPassFourFiveOverrides().overrides,
-    if (clock != null) clockProvider.overrideWithValue(clock.call),
-    // Pass 4.3 #081: production aiUpdateProvider now constructs
-    // LlmAiUpdate which would reach Firebase AI Logic. Pin Mock to
-    // preserve the deterministic shape these tests assert on.
-    aiUpdateProvider.overrideWith(
-      (ref) => MockAiUpdate(
-        memoryStore: memoryStore,
-        appController: ref.read(appControllerProvider.notifier),
-        onMemoryWritten: () {
-          final c = ref.read(clockProvider);
-          ref.read(memoryEpochProvider.notifier).bump(c());
-        },
+ProviderContainer _container({_FakeClock? clock, InMemoryMemoryStore? store}) {
+  final memoryStore = store ?? InMemoryMemoryStore();
+  return ProviderContainer(
+    overrides: [
+      firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
+      memoryStoreProvider.overrideWithValue(memoryStore),
+      ..._seededPassFourFiveOverrides().overrides,
+      if (clock != null) clockProvider.overrideWithValue(clock.call),
+      // Pass 4.3 #081: production aiUpdateProvider now constructs
+      // LlmAiUpdate which would reach Firebase AI Logic. Pin Mock to
+      // preserve the deterministic shape these tests assert on.
+      aiUpdateProvider.overrideWith(
+        (ref) => MockAiUpdate(
+          memoryStore: memoryStore,
+          appController: ref.read(appControllerProvider.notifier),
+          onMemoryWritten: () {
+            final c = ref.read(clockProvider);
+            ref.read(memoryEpochProvider.notifier).bump(c());
+          },
+        ),
       ),
-    ),
-  ]);
+    ],
+  );
 }
 
 void main() {
   group('recommendationsProvider', () {
-    test('emits a list ranked per the engine on initial read', () {
+    test('emits a list ranked per the engine on initial read', () async {
       final container = _container();
       addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
 
-      final recs = container.read(recommendationsProvider);
+      final recs = await container.read(recommendationsProvider.future);
 
       // Seeded AppState has 5 connections with varied recency. Top 3
       // by Q11 score get returned.
@@ -163,9 +185,11 @@ void main() {
       container.read(appControllerProvider);
       await _settle();
 
-      final before = container.read(recommendationsProvider);
+      final before = await container.read(recommendationsProvider.future);
 
-      await container.read(appControllerProvider.notifier).addConnection(
+      await container
+          .read(appControllerProvider.notifier)
+          .addConnection(
             name: 'Drifting Dana',
             email: 'dana@test.com',
             category: 'Friends',
@@ -177,55 +201,116 @@ void main() {
       // 24h cooldown. The provider still recomputes; result identity
       // changes even when content is similar because Provider returns a
       // fresh list per read.
-      final after = container.read(recommendationsProvider);
+      final after = await container.read(recommendationsProvider.future);
       expect(identical(before, after), isFalse);
     });
 
-    test("deleted contact's recommendation card is no longer present",
-        () async {
-      final container = _container();
-      addTearDown(container.dispose);
+    test(
+      "deleted contact's recommendation card is no longer present",
+      () async {
+        final container = _container();
+        addTearDown(container.dispose);
 
+        container.read(appControllerProvider);
+        await _settle();
+
+        // 'mike' is in the seeded fixture and lands in the top 3 because
+        // he's drifting (bond 68 = steady actually) with a 39-day gap.
+        // Verify he's present, then verify deletion drops him.
+        final before = (await container.read(
+          recommendationsProvider.future,
+        )).map((r) => r.contactId).toList();
+        expect(before, contains('mike'));
+
+        await container
+            .read(appControllerProvider.notifier)
+            .deleteConnection('mike');
+        await _settle();
+
+        final after = (await container.read(
+          recommendationsProvider.future,
+        )).map((r) => r.contactId).toList();
+        expect(after, isNot(contains('mike')));
+      },
+    );
+
+    test(
+      'returned recommendations carry deterministic priority strings',
+      () async {
+        final container = _container();
+        addTearDown(container.dispose);
+        container.read(appControllerProvider);
+        await _settle();
+
+        final recs = await container.read(recommendationsProvider.future);
+        const allowedPriorities = {
+          'high priority',
+          'medium priority',
+          'low priority',
+        };
+        for (final rec in recs) {
+          expect(allowedPriorities, contains(rec.priority));
+          expect(rec, isA<Recommendation>());
+        }
+      },
+    );
+
+    test('surfaces an upcoming card loaded from MemoryStore.listAll', () async {
+      final store = InMemoryMemoryStore();
+      await store.save(
+        MemoryDocument.empty(
+          contactId: 'mike',
+          displayName: 'Mike Chen',
+          now: DateTime(2026, 6, 1),
+        ).copyWith(
+          upcoming: [
+            UpcomingEntry(
+              startDate: DateTime(2026, 5, 29),
+              endDate: DateTime(2026, 6, 1),
+              description: 'Paris trip',
+            ),
+          ],
+        ),
+      );
+      final container = _container(
+        clock: _FakeClock(DateTime(2026, 6, 1, 12)),
+        store: store,
+      );
+      addTearDown(container.dispose);
       container.read(appControllerProvider);
       await _settle();
 
-      // 'mike' is in the seeded fixture and lands in the top 3 because
-      // he's drifting (bond 68 = steady actually) with a 39-day gap.
-      // Verify he's present, then verify deletion drops him.
-      final before = container
-          .read(recommendationsProvider)
-          .map((r) => r.contactId)
-          .toList();
-      expect(before, contains('mike'));
+      final recs = await container.read(recommendationsProvider.future);
 
-      await container
-          .read(appControllerProvider.notifier)
-          .deleteConnection('mike');
-      await _settle();
-
-      final after = container
-          .read(recommendationsProvider)
-          .map((r) => r.contactId)
-          .toList();
-      expect(after, isNot(contains('mike')));
+      expect(recs.first.contactId, 'mike');
+      expect(recs.first.reason, "Wondering how Mike Chen's Paris trip went?");
     });
 
-    test('returned recommendations carry deterministic priority strings',
-        () {
-      final container = _container();
-      addTearDown(container.dispose);
+    test(
+      'memory load failure falls back to recency-only recommendations',
+      () async {
+        final clock = _FakeClock(DateTime(2026, 6, 1, 12));
+        final container = ProviderContainer(
+          overrides: [
+            firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
+            memoryStoreProvider.overrideWithValue(_FailingListAllMemoryStore()),
+            ..._seededPassFourFiveOverrides().overrides,
+            clockProvider.overrideWithValue(clock.call),
+          ],
+        );
+        addTearDown(container.dispose);
+        container.read(appControllerProvider);
+        await _settle();
 
-      final recs = container.read(recommendationsProvider);
-      const allowedPriorities = {
-        'high priority',
-        'medium priority',
-        'low priority',
-      };
-      for (final rec in recs) {
-        expect(allowedPriorities, contains(rec.priority));
-        expect(rec, isA<Recommendation>());
-      }
-    });
+        final recs = await container.read(recommendationsProvider.future);
+
+        expect(recs, isNotEmpty);
+        expect(
+          recs.map((r) => r.reason),
+          isNot(contains("Wondering how Mike Chen's Paris trip went?")),
+        );
+      },
+    );
   });
 
   // -------------------------------------------------------------------
@@ -238,27 +323,38 @@ void main() {
   // `_FakeClock` above.
   // -------------------------------------------------------------------
   group('recommendationsProvider dual invalidation (PRD Q2)', () {
-    test('cache is served on a second read when no invalidation fires', () {
-      // Fake clock pinned at a time well after the seeded `lastContact`
-      // values so the engine produces a non-empty list.
+    test(
+      'cache is served on a second read when no invalidation fires',
+      () async {
+        // Fake clock pinned at a time well after the seeded `lastContact`
+        // values so the engine produces a non-empty list.
+        final clock = _FakeClock(DateTime(2026, 6, 1, 12));
+        final store = _CountingMemoryStore();
+        final container = _container(clock: clock, store: store);
+        addTearDown(container.dispose);
+        container.read(appControllerProvider);
+        await _settle();
+
+        final first = await container.read(recommendationsProvider.future);
+        final second = await container.read(recommendationsProvider.future);
+
+        // Same list reference — the notifier returned the cached value
+        // verbatim rather than recomputing.
+        expect(identical(first, second), isTrue);
+        expect(store.listAllCalls, 1);
+      },
+    );
+
+    test('memory-change signal invalidates the cache on next read', () async {
       final clock = _FakeClock(DateTime(2026, 6, 1, 12));
-      final container = _container(clock: clock);
+      final store = _CountingMemoryStore();
+      final container = _container(clock: clock, store: store);
       addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
 
-      final first = container.read(recommendationsProvider);
-      final second = container.read(recommendationsProvider);
-
-      // Same list reference — the notifier returned the cached value
-      // verbatim rather than recomputing.
-      expect(identical(first, second), isTrue);
-    });
-
-    test('memory-change signal invalidates the cache on next read', () {
-      final clock = _FakeClock(DateTime(2026, 6, 1, 12));
-      final container = _container(clock: clock);
-      addTearDown(container.dispose);
-
-      final before = container.read(recommendationsProvider);
+      final before = await container.read(recommendationsProvider.future);
+      expect(store.listAllCalls, 1);
 
       // Bump the memory epoch to a moment after computedAt. This is
       // what `MockAiUpdate.commit` does after a successful save.
@@ -266,10 +362,11 @@ void main() {
           .read(memoryEpochProvider.notifier)
           .bump(clock.now.add(const Duration(seconds: 1)));
 
-      final after = container.read(recommendationsProvider);
+      final after = await container.read(recommendationsProvider.future);
 
       // Recompute happened — a fresh list reference comes back.
       expect(identical(before, after), isFalse);
+      expect(store.listAllCalls, 2);
       // Content matches because the engine input did not change.
       expect(
         after.map((r) => r.contactId).toList(),
@@ -277,102 +374,108 @@ void main() {
       );
     });
 
-    test('elapsed time > 6h invalidates the cache on next read', () {
+    test('elapsed time > 6h invalidates the cache on next read', () async {
       final clock = _FakeClock(DateTime(2026, 6, 1, 12));
       final container = _container(clock: clock);
       addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
 
-      final before = container.read(recommendationsProvider);
+      final before = await container.read(recommendationsProvider.future);
 
-      // Advance the wall clock past the 6h freshness window. Because
-      // `read` alone does not re-run `build` (Riverpod treats the
-      // notifier state as cached too), simulate the next-screen-read
-      // freshness check by invalidating and re-reading. In production
-      // any read on Home or the recommendations screen drives a
-      // rebuild via the consumer; the test models that with
-      // `container.invalidate`.
+      // Advance the wall clock past the 6h freshness window, then
+      // invalidate the FutureProvider to model the next provider
+      // evaluation. That next evaluation should observe the stale
+      // timestamp, bypass the cache, and recompute recommendations.
       clock.now = clock.now.add(
         recommendationsFreshness + const Duration(milliseconds: 1),
       );
       container.invalidate(recommendationsProvider);
 
-      final after = container.read(recommendationsProvider);
+      final after = await container.read(recommendationsProvider.future);
       expect(identical(before, after), isFalse);
-    });
-
-    test('cache survives reads at exactly the 6h boundary minus one tick',
-        () {
-      final clock = _FakeClock(DateTime(2026, 6, 1, 12));
-      final container = _container(clock: clock);
-      addTearDown(container.dispose);
-
-      final before = container.read(recommendationsProvider);
-
-      // Just inside the freshness window. Re-reading should not
-      // recompute even after an explicit invalidate — build runs but
-      // the cache check returns the prior list.
-      clock.now = clock.now.add(
-        recommendationsFreshness - const Duration(seconds: 1),
-      );
-      container.invalidate(recommendationsProvider);
-      final after = container.read(recommendationsProvider);
-
-      expect(identical(before, after), isTrue);
     });
 
     test(
-        'AI update commit bumps memoryEpoch which invalidates '
-        'recommendations cache', () async {
-      final store = InMemoryMemoryStore();
-      final clock = _FakeClock(DateTime(2026, 6, 1, 12));
-      final container = ProviderContainer(overrides: [
-        firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
-        memoryStoreProvider.overrideWithValue(store),
-        ..._seededPassFourFiveOverrides().overrides,
-        clockProvider.overrideWithValue(clock.call),
-        // Pass 4.3 #081: pin Mock as the active adapter; this test
-        // asserts memoryEpoch bump from a successful commit, which
-        // requires the onMemoryWritten hook to land.
-        aiUpdateProvider.overrideWith(
-          (ref) => MockAiUpdate(
-            memoryStore: store,
-            appController: ref.read(appControllerProvider.notifier),
-            onMemoryWritten: () {
-              final c = ref.read(clockProvider);
-              ref.read(memoryEpochProvider.notifier).bump(c());
-            },
-          ),
-        ),
-      ]);
-      addTearDown(container.dispose);
+      'cache survives reads at exactly the 6h boundary minus one tick',
+      () async {
+        final clock = _FakeClock(DateTime(2026, 6, 1, 12));
+        final container = _container(clock: clock);
+        addTearDown(container.dispose);
+        container.read(appControllerProvider);
+        await _settle();
 
-      // Prime the cache.
-      final before = container.read(recommendationsProvider);
+        final before = await container.read(recommendationsProvider.future);
 
-      // Run + commit a full AI update on a seeded contact.
-      final mike = container
-          .read(appControllerProvider)
-          .connections
-          .firstWhere((c) => c.id == 'mike');
-      final memory = await container.read(memoryProvider('mike').future);
-      final adapter = container.read(aiUpdateProvider);
-      final result = await adapter.run(
-        contact: mike,
-        userInput: 'Caught up over coffee.',
-        currentMemory: memory,
-        attachments: const [],
-      );
-      // Advance the clock by one tick so the bumped epoch is strictly
-      // after computedAt regardless of the freshness window.
-      clock.now = clock.now.add(const Duration(seconds: 1));
-      await adapter.commit(result);
+        // Just inside the freshness window. Re-reading should not
+        // recompute even after an explicit invalidate — build runs but
+        // the cache check returns the prior list.
+        clock.now = clock.now.add(
+          recommendationsFreshness - const Duration(seconds: 1),
+        );
+        container.invalidate(recommendationsProvider);
+        final after = await container.read(recommendationsProvider.future);
 
-      // Reading the provider again must observe the epoch bump and
-      // recompute. The state delta from `commit` also bumps
-      // `lastContact`, so the recompute reflects the updated input.
-      final after = container.read(recommendationsProvider);
-      expect(identical(before, after), isFalse);
-    },
+        expect(identical(before, after), isTrue);
+      },
+    );
+
+    test(
+      'AI update commit bumps memoryEpoch which invalidates '
+      'recommendations cache',
+      () async {
+        final store = InMemoryMemoryStore();
+        final clock = _FakeClock(DateTime(2026, 6, 1, 12));
+        final container = ProviderContainer(
+          overrides: [
+            firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
+            memoryStoreProvider.overrideWithValue(store),
+            ..._seededPassFourFiveOverrides().overrides,
+            clockProvider.overrideWithValue(clock.call),
+            // Pass 4.3 #081: pin Mock as the active adapter; this test
+            // asserts memoryEpoch bump from a successful commit, which
+            // requires the onMemoryWritten hook to land.
+            aiUpdateProvider.overrideWith(
+              (ref) => MockAiUpdate(
+                memoryStore: store,
+                appController: ref.read(appControllerProvider.notifier),
+                onMemoryWritten: () {
+                  final c = ref.read(clockProvider);
+                  ref.read(memoryEpochProvider.notifier).bump(c());
+                },
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        // Prime the cache.
+        final before = await container.read(recommendationsProvider.future);
+
+        // Run + commit a full AI update on a seeded contact.
+        final mike = container
+            .read(appControllerProvider)
+            .connections
+            .firstWhere((c) => c.id == 'mike');
+        final memory = await container.read(memoryProvider('mike').future);
+        final adapter = container.read(aiUpdateProvider);
+        final result = await adapter.run(
+          contact: mike,
+          userInput: 'Caught up over coffee.',
+          currentMemory: memory,
+          attachments: const [],
+        );
+        // Advance the clock by one tick so the bumped epoch is strictly
+        // after computedAt regardless of the freshness window.
+        clock.now = clock.now.add(const Duration(seconds: 1));
+        await adapter.commit(result);
+
+        // Reading the provider again must observe the epoch bump and
+        // recompute. The state delta from `commit` also bumps
+        // `lastContact`, so the recompute reflects the updated input.
+        final after = await container.read(recommendationsProvider.future);
+        expect(identical(before, after), isFalse);
+      },
       // Pass 4.5 #070: hangs because the snapshot listener-driven
       // state.connections change cascades through memoryProvider's
       // ref.watch(appControllerProvider.select(...)) interaction
@@ -381,12 +484,12 @@ void main() {
       // test/state/app_state_test.dart's AI update batch test.
       // Tracked as a follow-up for a small refactor of memoryProvider's
       // dep set; not blocking #070.
-      skip: 'tracked: memoryProvider/connections-mirror interaction (#070 follow-up)',
+      skip:
+          'tracked: memoryProvider/connections-mirror interaction (#070 follow-up)',
     );
 
-    test(
-        'cache does not survive a memoryStoreProvider swap '
-        '(sign-out then sign-in-as-different-user) — #062', () {
+    test('cache does not survive a memoryStoreProvider swap '
+        '(sign-out then sign-in-as-different-user) — #062', () async {
       // Two distinct stores, one per user. We override
       // memoryStoreProvider directly to model the production
       // scenario: an auth swap rebuilds memoryStoreProvider's
@@ -400,98 +503,106 @@ void main() {
       // recomputed rather than served the cached list.
       final storeA = InMemoryMemoryStore();
       final storeB = InMemoryMemoryStore();
-      final container = ProviderContainer(overrides: [
-        firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
-        memoryStoreProvider.overrideWithValue(storeA),
-        ..._seededPassFourFiveOverrides().overrides,
-        // Pass 4.3 #081: pin Mock; this test doesn't read the
-        // adapter directly but a future provider walk could touch
-        // it via aiUpdateProvider construction.
-        aiUpdateProvider.overrideWith(
-          (ref) => MockAiUpdate(
-            memoryStore: ref.watch(memoryStoreProvider),
-            appController: ref.read(appControllerProvider.notifier),
+      var activeStore = storeA;
+      final container = ProviderContainer(
+        overrides: [
+          firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
+          memoryStoreProvider.overrideWith((_) => activeStore),
+          ..._seededPassFourFiveOverrides().overrides,
+          // Pass 4.3 #081: pin Mock; this test doesn't read the
+          // adapter directly but a future provider walk could touch
+          // it via aiUpdateProvider construction.
+          aiUpdateProvider.overrideWith(
+            (ref) => MockAiUpdate(
+              memoryStore: ref.watch(memoryStoreProvider),
+              appController: ref.read(appControllerProvider.notifier),
+            ),
           ),
-        ),
-      ]);
+        ],
+      );
       addTearDown(container.dispose);
 
-      final listA = container.read(recommendationsProvider);
+      container.read(appControllerProvider);
+      await _settle();
+      final listA = await container.read(recommendationsProvider.future);
 
-      container.updateOverrides([
-        firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
-        memoryStoreProvider.overrideWithValue(storeB),
-        ..._seededPassFourFiveOverrides().overrides,
-        aiUpdateProvider.overrideWith(
-          (ref) => MockAiUpdate(
-            memoryStore: ref.watch(memoryStoreProvider),
-            appController: ref.read(appControllerProvider.notifier),
-          ),
-        ),
-      ]);
+      activeStore = storeB;
+      container.invalidate(memoryStoreProvider);
+      container.invalidate(recommendationsProvider);
+      await _settle();
+      final listB = await container.read(recommendationsProvider.future);
 
-      final listB = container.read(recommendationsProvider);
-
-      expect(identical(listA, listB), isFalse,
-          reason: 'recommendationsProvider must rebuild when '
-              'memoryStoreProvider rebuilds (auth user swap), so the '
-              "previous user's cached list is not reused.");
+      expect(
+        identical(listA, listB),
+        isFalse,
+        reason:
+            'recommendationsProvider must rebuild when '
+            'memoryStoreProvider rebuilds (auth user swap), so the '
+            "previous user's cached list is not reused.",
+      );
     });
 
     test(
-        'failed commit (failOnApply) still bumps the epoch — a transient '
-        'extra recompute is acceptable per the rollback contract', () async {
-      final store = InMemoryMemoryStore();
-      final clock = _FakeClock(DateTime(2026, 6, 1, 12));
-      final container = ProviderContainer(overrides: [
-        firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
-        memoryStoreProvider.overrideWithValue(store),
-        ..._seededPassFourFiveOverrides().overrides,
-        clockProvider.overrideWithValue(clock.call),
-        aiUpdateProvider.overrideWith((ref) => MockAiUpdate(
-              memoryStore: ref.watch(memoryStoreProvider),
-              appController: ref.read(appControllerProvider.notifier),
-              onMemoryWritten: () {
-                final c = ref.read(clockProvider);
-                ref.read(memoryEpochProvider.notifier).bump(c());
-              },
-              failOnApply: true,
-            )),
-      ]);
-      addTearDown(container.dispose);
+      'failed commit (failOnApply) still bumps the epoch — a transient '
+      'extra recompute is acceptable per the rollback contract',
+      () async {
+        final store = InMemoryMemoryStore();
+        final clock = _FakeClock(DateTime(2026, 6, 1, 12));
+        final container = ProviderContainer(
+          overrides: [
+            firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
+            memoryStoreProvider.overrideWithValue(store),
+            ..._seededPassFourFiveOverrides().overrides,
+            clockProvider.overrideWithValue(clock.call),
+            aiUpdateProvider.overrideWith(
+              (ref) => MockAiUpdate(
+                memoryStore: ref.watch(memoryStoreProvider),
+                appController: ref.read(appControllerProvider.notifier),
+                onMemoryWritten: () {
+                  final c = ref.read(clockProvider);
+                  ref.read(memoryEpochProvider.notifier).bump(c());
+                },
+                failOnApply: true,
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        container.read(appControllerProvider);
+        await _settle();
 
-      final before = container.read(recommendationsProvider);
+        final before = await container.read(recommendationsProvider.future);
 
-      final mike = container
-          .read(appControllerProvider)
-          .connections
-          .firstWhere((c) => c.id == 'mike');
-      final memory = await container.read(memoryProvider('mike').future);
-      final adapter = container.read(aiUpdateProvider);
-      final result = await adapter.run(
-        contact: mike,
-        userInput: 'Will roll back.',
-        currentMemory: memory,
-        attachments: const [],
-      );
-      clock.now = clock.now.add(const Duration(seconds: 1));
-      await expectLater(
-        adapter.commit(result),
-        throwsA(isA<AiUpdateFailure>()),
-      );
+        final mike = container
+            .read(appControllerProvider)
+            .connections
+            .firstWhere((c) => c.id == 'mike');
+        final memory = await container.read(memoryProvider('mike').future);
+        final adapter = container.read(aiUpdateProvider);
+        final result = await adapter.run(
+          contact: mike,
+          userInput: 'Will roll back.',
+          currentMemory: memory,
+          attachments: const [],
+        );
+        clock.now = clock.now.add(const Duration(seconds: 1));
+        await expectLater(
+          adapter.commit(result),
+          throwsA(isA<AiUpdateFailure>()),
+        );
 
-      // The save succeeded then the apply threw; the epoch was
-      // bumped after the save and is not unbumped on rollback. The
-      // documented behavior is one extra recompute that produces the
-      // same output (engine input is unchanged because the state
-      // delta was rolled back).
-      final after = container.read(recommendationsProvider);
-      expect(identical(before, after), isFalse);
-      expect(
-        after.map((r) => r.contactId).toList(),
-        before.map((r) => r.contactId).toList(),
-      );
-    },
+        // The save succeeded then the apply threw; the epoch was
+        // bumped after the save and is not unbumped on rollback. The
+        // documented behavior is one extra recompute that produces the
+        // same output (engine input is unchanged because the state
+        // delta was rolled back).
+        final after = await container.read(recommendationsProvider.future);
+        expect(identical(before, after), isFalse);
+        expect(
+          after.map((r) => r.contactId).toList(),
+          before.map((r) => r.contactId).toList(),
+        );
+      },
       // Pass 4.5 #070: hangs at memoryProvider's load step alongside
       // its watch on appControllerProvider.connections — same root
       // cause as the AI-update-bumps-epoch test above. The

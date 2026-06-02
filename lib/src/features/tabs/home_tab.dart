@@ -24,8 +24,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final state = ref.watch(appControllerProvider);
-    final allRecs = ref.watch(recommendationsProvider);
-    final recs = showAll ? allRecs : allRecs.take(2).toList();
+    final recommendations = ref.watch(recommendationsProvider);
     return ListView(
       key: const Key('home-tab'),
       padding: EdgeInsets.fromLTRB(
@@ -51,7 +50,9 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                 padding: EdgeInsets.only(left: AppSpacing.space2),
                 child: SectionTitle(
                   'Top Recommendations',
-                  titleStyle: AppTypography.bodyLg().copyWith(fontWeight: FontWeight.w800),
+                  titleStyle: AppTypography.bodyLg().copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                   action: Padding(
                     padding: EdgeInsets.only(left: AppSpacing.space3),
                     child: TextButton.icon(
@@ -78,44 +79,112 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                 ),
               ),
               SizedBox(height: AppSpacing.space4),
-              if (recs.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(AppSpacing.space8),
-                    child: Text(
-                      'You\'re in touch with everyone right now.',
-                      style: AppTypography.bodyLg(color: tokens.inkMuted),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                )
-              else ...[
-                for (var i = 0; i < recs.length; i++) ...[
-                  Builder(
-                    builder: (context) {
-                      final contact = ref.watch(contactByIdProvider(recs[i].contactId));
-                      if (contact == null) return const SizedBox.shrink();
-                      return RecommendationCard(
-                        key: Key('recommendation-card-${recs[i].contactId}'),
-                        connection: contact,
-                        recommendation: recs[i],
-                        onTap: () => context.push('/contact/${recs[i].contactId}'),
-                      );
-                    },
-                  ),
-                  if (i < recs.length - 1) SizedBox(height: AppSpacing.space3),
-                ],
-                if (!showAll)
-                  Center(
-                    child: TextButton(
-                      onPressed: () => setState(() => showAll = true),
-                      child: const Text('Expand recommendations'),
-                    ),
-                  ),
-              ],
+              recommendations.when(
+                loading: () => const _RecommendationLoadingPlaceholders(
+                  key: Key('home-recommendations-loading'),
+                  count: 2,
+                ),
+                error: (_, _) => _EmptyRecommendations(tokens: tokens),
+                data: (allRecs) {
+                  final recs = showAll ? allRecs : allRecs.take(2).toList();
+                  if (recs.isEmpty) {
+                    return _EmptyRecommendations(tokens: tokens);
+                  }
+                  return Column(
+                    children: [
+                      for (var i = 0; i < recs.length; i++) ...[
+                        Builder(
+                          builder: (context) {
+                            final contact = ref.watch(
+                              contactByIdProvider(recs[i].contactId),
+                            );
+                            if (contact == null) {
+                              return const SizedBox.shrink();
+                            }
+                            return RecommendationCard(
+                              key: Key(
+                                'recommendation-card-${recs[i].contactId}',
+                              ),
+                              connection: contact,
+                              recommendation: recs[i],
+                              onTap: () =>
+                                  context.push('/contact/${recs[i].contactId}'),
+                            );
+                          },
+                        ),
+                        if (i < recs.length - 1)
+                          SizedBox(height: AppSpacing.space3),
+                      ],
+                      if (!showAll)
+                        Center(
+                          child: TextButton(
+                            onPressed: () => setState(() => showAll = true),
+                            child: const Text('Expand recommendations'),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _EmptyRecommendations extends StatelessWidget {
+  const _EmptyRecommendations({required this.tokens});
+
+  final AppTokens tokens;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(AppSpacing.space8),
+        child: Text(
+          'You\'re in touch with everyone right now.',
+          style: AppTypography.bodyLg(color: tokens.inkMuted),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+}
+
+class _RecommendationLoadingPlaceholders extends StatelessWidget {
+  const _RecommendationLoadingPlaceholders({super.key, required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Column(
+      children: [
+        for (var i = 0; i < count; i++) ...[
+          Container(
+            key: Key('recommendation-loading-placeholder-$i'),
+            height: 88,
+            decoration: BoxDecoration(
+              color: tokens.surfaceSunken,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.space4),
+                child: Text(
+                  'Loading recommendations…',
+                  style: AppTypography.body(color: tokens.inkMuted),
+                ),
+              ),
+            ),
+          ),
+          if (i < count - 1) SizedBox(height: AppSpacing.space3),
+        ],
       ],
     );
   }

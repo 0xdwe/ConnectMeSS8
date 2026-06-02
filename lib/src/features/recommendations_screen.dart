@@ -24,26 +24,77 @@ class RecommendationsScreen extends ConsumerWidget {
         backgroundColor: tokens.surface,
         foregroundColor: tokens.ink,
       ),
-      body: ListView(padding: EdgeInsets.all(AppSpacing.space6), children: [
-        for (final recommendation in recommendations)
-          Builder(
-            builder: (context) {
-              final contact = ref.watch(
-                contactByIdProvider(recommendation.contactId),
-              );
-              if (contact == null) return const SizedBox.shrink();
-              return RecommendationCard(
-                key: Key(
-                  'recommendation-card-${recommendation.contactId}',
-                ),
-                connection: contact,
-                recommendation: recommendation,
-                onTap: () =>
-                    context.push('/contact/${recommendation.contactId}'),
-              );
-            },
+      body: ListView(
+        padding: EdgeInsets.all(AppSpacing.space6),
+        children: [
+          recommendations.when(
+            loading: () => const _RecommendationLoadingPlaceholders(
+              key: Key('recommendations-screen-loading'),
+              count: 3,
+            ),
+            error: (_, _) => const SizedBox.shrink(),
+            data: (items) => Column(
+              children: [
+                for (final recommendation in items)
+                  Builder(
+                    builder: (context) {
+                      final contact = ref.watch(
+                        contactByIdProvider(recommendation.contactId),
+                      );
+                      if (contact == null) return const SizedBox.shrink();
+                      return RecommendationCard(
+                        key: Key(
+                          'recommendation-card-${recommendation.contactId}',
+                        ),
+                        connection: contact,
+                        recommendation: recommendation,
+                        onTap: () => context.push(
+                          '/contact/${recommendation.contactId}',
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
           ),
-      ]),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecommendationLoadingPlaceholders extends StatelessWidget {
+  const _RecommendationLoadingPlaceholders({super.key, required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Column(
+      children: [
+        for (var i = 0; i < count; i++) ...[
+          Container(
+            key: Key('recommendations-screen-loading-placeholder-$i'),
+            height: 88,
+            decoration: BoxDecoration(
+              color: tokens.surfaceSunken,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.space4),
+                child: Text(
+                  'Loading recommendations…',
+                  style: AppTypography.body(color: tokens.inkMuted),
+                ),
+              ),
+            ),
+          ),
+          if (i < count - 1) SizedBox(height: AppSpacing.space3),
+        ],
+      ],
     );
   }
 }
