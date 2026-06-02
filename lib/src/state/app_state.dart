@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/social_models.dart';
+import '../ai/ai_update_commit_plan.dart';
 import 'connections/batched_writes.dart';
 import 'connections/batched_writes_providers.dart';
 import 'connections/connection_providers.dart';
@@ -734,29 +735,20 @@ class AppController extends Notifier<AppState> {
         'applyAiUpdateResult: contactId ${result.contactId} not found',
       ),
     );
-    final nextScore =
-        (connection.bondScore + result.bondScoreDelta).clamp(0, 100);
-    final updatedConnection = connection.copyWith(
-      nextStep: result.nextStep ?? connection.nextStep,
-      lastContact: DateTime.now(),
-      bondScore: nextScore,
+    final plan = buildAiUpdateCommitPlan(
+      result: result,
+      connection: connection,
+      now: DateTime.now(),
     );
-    if (result.interactions.length != 1) {
-      throw StateError(
-        'applyAiUpdateResult expects exactly one interaction, '
-        'got ${result.interactions.length}',
-      );
-    }
-    final interaction = result.interactions.single;
 
     await ref.read(batchedWritesProvider).commitAiUpdate(
-          interaction: interaction,
-          updatedConnection: updatedConnection,
+          interaction: plan.interaction,
+          updatedConnection: plan.updatedConnection,
         );
 
     // lastAiSummary is informational; not part of the persisted
     // Firestore shape. Update only after a successful batch commit
     // so a failed batch leaves the prior summary in place.
-    state = state.copyWith(lastAiSummary: result.summary);
+    state = state.copyWith(lastAiSummary: plan.summary);
   }
 }
