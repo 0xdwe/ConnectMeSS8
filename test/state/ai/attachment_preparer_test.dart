@@ -255,6 +255,83 @@ void main() {
     });
   });
 
+  group('hard-fail policy', () {
+    const hardFailMessage =
+        "Attachments couldn't be read. Try again, or continue without them.";
+
+    test('returns message when image-like refs all fail and input is blank', () {
+      final message = attachmentHardFailureFor(
+        userInput: '   ',
+        attachments: const [AttachmentRef(name: 'photo.jpg', path: null)],
+        prepared: const PreparedAttachments(
+          images: [],
+          nameOnly: [
+            PreparedAttachment(
+              name: 'photo.jpg',
+              softFailReason: AttachmentDegradeReason.fileNotFound,
+            ),
+          ],
+        ),
+      );
+
+      expect(message, hardFailMessage);
+    });
+
+    test('does not hard-fail non-image-only attachments', () {
+      final message = attachmentHardFailureFor(
+        userInput: '',
+        attachments: const [AttachmentRef(name: 'notes.pdf', path: null)],
+        prepared: const PreparedAttachments(
+          images: [],
+          nameOnly: [
+            PreparedAttachment(
+              name: 'notes.pdf',
+              softFailReason: AttachmentDegradeReason.notAnImage,
+            ),
+          ],
+        ),
+      );
+
+      expect(message, isNull);
+    });
+
+    test('does not hard-fail image failures when useful text exists', () {
+      final message = attachmentHardFailureFor(
+        userInput: 'Remember this photo from lunch.',
+        attachments: const [AttachmentRef(name: 'photo.png', path: null)],
+        prepared: const PreparedAttachments(
+          images: [],
+          nameOnly: [
+            PreparedAttachment(
+              name: 'photo.png',
+              softFailReason: AttachmentDegradeReason.fileNotFound,
+            ),
+          ],
+        ),
+      );
+
+      expect(message, isNull);
+    });
+
+    test('does not hard-fail when a prepared image is available', () {
+      final message = attachmentHardFailureFor(
+        userInput: '',
+        attachments: const [AttachmentRef(name: 'photo.webp', path: '/p')],
+        prepared: PreparedAttachments(
+          images: [
+            PreparedImageAttachment(
+              name: 'photo.webp',
+              bytes: Uint8List.fromList([1, 2, 3]),
+            ),
+          ],
+          nameOnly: const [],
+        ),
+      );
+
+      expect(message, isNull);
+    });
+  });
+
   group('soft-fail branches', () {
     test('null path → fileNotFound nameOnly', () async {
       final result = await prepareAttachments(

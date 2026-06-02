@@ -167,6 +167,25 @@ bool _hasImageExtension(String name) {
   return _kImageExtensions.contains(ext);
 }
 
+/// PRD §Q7 composite hard-fail policy for image attachments.
+///
+/// Individual image failures are soft-failed by [prepareAttachments].
+/// The user-level run hard-fails only when the user clearly intended
+/// image input, none of those images survived preparation, and there
+/// is no useful text to process instead.
+String? attachmentHardFailureFor({
+  required String userInput,
+  required List<AttachmentRef> attachments,
+  required PreparedAttachments prepared,
+}) {
+  final hadImageIntent = attachments.any((ref) => _hasImageExtension(ref.name));
+  final allImagesFailed = hadImageIntent && prepared.images.isEmpty;
+  if (allImagesFailed && userInput.trim().isEmpty) {
+    return "Attachments couldn't be read. Try again, or continue without them.";
+  }
+  return null;
+}
+
 /// Encodes [decoded] as JPEG-[kImageJpegQuality] after downscaling
 /// to fit within an [kImageMaxDimension] bounding box if necessary.
 /// Returns null if the source image was empty.
@@ -198,9 +217,9 @@ Uint8List? _downscaleAndEncode(img.Image decoded) {
 /// re-encodes; returns the bounded image set + name-only entries.
 ///
 /// Per PRD §Q7 individual image failures are soft-fails: the run
-/// continues with that one image bumped to name-only. The adapter
-/// in #080 owns the "all-images-failed AND no useful text" hard
-/// fail; this preparer always returns a result.
+/// continues with that one image bumped to name-only. The composite
+/// "all-images-failed AND no useful text" hard-fail policy lives in
+/// [attachmentHardFailureFor].
 Future<PreparedAttachments> prepareAttachments(
   List<AttachmentRef> attachments, {
   AttachmentBytesReader reader = _diskFileReader,
