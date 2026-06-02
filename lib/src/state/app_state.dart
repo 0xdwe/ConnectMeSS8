@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -366,14 +365,6 @@ class AppController extends Notifier<AppState> {
         // (Firestore returns documents in collection order). Tests
         // can override with their own InMemory store and rely on
         // its broadcast order.
-        // Pass 4.3 #085 stall diagnosis (2026-06-01): log every
-        // connection-snapshot emission's bond scores so a missing
-        // round-trip from Firestore through the listener is
-        // visible. Removable once the stall is diagnosed.
-        final summary = snapshot.values
-            .map((c) => '${c.id}:${c.bondScore}')
-            .join(',');
-        debugPrint('connectionsSnapshot: $summary');
         state = state.copyWith(connections: snapshot.values.toList());
       },
       onError: (_) {
@@ -750,17 +741,6 @@ class AppController extends Notifier<AppState> {
       lastContact: DateTime.now(),
       bondScore: nextScore,
     );
-    // Pass 4.3 #085 stall diagnosis (2026-06-01): log the bond
-    // transition through applyAiUpdateResult so a UI-side stall
-    // (curve produced +23, ring stayed at 50) can be triaged
-    // against the actual write path. Removable once the issue is
-    // diagnosed.
-    debugPrint(
-      'applyAiUpdateResult: contactId=${result.contactId} '
-      'priorBond=${connection.bondScore} '
-      'delta=${result.bondScoreDelta} nextBond=$nextScore',
-    );
-
     if (result.interactions.length != 1) {
       throw StateError(
         'applyAiUpdateResult expects exactly one interaction, '
