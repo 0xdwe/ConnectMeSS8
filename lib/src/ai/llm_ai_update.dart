@@ -243,19 +243,13 @@ class LlmAiUpdate implements AiUpdate {
 
     final prepared = await raceWithCancel(attachmentPreparer(attachments));
 
-    // PRD §Q7 hard-fail rule: if the user attached only images, all
-    // of them failed to read, and there is no useful text, surface
-    // a hard fail. The preparer soft-fails individual images; this
-    // is the all-images-failed AND no-useful-text composite check
-    // that lives at the adapter layer. trim() treats whitespace-only
-    // input as "no useful text."
-    final hadImageIntent = attachments.any(_looksLikeImageRef);
-    final allImagesFailed = hadImageIntent && prepared.images.isEmpty;
-    if (allImagesFailed && userInput.trim().isEmpty) {
-      throw const AiUpdateFailure(
-        "Attachments couldn't be read. Try again, or continue without "
-        'them.',
-      );
+    final attachmentFailure = attachmentHardFailureFor(
+      userInput: userInput,
+      attachments: attachments,
+      prepared: prepared,
+    );
+    if (attachmentFailure != null) {
+      throw AiUpdateFailure(attachmentFailure);
     }
 
     final today = clock();
@@ -659,14 +653,6 @@ class LlmAiUpdate implements AiUpdate {
     final closerIdx = withoutOpener.lastIndexOf('```');
     if (closerIdx < 0) return withoutOpener;
     return withoutOpener.substring(0, closerIdx);
-  }
-
-  static bool _looksLikeImageRef(AttachmentRef a) {
-    final lower = a.name.toLowerCase();
-    final dot = lower.lastIndexOf('.');
-    if (dot < 0) return false;
-    final ext = lower.substring(dot);
-    return const {'.jpg', '.jpeg', '.png', '.webp', '.heic'}.contains(ext);
   }
 
   static bool _looksLikeContentPolicy(FirebaseAIException e) {
