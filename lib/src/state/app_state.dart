@@ -18,6 +18,7 @@ import 'connections/connection_seeder.dart';
 import 'connections/firebase_connection_store.dart';
 import 'firebase_providers.dart';
 import 'memory/memory_providers.dart';
+import 'planner_event_normalizer.dart';
 
 final appControllerProvider = NotifierProvider<AppController, AppState>(
   AppController.new,
@@ -629,7 +630,7 @@ class AppController extends Notifier<AppState> {
   }
 
   Future<void> saveEvent(PlannerEvent event) async {
-    await ref.read(eventStoreProvider).save(event);
+    await ref.read(eventStoreProvider).save(normalizePlannerEvent(event));
   }
 
   /// Delete an event and return the deleted record so the UI can
@@ -649,7 +650,7 @@ class AppController extends Notifier<AppState> {
   }
 
   Future<void> restoreEvent(PlannerEvent event) async {
-    await ref.read(eventStoreProvider).save(event);
+    await ref.read(eventStoreProvider).save(normalizePlannerEvent(event));
   }
 
   Future<void> addCategory(String category) async {
