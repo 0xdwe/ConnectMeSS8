@@ -20,7 +20,11 @@ import '../widgets/crm_widgets.dart';
 enum AiUpdateState { inputting, generating, previewing, saving }
 
 class AiUpdateScreen extends ConsumerStatefulWidget {
-  const AiUpdateScreen({super.key, required this.contactId, @visibleForTesting this.initialAttachments});
+  const AiUpdateScreen({
+    super.key,
+    required this.contactId,
+    @visibleForTesting this.initialAttachments,
+  });
   final String contactId;
   final List<AttachmentRef>? initialAttachments;
 
@@ -28,7 +32,8 @@ class AiUpdateScreen extends ConsumerStatefulWidget {
   ConsumerState<AiUpdateScreen> createState() => _AiUpdateScreenState();
 }
 
-class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProviderStateMixin {
+class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
+    with TickerProviderStateMixin {
   final input = TextEditingController();
   final attachments = <AttachmentRef>[];
   AiUpdateState currentState = AiUpdateState.inputting;
@@ -65,7 +70,11 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
   Future<void> pick() async {
     final result = await openFiles();
     if (result.isEmpty) return;
-    setState(() => attachments.addAll(result.map((f) => AttachmentRef(name: f.name, path: f.path))));
+    setState(
+      () => attachments.addAll(
+        result.map((f) => AttachmentRef(name: f.name, path: f.path)),
+      ),
+    );
   }
 
   Future<void> pickImage() async {
@@ -75,7 +84,11 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
     );
     final result = await openFiles(acceptedTypeGroups: [imageGroup]);
     if (result.isEmpty) return;
-    setState(() => attachments.addAll(result.map((f) => AttachmentRef(name: f.name, path: f.path))));
+    setState(
+      () => attachments.addAll(
+        result.map((f) => AttachmentRef(name: f.name, path: f.path)),
+      ),
+    );
   }
 
   bool _isImage(String name) {
@@ -98,14 +111,16 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
           .connections
           .firstWhere((c) => c.id == widget.contactId);
       final memory = await ref.read(memoryProvider(widget.contactId).future);
-      final result = await ref.read(aiUpdateProvider).run(
+      final result = await ref
+          .read(aiUpdateProvider)
+          .run(
             contact: connection,
             userInput: input.text.trim(),
             currentMemory: memory,
             attachments: attachments,
             cancelToken: cancelCompleter.future,
           );
-      
+
       // Initialize controllers for editable fields
       titleControllers = result.interactions
           .map((i) => TextEditingController(text: i.title))
@@ -113,21 +128,22 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
       noteControllers = result.interactions
           .map((i) => TextEditingController(text: i.note))
           .toList();
-      
+
       // Compute whether a memory delta card will render so we know
       // whether to allocate the extra animation controller. The view
       // recomputes the delta itself; this is just for controller sizing.
-      final hasDelta = _computeMemoryDelta(
+      final hasDelta =
+          _computeMemoryDelta(
             priorMemory: memory,
             result: result,
             contactDisplayName: connection.name,
           ) !=
           null;
+      if (!mounted) return;
       // Initialize animation controllers for stagger effect (one extra
       // slot at index N for the memory delta card when present).
       final disableAnimations = MediaQuery.of(context).disableAnimations;
-      final controllerCount =
-          result.interactions.length + (hasDelta ? 1 : 0);
+      final controllerCount = result.interactions.length + (hasDelta ? 1 : 0);
       cardAnimationControllers = List.generate(
         controllerCount,
         (index) => AnimationController(
@@ -135,13 +151,13 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
           duration: const Duration(milliseconds: 240),
         ),
       );
-      
+
       setState(() {
         priorMemory = memory;
         previewResult = result;
         currentState = AiUpdateState.previewing;
       });
-      
+
       // Start staggered animations
       if (!disableAnimations) {
         for (int i = 0; i < cardAnimationControllers.length; i++) {
@@ -185,9 +201,9 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
       // here — the message is the contract.
       if (mounted) {
         setState(() => currentState = AiUpdateState.inputting);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (e) {
       // Catch-all for non-AiUpdate exceptions (e.g. a programming
@@ -249,9 +265,9 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
 
   Future<void> save() async {
     if (previewResult == null) return;
-    
+
     setState(() => currentState = AiUpdateState.saving);
-    
+
     // Build edited result with user changes
     final editedInteractions = <CrmInteraction>[];
     for (int i = 0; i < previewResult!.interactions.length; i++) {
@@ -263,7 +279,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
         ),
       );
     }
-    
+
     final editedResult = AiUpdateResult(
       summary: previewResult!.summary,
       contactId: previewResult!.contactId,
@@ -292,7 +308,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
     // Drop the captured pre-run memory once committed; the next run
     // will recapture it from `memoryProvider`.
     priorMemory = null;
-    
+
     if (mounted) {
       final person = ref.read(contactByIdProvider(widget.contactId));
       final count = editedInteractions.length;
@@ -378,62 +394,108 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
       body: currentState == AiUpdateState.previewing
           ? _buildPreviewView(tokens, person)
           : currentState == AiUpdateState.generating
-              ? _buildLoadingView(tokens, person)
-              : _buildInputView(tokens, person),
+          ? _buildLoadingView(tokens, person)
+          : _buildInputView(tokens, person),
     );
   }
 
   Widget _buildInputView(AppTokens tokens, Connection person) {
-    return ListView(padding: EdgeInsets.all(AppSpacing.space6), children: [
-      CardBox(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Update ${person.name}', style: AppTypography.h1()),
-        SizedBox(height: AppSpacing.space2),
-        Text('Tell AI anything', style: AppTypography.h2()),
-        SizedBox(height: AppSpacing.space2),
-        Text('Text, images, files. AI categorizes info into the right basket and updates history/dashboard.', style: AppTypography.body(color: tokens.inkMuted)),
-        SizedBox(height: AppSpacing.space4),
-        TextField(key: const Key('ai-input-field'), controller: input, minLines: 4, maxLines: 12, decoration: const InputDecoration(hintText: 'Example: Sam said today is first day at job. Ask how it went tomorrow.')),
-        SizedBox(height: AppSpacing.space3),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          ActionChip(avatar: const Icon(Icons.attach_file), label: const Text('Attach'), onPressed: pick),
-          ActionChip(key: const Key('add-image-chip'), avatar: const Icon(Icons.image), label: const Text('Add image'), onPressed: pickImage),
-          for (final file in attachments)
-            if (_isImage(file.name))
-              ClipRRect(
-                key: Key('attachment-preview-${file.name}'),
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                child: file.path != null
-                    ? Image.file(
-                        File(file.path!),
-                        width: 64,
-                        height: 64,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          width: 64,
-                          height: 64,
-                          color: tokens.surfaceSunken,
-                          child: Icon(Icons.image_outlined, color: tokens.inkSubtle),
-                        ),
+    return ListView(
+      padding: EdgeInsets.all(AppSpacing.space6),
+      children: [
+        CardBox(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Update ${person.name}', style: AppTypography.h1()),
+              SizedBox(height: AppSpacing.space2),
+              Text('Tell AI anything', style: AppTypography.h2()),
+              SizedBox(height: AppSpacing.space2),
+              Text(
+                'Text, images, files. AI categorizes info into the right basket and updates history/dashboard.',
+                style: AppTypography.body(color: tokens.inkMuted),
+              ),
+              SizedBox(height: AppSpacing.space4),
+              TextField(
+                key: const Key('ai-input-field'),
+                controller: input,
+                minLines: 4,
+                maxLines: 12,
+                decoration: const InputDecoration(
+                  hintText:
+                      'Example: Sam said today is first day at job. Ask how it went tomorrow.',
+                ),
+              ),
+              SizedBox(height: AppSpacing.space3),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ActionChip(
+                    avatar: const Icon(Icons.attach_file),
+                    label: const Text('Attach'),
+                    onPressed: pick,
+                  ),
+                  ActionChip(
+                    key: const Key('add-image-chip'),
+                    avatar: const Icon(Icons.image),
+                    label: const Text('Add image'),
+                    onPressed: pickImage,
+                  ),
+                  for (final file in attachments)
+                    if (_isImage(file.name))
+                      ClipRRect(
+                        key: Key('attachment-preview-${file.name}'),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        child: file.path != null
+                            ? Image.file(
+                                File(file.path!),
+                                width: 64,
+                                height: 64,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
+                                      width: 64,
+                                      height: 64,
+                                      color: tokens.surfaceSunken,
+                                      child: Icon(
+                                        Icons.image_outlined,
+                                        color: tokens.inkSubtle,
+                                      ),
+                                    ),
+                              )
+                            : Container(
+                                width: 64,
+                                height: 64,
+                                color: tokens.surfaceSunken,
+                                child: Icon(
+                                  Icons.image_outlined,
+                                  color: tokens.inkSubtle,
+                                ),
+                              ),
                       )
-                    : Container(
-                        width: 64,
-                        height: 64,
-                        color: tokens.surfaceSunken,
-                        child: Icon(Icons.image_outlined, color: tokens.inkSubtle),
-                      ),
-              )
-            else
-              Chip(label: Text(file.name)),
-        ]),
-        SizedBox(height: AppSpacing.space5),
-        FilledButton.icon(
-          key: const Key('run-ai-button'),
-          onPressed: currentState == AiUpdateState.generating ? null : submit,
-          icon: const Icon(Icons.auto_awesome),
-          label: Text(currentState == AiUpdateState.generating ? 'Generating...' : 'Update Connection'),
+                    else
+                      Chip(label: Text(file.name)),
+                ],
+              ),
+              SizedBox(height: AppSpacing.space5),
+              FilledButton.icon(
+                key: const Key('run-ai-button'),
+                onPressed: currentState == AiUpdateState.generating
+                    ? null
+                    : submit,
+                icon: const Icon(Icons.auto_awesome),
+                label: Text(
+                  currentState == AiUpdateState.generating
+                      ? 'Generating...'
+                      : 'Update Connection',
+                ),
+              ),
+            ],
+          ),
         ),
-      ])),
-    ]);
+      ],
+    );
   }
 
   /// Loading view shown while [aiUpdateProvider.run] is in flight
@@ -456,9 +518,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(
-              key: const Key('ai-loading-spinner'),
-            ),
+            CircularProgressIndicator(key: const Key('ai-loading-spinner')),
             SizedBox(height: AppSpacing.space5),
             Text(
               "Reading what you've shared with $firstName…",
@@ -531,7 +591,9 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
                 child: FilledButton(
                   key: const Key('save-button'),
                   onPressed: currentState == AiUpdateState.saving ? null : save,
-                  child: Text('Save these (${previewResult!.interactions.length})'),
+                  child: Text(
+                    'Save these (${previewResult!.interactions.length})',
+                  ),
                 ),
               ),
               SizedBox(width: AppSpacing.space3),
@@ -550,13 +612,13 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
   Widget _buildPreviewCard(AppTokens tokens, Connection person, int index) {
     final interaction = previewResult!.interactions[index];
     final animationController = cardAnimationControllers[index];
-    
+
     // Create curved animation for smooth easing
     final animation = CurvedAnimation(
       parent: animationController,
       curve: Curves.easeOutQuart,
     );
-    
+
     return AnimatedBuilder(
       animation: animation,
       builder: (context, child) {
@@ -571,80 +633,83 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen> with TickerProv
       child: CardBox(
         key: Key('preview-card-$index'),
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Contact match row
-          Row(
-            children: [
-              Text(person.avatar, style: const TextStyle(fontSize: 32)),
-              SizedBox(width: AppSpacing.space3),
-              Expanded(
-                child: Text(person.name, style: AppTypography.bodyLg()),
-              ),
-              // AI suggested tag
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.space2, vertical: AppSpacing.space1),
-                decoration: BoxDecoration(
-                  color: tokens.primaryTint,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Contact match row
+            Row(
+              children: [
+                Text(person.avatar, style: const TextStyle(fontSize: 32)),
+                SizedBox(width: AppSpacing.space3),
+                Expanded(
+                  child: Text(person.name, style: AppTypography.bodyLg()),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.auto_awesome, size: 14, color: tokens.primary),
-                    SizedBox(width: AppSpacing.space1),
-                    Text(
-                      'AI suggested',
-                      style: AppTypography.caption(color: tokens.primary),
-                    ),
-                  ],
+                // AI suggested tag
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.space2,
+                    vertical: AppSpacing.space1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tokens.primaryTint,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.auto_awesome, size: 14, color: tokens.primary),
+                      SizedBox(width: AppSpacing.space1),
+                      Text(
+                        'AI suggested',
+                        style: AppTypography.caption(color: tokens.primary),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          SizedBox(height: AppSpacing.space3),
-          // Type chip
-          Chip(
-            avatar: Icon(interaction.type.icon, size: 16),
-            label: Text(interaction.type.label),
-            visualDensity: VisualDensity.compact,
-          ),
-          SizedBox(height: AppSpacing.space3),
-          // Editable title
-          TextField(
-            key: Key('preview-title-$index'),
-            controller: titleControllers[index],
-            decoration: const InputDecoration(
-              labelText: 'Title',
-              border: OutlineInputBorder(),
+              ],
             ),
-          ),
-          SizedBox(height: AppSpacing.space3),
-          // Editable note
-          TextField(
-            key: Key('preview-note-$index'),
-            controller: noteControllers[index],
-            decoration: const InputDecoration(
-              labelText: 'Note',
-              border: OutlineInputBorder(),
+            SizedBox(height: AppSpacing.space3),
+            // Type chip
+            Chip(
+              avatar: Icon(interaction.type.icon, size: 16),
+              label: Text(interaction.type.label),
+              visualDensity: VisualDensity.compact,
             ),
-            minLines: 2,
-            maxLines: 6,
-          ),
-          SizedBox(height: AppSpacing.space3),
-          // Date row
-          Row(
-            children: [
-              Icon(Icons.calendar_today, size: 16, color: tokens.inkMuted),
-              SizedBox(width: AppSpacing.space2),
-              Text(
-                DateFormat.yMMMd().format(interaction.date),
-                style: AppTypography.caption(color: tokens.inkMuted),
+            SizedBox(height: AppSpacing.space3),
+            // Editable title
+            TextField(
+              key: Key('preview-title-$index'),
+              controller: titleControllers[index],
+              decoration: const InputDecoration(
+                labelText: 'Title',
+                border: OutlineInputBorder(),
               ),
-            ],
-          ),
-        ],
-      ),
+            ),
+            SizedBox(height: AppSpacing.space3),
+            // Editable note
+            TextField(
+              key: Key('preview-note-$index'),
+              controller: noteControllers[index],
+              decoration: const InputDecoration(
+                labelText: 'Note',
+                border: OutlineInputBorder(),
+              ),
+              minLines: 2,
+              maxLines: 6,
+            ),
+            SizedBox(height: AppSpacing.space3),
+            // Date row
+            Row(
+              children: [
+                Icon(Icons.calendar_today, size: 16, color: tokens.inkMuted),
+                SizedBox(width: AppSpacing.space2),
+                Text(
+                  DateFormat.yMMMd().format(interaction.date),
+                  style: AppTypography.caption(color: tokens.inkMuted),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -847,11 +912,7 @@ String _extractAppendedBullet({
 /// A small `primary-tint` chip with a leading `primary` accent dot,
 /// announcing as "`<topic>`, newly added" for screen readers.
 class _NewTopicChip extends StatelessWidget {
-  const _NewTopicChip({
-    super.key,
-    required this.topic,
-    required this.tokens,
-  });
+  const _NewTopicChip({super.key, required this.topic, required this.tokens});
 
   final String topic;
   final AppTokens tokens;
@@ -881,10 +942,7 @@ class _NewTopicChip extends StatelessWidget {
               ),
             ),
             SizedBox(width: AppSpacing.space2),
-            Text(
-              topic,
-              style: AppTypography.caption(color: tokens.ink),
-            ),
+            Text(topic, style: AppTypography.caption(color: tokens.ink)),
           ],
         ),
       ),

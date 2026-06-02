@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -70,9 +69,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not pick image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not pick image: $e')));
       }
     }
   }
@@ -99,16 +98,28 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ),
               Divider(color: tokens.border, height: 1),
               ListTile(
-                leading: Icon(Icons.photo_library_outlined, color: tokens.primary),
-                title: Text('Choose from Gallery', style: AppTypography.body(color: tokens.ink)),
+                leading: Icon(
+                  Icons.photo_library_outlined,
+                  color: tokens.primary,
+                ),
+                title: Text(
+                  'Choose from Gallery',
+                  style: AppTypography.body(color: tokens.ink),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImage();
                 },
               ),
               ListTile(
-                leading: Icon(Icons.emoji_emotions_outlined, color: tokens.secondary),
-                title: Text('Use Emoji', style: AppTypography.body(color: tokens.ink)),
+                leading: Icon(
+                  Icons.emoji_emotions_outlined,
+                  color: tokens.secondary,
+                ),
+                title: Text(
+                  'Use Emoji',
+                  style: AppTypography.body(color: tokens.ink),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   setState(() {
@@ -121,7 +132,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ),
               ListTile(
                 leading: Icon(Icons.delete_outline, color: tokens.danger),
-                title: Text('Remove Photo', style: AppTypography.body(color: tokens.danger)),
+                title: Text(
+                  'Remove Photo',
+                  style: AppTypography.body(color: tokens.danger),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   setState(() {
@@ -138,7 +152,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   void _saveChanges() {
-    ref.read(appControllerProvider.notifier).updateUser(
+    ref
+        .read(appControllerProvider.notifier)
+        .updateUser(
           name: name.text,
           email: email.text,
           avatar: avatar.text,
@@ -193,7 +209,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 border: Border.all(color: tokens.border),
               ),
               child: IconButton(
-                icon: Icon(Icons.save_outlined, color: tokens.primary, size: 18),
+                icon: Icon(
+                  Icons.save_outlined,
+                  color: tokens.primary,
+                  size: 18,
+                ),
                 onPressed: _saveChanges,
                 padding: EdgeInsets.zero,
               ),
@@ -221,7 +241,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: tokens.primary.withOpacity(0.15),
+                          color: tokens.primary.withValues(alpha: 0.15),
                           width: 4,
                         ),
                       ),
@@ -258,7 +278,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               // PROFILE PHOTO Label
               Center(
                 child: Text(
@@ -283,18 +303,22 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: tokens.danger,
-                    side: BorderSide(color: tokens.danger.withOpacity(0.25)),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                    side: BorderSide(
+                      color: tokens.danger.withValues(alpha: 0.25),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 10,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
                   child: Text(
                     'Remove Photo',
-                    style: AppTypography.body(color: tokens.danger).copyWith(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTypography.body(
+                      color: tokens.danger,
+                    ).copyWith(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -309,18 +333,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   children: [
                     Text(
                       'NAME',
-                      style: AppTypography.caption(color: tokens.primary).copyWith(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.0,
-                      ),
+                      style: AppTypography.caption(color: tokens.primary)
+                          .copyWith(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.0,
+                          ),
                     ),
                     TextField(
                       controller: name,
-                      style: AppTypography.body(color: tokens.ink).copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: AppTypography.body(
+                        color: tokens.ink,
+                      ).copyWith(fontSize: 16, fontWeight: FontWeight.w600),
                       decoration: const InputDecoration(
                         labelText: 'Name',
                         border: InputBorder.none,
@@ -333,18 +357,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     const SizedBox(height: 12),
                     Text(
                       'EMAIL ADDRESS',
-                      style: AppTypography.caption(color: tokens.primary).copyWith(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.0,
-                      ),
+                      style: AppTypography.caption(color: tokens.primary)
+                          .copyWith(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.0,
+                          ),
                     ),
                     TextField(
                       controller: email,
-                      style: AppTypography.body(color: tokens.ink).copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: AppTypography.body(
+                        color: tokens.ink,
+                      ).copyWith(fontSize: 16, fontWeight: FontWeight.w600),
                       decoration: const InputDecoration(
                         labelText: 'Email',
                         border: InputBorder.none,
@@ -386,7 +410,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         borderRadius: BorderRadius.circular(30),
                         boxShadow: [
                           BoxShadow(
-                            color: tokens.primary.withOpacity(0.3),
+                            color: tokens.primary.withValues(alpha: 0.3),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -403,9 +427,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         onPressed: _saveChanges,
                         child: Text(
                           'Save Changes',
-                          style: AppTypography.body(color: Colors.white).copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: AppTypography.body(
+                            color: Colors.white,
+                          ).copyWith(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),

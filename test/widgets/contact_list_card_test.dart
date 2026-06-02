@@ -8,27 +8,29 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('ContactListCard', () {
     Connection makeConnection({String category = 'Family'}) => Connection(
-          id: 'test-1',
-          name: 'Test User',
-          email: 'test@example.com',
-          category: category,
-          avatar: '🌟',
-          bondScore: 70,
-          nextStep: 'Say hi',
-          lastContact: DateTime(2026, 5, 1),
-          notes: '',
-          knownSince: DateTime(2020, 1, 1),
-          preferredChannels: const ['Text'],
-        );
+      id: 'test-1',
+      name: 'Test User',
+      email: 'test@example.com',
+      category: category,
+      avatar: '🌟',
+      bondScore: 70,
+      nextStep: 'Say hi',
+      lastContact: DateTime(2026, 5, 1),
+      notes: '',
+      knownSince: DateTime(2020, 1, 1),
+      preferredChannels: const ['Text'],
+    );
 
     Widget pump(Connection connection) => MaterialApp(
-          theme: AppTheme.data(false),
-          home: Scaffold(
-            body: ContactListCard(connection: connection, onTap: () {}),
-          ),
-        );
+      theme: AppTheme.data(false),
+      home: Scaffold(
+        body: ContactListCard(connection: connection, onTap: () {}),
+      ),
+    );
 
-    testWidgets('renders category dot tinted to category color', (tester) async {
+    testWidgets('renders category dot tinted to category color', (
+      tester,
+    ) async {
       final connection = makeConnection(category: 'Family');
 
       await tester.pumpWidget(pump(connection));
@@ -38,7 +40,7 @@ void main() {
       final dotFinder = find.byWidgetPredicate(
         (w) =>
             w is CircleAvatar &&
-            w.backgroundColor == tokens.primary &&
+            w.backgroundColor == tokens.categoryFamily &&
             (w.radius ?? 0) <= 6,
       );
       expect(dotFinder, findsOneWidget);

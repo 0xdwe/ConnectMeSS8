@@ -338,7 +338,7 @@ class RecommendationCard extends StatelessWidget {
                   vertical: AppSpacing.space1,
                 ),
                 decoration: BoxDecoration(
-                  color: priorityColor.withOpacity(0.16),
+                  color: priorityColor.withValues(alpha: .16),
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Text(
@@ -367,8 +367,14 @@ Color _recommendationPriorityColor(int score, AppTokens tokens) =>
 
 /// Returns the category-color mapping per DESIGN.md.
 Color categoryColor(String category, AppTokens tokens) {
-  // Swapped to a single elegant premium unified purple color scheme
-  return tokens.primary;
+  return switch (category) {
+    'Family' => tokens.categoryFamily,
+    'Friends' => tokens.categoryFriends,
+    'High School' => tokens.categoryHighSchool,
+    'College' => tokens.categoryCollege,
+    'Work' => tokens.categoryWork,
+    _ => tokens.primary,
+  };
 }
 
 class HeatmapCard extends StatelessWidget {
@@ -378,39 +384,97 @@ class HeatmapCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final categories = ['Family', 'Friends', 'High School', 'College', 'Work'];
+    const categories = [
+      _HeatmapCategory(
+        label: 'Family',
+        icon: Icons.home_outlined,
+        strength: 'Very Strong',
+      ),
+      _HeatmapCategory(
+        label: 'Friends',
+        icon: Icons.groups_2_outlined,
+        strength: 'Strong',
+      ),
+      _HeatmapCategory(
+        label: 'High School',
+        icon: Icons.school_outlined,
+        strength: 'Moderate',
+      ),
+      _HeatmapCategory(
+        label: 'College',
+        icon: Icons.work_outline,
+        strength: 'Light',
+      ),
+      _HeatmapCategory(
+        label: 'Work',
+        icon: Icons.business_center_outlined,
+        strength: 'Building',
+      ),
+    ];
     return CardBox(
+      padding: EdgeInsets.all(AppSpacing.space5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.trending_up, color: tokens.primary),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: tokens.primaryTint,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Icon(Icons.trending_up, color: tokens.primary),
+              ),
               SizedBox(width: AppSpacing.space3),
               Expanded(
-                child: Text(
-                  'Connection Heatmap by Category',
-                  style: AppTypography.h1(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Connection Heatmap by Category',
+                      style: AppTypography.h2(),
+                    ),
+                    SizedBox(height: AppSpacing.space1),
+                    Text(
+                      'Your social activity over the last 12 months',
+                      style: AppTypography.caption(color: tokens.inkMuted),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          SizedBox(height: AppSpacing.space5),
-          Text(
-            'Your social activity patterns over months',
-            style: AppTypography.bodyLg(color: tokens.inkMuted),
-          ),
-          SizedBox(height: AppSpacing.space5),
-          for (final category in categories)
+          SizedBox(height: AppSpacing.space4),
+          for (var i = 0; i < categories.length; i++) ...[
             _HeatmapRow(
-              category: category,
-              count: connections.where((c) => c.category == category).length,
-              color: categoryColor(category, tokens),
+              category: categories[i],
+              count: connections
+                  .where((c) => c.category == categories[i].label)
+                  .length,
+              color: categoryColor(categories[i].label, tokens),
             ),
+            if (i != categories.length - 1)
+              Divider(height: AppSpacing.space5, color: tokens.border),
+          ],
         ],
       ),
     );
   }
+}
+
+class _HeatmapCategory {
+  const _HeatmapCategory({
+    required this.label,
+    required this.icon,
+    required this.strength,
+  });
+
+  final String label;
+  final IconData icon;
+  final String strength;
 }
 
 class _HeatmapRow extends StatelessWidget {
@@ -419,50 +483,90 @@ class _HeatmapRow extends StatelessWidget {
     required this.count,
     required this.color,
   });
-  final String category;
+  final _HeatmapCategory category;
   final int count;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.space5),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: .12),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          child: Icon(category.icon, color: color, size: 23),
+        ),
+        SizedBox(width: AppSpacing.space3),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(radius: 9, backgroundColor: color),
-              SizedBox(width: AppSpacing.space3),
-              Text(
-                category,
-                style: AppTypography.h2(),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.space2,
+                runSpacing: AppSpacing.space1,
+                children: [
+                  Text(
+                    category.label,
+                    style: AppTypography.bodyLg(
+                      color: tokens.ink,
+                    ).copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    '($count contact)',
+                    style: AppTypography.caption(color: tokens.inkMuted),
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.space2,
+                      vertical: AppSpacing.space1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: .12),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text(
+                      category.strength,
+                      style: AppTypography.caption(
+                        color: color,
+                      ).copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                '  ($count contact)',
-                style: AppTypography.bodyLg(color: tokens.inkMuted),
+              SizedBox(height: AppSpacing.space3),
+              Row(
+                children: List.generate(12, (i) {
+                  final activity = (i * 19 + category.label.length * 7) % 100;
+                  final muted = i > 8 && activity.isEven;
+                  return Expanded(
+                    child: Container(
+                      height: 18,
+                      margin: EdgeInsets.only(
+                        right: i == 11 ? 0 : AppSpacing.space2,
+                      ),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: muted
+                            ? tokens.surfaceSunken
+                            : color.withValues(
+                                alpha: .35 + (activity % 55) / 100,
+                              ),
+                      ),
+                    ),
+                  );
+                }),
               ),
             ],
           ),
-          SizedBox(height: AppSpacing.space3),
-          Row(
-            children: List.generate(12, (i) {
-              final active = (i * 19 + category.length * 7) % 100;
-              return Expanded(
-                child: Container(
-                  height: 56,
-                  margin: EdgeInsets.only(right: AppSpacing.space2),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: .35 + (active % 60) / 100),
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

@@ -48,31 +48,30 @@ Future<ProviderContainer> _pumpAndSignIn(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets(
-    'recommendations screen ignores stale recommendation ids',
-    (tester) async {
-      final container = await _pumpAndSignIn(tester);
+  testWidgets('recommendations screen ignores stale recommendation ids', (
+    tester,
+  ) async {
+    final container = await _pumpAndSignIn(tester);
 
-      // The seeded recommendations list references 'mike', 'jessica',
-      // 'sarah', 'david'. Delete 'mike' so the recommendation for 'mike'
-      // points at no connection.
-      container.read(appControllerProvider.notifier).deleteConnection('mike');
-      await tester.pumpAndSettle();
+    // The seeded recommendations list references 'mike', 'jessica',
+    // 'sarah', 'david'. Delete 'mike' so the recommendation for 'mike'
+    // points at no connection.
+    container.read(appControllerProvider.notifier).deleteConnection('mike');
+    await tester.pumpAndSettle();
 
-      // Navigate to the recommendations screen via the View All link
-      // on the home tab.
-      await tester.tap(find.text('View All'));
-      await tester.pumpAndSettle();
+    // Navigate to the recommendations screen via the View All link
+    // on the home tab.
+    await tester.tap(find.text('View All'));
+    await tester.pumpAndSettle();
 
-      // The screen must render without throwing. The other (still-valid)
-      // recommendation cards should render; the stale 'mike' card is
-      // silently skipped.
-      expect(tester.takeException(), isNull);
-      expect(find.byKey(const Key('recommendation-card-mike')), findsNothing);
-      expect(
-        find.byKey(const Key('recommendation-card-jessica')),
-        findsOneWidget,
-      );
-    },
-  );
+    // The screen must render without throwing. The other (still-valid)
+    // recommendation cards should render; the stale 'mike' card is
+    // silently skipped.
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('recommendation-card-mike')), findsNothing);
+    expect(
+      find.byKey(const Key('recommendation-card-jessica')),
+      findsOneWidget,
+    );
+  });
 }

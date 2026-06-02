@@ -21,10 +21,7 @@ import '../test_overrides.dart';
 /// `test/state/memory/ai_update_provider_test.dart`; real-Gemini
 /// integration in #082). Here we only need the failure shape and
 /// the slow-run knob, both of which the Mock supports.
-Widget _wrapScreen({
-  required String contactId,
-  required AiUpdate aiUpdate,
-}) {
+Widget _wrapScreen({required String contactId, required AiUpdate aiUpdate}) {
   return ProviderScope(
     overrides: [
       ...signedInDemoOverrides(),
@@ -38,10 +35,7 @@ Widget _wrapScreen({
   );
 }
 
-MockAiUpdate _mockWith({
-  Duration? slowRunDuration,
-  bool failOnRun = false,
-}) {
+MockAiUpdate _mockWith({Duration? slowRunDuration, bool failOnRun = false}) {
   // Constructor needs a memoryStore + appController, but the screen's
   // submit() reads aiUpdateProvider via Riverpod, not via this Mock.
   // We still need to give it values that don't crash if accidentally
@@ -49,10 +43,12 @@ MockAiUpdate _mockWith({
   // gets cancelled, and never reaches the run() body when failOnRun
   // throws — so a placeholder store and controller are fine.
   final memoryStore = InMemoryMemoryStore();
-  final container = ProviderContainer(overrides: [
-    ...signedInDemoOverrides(),
-    memoryStoreProvider.overrideWithValue(memoryStore),
-  ]);
+  final container = ProviderContainer(
+    overrides: [
+      ...signedInDemoOverrides(),
+      memoryStoreProvider.overrideWithValue(memoryStore),
+    ],
+  );
   addTearDown(container.dispose);
   final appController = container.read(appControllerProvider.notifier);
   return MockAiUpdate(
@@ -71,64 +67,71 @@ Future<void> _typeAndTapRun(WidgetTester tester, String text) async {
 void main() {
   group('AI Update modal — loading view (PRD §Q10 / #081 Slice B)', () {
     testWidgets(
-        'shows centered spinner and warm copy with the contact first name '
-        'while run() is in flight',
-        (tester) async {
-      final ai = _mockWith(slowRunDuration: const Duration(seconds: 2));
-      await tester.pumpWidget(_wrapScreen(contactId: 'mike', aiUpdate: ai));
-      await tester.pumpAndSettle();
+      'shows centered spinner and warm copy with the contact first name '
+      'while run() is in flight',
+      (tester) async {
+        final ai = _mockWith(slowRunDuration: const Duration(seconds: 2));
+        await tester.pumpWidget(_wrapScreen(contactId: 'mike', aiUpdate: ai));
+        await tester.pumpAndSettle();
 
-      await _typeAndTapRun(tester, 'Had coffee with Mike today.');
-      await tester.pump(); // kick the async Future
+        await _typeAndTapRun(tester, 'Had coffee with Mike today.');
+        await tester.pump(); // kick the async Future
 
-      // Loading view is now visible.
-      expect(find.byKey(const Key('ai-loading-spinner')), findsOneWidget);
-      // Warm copy uses the contact's FIRST name (no trailing period
-      // is fine; we assert substring) per PRD §Q10. Mike's first
-      // name in the seed is "Mike".
-      expect(find.textContaining('Reading what you\'ve shared with Mike'),
-          findsOneWidget);
-      // Cancel is reachable.
-      expect(find.byKey(const Key('ai-loading-cancel-button')), findsOneWidget);
+        // Loading view is now visible.
+        expect(find.byKey(const Key('ai-loading-spinner')), findsOneWidget);
+        // Warm copy uses the contact's FIRST name (no trailing period
+        // is fine; we assert substring) per PRD §Q10. Mike's first
+        // name in the seed is "Mike".
+        expect(
+          find.textContaining('Reading what you\'ve shared with Mike'),
+          findsOneWidget,
+        );
+        // Cancel is reachable.
+        expect(
+          find.byKey(const Key('ai-loading-cancel-button')),
+          findsOneWidget,
+        );
 
-      // Drain the in-flight future before tearing down so pending
-      // async doesn't leak into the next test.
-      await tester.pump(const Duration(seconds: 3));
-      await tester.pumpAndSettle();
-    });
+        // Drain the in-flight future before tearing down so pending
+        // async doesn't leak into the next test.
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pumpAndSettle();
+      },
+    );
 
     testWidgets(
-        'tapping Cancel during loading silently returns to inputting view '
-        'without a snackbar',
-        (tester) async {
-      final ai = _mockWith(slowRunDuration: const Duration(seconds: 5));
-      await tester.pumpWidget(_wrapScreen(contactId: 'mike', aiUpdate: ai));
-      await tester.pumpAndSettle();
+      'tapping Cancel during loading silently returns to inputting view '
+      'without a snackbar',
+      (tester) async {
+        final ai = _mockWith(slowRunDuration: const Duration(seconds: 5));
+        await tester.pumpWidget(_wrapScreen(contactId: 'mike', aiUpdate: ai));
+        await tester.pumpAndSettle();
 
-      await _typeAndTapRun(tester, 'Some long story about Mike.');
-      await tester.pump();
+        await _typeAndTapRun(tester, 'Some long story about Mike.');
+        await tester.pump();
 
-      expect(find.byKey(const Key('ai-loading-spinner')), findsOneWidget);
+        expect(find.byKey(const Key('ai-loading-spinner')), findsOneWidget);
 
-      // Tap Cancel mid-flight.
-      await tester.tap(find.byKey(const Key('ai-loading-cancel-button')));
-      // The cancel handler awaits AiUpdateCancelled from the Mock.
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+        // Tap Cancel mid-flight.
+        await tester.tap(find.byKey(const Key('ai-loading-cancel-button')));
+        // The cancel handler awaits AiUpdateCancelled from the Mock.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
 
-      // Back on the input view.
-      expect(find.byKey(const Key('ai-input-field')), findsOneWidget);
-      expect(find.byKey(const Key('run-ai-button')), findsOneWidget);
-      // No snackbar surfaced.
-      expect(find.byType(SnackBar), findsNothing);
+        // Back on the input view.
+        expect(find.byKey(const Key('ai-input-field')), findsOneWidget);
+        expect(find.byKey(const Key('run-ai-button')), findsOneWidget);
+        // No snackbar surfaced.
+        expect(find.byType(SnackBar), findsNothing);
 
-      // The user's text is preserved so they can retry without
-      // retyping it.
-      final textField = tester.widget<TextField>(
-        find.byKey(const Key('ai-input-field')),
-      );
-      expect(textField.controller?.text, 'Some long story about Mike.');
-    });
+        // The user's text is preserved so they can retry without
+        // retyping it.
+        final textField = tester.widget<TextField>(
+          find.byKey(const Key('ai-input-field')),
+        );
+        expect(textField.controller?.text, 'Some long story about Mike.');
+      },
+    );
   });
 
   group('AI Update modal — failure-taxonomy snackbar copy '
@@ -149,14 +152,18 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(find.text(expectedText), findsOneWidget,
-          reason: 'should show the AiUpdateFailure.message text directly');
+      expect(
+        find.text(expectedText),
+        findsOneWidget,
+        reason: 'should show the AiUpdateFailure.message text directly',
+      );
       // Always returns to the input view on failure.
       expect(find.byKey(const Key('ai-input-field')), findsOneWidget);
     }
 
-    testWidgets("transient: \"AI didn't respond in time. Try again?\"",
-        (tester) async {
+    testWidgets("transient: \"AI didn't respond in time. Try again?\"", (
+      tester,
+    ) async {
       await assertFailureMessage(
         tester,
         thrown: const AiUpdateFailure("AI didn't respond in time. Try again?"),
@@ -210,9 +217,9 @@ void main() {
       );
     });
 
-    testWidgets(
-        'unknown exception type falls back to a warm generic message',
-        (tester) async {
+    testWidgets('unknown exception type falls back to a warm generic message', (
+      tester,
+    ) async {
       // Not an AiUpdateFailure and not AiUpdateCancelled — exercises
       // the catch-all branch in submit().
       final ai = _ThrowingAiUpdate(StateError('something else'));
@@ -223,10 +230,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(
-        find.textContaining("Couldn't run AI update"),
-        findsOneWidget,
-      );
+      expect(find.textContaining("Couldn't run AI update"), findsOneWidget);
     });
   });
 }

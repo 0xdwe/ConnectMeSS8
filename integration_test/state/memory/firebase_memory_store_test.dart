@@ -15,7 +15,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
-import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/firebase_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_document.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
@@ -102,19 +101,24 @@ void main() {
     expect(loaded.render(), input.render());
   });
 
-  test('listAll returns every saved doc keyed by contactId; empty when none',
-      () async {
-    final store = FirebaseMemoryStore(firestore: firestore, uid: currentUid());
-    expect(await store.listAll(), isEmpty);
+  test(
+    'listAll returns every saved doc keyed by contactId; empty when none',
+    () async {
+      final store = FirebaseMemoryStore(
+        firestore: firestore,
+        uid: currentUid(),
+      );
+      expect(await store.listAll(), isEmpty);
 
-    await store.save(_doc(contactId: 'a', displayName: 'A'));
-    await store.save(_doc(contactId: 'b', displayName: 'B'));
+      await store.save(_doc(contactId: 'a', displayName: 'A'));
+      await store.save(_doc(contactId: 'b', displayName: 'B'));
 
-    final all = await store.listAll();
-    expect(all.keys, unorderedEquals({'a', 'b'}));
-    expect(all['a']!.displayName, 'A');
-    expect(all['b']!.displayName, 'B');
-  });
+      final all = await store.listAll();
+      expect(all.keys, unorderedEquals({'a', 'b'}));
+      expect(all['a']!.displayName, 'A');
+      expect(all['b']!.displayName, 'B');
+    },
+  );
 
   test('delete removes the doc; subsequent load returns null', () async {
     final store = FirebaseMemoryStore(firestore: firestore, uid: currentUid());
@@ -134,8 +138,7 @@ void main() {
     expect(await store.listAll(), isEmpty);
   });
 
-  test('save writes exactly {markdown, updatedAt, schemaVersion: 1}',
-      () async {
+  test('save writes exactly {markdown, updatedAt, schemaVersion: 1}', () async {
     final uid = currentUid();
     final store = FirebaseMemoryStore(firestore: firestore, uid: uid);
     await store.save(_doc(contactId: 'c1'));
@@ -186,22 +189,27 @@ void main() {
     expect(loaded.history, contains('bullet-39'));
   });
 
-  test('save throws MemoryCapExceededException when no history to trim',
-      () async {
-    final store = FirebaseMemoryStore(firestore: firestore, uid: currentUid());
-    // Pathologically large summary, zero history bullets to drop.
-    final pathological = _doc(
-      contactId: 'huge-summary',
-      summary: 'x' * (70 * 1024),
-      history: '',
-      topics: const [],
-    );
+  test(
+    'save throws MemoryCapExceededException when no history to trim',
+    () async {
+      final store = FirebaseMemoryStore(
+        firestore: firestore,
+        uid: currentUid(),
+      );
+      // Pathologically large summary, zero history bullets to drop.
+      final pathological = _doc(
+        contactId: 'huge-summary',
+        summary: 'x' * (70 * 1024),
+        history: '',
+        topics: const [],
+      );
 
-    await expectLater(
-      store.save(pathological),
-      throwsA(isA<MemoryCapExceededException>()),
-    );
-  });
+      await expectLater(
+        store.save(pathological),
+        throwsA(isA<MemoryCapExceededException>()),
+      );
+    },
+  );
 
   test('two stores for two UIDs are isolated', () async {
     // Save under user A.
@@ -222,36 +230,38 @@ void main() {
     expect(await storeB.load('only-a'), isNull);
   });
 
-  test("user B cannot read user A's memory (rules-enforced isolation)",
-      () async {
-    // Save under user A.
-    final uidA = currentUid();
-    final storeA = FirebaseMemoryStore(firestore: firestore, uid: uidA);
-    await storeA.save(_doc(contactId: 'private', displayName: 'A private'));
-
-    // Switch to user B.
-    await FirebaseAuth.instance.signOut();
-    await FirebaseAuth.instance.signInAnonymously();
-
-    // Build a store bound to *user A's* UID but operated by user B.
-    // The rules require `request.auth.uid == uid` on the path, so
-    // user B's load attempt is denied. The Firestore SDK surfaces
-    // permission-denied as a FirebaseException.
-    final spoofStore = FirebaseMemoryStore(firestore: firestore, uid: uidA);
-    await expectLater(
-      spoofStore.load('private'),
-      throwsA(isA<FirebaseException>().having(
-        (e) => e.code,
-        'code',
-        'permission-denied',
-      )),
-    );
-  });
-
   test(
-      'memoryStoreProvider rebuilds for a new user and the new store '
-      'sees an empty collection (Pass 4.2 #058)',
-      () async {
+    "user B cannot read user A's memory (rules-enforced isolation)",
+    () async {
+      // Save under user A.
+      final uidA = currentUid();
+      final storeA = FirebaseMemoryStore(firestore: firestore, uid: uidA);
+      await storeA.save(_doc(contactId: 'private', displayName: 'A private'));
+
+      // Switch to user B.
+      await FirebaseAuth.instance.signOut();
+      await FirebaseAuth.instance.signInAnonymously();
+
+      // Build a store bound to *user A's* UID but operated by user B.
+      // The rules require `request.auth.uid == uid` on the path, so
+      // user B's load attempt is denied. The Firestore SDK surfaces
+      // permission-denied as a FirebaseException.
+      final spoofStore = FirebaseMemoryStore(firestore: firestore, uid: uidA);
+      await expectLater(
+        spoofStore.load('private'),
+        throwsA(
+          isA<FirebaseException>().having(
+            (e) => e.code,
+            'code',
+            'permission-denied',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('memoryStoreProvider rebuilds for a new user and the new store '
+      'sees an empty collection (Pass 4.2 #058)', () async {
     // Sign in as user A through the real (emulator) FirebaseAuth and
     // build a ProviderContainer. memoryStoreProvider should hand out
     // a UID-bound FirebaseMemoryStore for user A; saving a doc and
@@ -261,9 +271,13 @@ void main() {
 
     final userAUid = currentUid();
     final storeA = container.read(memoryStoreProvider);
-    expect(storeA, isA<FirebaseMemoryStore>(),
-        reason: 'signed-in memoryStoreProvider must return the '
-            'Firestore-backed adapter.');
+    expect(
+      storeA,
+      isA<FirebaseMemoryStore>(),
+      reason:
+          'signed-in memoryStoreProvider must return the '
+          'Firestore-backed adapter.',
+    );
 
     await storeA.save(_doc(contactId: 'a-only', displayName: 'A only'));
     expect((await storeA.listAll()).keys, contains('a-only'));
@@ -275,8 +289,11 @@ void main() {
     await FirebaseAuth.instance.signOut();
     await FirebaseAuth.instance.signInAnonymously();
     final userBUid = currentUid();
-    expect(userBUid, isNot(equals(userAUid)),
-        reason: 'anonymous sign-in must produce a fresh UID.');
+    expect(
+      userBUid,
+      isNot(equals(userAUid)),
+      reason: 'anonymous sign-in must produce a fresh UID.',
+    );
 
     // Pump a microtask so the StreamSubscription callback runs and
     // the provider invalidation is observed.
@@ -284,12 +301,20 @@ void main() {
 
     final storeB = container.read(memoryStoreProvider);
     expect(storeB, isA<FirebaseMemoryStore>());
-    expect(identical(storeA, storeB), isFalse,
-        reason: 'memoryStoreProvider must rebuild when the auth user '
-            'changes; user B must not share user A\'s store instance.');
+    expect(
+      identical(storeA, storeB),
+      isFalse,
+      reason:
+          'memoryStoreProvider must rebuild when the auth user '
+          'changes; user B must not share user A\'s store instance.',
+    );
 
-    expect(await storeB.listAll(), isEmpty,
-        reason: 'user B starts with an empty memories collection; '
-            'user A\'s data must not leak into user B\'s session.');
+    expect(
+      await storeB.listAll(),
+      isEmpty,
+      reason:
+          'user B starts with an empty memories collection; '
+          'user A\'s data must not leak into user B\'s session.',
+    );
   });
 }
