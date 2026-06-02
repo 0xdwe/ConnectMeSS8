@@ -326,14 +326,14 @@ final memoryProvider = FutureProvider.family<MemoryDocument, String>((
   contactId,
 ) async {
   final store = ref.watch(memoryStoreProvider);
-  final connections = ref.watch(
-    appControllerProvider.select((state) => state.connections),
-  );
 
   final loaded = await store.load(contactId);
   if (loaded != null) return loaded;
 
-  final connection = _findConnection(connections, contactId);
+  final connection = _findConnection(
+    ref.read(appControllerProvider).connections,
+    contactId,
+  );
   final empty = MemoryDocument.empty(
     contactId: contactId,
     displayName: connection?.name ?? contactId,

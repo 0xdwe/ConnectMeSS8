@@ -449,6 +449,11 @@ void main() {
         );
         addTearDown(container.dispose);
 
+        final subscription = container.listen<AsyncValue<List<Recommendation>>>(
+          recommendationsProvider,
+          (_, _) {},
+        );
+
         // Prime the cache.
         final before = await container.read(recommendationsProvider.future);
 
@@ -469,23 +474,15 @@ void main() {
         // after computedAt regardless of the freshness window.
         clock.now = clock.now.add(const Duration(seconds: 1));
         await adapter.commit(result);
+        await _settle();
 
         // Reading the provider again must observe the epoch bump and
         // recompute. The state delta from `commit` also bumps
         // `lastContact`, so the recompute reflects the updated input.
         final after = await container.read(recommendationsProvider.future);
+        subscription.close();
         expect(identical(before, after), isFalse);
       },
-      // Pass 4.5 #070: hangs because the snapshot listener-driven
-      // state.connections change cascades through memoryProvider's
-      // ref.watch(appControllerProvider.select(...)) interaction
-      // with the FutureProvider's invalidation. The behavior under
-      // test (epoch bump after commit) is covered by
-      // test/state/app_state_test.dart's AI update batch test.
-      // Tracked as a follow-up for a small refactor of memoryProvider's
-      // dep set; not blocking #070.
-      skip:
-          'tracked: memoryProvider/connections-mirror interaction (#070 follow-up)',
     );
 
     test('cache does not survive a memoryStoreProvider swap '
@@ -603,14 +600,6 @@ void main() {
           before.map((r) => r.contactId).toList(),
         );
       },
-      // Pass 4.5 #070: hangs at memoryProvider's load step alongside
-      // its watch on appControllerProvider.connections — same root
-      // cause as the AI-update-bumps-epoch test above. The
-      // failOnApply rollback contract is independently covered by
-      // test/state/app_state_test.dart's batched-write rollback
-      // tests. Tracked as a follow-up; not blocking #070.
-      skip:
-          'tracked: memoryProvider/connections-mirror interaction (#070 follow-up)',
     );
   });
 }
