@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connect_me/src/ai/ai_update.dart';
 import 'package:connect_me/src/models/social_models.dart';
 import 'package:connect_me/src/state/app_state.dart';
@@ -120,6 +122,216 @@ Future<void> _seedEvents(InMemoryEventStore store) async {
   for (final e in AppState.seeded().events) {
     await store.save(e);
   }
+}
+
+class _RecordingConnectionStore extends InMemoryConnectionStore {
+  int activeSnapshotListeners = 0;
+
+  @override
+  Stream<Map<String, Connection>> snapshot() {
+    late StreamController<Map<String, Connection>> controller;
+    StreamSubscription<Map<String, Connection>>? sub;
+    controller = StreamController<Map<String, Connection>>(
+      onListen: () {
+        activeSnapshotListeners++;
+        sub = super.snapshot().listen(
+              controller.add,
+              onError: controller.addError,
+              onDone: controller.close,
+            );
+      },
+      onCancel: () async {
+        activeSnapshotListeners--;
+        await sub?.cancel();
+        await controller.close();
+      },
+    );
+    return controller.stream;
+  }
+}
+
+class _RecordingInteractionStore extends InMemoryInteractionStore {
+  int activeSnapshotListeners = 0;
+
+  @override
+  Stream<Map<String, CrmInteraction>> snapshot() {
+    late StreamController<Map<String, CrmInteraction>> controller;
+    StreamSubscription<Map<String, CrmInteraction>>? sub;
+    controller = StreamController<Map<String, CrmInteraction>>(
+      onListen: () {
+        activeSnapshotListeners++;
+        sub = super.snapshot().listen(
+              controller.add,
+              onError: controller.addError,
+              onDone: controller.close,
+            );
+      },
+      onCancel: () async {
+        activeSnapshotListeners--;
+        await sub?.cancel();
+        await controller.close();
+      },
+    );
+    return controller.stream;
+  }
+}
+
+class _RecordingEventStore extends InMemoryEventStore {
+  int activeSnapshotListeners = 0;
+
+  @override
+  Stream<Map<String, PlannerEvent>> snapshot() {
+    late StreamController<Map<String, PlannerEvent>> controller;
+    StreamSubscription<Map<String, PlannerEvent>>? sub;
+    controller = StreamController<Map<String, PlannerEvent>>(
+      onListen: () {
+        activeSnapshotListeners++;
+        sub = super.snapshot().listen(
+              controller.add,
+              onError: controller.addError,
+              onDone: controller.close,
+            );
+      },
+      onCancel: () async {
+        activeSnapshotListeners--;
+        await sub?.cancel();
+        await controller.close();
+      },
+    );
+    return controller.stream;
+  }
+}
+
+class _RecordingUserDocStore extends InMemoryUserDocStore {
+  int activeSnapshotListeners = 0;
+
+  @override
+  Stream<UserDocSnapshot> snapshot() {
+    late StreamController<UserDocSnapshot> controller;
+    StreamSubscription<UserDocSnapshot>? sub;
+    controller = StreamController<UserDocSnapshot>(
+      onListen: () {
+        activeSnapshotListeners++;
+        sub = super.snapshot().listen(
+              controller.add,
+              onError: controller.addError,
+              onDone: controller.close,
+            );
+      },
+      onCancel: () async {
+        activeSnapshotListeners--;
+        await sub?.cancel();
+        await controller.close();
+      },
+    );
+    return controller.stream;
+  }
+}
+
+class _SignedOutTestConnectionStore implements ConnectionStore {
+  const _SignedOutTestConnectionStore();
+
+  StateError get _error => StateError('signed out');
+
+  @override
+  Future<Connection?> load(String contactId) => Future.error(_error);
+
+  @override
+  Future<void> save(Connection connection) => Future.error(_error);
+
+  @override
+  Future<void> delete(String contactId) => Future.error(_error);
+
+  @override
+  Future<Map<String, Connection>> listAll() => Future.error(_error);
+
+  @override
+  Stream<Map<String, Connection>> snapshot() =>
+      Stream.value(const <String, Connection>{});
+
+  @override
+  Map<String, Connection>? snapshotSync() => const <String, Connection>{};
+
+  @override
+  Future<void> dispose() async {}
+}
+
+class _SignedOutTestInteractionStore implements InteractionStore {
+  const _SignedOutTestInteractionStore();
+
+  StateError get _error => StateError('signed out');
+
+  @override
+  Future<CrmInteraction?> load(String interactionId) => Future.error(_error);
+
+  @override
+  Future<void> save(CrmInteraction interaction) => Future.error(_error);
+
+  @override
+  Future<void> delete(String interactionId) => Future.error(_error);
+
+  @override
+  Future<Map<String, CrmInteraction>> listAll() => Future.error(_error);
+
+  @override
+  Stream<Map<String, CrmInteraction>> snapshot() =>
+      Stream.value(const <String, CrmInteraction>{});
+
+  @override
+  Map<String, CrmInteraction>? snapshotSync() =>
+      const <String, CrmInteraction>{};
+
+  @override
+  Future<void> dispose() async {}
+}
+
+class _SignedOutTestEventStore implements EventStore {
+  const _SignedOutTestEventStore();
+
+  StateError get _error => StateError('signed out');
+
+  @override
+  Future<PlannerEvent?> load(String eventId) => Future.error(_error);
+
+  @override
+  Future<void> save(PlannerEvent event) => Future.error(_error);
+
+  @override
+  Future<void> delete(String eventId) => Future.error(_error);
+
+  @override
+  Future<Map<String, PlannerEvent>> listAll() => Future.error(_error);
+
+  @override
+  Stream<Map<String, PlannerEvent>> snapshot() =>
+      Stream.value(const <String, PlannerEvent>{});
+
+  @override
+  Map<String, PlannerEvent>? snapshotSync() => const <String, PlannerEvent>{};
+
+  @override
+  Future<void> dispose() async {}
+}
+
+class _SignedOutTestUserDocStore implements UserDocStore {
+  const _SignedOutTestUserDocStore();
+
+  StateError get _error => StateError('signed out');
+
+  @override
+  Future<void> saveCategories(List<String> categories) => Future.error(_error);
+
+  @override
+  Future<void> saveEventTypes(List<String> eventTypes) => Future.error(_error);
+
+  @override
+  Stream<UserDocSnapshot> snapshot() => Stream.value(UserDocSnapshot.empty);
+
+  @override
+  UserDocSnapshot? snapshotSync() => UserDocSnapshot.empty;
+
+  @override
+  Future<void> dispose() async {}
 }
 
 void main() {
@@ -670,6 +882,147 @@ void main() {
               .map((c) => c.id),
           contains('returning'),
         );
+      },
+    );
+
+    test(
+      'firebaseAuth.signOut rebuilds auth-aware stores, cancels old '
+      'snapshot listeners, then sign-in replays state from the stores',
+      () async {
+        final auth = MockFirebaseAuth(
+          signedIn: true,
+          mockUser: MockUser(
+            uid: 'test-user',
+            email: 'test@example.com',
+            isAnonymous: false,
+          ),
+        );
+        final connections = _RecordingConnectionStore();
+        final interactions = _RecordingInteractionStore();
+        final events = _RecordingEventStore();
+        final userDoc = _RecordingUserDocStore();
+        await _seedConnections(connections);
+        await _seedInteractions(interactions);
+        await _seedEvents(events);
+        await userDoc.saveCategories(['Team']);
+        await userDoc.saveEventTypes(['Retro']);
+
+        final container = ProviderContainer(overrides: [
+          firebaseAuthProvider.overrideWithValue(auth),
+          memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+          connectionStoreProvider.overrideWith((ref) {
+            if (ref.watch(currentUserProvider) == null) {
+              return const _SignedOutTestConnectionStore();
+            }
+            return connections;
+          }),
+          interactionStoreProvider.overrideWith((ref) {
+            if (ref.watch(currentUserProvider) == null) {
+              return const _SignedOutTestInteractionStore();
+            }
+            return interactions;
+          }),
+          eventStoreProvider.overrideWith((ref) {
+            if (ref.watch(currentUserProvider) == null) {
+              return const _SignedOutTestEventStore();
+            }
+            return events;
+          }),
+          userDocStoreProvider.overrideWith((ref) {
+            if (ref.watch(currentUserProvider) == null) {
+              return const _SignedOutTestUserDocStore();
+            }
+            return userDoc;
+          }),
+          batchedWritesProvider.overrideWithValue(
+            InMemoryBatchedWrites(
+              connectionStore: connections,
+              interactionStore: interactions,
+              eventStore: events,
+            ),
+          ),
+        ]);
+        addTearDown(container.dispose);
+
+        container.read(appControllerProvider);
+        await _settle();
+        expect(connections.activeSnapshotListeners, 1);
+        expect(interactions.activeSnapshotListeners, 1);
+        expect(events.activeSnapshotListeners, 1);
+        expect(userDoc.activeSnapshotListeners, 1);
+        expect(container.read(appControllerProvider).connections, isNotEmpty);
+        expect(container.read(appControllerProvider).categories, ['Team']);
+
+        await auth.signOut();
+        await _settle();
+
+        final signedOutConnectionStore = container.read(connectionStoreProvider);
+        final signedOutInteractionStore = container.read(interactionStoreProvider);
+        final signedOutEventStore = container.read(eventStoreProvider);
+        final signedOutUserDocStore = container.read(userDocStoreProvider);
+        await expectLater(
+          signedOutConnectionStore.load('mike'),
+          throwsA(isA<StateError>()),
+        );
+        await expectLater(
+          signedOutInteractionStore.load('seed'),
+          throwsA(isA<StateError>()),
+        );
+        await expectLater(
+          signedOutEventStore.load('seed'),
+          throwsA(isA<StateError>()),
+        );
+        await expectLater(
+          signedOutUserDocStore.saveCategories(['Nope']),
+          throwsA(isA<StateError>()),
+        );
+        expect(connections.activeSnapshotListeners, 0);
+        expect(interactions.activeSnapshotListeners, 0);
+        expect(events.activeSnapshotListeners, 0);
+        expect(userDoc.activeSnapshotListeners, 0);
+
+        await connections.save(Connection(
+          id: 'after-signout',
+          name: 'After Signout',
+          email: 'after@example.com',
+          category: 'Work',
+          avatar: '👤',
+          bondScore: 50,
+          nextStep: '',
+          lastContact: DateTime.utc(2026, 6, 2),
+          notes: '',
+          knownSince: DateTime.utc(2026, 1, 1),
+          preferredChannels: const ['Text'],
+        ));
+        await _settle();
+        expect(
+          container.read(appControllerProvider).connections.map((c) => c.id),
+          isNot(contains('after-signout')),
+          reason: 'old connection snapshot subscription must be cancelled',
+        );
+
+        auth.mockUser = MockUser(
+          uid: 'test-user',
+          email: 'test@example.com',
+          isAnonymous: false,
+        );
+        await auth.signInWithEmailAndPassword(
+          email: 'test@example.com',
+          password: 'password',
+        );
+        container.read(appControllerProvider);
+        await _settle();
+
+        expect(connections.activeSnapshotListeners, 1);
+        expect(interactions.activeSnapshotListeners, 1);
+        expect(events.activeSnapshotListeners, 1);
+        expect(userDoc.activeSnapshotListeners, 1);
+        expect(
+          container.read(appControllerProvider).connections.map((c) => c.id),
+          contains('after-signout'),
+          reason: 'new sign-in listener should replay the store mirror',
+        );
+        expect(container.read(appControllerProvider).categories, ['Team']);
       },
     );
 
