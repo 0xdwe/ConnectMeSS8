@@ -38,8 +38,9 @@ class MemoryEpochNotifier extends Notifier<DateTime?> {
   void bump(DateTime now) => state = now;
 }
 
-final memoryEpochProvider =
-    NotifierProvider<MemoryEpochNotifier, DateTime?>(MemoryEpochNotifier.new);
+final memoryEpochProvider = NotifierProvider<MemoryEpochNotifier, DateTime?>(
+  MemoryEpochNotifier.new,
+);
 
 /// Active [MemoryStore] for the running app (Pass 4.2, #058).
 ///
@@ -84,20 +85,17 @@ final memoryStoreProvider = Provider<MemoryStore>((ref) {
 class _SignedOutMemoryStore implements MemoryStore {
   const _SignedOutMemoryStore();
 
-  static const String _msg =
-      'Memory is not available while signed out.';
+  static const String _msg = 'Memory is not available while signed out.';
 
   @override
   Future<MemoryDocument?> load(String contactId) =>
       Future.error(StateError(_msg));
 
   @override
-  Future<void> save(MemoryDocument doc) =>
-      Future.error(StateError(_msg));
+  Future<void> save(MemoryDocument doc) => Future.error(StateError(_msg));
 
   @override
-  Future<void> delete(String contactId) =>
-      Future.error(StateError(_msg));
+  Future<void> delete(String contactId) => Future.error(StateError(_msg));
 
   @override
   Future<Map<String, MemoryDocument>> listAll() =>
@@ -146,12 +144,13 @@ final aiUpdateProvider = Provider<AiUpdate>((ref) {
       // at the cap below. AppController stores interactions in
       // insertion order; we sort by date desc to be explicit and
       // robust to future changes in storage order.
-      final all = ref
-          .read(appControllerProvider)
-          .interactions
-          .where((i) => i.contactId == contactId)
-          .toList()
-        ..sort((a, b) => b.date.compareTo(a.date));
+      final all =
+          ref
+              .read(appControllerProvider)
+              .interactions
+              .where((i) => i.contactId == contactId)
+              .toList()
+            ..sort((a, b) => b.date.compareTo(a.date));
       if (all.length > _aiUpdateRecentInteractionsCap) {
         return all.sublist(0, _aiUpdateRecentInteractionsCap);
       }
@@ -177,8 +176,7 @@ const int _aiUpdateRecentInteractionsCap = 10;
 class _SignedOutAiUpdate implements AiUpdate {
   const _SignedOutAiUpdate();
 
-  static const String _msg =
-      'AI Update is not available while signed out.';
+  static const String _msg = 'AI Update is not available while signed out.';
 
   @override
   Future<AiUpdateResult> run({
@@ -187,12 +185,10 @@ class _SignedOutAiUpdate implements AiUpdate {
     required MemoryDocument currentMemory,
     required List<AttachmentRef> attachments,
     Future<void>? cancelToken,
-  }) =>
-      Future.error(StateError(_msg));
+  }) => Future.error(StateError(_msg));
 
   @override
-  Future<void> commit(AiUpdateResult result) =>
-      Future.error(StateError(_msg));
+  Future<void> commit(AiUpdateResult result) => Future.error(StateError(_msg));
 }
 
 /// Freshness window for the [recommendationsProvider] cache (PRD Q2).
@@ -230,88 +226,77 @@ class _RecommendationsCache {
 /// `now - computedAt > recommendationsFreshness`. Otherwise serve
 /// the cached list.
 ///
-/// Connection / interaction state changes also rebuild the notifier
+/// Connection / interaction state changes also rebuild the provider
 /// (via the `select` watches), and the cache invariant compares dep
 /// references by identity — a new connections list (e.g. after
-/// `addConnection`) skips the cache. Memory changes do not flow
-/// through `select` (the engine does not yet read memories), so
-/// [memoryEpochProvider] is the explicit signal from
-/// [MockAiUpdate.commit].
+/// `addConnection`) skips the cache. Memory document changes are
+/// signalled via [memoryEpochProvider]; when the cache is stale or
+/// invalidated, the provider reloads [MemoryStore.listAll()] before
+/// ranking.
 ///
 /// Per PRD Q2 there is no background scheduler. The freshness check
 /// runs on each read; a passive app whose state never changes
 /// continues to serve the cache until the next read after the 6h
-/// boundary, at which point the next read recomputes.
-class RecommendationsNotifier extends Notifier<List<Recommendation>> {
-  _RecommendationsCache? _cache;
-
-  @override
-  List<Recommendation> build() {
-    // Watch the active memory store so an auth swap (sign-out
-    // then sign-in-as-different-user) rebuilds this notifier and
-    // discards the previous user's cached list. #062 follow-up
-    // against #058 AC4. The store reference is also pinned into
-    // the cache tuple below: the long-lived Notifier instance
-    // outlives an override swap, so `_cache` would otherwise
-    // survive the rebuild and serve user A's list to user B when
-    // connections + interactions stay object-identical across the
-    // swap (the AppController is not yet auth-aware). Bounded
-    // today because the engine still receives `memories: const
-    // {}`; closes the leak before #051 wires real per-contact
-    // memory in.
-    final store = ref.watch(memoryStoreProvider);
-    final connections = ref.watch(
-      appControllerProvider.select((state) => state.connections),
-    );
-    final interactions = ref.watch(
-      appControllerProvider.select((state) => state.interactions),
-    );
-    final memoryEpoch = ref.watch(memoryEpochProvider);
-    final clock = ref.read(clockProvider);
-    final now = clock();
-
-    final cache = _cache;
-    final isFresh = cache != null &&
-        now.difference(cache.computedAt) < recommendationsFreshness &&
-        (memoryEpoch == null || !memoryEpoch.isAfter(cache.computedAt)) &&
-        identical(cache.store, store) &&
-        identical(cache.connections, connections) &&
-        identical(cache.interactions, interactions);
-
-    if (isFresh) {
-      return cache.list;
-    }
-
-    // PRD Q12 / #049: the engine knows how to surface upcoming-driven
-    // cards from `memory.upcoming`, but the Mock updater never
-    // populates that section. Aggregating the memory map for
-    // production reads requires async I/O against `MemoryStore` which
-    // doesn't fit a sync `Notifier.build()`. Pass `const {}` for now
-    // — the engine logic is fixture-tested, and a follow-up issue
-    // wires the loaded map when (a) `LlmAiUpdate` lands in Pass 4 and
-    // starts producing upcoming entries, or (b) the demo path needs
-    // hand-edited upcoming entries surfaced.
-    final list = rankRecommendations(
-      connections: connections,
-      interactions: interactions,
-      memories: const {},
-      now: now,
-    );
-    _cache = _RecommendationsCache(
-      computedAt: now,
-      list: list,
-      store: store,
-      connections: connections,
-      interactions: interactions,
-    );
-    return list;
-  }
+/// boundary, at which point the next read reloads memories and
+/// recomputes.
+class _RecommendationsCacheHolder {
+  _RecommendationsCache? cache;
 }
 
-final recommendationsProvider =
-    NotifierProvider<RecommendationsNotifier, List<Recommendation>>(
-  RecommendationsNotifier.new,
+final _recommendationsCacheProvider = Provider<_RecommendationsCacheHolder>(
+  (_) => _RecommendationsCacheHolder(),
 );
+
+final recommendationsProvider = FutureProvider<List<Recommendation>>((
+  ref,
+) async {
+  final holder = ref.watch(_recommendationsCacheProvider);
+  final store = ref.watch(memoryStoreProvider);
+  final connections = ref.watch(
+    appControllerProvider.select((state) => state.connections),
+  );
+  final interactions = ref.watch(
+    appControllerProvider.select((state) => state.interactions),
+  );
+  final memoryEpoch = ref.watch(memoryEpochProvider);
+  final clock = ref.read(clockProvider);
+  final now = clock();
+
+  final cache = holder.cache;
+  final isFresh =
+      cache != null &&
+      now.difference(cache.computedAt) < recommendationsFreshness &&
+      (memoryEpoch == null || !memoryEpoch.isAfter(cache.computedAt)) &&
+      identical(cache.store, store) &&
+      identical(cache.connections, connections) &&
+      identical(cache.interactions, interactions);
+
+  if (isFresh) {
+    return cache.list;
+  }
+
+  Map<String, MemoryDocument> memories;
+  try {
+    memories = await store.listAll();
+  } catch (_) {
+    memories = const {};
+  }
+
+  final list = rankRecommendations(
+    connections: connections,
+    interactions: interactions,
+    memories: memories,
+    now: now,
+  );
+  holder.cache = _RecommendationsCache(
+    computedAt: now,
+    list: list,
+    store: store,
+    connections: connections,
+    interactions: interactions,
+  );
+  return list;
+});
 
 /// Per-contact list of conversation topics (family by `contactId`).
 ///
@@ -319,8 +304,10 @@ final recommendationsProvider =
 /// the doc resolves with topics, or an empty list otherwise. The
 /// empty-list signal lets callers fall back to category defaults via
 /// `topicsForContact` without binding this provider to widget code.
-final memoryTopicsProvider =
-    Provider.family<List<String>, String>((ref, contactId) {
+final memoryTopicsProvider = Provider.family<List<String>, String>((
+  ref,
+  contactId,
+) {
   final memory = ref.watch(memoryProvider(contactId));
   return memory.maybeWhen(
     data: (doc) => doc.topics,
@@ -334,8 +321,10 @@ final memoryTopicsProvider =
 /// connections added between Pass 2 and Pass 3 — or any contact missed
 /// by the seed migration — get a sensible empty memory on first
 /// observe rather than null.
-final memoryProvider =
-    FutureProvider.family<MemoryDocument, String>((ref, contactId) async {
+final memoryProvider = FutureProvider.family<MemoryDocument, String>((
+  ref,
+  contactId,
+) async {
   final store = ref.watch(memoryStoreProvider);
   final connections = ref.watch(
     appControllerProvider.select((state) => state.connections),
@@ -388,10 +377,7 @@ final diskToFirestoreMigrationProvider = FutureProvider<int>((ref) async {
   final migration = DiskToFirestoreMigration(
     source: FileMemoryStore(),
     target: store,
-    sentinel: FirestoreMigrationSentinel(
-      firestore: firestore,
-      uid: user.uid,
-    ),
+    sentinel: FirestoreMigrationSentinel(firestore: firestore, uid: user.uid),
   );
   return migration.ensureMigrated();
 });

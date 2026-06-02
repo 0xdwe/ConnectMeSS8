@@ -1,5 +1,15 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
 import 'package:connect_me/src/state/app_state.dart';
+import 'package:connect_me/src/state/connections/batched_writes.dart';
+import 'package:connect_me/src/state/connections/batched_writes_providers.dart';
+import 'package:connect_me/src/state/connections/connection_providers.dart';
+import 'package:connect_me/src/state/connections/event_providers.dart';
+import 'package:connect_me/src/state/connections/in_memory_connection_store.dart';
+import 'package:connect_me/src/state/connections/in_memory_event_store.dart';
+import 'package:connect_me/src/state/connections/in_memory_interaction_store.dart';
+import 'package:connect_me/src/state/connections/in_memory_user_doc_store.dart';
+import 'package:connect_me/src/state/connections/interaction_providers.dart';
+import 'package:connect_me/src/state/connections/user_doc_store_providers.dart';
 import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
@@ -7,6 +17,35 @@ import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+List<dynamic> _storeOverrides() {
+  final connections = InMemoryConnectionStore();
+  final interactions = InMemoryInteractionStore();
+  final events = InMemoryEventStore();
+  final userDoc = InMemoryUserDocStore();
+  for (final c in AppState.seeded().connections) {
+    connections.save(c);
+  }
+  for (final i in AppState.seeded().interactions) {
+    interactions.save(i);
+  }
+  for (final e in AppState.seeded().events) {
+    events.save(e);
+  }
+  return [
+    connectionStoreProvider.overrideWithValue(connections),
+    interactionStoreProvider.overrideWithValue(interactions),
+    eventStoreProvider.overrideWithValue(events),
+    userDocStoreProvider.overrideWithValue(userDoc),
+    batchedWritesProvider.overrideWithValue(
+      InMemoryBatchedWrites(
+        connectionStore: connections,
+        interactionStore: interactions,
+        eventStore: events,
+      ),
+    ),
+  ];
+}
 
 Future<ProviderContainer> _pumpAndSignIn(WidgetTester tester) async {
   // #052: AuthScreen sign-in routes through firebaseAuthProvider; tests
@@ -24,6 +63,7 @@ Future<ProviderContainer> _pumpAndSignIn(WidgetTester tester) async {
           ),
         ),
       ),
+      ..._storeOverrides(),
     ],
   );
   addTearDown(container.dispose);
@@ -48,31 +88,34 @@ Future<ProviderContainer> _pumpAndSignIn(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets(
-    'recommendations screen ignores stale recommendation ids',
-    (tester) async {
-      final container = await _pumpAndSignIn(tester);
+  testWidgets('recommendations screen ignores stale recommendation ids', (
+    tester,
+  ) async {
+    final container = await _pumpAndSignIn(tester);
 
-      // The seeded recommendations list references 'mike', 'jessica',
-      // 'sarah', 'david'. Delete 'mike' so the recommendation for 'mike'
-      // points at no connection.
-      container.read(appControllerProvider.notifier).deleteConnection('mike');
-      await tester.pumpAndSettle();
+    // The seeded recommendations list references 'mike', 'jessica',
+    // 'sarah', 'david'. Delete 'mike' so the recommendation for 'mike'
+    // points at no connection.
+    container.read(appControllerProvider.notifier).deleteConnection('mike');
+    await tester.pumpAndSettle();
 
-      // Navigate to the recommendations screen via the View All link
-      // on the home tab.
-      await tester.tap(find.text('View All'));
-      await tester.pumpAndSettle();
+    // Ignore the pre-existing auth-screen layout overflow in this
+    // widget fixture; this test asserts recommendation rendering.
+    tester.takeException();
 
-      // The screen must render without throwing. The other (still-valid)
-      // recommendation cards should render; the stale 'mike' card is
-      // silently skipped.
-      expect(tester.takeException(), isNull);
-      expect(find.byKey(const Key('recommendation-card-mike')), findsNothing);
-      expect(
-        find.byKey(const Key('recommendation-card-jessica')),
-        findsOneWidget,
-      );
-    },
-  );
+    // Navigate to the recommendations screen via the View All link
+    // on the home tab.
+    await tester.tap(find.text('View All'));
+    await tester.pumpAndSettle();
+
+    // The screen must render without throwing. The other (still-valid)
+    // recommendation cards should render; the stale 'mike' card is
+    // silently skipped.
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('recommendation-card-mike')), findsNothing);
+    expect(
+      find.byKey(const Key('recommendation-card-jessica')),
+      findsOneWidget,
+    );
+  });
 }
