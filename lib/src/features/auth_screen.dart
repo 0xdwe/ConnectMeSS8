@@ -8,9 +8,7 @@ import '../state/firebase_providers.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
-import '../widgets/crm_widgets.dart';
 import '../widgets/chain_logo.dart';
-
 
 enum _AuthMode { login, signup }
 
@@ -73,7 +71,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     setState(() => _busy = true);
     try {
-      await ref.read(firebaseAuthProvider).signInWithEmailAndPassword(
+      await ref
+          .read(firebaseAuthProvider)
+          .signInWithEmailAndPassword(
             email: _loginEmail.text.trim(),
             password: _loginPassword.text,
           );
@@ -131,14 +131,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     setState(() => _busy = true);
     try {
-      final cred =
-          await ref.read(firebaseAuthProvider).createUserWithEmailAndPassword(
-                email: email,
-                password: password,
-              );
+      final cred = await ref
+          .read(firebaseAuthProvider)
+          .createUserWithEmailAndPassword(email: email, password: password);
       try {
         await cred.user?.updateDisplayName(name);
-      } catch (_) {/* ignore */}
+      } catch (_) {
+        /* ignore */
+      }
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -200,7 +200,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -218,9 +217,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             builder: (context, constraints) {
               return SingleChildScrollView(
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight,
-                  ),
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: IntrinsicHeight(
                     child: Padding(
                       padding: EdgeInsets.all(AppSpacing.space5),
@@ -228,18 +225,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         children: [
                           // Spacer to push white card to center vertically
                           Spacer(),
-                          
+
                           // White rounded rectangle as base
                           Container(
                             constraints: BoxConstraints(
-                              maxWidth: 500, // Max width for better readability on larger screens
+                              maxWidth:
+                                  500, // Max width for better readability on larger screens
                             ),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(AppRadius.xl * 2),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.xl * 2,
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withValues(alpha: 0.1),
                                   blurRadius: 30,
                                   offset: Offset(0, 10),
                                 ),
@@ -251,20 +251,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   // App logo (smaller)
-                                    Container(
-                                      padding: EdgeInsets.all(AppSpacing.space3),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFA0C4FF).withOpacity(0.1),  // Soft blue background
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const LinkedChainLogo(
-                                        size: 48,
-                                        color: Color(0xFF6B4EFF), // ← ADD THIS: Purple color for the logo
-                                      ),
+                                  Container(
+                                    padding: EdgeInsets.all(AppSpacing.space3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFA0C4FF).withValues(
+                                        alpha: 0.1,
+                                      ), // Soft blue background
+                                      shape: BoxShape.circle,
                                     ),
-                                  
+                                    child: const LinkedChainLogo(
+                                      size: 48,
+                                      color: Color(
+                                        0xFF6B4EFF,
+                                      ), // ← ADD THIS: Purple color for the logo
+                                    ),
+                                  ),
+
                                   SizedBox(height: AppSpacing.space5),
-                                  
+
                                   // Content based on mode (no mode selector)
                                   if (_mode == _AuthMode.login)
                                     _LoginForm(
@@ -274,7 +278,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       passwordError: _loginPasswordError,
                                       busy: _busy,
                                       onSubmit: _submitLogin,
-                                      onSwitch: () => _switchMode(_AuthMode.signup),
+                                      onSwitch: () =>
+                                          _switchMode(_AuthMode.signup),
                                     )
                                   else
                                     _SignupForm(
@@ -288,24 +293,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       confirmError: _signupConfirmError,
                                       busy: _busy,
                                       onSubmit: _submitSignup,
-                                      onSwitch: () => _switchMode(_AuthMode.login),
+                                      onSwitch: () =>
+                                          _switchMode(_AuthMode.login),
                                     ),
                                 ],
                               ),
                             ),
                           ),
-                          
+
                           SizedBox(height: AppSpacing.space5),
-                          
+
                           // Powered by text outside the white box
                           Text(
                             'Powered by Firebase Auth.',
                             textAlign: TextAlign.center,
                             style: AppTypography.caption(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
-                          
+
                           Spacer(),
                         ],
                       ),
@@ -347,25 +353,21 @@ class _LoginForm extends StatelessWidget {
         // Welcome back text
         Text(
           'Welcome back.',
-          style: AppTypography.display(
-            color: Colors.black,
-          ),
+          style: AppTypography.display(color: Colors.black),
           textAlign: TextAlign.center,
         ),
-        
+
         SizedBox(height: AppSpacing.space2),
-        
+
         // Subtitle text
         Text(
           'Log in to keep your connections close.',
-          style: AppTypography.body(
-            color: Colors.grey.shade600,
-          ),
+          style: AppTypography.body(color: Colors.grey.shade600),
           textAlign: TextAlign.center,
         ),
-        
+
         SizedBox(height: AppSpacing.space5),
-        
+
         // Email field - no outline, light grey background
         TextField(
           key: const Key('login-email-field'),
@@ -400,9 +402,9 @@ class _LoginForm extends StatelessWidget {
             ),
           ),
         ),
-        
+
         SizedBox(height: AppSpacing.space4),
-        
+
         // Password field - no outline, light grey background
         TextField(
           key: const Key('login-password-field'),
@@ -435,9 +437,9 @@ class _LoginForm extends StatelessWidget {
             ),
           ),
         ),
-        
+
         SizedBox(height: AppSpacing.space5),
-        
+
         // Login button
         FilledButton.icon(
           key: const Key('sign-in-button'),
@@ -461,15 +463,13 @@ class _LoginForm extends StatelessWidget {
               : const Icon(Icons.arrow_forward),
           label: Text(busy ? 'Signing in…' : 'Log in'),
         ),
-        
+
         SizedBox(height: AppSpacing.space3),
-        
+
         // Sign up option
         TextButton(
           onPressed: busy ? null : onSwitch,
-          style: TextButton.styleFrom(
-            foregroundColor: Color(0xFF6B4EFF),
-          ),
+          style: TextButton.styleFrom(foregroundColor: Color(0xFF6B4EFF)),
           child: const Text("Don't have an account? Sign up"),
         ),
       ],
@@ -510,24 +510,20 @@ class _SignupForm extends StatelessWidget {
       children: [
         Text(
           'Join Connect Me.',
-          style: AppTypography.display(
-            color: Colors.black,
-          ),
+          style: AppTypography.display(color: Colors.black),
           textAlign: TextAlign.center,
         ),
-        
+
         SizedBox(height: AppSpacing.space2),
-        
+
         Text(
           'Join ConnectMe today', // Updated text
-          style: AppTypography.body(
-            color: Colors.grey.shade600,
-          ),
+          style: AppTypography.body(color: Colors.grey.shade600),
           textAlign: TextAlign.center,
         ),
-        
+
         SizedBox(height: AppSpacing.space5),
-        
+
         // Name field - no outline, light grey background
         TextField(
           key: const Key('signup-name-field'),
@@ -560,9 +556,9 @@ class _SignupForm extends StatelessWidget {
             ),
           ),
         ),
-        
+
         SizedBox(height: AppSpacing.space4),
-        
+
         // Email field - no outline, light grey background
         TextField(
           key: const Key('signup-email-field'),
@@ -597,9 +593,9 @@ class _SignupForm extends StatelessWidget {
             ),
           ),
         ),
-        
+
         SizedBox(height: AppSpacing.space4),
-        
+
         // Password field - no outline, light grey background
         TextField(
           key: const Key('signup-password-field'),
@@ -632,9 +628,9 @@ class _SignupForm extends StatelessWidget {
             ),
           ),
         ),
-        
+
         SizedBox(height: AppSpacing.space4),
-        
+
         // Confirm password field - no outline, light grey background
         TextField(
           key: const Key('signup-confirm-field'),
@@ -667,9 +663,9 @@ class _SignupForm extends StatelessWidget {
             ),
           ),
         ),
-        
+
         SizedBox(height: AppSpacing.space5),
-        
+
         // Sign up button
         FilledButton.icon(
           key: const Key('sign-up-button'),
@@ -693,15 +689,13 @@ class _SignupForm extends StatelessWidget {
               : const Icon(Icons.check),
           label: Text(busy ? 'Creating account…' : 'Create account'),
         ),
-        
+
         SizedBox(height: AppSpacing.space3),
-        
+
         // Login option
         TextButton(
           onPressed: busy ? null : onSwitch,
-          style: TextButton.styleFrom(
-            foregroundColor: Color(0xFF6B4EFF),
-          ),
+          style: TextButton.styleFrom(foregroundColor: Color(0xFF6B4EFF)),
           child: const Text('Already have an account? Log in'),
         ),
       ],

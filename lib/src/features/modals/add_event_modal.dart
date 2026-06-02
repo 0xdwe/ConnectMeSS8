@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
-import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 
@@ -18,7 +17,7 @@ Future<PlannerEvent?> showAddEventModal(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.4),
+    barrierColor: Colors.black.withValues(alpha: 0.4),
     builder: (_) => AddEventModal(initialDate: initialDate, event: event),
   );
 }
@@ -99,10 +98,9 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                 Expanded(
                   child: Text(
                     widget.event == null ? 'Add Event' : 'Edit Event',
-                    style: AppTypography.h1(color: tokens.ink).copyWith(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: AppTypography.h1(
+                      color: tokens.ink,
+                    ).copyWith(fontSize: 26, fontWeight: FontWeight.w800),
                   ),
                 ),
                 IconButton(
@@ -121,10 +119,10 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
+                    color: Colors.black.withValues(alpha: 0.03),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
-                  )
+                  ),
                 ],
               ),
               child: Column(
@@ -132,11 +130,12 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                 children: [
                   Text(
                     'TITLE',
-                    style: AppTypography.caption(color: tokens.inkSubtle).copyWith(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
+                    style: AppTypography.caption(color: tokens.inkSubtle)
+                        .copyWith(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
                   ),
                   const SizedBox(height: 6),
                   TextField(
@@ -163,10 +162,10 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
+                    color: Colors.black.withValues(alpha: 0.03),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
-                  )
+                  ),
                 ],
               ),
               child: Column(
@@ -190,16 +189,17 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                       const SizedBox(width: 12),
                       Text(
                         _formatDate(date),
-                        style: AppTypography.body(color: tokens.ink).copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: AppTypography.body(
+                          color: tokens.ink,
+                        ).copyWith(fontWeight: FontWeight.w600),
                       ),
                       const Spacer(),
                       TextButton(
                         onPressed: () async {
                           final picked = await showDialog<DateTime>(
                             context: context,
-                            builder: (context) => _CustomDatePickerDialog(initialDate: date),
+                            builder: (context) =>
+                                _CustomDatePickerDialog(initialDate: date),
                           );
                           if (picked != null) setState(() => date = picked);
                         },
@@ -223,18 +223,23 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                             children: [
                               Text(
                                 'START TIME',
-                                style: AppTypography.caption(color: tokens.inkSubtle).copyWith(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.5,
-                                ),
+                                style:
+                                    AppTypography.caption(
+                                      color: tokens.inkSubtle,
+                                    ).copyWith(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                    ),
                               ),
                               const SizedBox(height: 6),
                               OutlinedButton.icon(
                                 style: OutlinedButton.styleFrom(
                                   side: BorderSide(color: tokens.border),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.md,
+                                    ),
                                   ),
                                 ),
                                 onPressed: () async {
@@ -242,9 +247,15 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                                     context: context,
                                     initialTime: startTime,
                                   );
-                                  if (picked != null) setState(() => startTime = picked);
+                                  if (picked != null) {
+                                    setState(() => startTime = picked);
+                                  }
                                 },
-                                icon: Icon(Icons.schedule, color: tokens.primary, size: 16),
+                                icon: Icon(
+                                  Icons.schedule,
+                                  color: tokens.primary,
+                                  size: 16,
+                                ),
                                 label: Text(
                                   startTime.format(context),
                                   style: AppTypography.body(color: tokens.ink),
@@ -260,18 +271,23 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                             children: [
                               Text(
                                 'END TIME',
-                                style: AppTypography.caption(color: tokens.inkSubtle).copyWith(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.5,
-                                ),
+                                style:
+                                    AppTypography.caption(
+                                      color: tokens.inkSubtle,
+                                    ).copyWith(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                    ),
                               ),
                               const SizedBox(height: 6),
                               OutlinedButton.icon(
                                 style: OutlinedButton.styleFrom(
                                   side: BorderSide(color: tokens.border),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.md,
+                                    ),
                                   ),
                                 ),
                                 onPressed: () async {
@@ -279,9 +295,15 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                                     context: context,
                                     initialTime: endTime,
                                   );
-                                  if (picked != null) setState(() => endTime = picked);
+                                  if (picked != null) {
+                                    setState(() => endTime = picked);
+                                  }
                                 },
-                                icon: Icon(Icons.schedule, color: tokens.primary, size: 16),
+                                icon: Icon(
+                                  Icons.schedule,
+                                  color: tokens.primary,
+                                  size: 16,
+                                ),
                                 label: Text(
                                   endTime.format(context),
                                   style: AppTypography.body(color: tokens.ink),
@@ -299,13 +321,13 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                     children: [
                       Text(
                         'All Day',
-                        style: AppTypography.body(color: tokens.ink).copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: AppTypography.body(
+                          color: tokens.ink,
+                        ).copyWith(fontWeight: FontWeight.w600),
                       ),
                       Switch(
                         value: isAllDay,
-                        activeColor: tokens.primary,
+                        activeThumbColor: tokens.primary,
                         onChanged: (value) => setState(() => isAllDay = value),
                       ),
                     ],
@@ -323,10 +345,10 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
+                    color: Colors.black.withValues(alpha: 0.03),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
-                  )
+                  ),
                 ],
               ),
               child: Column(
@@ -337,18 +359,20 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                     style: AppTypography.body(color: tokens.ink),
                     decoration: InputDecoration(
                       labelText: 'EVENT TYPE',
-                      labelStyle: AppTypography.caption(color: tokens.inkSubtle).copyWith(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
+                      labelStyle: AppTypography.caption(color: tokens.inkSubtle)
+                          .copyWith(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.zero,
                       isDense: true,
                     ),
                     items: state.eventTypes
                         .map(
-                          (type) => DropdownMenuItem(value: type, child: Text(type)),
+                          (type) =>
+                              DropdownMenuItem(value: type, child: Text(type)),
                         )
                         .toList(),
                     onChanged: (value) =>
@@ -360,11 +384,12 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                     style: AppTypography.body(color: tokens.ink),
                     decoration: InputDecoration(
                       labelText: 'LINK TO CONTACT (OPTIONAL)',
-                      labelStyle: AppTypography.caption(color: tokens.inkSubtle).copyWith(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
+                      labelStyle: AppTypography.caption(color: tokens.inkSubtle)
+                          .copyWith(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.zero,
                       isDense: true,
@@ -396,11 +421,12 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                     style: AppTypography.body(color: tokens.ink),
                     decoration: InputDecoration(
                       labelText: 'CATEGORY',
-                      labelStyle: AppTypography.caption(color: tokens.inkSubtle).copyWith(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
+                      labelStyle: AppTypography.caption(color: tokens.inkSubtle)
+                          .copyWith(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.zero,
                       isDense: true,
@@ -442,10 +468,10 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
+                    color: Colors.black.withValues(alpha: 0.03),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
-                  )
+                  ),
                 ],
               ),
               child: Column(
@@ -456,14 +482,15 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                     children: [
                       Text(
                         'Repeat',
-                        style: AppTypography.body(color: tokens.ink).copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: AppTypography.body(
+                          color: tokens.ink,
+                        ).copyWith(fontWeight: FontWeight.w600),
                       ),
                       Switch(
                         value: isRecurring,
-                        activeColor: tokens.primary,
-                        onChanged: (value) => setState(() => isRecurring = value),
+                        activeThumbColor: tokens.primary,
+                        onChanged: (value) =>
+                            setState(() => isRecurring = value),
                       ),
                     ],
                   ),
@@ -487,11 +514,12 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                   Divider(color: tokens.border, height: 24, thickness: 1),
                   Text(
                     'NOTE',
-                    style: AppTypography.caption(color: tokens.inkSubtle).copyWith(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
+                    style: AppTypography.caption(color: tokens.inkSubtle)
+                        .copyWith(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   Container(
@@ -500,7 +528,10 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       border: Border.all(color: tokens.border),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     child: TextField(
                       controller: note,
                       maxLines: 3,
@@ -537,7 +568,9 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                         .saveEvent(
                           PlannerEvent(
                             id: widget.event?.id ?? _uuid.v4(),
-                            title: cleanTitle.isEmpty ? 'New Event' : cleanTitle,
+                            title: cleanTitle.isEmpty
+                                ? 'New Event'
+                                : cleanTitle,
                             contactId: contactId,
                             category: category,
                             date: date,
@@ -560,7 +593,9 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                   } catch (_) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Could not save event. Try again.')),
+                        const SnackBar(
+                          content: Text('Could not save event. Try again.'),
+                        ),
                       );
                     }
                   }
@@ -588,7 +623,9 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                   } catch (_) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Could not delete event. Try again.')),
+                        const SnackBar(
+                          content: Text('Could not delete event. Try again.'),
+                        ),
                       );
                     }
                   }
@@ -618,12 +655,17 @@ class _CustomDatePickerDialog extends ConsumerStatefulWidget {
   final DateTime initialDate;
 
   @override
-  ConsumerState<_CustomDatePickerDialog> createState() => _CustomDatePickerDialogState();
+  ConsumerState<_CustomDatePickerDialog> createState() =>
+      _CustomDatePickerDialogState();
 }
 
-class _CustomDatePickerDialogState extends ConsumerState<_CustomDatePickerDialog> {
+class _CustomDatePickerDialogState
+    extends ConsumerState<_CustomDatePickerDialog> {
   late DateTime _selectedDate = widget.initialDate;
-  late DateTime _currentMonth = DateTime(widget.initialDate.year, widget.initialDate.month);
+  late DateTime _currentMonth = DateTime(
+    widget.initialDate.year,
+    widget.initialDate.month,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -636,7 +678,10 @@ class _CustomDatePickerDialogState extends ConsumerState<_CustomDatePickerDialog
     final firstOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final offset = firstOfMonth.weekday % 7;
     final firstGridDate = firstOfMonth.subtract(Duration(days: offset));
-    final gridDates = List.generate(42, (index) => firstGridDate.add(Duration(days: index)));
+    final gridDates = List.generate(
+      42,
+      (index) => firstGridDate.add(Duration(days: index)),
+    );
 
     return Dialog(
       backgroundColor: tokens.surface,
@@ -657,19 +702,25 @@ class _CustomDatePickerDialogState extends ConsumerState<_CustomDatePickerDialog
                 Expanded(
                   child: Text(
                     DateFormat.yMMMM().format(_currentMonth),
-                    style: AppTypography.h1(color: tokens.ink).copyWith(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: AppTypography.h1(
+                      color: tokens.ink,
+                    ).copyWith(fontSize: 20, fontWeight: FontWeight.w800),
                   ),
                 ),
                 IconButton(
                   onPressed: () {
                     setState(() {
-                      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+                      _currentMonth = DateTime(
+                        _currentMonth.year,
+                        _currentMonth.month - 1,
+                      );
                     });
                   },
-                  icon: Icon(Icons.chevron_left, color: tokens.primary, size: 24),
+                  icon: Icon(
+                    Icons.chevron_left,
+                    color: tokens.primary,
+                    size: 24,
+                  ),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -677,10 +728,17 @@ class _CustomDatePickerDialogState extends ConsumerState<_CustomDatePickerDialog
                 IconButton(
                   onPressed: () {
                     setState(() {
-                      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+                      _currentMonth = DateTime(
+                        _currentMonth.year,
+                        _currentMonth.month + 1,
+                      );
                     });
                   },
-                  icon: Icon(Icons.chevron_right, color: tokens.primary, size: 24),
+                  icon: Icon(
+                    Icons.chevron_right,
+                    color: tokens.primary,
+                    size: 24,
+                  ),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -697,11 +755,12 @@ class _CustomDatePickerDialogState extends ConsumerState<_CustomDatePickerDialog
                       child: Center(
                         child: Text(
                           d,
-                          style: AppTypography.caption(color: tokens.inkMuted).copyWith(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 10,
-                            letterSpacing: 0.05,
-                          ),
+                          style: AppTypography.caption(color: tokens.inkMuted)
+                              .copyWith(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 10,
+                                letterSpacing: 0.05,
+                              ),
                         ),
                       ),
                     ),
@@ -741,14 +800,14 @@ class _CustomDatePickerDialogState extends ConsumerState<_CustomDatePickerDialog
                     backgroundColor = tokens.primary;
                     textColor = tokens.primaryOn;
                   } else if (isToday) {
-                    backgroundColor = tokens.primary.withOpacity(0.08);
+                    backgroundColor = tokens.primary.withValues(alpha: 0.08);
                     textColor = tokens.primary;
                     border = Border.all(color: tokens.primary, width: 1.5);
                   } else {
                     backgroundColor = Colors.transparent;
                     textColor = isCurrentMonth
                         ? tokens.ink
-                        : tokens.inkSubtle.withOpacity(0.5);
+                        : tokens.inkSubtle.withValues(alpha: 0.5);
                   }
 
                   return InkWell(
@@ -773,10 +832,13 @@ class _CustomDatePickerDialogState extends ConsumerState<_CustomDatePickerDialog
                         children: [
                           Text(
                             '${day.day}',
-                            style: AppTypography.body(color: textColor).copyWith(
-                              fontWeight: isSelected || isToday ? FontWeight.w700 : FontWeight.w600,
-                              fontSize: 13,
-                            ),
+                            style: AppTypography.body(color: textColor)
+                                .copyWith(
+                                  fontWeight: isSelected || isToday
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                  fontSize: 13,
+                                ),
                           ),
                           const SizedBox(height: 1),
                           // Event indicator dot
@@ -785,7 +847,9 @@ class _CustomDatePickerDialogState extends ConsumerState<_CustomDatePickerDialog
                             height: 3.5,
                             decoration: BoxDecoration(
                               color: hasEvent
-                                  ? (isSelected ? tokens.primaryOn : tokens.primary)
+                                  ? (isSelected
+                                        ? tokens.primaryOn
+                                        : tokens.primary)
                                   : Colors.transparent,
                               shape: BoxShape.circle,
                             ),
@@ -807,9 +871,9 @@ class _CustomDatePickerDialogState extends ConsumerState<_CustomDatePickerDialog
                   onPressed: () => Navigator.pop(context),
                   child: Text(
                     'Cancel',
-                    style: AppTypography.body(color: tokens.inkMuted).copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTypography.body(
+                      color: tokens.inkMuted,
+                    ).copyWith(fontWeight: FontWeight.w600),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -817,9 +881,9 @@ class _CustomDatePickerDialogState extends ConsumerState<_CustomDatePickerDialog
                   onPressed: () => Navigator.pop(context, _selectedDate),
                   child: Text(
                     'OK',
-                    style: AppTypography.body(color: tokens.primary).copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: AppTypography.body(
+                      color: tokens.primary,
+                    ).copyWith(fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
@@ -830,4 +894,3 @@ class _CustomDatePickerDialogState extends ConsumerState<_CustomDatePickerDialog
     );
   }
 }
-

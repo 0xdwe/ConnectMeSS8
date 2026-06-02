@@ -383,48 +383,36 @@ class AppController extends Notifier<AppState> {
       },
     );
 
-    _interactionsSub = interactionStore.snapshot().listen(
-      (snapshot) {
-        // Newest-first ordering matches the prior in-memory
-        // shape (`addInteraction` prepended) so widgets that read
-        // `state.interactions` keep the same chronological feel.
-        final values = snapshot.values.toList()
-          ..sort((a, b) => b.date.compareTo(a.date));
-        state = state.copyWith(interactions: values);
-      },
-      onError: (_) {},
-    );
+    _interactionsSub = interactionStore.snapshot().listen((snapshot) {
+      // Newest-first ordering matches the prior in-memory
+      // shape (`addInteraction` prepended) so widgets that read
+      // `state.interactions` keep the same chronological feel.
+      final values = snapshot.values.toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
+      state = state.copyWith(interactions: values);
+    }, onError: (_) {});
 
-    _eventsSub = eventStore.snapshot().listen(
-      (snapshot) {
-        // Date-sorted ascending matches the calendar UI's expected
-        // order. `restoreEvent` previously sorted; doing it here
-        // keeps the contract uniform regardless of write source.
-        final values = snapshot.values.toList()
-          ..sort((a, b) => a.date.compareTo(b.date));
-        state = state.copyWith(events: values);
-      },
-      onError: (_) {},
-    );
+    _eventsSub = eventStore.snapshot().listen((snapshot) {
+      // Date-sorted ascending matches the calendar UI's expected
+      // order. `restoreEvent` previously sorted; doing it here
+      // keeps the contract uniform regardless of write source.
+      final values = snapshot.values.toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
+      state = state.copyWith(events: values);
+    }, onError: (_) {});
 
-    _userDocSub = userDocStore.snapshot().listen(
-      (snapshot) {
-        // Empty snapshots happen during sign-out / pre-seed. Fall
-        // back to the seed defaults so category / event-type
-        // pickers don't blank out for one frame.
-        final categories = snapshot.categories.isEmpty
-            ? UserDocDefaults.categories()
-            : snapshot.categories;
-        final eventTypes = snapshot.eventTypes.isEmpty
-            ? UserDocDefaults.eventTypes()
-            : snapshot.eventTypes;
-        state = state.copyWith(
-          categories: categories,
-          eventTypes: eventTypes,
-        );
-      },
-      onError: (_) {},
-    );
+    _userDocSub = userDocStore.snapshot().listen((snapshot) {
+      // Empty snapshots happen during sign-out / pre-seed. Fall
+      // back to the seed defaults so category / event-type
+      // pickers don't blank out for one frame.
+      final categories = snapshot.categories.isEmpty
+          ? UserDocDefaults.categories()
+          : snapshot.categories;
+      final eventTypes = snapshot.eventTypes.isEmpty
+          ? UserDocDefaults.eventTypes()
+          : snapshot.eventTypes;
+      state = state.copyWith(categories: categories, eventTypes: eventTypes);
+    }, onError: (_) {});
 
     ref.onDispose(() {
       _connectionsSub?.cancel();
@@ -683,6 +671,7 @@ class AppController extends Notifier<AppState> {
     if (clean.isEmpty || state.eventTypes.contains(clean)) return;
     final next = <String>[...state.eventTypes, clean];
     await ref.read(userDocStoreProvider).saveEventTypes(next);
+    state = state.copyWith(eventTypes: next);
   }
 
   /// Rename an event type. Cascades to every event that referenced
@@ -702,6 +691,7 @@ class AppController extends Notifier<AppState> {
         if (item == oldValue) clean else item,
     ];
     await ref.read(userDocStoreProvider).saveEventTypes(next);
+    state = state.copyWith(eventTypes: next);
     final eventStore = ref.read(eventStoreProvider);
     for (final event in state.events) {
       if (event.eventType == oldValue) {
@@ -717,6 +707,7 @@ class AppController extends Notifier<AppState> {
         if (item != eventType) item,
     ];
     await ref.read(userDocStoreProvider).saveEventTypes(next);
+    state = state.copyWith(eventTypes: next);
     final eventStore = ref.read(eventStoreProvider);
     for (final event in state.events) {
       if (event.eventType == eventType) {
@@ -743,8 +734,10 @@ class AppController extends Notifier<AppState> {
         'applyAiUpdateResult: contactId ${result.contactId} not found',
       ),
     );
-    final nextScore =
-        (connection.bondScore + result.bondScoreDelta).clamp(0, 100);
+    final nextScore = (connection.bondScore + result.bondScoreDelta).clamp(
+      0,
+      100,
+    );
     final updatedConnection = connection.copyWith(
       nextStep: result.nextStep ?? connection.nextStep,
       lastContact: DateTime.now(),
@@ -769,14 +762,21 @@ class AppController extends Notifier<AppState> {
     }
     final interaction = result.interactions.single;
 
-    await ref.read(batchedWritesProvider).commitAiUpdate(
+    await ref
+        .read(batchedWritesProvider)
+        .commitAiUpdate(
           interaction: interaction,
           updatedConnection: updatedConnection,
         );
 
-    // lastAiSummary is informational; not part of the persisted
-    // Firestore shape. Update only after a successful batch commit
-    // so a failed batch leaves the prior summary in place.
-    state = state.copyWith(lastAiSummary: result.summary);
+    // Mirror the successful persisted write locally so tests and stores
+    // without live snapshot listeners observe the committed update too.
+    state = state.copyWith(
+      connections: [
+        for (final item in state.connections)
+          if (item.id == updatedConnection.id) updatedConnection else item,
+      ],
+      lastAiSummary: result.summary,
+    );
   }
 }

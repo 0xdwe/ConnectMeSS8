@@ -104,14 +104,14 @@ class SettingsTab extends ConsumerWidget {
               Divider(color: tokens.border, height: 1, indent: 68),
               _SettingsRow(
                 icon: Icons.sell_outlined,
-                iconColor: const Color(0xFF9B59B6),
+                iconColor: tokens.primary,
                 label: 'Manage Categories',
                 onTap: () => showManageCategoriesModal(context),
               ),
               Divider(color: tokens.border, height: 1, indent: 68),
               _SettingsRow(
                 icon: Icons.event_note_outlined,
-                iconColor: const Color(0xFF2EAD84),
+                iconColor: tokens.primary,
                 label: 'Manage Event Types',
                 onTap: () => showManageEventTypesModal(context),
               ),
@@ -156,9 +156,9 @@ class SettingsTab extends ConsumerWidget {
             },
             label: Text(
               'Sign out',
-              style: AppTypography.body(color: tokens.danger).copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: AppTypography.body(
+                color: tokens.danger,
+              ).copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -206,7 +206,9 @@ class SettingsTab extends ConsumerWidget {
             onPressed: () async {
               Navigator.of(context).pop();
               try {
-                await ref.read(appControllerProvider.notifier).removeSampleConnections();
+                await ref
+                    .read(appControllerProvider.notifier)
+                    .removeSampleConnections();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Sample friends removed')),
@@ -215,14 +217,16 @@ class SettingsTab extends ConsumerWidget {
               } catch (_) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Could not remove sample friends. Try again.')),
+                    const SnackBar(
+                      content: Text(
+                        'Could not remove sample friends. Try again.',
+                      ),
+                    ),
                   );
                 }
               }
             },
-            style: FilledButton.styleFrom(
-              backgroundColor: tokens.danger,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: tokens.danger),
             child: const Text('Remove'),
           ),
         ],
@@ -283,7 +287,7 @@ class _SettingsRow extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.12),
+                color: iconColor.withValues(alpha: .12),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: iconColor, size: 20),
@@ -293,29 +297,23 @@ class _SettingsRow extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: AppTypography.body(color: tokens.ink).copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                ),
+                style: AppTypography.body(
+                  color: tokens.ink,
+                ).copyWith(fontWeight: FontWeight.w600, fontSize: 15),
               ),
             ),
             // Optional trailing text (e.g. "Light" for theme)
             if (trailing != null) ...[
               Text(
                 trailing!,
-                style: AppTypography.caption(color: tokens.inkMuted).copyWith(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                ),
+                style: AppTypography.caption(
+                  color: tokens.inkMuted,
+                ).copyWith(fontWeight: FontWeight.w500, fontSize: 13),
               ),
               const SizedBox(width: 4),
             ],
             // Chevron
-            Icon(
-              Icons.chevron_right,
-              color: tokens.inkSubtle,
-              size: 20,
-            ),
+            Icon(Icons.chevron_right, color: tokens.inkSubtle, size: 20),
           ],
         ),
       ),

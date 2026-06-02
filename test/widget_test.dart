@@ -99,13 +99,13 @@ Future<void> openJessicaProfile(WidgetTester tester) async {
   );
   await tester.ensureVisible(jessicaFinder.first);
   await tester.pumpAndSettle();
-  
+
   // Tap the InkWell ancestor to ensure the tap is registered
   final inkWell = find.ancestor(
     of: jessicaFinder.first,
     matching: find.byType(InkWell),
   );
-  
+
   if (inkWell.evaluate().isNotEmpty) {
     await tester.tap(inkWell.first);
   } else {
@@ -127,7 +127,7 @@ void main() {
     await tester.tap(find.text('People'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('people-tab')), findsOneWidget);
-    await tester.tap(find.text('Planner'));
+    await tester.tap(find.text('Plan'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('planner-tab')), findsOneWidget);
   });
@@ -240,7 +240,9 @@ void main() {
     expect(find.textContaining('new'), findsOneWidget);
   });
 
-  testWidgets('contact profile shows insight summary in header', (tester) async {
+  testWidgets('contact profile shows insight summary in header', (
+    tester,
+  ) async {
     await pumpConnectMe(tester);
     await signInAsDemo(tester);
 
@@ -274,7 +276,9 @@ void main() {
           ...signedInDemoOverrides(),
           memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
         ],
-        child: const MaterialApp(home: ContactProfileScreen(contactId: 'jessica')),
+        child: const MaterialApp(
+          home: ContactProfileScreen(contactId: 'jessica'),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -349,10 +353,12 @@ void main() {
     await tester.tap(find.text('Manage Event Types'));
     await tester.pumpAndSettle();
     await tester.enterText(
-      find.widgetWithText(TextField, 'New event type'),
+      find.byKey(const Key('new-event-type-field')),
       'Workshop',
     );
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -600));
     await tester.pumpAndSettle();
 
     expect(find.text('Workshop'), findsOneWidget);
@@ -369,60 +375,68 @@ void main() {
       interactionStore: interactionStore,
       eventStore: eventsStore,
     );
-    
-    await eventsStore.save(PlannerEvent(
-      id: 'e1',
-      title: 'Coffee with Sarah',
-      contactId: 'sarah',
-      category: 'Friends',
-      date: DateTime(2026, 4, 28),
-      note: 'Google Calendar mock sync',
-      eventType: 'Coffee',
-      isAllDay: false,
-      startTimeMinutes: 10 * 60,
-      endTimeMinutes: 11 * 60 + 30,
-    ));
-    await eventsStore.save(PlannerEvent(
-      id: 'e2',
-      title: 'Team Meeting',
-      contactId: 'emily',
-      category: 'Work',
-      date: DateTime(2026, 4, 30),
-      note: 'Discuss launch',
-      eventType: 'Meeting',
-      isAllDay: false,
-      startTimeMinutes: 14 * 60,
-      endTimeMinutes: 15 * 60 + 30,
-    ));
 
-    await connectionsStore.save(Connection(
-      id: 'sarah',
-      name: 'Sarah Johnson',
-      email: 'sarah.j@email.com',
-      category: 'Friends',
-      avatar: '👱‍♀️',
-      bondScore: 92,
-      nextStep: 'Coffee catch-up',
-      lastContact: now.subtract(const Duration(days: 7)),
-      notes: 'Coffee with Sarah scheduled.',
-      knownSince: DateTime(2020, 6, 1),
-      preferredChannels: const ['Text', 'Instagram', 'Coffee'],
-      isSample: true,
-    ));
-    await connectionsStore.save(Connection(
-      id: 'emily',
-      name: 'Emily Rodriguez',
-      email: 'emily.r@email.com',
-      category: 'Work',
-      avatar: '👩‍💼',
-      bondScore: 85,
-      nextStep: 'Ask about first week in new role',
-      lastContact: now.subtract(const Duration(days: 5)),
-      notes: 'First week at new role. Keep momentum going.',
-      knownSince: DateTime(2023, 9, 1),
-      preferredChannels: const ['Slack', 'Email', 'Text'],
-      isSample: true,
-    ));
+    await eventsStore.save(
+      PlannerEvent(
+        id: 'e1',
+        title: 'Coffee with Sarah',
+        contactId: 'sarah',
+        category: 'Friends',
+        date: DateTime(2026, 4, 28),
+        note: 'Google Calendar mock sync',
+        eventType: 'Coffee',
+        isAllDay: false,
+        startTimeMinutes: 10 * 60,
+        endTimeMinutes: 11 * 60 + 30,
+      ),
+    );
+    await eventsStore.save(
+      PlannerEvent(
+        id: 'e2',
+        title: 'Team Meeting',
+        contactId: 'emily',
+        category: 'Work',
+        date: DateTime(2026, 4, 30),
+        note: 'Discuss launch',
+        eventType: 'Meeting',
+        isAllDay: false,
+        startTimeMinutes: 14 * 60,
+        endTimeMinutes: 15 * 60 + 30,
+      ),
+    );
+
+    await connectionsStore.save(
+      Connection(
+        id: 'sarah',
+        name: 'Sarah Johnson',
+        email: 'sarah.j@email.com',
+        category: 'Friends',
+        avatar: '👱‍♀️',
+        bondScore: 92,
+        nextStep: 'Coffee catch-up',
+        lastContact: now.subtract(const Duration(days: 7)),
+        notes: 'Coffee with Sarah scheduled.',
+        knownSince: DateTime(2020, 6, 1),
+        preferredChannels: const ['Text', 'Instagram', 'Coffee'],
+        isSample: true,
+      ),
+    );
+    await connectionsStore.save(
+      Connection(
+        id: 'emily',
+        name: 'Emily Rodriguez',
+        email: 'emily.r@email.com',
+        category: 'Work',
+        avatar: '👩‍💼',
+        bondScore: 85,
+        nextStep: 'Ask about first week in new role',
+        lastContact: now.subtract(const Duration(days: 5)),
+        notes: 'First week at new role. Keep momentum going.',
+        knownSince: DateTime(2023, 9, 1),
+        preferredChannels: const ['Slack', 'Email', 'Text'],
+        isSample: true,
+      ),
+    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -476,34 +490,38 @@ void main() {
       interactionStore: interactionStore,
       eventStore: eventsStore,
     );
-    
-    await eventsStore.save(PlannerEvent(
-      id: 'e1',
-      title: 'Coffee with Sarah',
-      contactId: 'sarah',
-      category: 'Friends',
-      date: DateTime(2026, 4, 28),
-      note: 'Google Calendar mock sync',
-      eventType: 'Coffee',
-      isAllDay: false,
-      startTimeMinutes: 10 * 60,
-      endTimeMinutes: 11 * 60 + 30,
-    ));
 
-    await connectionsStore.save(Connection(
-      id: 'sarah',
-      name: 'Sarah Johnson',
-      email: 'sarah.j@email.com',
-      category: 'Friends',
-      avatar: '👱‍♀️',
-      bondScore: 92,
-      nextStep: 'Coffee catch-up',
-      lastContact: now.subtract(const Duration(days: 7)),
-      notes: 'Coffee with Sarah scheduled.',
-      knownSince: DateTime(2020, 6, 1),
-      preferredChannels: const ['Text', 'Instagram', 'Coffee'],
-      isSample: true,
-    ));
+    await eventsStore.save(
+      PlannerEvent(
+        id: 'e1',
+        title: 'Coffee with Sarah',
+        contactId: 'sarah',
+        category: 'Friends',
+        date: DateTime(2026, 4, 28),
+        note: 'Google Calendar mock sync',
+        eventType: 'Coffee',
+        isAllDay: false,
+        startTimeMinutes: 10 * 60,
+        endTimeMinutes: 11 * 60 + 30,
+      ),
+    );
+
+    await connectionsStore.save(
+      Connection(
+        id: 'sarah',
+        name: 'Sarah Johnson',
+        email: 'sarah.j@email.com',
+        category: 'Friends',
+        avatar: '👱‍♀️',
+        bondScore: 92,
+        nextStep: 'Coffee catch-up',
+        lastContact: now.subtract(const Duration(days: 7)),
+        notes: 'Coffee with Sarah scheduled.',
+        knownSince: DateTime(2020, 6, 1),
+        preferredChannels: const ['Text', 'Instagram', 'Coffee'],
+        isSample: true,
+      ),
+    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -613,5 +631,4 @@ void main() {
     expect(find.text('Repeat'), findsOneWidget);
     expect(find.text('Save Event'), findsOneWidget);
   });
-
 }
