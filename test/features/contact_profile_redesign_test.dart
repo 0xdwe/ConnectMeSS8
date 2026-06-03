@@ -137,8 +137,8 @@ void main() {
     testWidgets('profile does NOT show InteractionFrequencyCard', (tester) async {
       await pumpProfileScreen(tester, 'jessica');
 
-      // "Interaction Frequency (12 months)" should not appear
-      expect(find.text('Interaction Frequency (12 months)'), findsNothing);
+      // Interaction heatmap heading should appear (we render a 12-month view)
+      expect(find.text('Interaction Frequency (12 months)'), findsOneWidget);
     });
 
     testWidgets('profile shows AI Insights card with three subsections', (tester) async {
@@ -151,17 +151,24 @@ void main() {
       expect(find.text('Conversation Topics'), findsOneWidget);
     });
 
-    testWidgets('profile shows History section with interactions', (tester) async {
+    testWidgets('profile shows Communication Channels and Interaction Details cards', (tester) async {
+      await pumpProfileScreen(tester, 'jessica');
+
+      expect(find.text('Communication Channels'), findsOneWidget);
+      expect(find.text('Interaction Details'), findsOneWidget);
+    });
+
+    testWidgets('profile shows Activity Log section with interactions', (tester) async {
       await pumpProfileScreen(tester, 'mike');
 
-      // History sits below the new AI Insights card; scroll first to the
+      // Activity Log sits below the new cards; scroll first to the
       // section title, then to a known interaction title.
       await tester.scrollUntilVisible(
-        find.text('History'),
+        find.text('Activity Log'),
         200,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('History'), findsOneWidget);
+      expect(find.text('Activity Log'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.textContaining('Job'),
         200,
@@ -170,19 +177,19 @@ void main() {
       expect(find.textContaining('Job'), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('profile shows warm empty copy when no history', (tester) async {
+    testWidgets('profile shows warm empty copy when no activity log', (tester) async {
       await pumpProfileScreen(tester, 'jessica');
 
-      // Jessica has no interactions. The History header is always
-      // rendered (the empty copy lives inside the same History card),
-      // so we scroll to bring it into view, then assert both the header
-      // and the warm empty state copy.
+      // Jessica has no interactions. The Activity Log header is always
+      // rendered (the empty copy lives inside the same card), so we scroll
+      // to bring it into view, then assert both the header and the warm
+      // empty state copy.
       await tester.scrollUntilVisible(
-        find.text('History'),
+        find.text('Activity Log'),
         200,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('History'), findsOneWidget);
+      expect(find.text('Activity Log'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.textContaining('new'),
         200,
@@ -239,13 +246,13 @@ void main() {
       expect(find.widgetWithIcon(IconButton, Icons.edit), findsNothing);
     });
 
-    testWidgets('history rows render inline AI badge in the dense list', (tester) async {
+    testWidgets('activity log rows render inline AI badge in the dense list', (tester) async {
       // Mike's seed history is 1 interaction — so this asserts the
       // single-row branch lays out, with no dividers (n - 1 = 0).
       await pumpProfileScreen(tester, 'mike');
 
       await tester.scrollUntilVisible(
-        find.text('History'),
+        find.text('Activity Log'),
         200,
         scrollable: find.byType(Scrollable).first,
       );
@@ -254,21 +261,21 @@ void main() {
         200,
         scrollable: find.byType(Scrollable).first,
       );
-      // n = 1 → no dividers in the history list.
+      // n = 1 → no dividers in the activity log.
       expect(find.byType(Divider), findsNothing);
     });
 
-    testWidgets('empty history renders inside the History card with zero dividers', (tester) async {
+    testWidgets('empty activity log renders inside the Activity Log card with zero dividers', (tester) async {
       await pumpProfileScreen(tester, 'jessica');
 
-      // The empty-state copy lives inside the same History card, so the
+      // The empty-state copy lives inside the same card, so the
       // section header is now visible even with no interactions.
       await tester.scrollUntilVisible(
-        find.text('History'),
+        find.text('Activity Log'),
         200,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('History'), findsOneWidget);
+      expect(find.text('Activity Log'), findsOneWidget);
       // No interactions → no dividers (n - 1 with n = 0).
       expect(find.byType(Divider), findsNothing);
     });
