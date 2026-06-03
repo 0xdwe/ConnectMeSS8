@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -25,10 +27,22 @@ List<String> _parseMemoryHistoryLines(MemoryDocument memory) {
     final trimmed = raw.trim();
     if (trimmed.isEmpty) continue;
     // Drop leading '- ' bullets if present.
-    final line = trimmed.startsWith('- ') ? trimmed.substring(2).trim() : trimmed;
+    final line = trimmed.startsWith('- ')
+        ? trimmed.substring(2).trim()
+        : trimmed;
     lines.add(line);
   }
   return lines;
+}
+
+ImageProvider<Object>? _connectionAvatarImage(String avatar) {
+  final trimmed = avatar.trim();
+  if (!trimmed.startsWith('data:image/')) return null;
+
+  final parts = trimmed.split(',');
+  if (parts.length != 2) return null;
+
+  return MemoryImage(base64Decode(parts[1]));
 }
 
 class AppHeader extends StatelessWidget {
@@ -48,7 +62,12 @@ class AppHeader extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 108,
-      padding: EdgeInsets.fromLTRB(AppSpacing.space6, AppSpacing.space5, AppSpacing.space5, AppSpacing.space4),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.space6,
+        AppSpacing.space5,
+        AppSpacing.space5,
+        AppSpacing.space4,
+      ),
       decoration: BoxDecoration(
         color: tokens.surfaceRaised,
         boxShadow: AppTokens.elevation1(dark),
@@ -90,7 +109,9 @@ class AppHeader extends StatelessWidget {
   }
 }
 
-@Deprecated('Use BondRing instead. ScoreRing will be removed in a future release.')
+@Deprecated(
+  'Use BondRing instead. ScoreRing will be removed in a future release.',
+)
 class ScoreRing extends StatelessWidget {
   const ScoreRing({
     super.key,
@@ -214,8 +235,7 @@ class _ContactListCardState extends State<ContactListCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
-        transform: Matrix4.identity()
-          ..translate(0.0, hovering ? -3.0 : 0.0),
+        transform: Matrix4.identity()..translate(0.0, hovering ? -3.0 : 0.0),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
@@ -242,10 +262,15 @@ class _ContactListCardState extends State<ContactListCard> {
               CircleAvatar(
                 radius: 30,
                 backgroundColor: tokens.primaryTint,
-                child: Text(
+                backgroundImage: _connectionAvatarImage(
                   widget.connection.avatar,
-                  style: AppTypography.glyph(26),
                 ),
+                child: _connectionAvatarImage(widget.connection.avatar) == null
+                    ? Text(
+                        widget.connection.avatar,
+                        style: AppTypography.glyph(26),
+                      )
+                    : null,
               ),
               SizedBox(width: AppSpacing.space5),
               Expanded(
@@ -279,10 +304,7 @@ class _ContactListCardState extends State<ContactListCard> {
                   ],
                 ),
               ),
-              ConnectionScoreRing(
-                score: widget.connection.bondScore,
-                size: 58,
-              ),
+              ConnectionScoreRing(score: widget.connection.bondScore, size: 58),
             ],
           ),
         ),
@@ -292,11 +314,7 @@ class _ContactListCardState extends State<ContactListCard> {
 }
 
 class ConnectionScoreRing extends StatelessWidget {
-  const ConnectionScoreRing({
-    super.key,
-    required this.score,
-    this.size = 58,
-  });
+  const ConnectionScoreRing({super.key, required this.score, this.size = 58});
 
   final int score;
   final double size;
@@ -367,7 +385,10 @@ class RecommendationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final priority = _recommendationPriority(connection.bondScore);
-    final priorityColor = _recommendationPriorityColor(connection.bondScore, tokens);
+    final priorityColor = _recommendationPriorityColor(
+      connection.bondScore,
+      tokens,
+    );
 
     return CardBox(
       onTap: onTap,
@@ -381,10 +402,13 @@ class RecommendationCard extends StatelessWidget {
           CircleAvatar(
             radius: 22,
             backgroundColor: tokens.primaryTint,
-            child: Text(
-              connection.avatar,
-              style: AppTypography.glyph(20, color: tokens.primary),
-            ),
+            backgroundImage: _connectionAvatarImage(connection.avatar),
+            child: _connectionAvatarImage(connection.avatar) == null
+                ? Text(
+                    connection.avatar,
+                    style: AppTypography.glyph(20, color: tokens.primary),
+                  )
+                : null,
           ),
           SizedBox(width: AppSpacing.space4),
           Expanded(
@@ -404,7 +428,10 @@ class RecommendationCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     CircleAvatar(
                       radius: 4,
-                      backgroundColor: categoryColor(connection.category, tokens),
+                      backgroundColor: categoryColor(
+                        connection.category,
+                        tokens,
+                      ),
                     ),
                   ],
                 ),
@@ -443,11 +470,7 @@ class RecommendationCard extends StatelessWidget {
                 ),
               ),
               SizedBox(height: AppSpacing.space3),
-              BondRing(
-                connection: connection,
-                size: 56,
-                showAvatar: false,
-              ),
+              BondRing(connection: connection, size: 56, showAvatar: false),
             ],
           ),
         ],
@@ -531,10 +554,7 @@ class _HeatmapRow extends StatelessWidget {
             children: [
               CircleAvatar(radius: 9, backgroundColor: color),
               SizedBox(width: AppSpacing.space3),
-              Text(
-                category,
-                style: AppTypography.h2(),
-              ),
+              Text(category, style: AppTypography.h2()),
               Text(
                 '  ($count contact)',
                 style: AppTypography.bodyLg(color: tokens.inkMuted),
@@ -612,11 +632,7 @@ class SectionTitle extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: [
-                titleWidget,
-                const SizedBox(height: 8),
-                action!,
-              ],
+              children: [titleWidget, const SizedBox(height: 8), action!],
             );
           }
 
@@ -650,14 +666,14 @@ class EventTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     return CardBox(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.space5, vertical: AppSpacing.space4),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.space5,
+        vertical: AppSpacing.space4,
+      ),
       child: ListTile(
         onTap: onTap,
         contentPadding: EdgeInsets.zero,
-        title: Text(
-          event.title,
-          style: AppTypography.h2(),
-        ),
+        title: Text(event.title, style: AppTypography.h2()),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -732,7 +748,7 @@ class GradientScaffold extends AppSurface {
 /// larger than the section titles below it.
 class ConnectionScoreHero extends StatelessWidget {
   const ConnectionScoreHero({super.key, required this.score});
-  
+
   final int score;
 
   @override
@@ -748,7 +764,8 @@ class ConnectionScoreHero extends StatelessWidget {
       ),
       child: Semantics(
         container: true,
-        excludeSemantics: true, // Excludes inner BondRing semantics to avoid duplication
+        excludeSemantics:
+            true, // Excludes inner BondRing semantics to avoid duplication
         label: semanticLabel,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -770,11 +787,7 @@ class ConnectionScoreHero extends StatelessWidget {
               spacing: AppSpacing.space2,
               alignment: WrapAlignment.center,
               children: [
-                Icon(
-                  Icons.trending_up,
-                  color: tokens.primary,
-                  size: 18,
-                ),
+                Icon(Icons.trending_up, color: tokens.primary, size: 18),
                 Text(
                   'Keep nurturing your relationships!',
                   style: AppTypography.body(color: tokens.inkMuted),
@@ -806,10 +819,10 @@ class ConnectionScoreHero extends StatelessWidget {
 
 /// Bond-tier-derived encouragement copy for the Recommendation callout.
 String _bondEncouragement(BondTier tier) => switch (tier) {
-      BondTier.close    => 'Strong bond! Keep up the regular communication.',
-      BondTier.steady   => 'Steady ground — a quick check-in keeps it warm.',
-      BondTier.drifting => 'It\'s been a while. A short hello goes a long way.',
-    };
+  BondTier.close => 'Strong bond! Keep up the regular communication.',
+  BondTier.steady => 'Steady ground — a quick check-in keeps it warm.',
+  BondTier.drifting => 'It\'s been a while. A short hello goes a long way.',
+};
 
 // Recommendation callout interior text colors.
 //
@@ -817,8 +830,8 @@ String _bondEncouragement(BondTier tier) => switch (tier) {
 // "on-recommendation" token in the system yet. If we keep this pattern
 // long-term we should add tokens for these colors.
 const Color _recommendationTitleColor = Color(0xFF7B4F12);
-const Color _recommendationBodyColor  = Color(0xFF6B4513);
-const Color _recommendationIconColor  = Color(0xFFB7791F);
+const Color _recommendationBodyColor = Color(0xFF6B4513);
+const Color _recommendationIconColor = Color(0xFFB7791F);
 
 class AiInsightsCard extends StatefulWidget {
   const AiInsightsCard({
@@ -876,10 +889,7 @@ class _AiInsightsCardState extends State<AiInsightsCard> {
                   Icon(Icons.auto_awesome, size: 18, color: tokens.primary),
                   SizedBox(width: AppSpacing.space3),
                   Expanded(
-                    child: Text(
-                      'AI Insights',
-                      style: AppTypography.h2(),
-                    ),
+                    child: Text('AI Insights', style: AppTypography.h2()),
                   ),
                   Icon(
                     expanded ? Icons.expand_less : Icons.expand_more,
@@ -984,10 +994,7 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
           padding: EdgeInsets.all(AppSpacing.space4),
           decoration: BoxDecoration(
             color: tokens.recommendationSurface,
-            border: Border.all(
-              color: tokens.recommendationBorder,
-              width: 1.5,
-            ),
+            border: Border.all(color: tokens.recommendationBorder, width: 1.5),
             borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
           child: Row(
@@ -1005,9 +1012,7 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
                   children: [
                     Text(
                       'Recommendation',
-                      style: AppTypography.h2(
-                        color: _recommendationTitleColor,
-                      ),
+                      style: AppTypography.h2(color: _recommendationTitleColor),
                     ),
                     SizedBox(height: AppSpacing.space1),
                     Text(
@@ -1026,11 +1031,7 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
         // Person Summary
         Row(
           children: [
-            Icon(
-              Icons.person_outline,
-              size: 20,
-              color: tokens.primary,
-            ),
+            Icon(Icons.person_outline, size: 20, color: tokens.primary),
             SizedBox(width: AppSpacing.space2),
             Flexible(
               child: Text(
@@ -1044,7 +1045,8 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
         ),
         SizedBox(height: AppSpacing.space2),
         Text(
-          (widget.memorySummary != null && widget.memorySummary!.trim().isNotEmpty)
+          (widget.memorySummary != null &&
+                  widget.memorySummary!.trim().isNotEmpty)
               ? widget.memorySummary!
               : '',
           style: AppTypography.body(color: tokens.inkMuted),
@@ -1053,11 +1055,7 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
         // Conversation Topics
         Row(
           children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 20,
-              color: tokens.secondary,
-            ),
+            Icon(Icons.chat_bubble_outline, size: 20, color: tokens.secondary),
             SizedBox(width: AppSpacing.space2),
             Flexible(
               child: Text(
@@ -1140,11 +1138,24 @@ class _InlineTopicDetails extends StatelessWidget {
             children: [
               Icon(Icons.lightbulb_outline, color: tokens.secondary, size: 18),
               SizedBox(width: AppSpacing.space3),
-              Expanded(child: Text(topic, style: AppTypography.h2().copyWith(fontWeight: FontWeight.w700, color: _recommendationTitleColor))),
+              Expanded(
+                child: Text(
+                  topic,
+                  style: AppTypography.h2().copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: _recommendationTitleColor,
+                  ),
+                ),
+              ),
             ],
           ),
           SizedBox(height: AppSpacing.space3),
-          Text('Conversation Starter:', style: AppTypography.h2(color: _recommendationTitleColor).copyWith(fontSize: 14)),
+          Text(
+            'Conversation Starter:',
+            style: AppTypography.h2(
+              color: _recommendationTitleColor,
+            ).copyWith(fontSize: 14),
+          ),
           SizedBox(height: AppSpacing.space2),
           Container(
             width: double.infinity,
@@ -1152,12 +1163,27 @@ class _InlineTopicDetails extends StatelessWidget {
             decoration: BoxDecoration(
               color: tokens.surfaceRaised,
               borderRadius: BorderRadius.circular(AppRadius.sm),
-              boxShadow: [BoxShadow(color: tokens.border.withOpacity(0.04), blurRadius: 6)],
+              boxShadow: [
+                BoxShadow(
+                  color: tokens.border.withOpacity(0.04),
+                  blurRadius: 6,
+                ),
+              ],
             ),
-            child: Text(suggestions.isNotEmpty ? suggestions.first : 'Ask an open question about how they\'ve been', style: AppTypography.body(color: _recommendationBodyColor)),
+            child: Text(
+              suggestions.isNotEmpty
+                  ? suggestions.first
+                  : 'Ask an open question about how they\'ve been',
+              style: AppTypography.body(color: _recommendationBodyColor),
+            ),
           ),
           SizedBox(height: AppSpacing.space3),
-          Text('Past Conversations:', style: AppTypography.h2(color: _recommendationTitleColor).copyWith(fontSize: 14)),
+          Text(
+            'Past Conversations:',
+            style: AppTypography.h2(
+              color: _recommendationTitleColor,
+            ).copyWith(fontSize: 14),
+          ),
           SizedBox(height: AppSpacing.space2),
           if (memory != null && memory!.history.trim().isNotEmpty)
             for (final line in _parseMemoryHistoryLines(memory!).take(3))
@@ -1170,13 +1196,24 @@ class _InlineTopicDetails extends StatelessWidget {
                     color: tokens.recommendationSurface,
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
-                  child: Text(line, style: AppTypography.body(color: _recommendationBodyColor)),
+                  child: Text(
+                    line,
+                    style: AppTypography.body(color: _recommendationBodyColor),
+                  ),
                 ),
               )
           else
-            Text('No recent conversations recorded.', style: AppTypography.body(color: tokens.inkSubtle)),
+            Text(
+              'No recent conversations recorded.',
+              style: AppTypography.body(color: tokens.inkSubtle),
+            ),
           SizedBox(height: AppSpacing.space3),
-          Text('Current Context:', style: AppTypography.h2(color: _recommendationTitleColor).copyWith(fontSize: 14)),
+          Text(
+            'Current Context:',
+            style: AppTypography.h2(
+              color: _recommendationTitleColor,
+            ).copyWith(fontSize: 14),
+          ),
           SizedBox(height: AppSpacing.space2),
           Container(
             width: double.infinity,
@@ -1185,10 +1222,20 @@ class _InlineTopicDetails extends StatelessWidget {
               color: tokens.surfaceRaised,
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
-            child: Text((memory != null && memory!.summary.trim().isNotEmpty) ? memory!.summary : 'No current context available.', style: AppTypography.body(color: _recommendationBodyColor)),
+            child: Text(
+              (memory != null && memory!.summary.trim().isNotEmpty)
+                  ? memory!.summary
+                  : 'No current context available.',
+              style: AppTypography.body(color: _recommendationBodyColor),
+            ),
           ),
           SizedBox(height: AppSpacing.space3),
-          Text('Related News:', style: AppTypography.h2(color: _recommendationTitleColor).copyWith(fontSize: 14)),
+          Text(
+            'Related News:',
+            style: AppTypography.h2(
+              color: _recommendationTitleColor,
+            ).copyWith(fontSize: 14),
+          ),
           SizedBox(height: AppSpacing.space2),
           Container(
             width: double.infinity,
@@ -1197,7 +1244,10 @@ class _InlineTopicDetails extends StatelessWidget {
               color: tokens.recommendationSurface,
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
-            child: Text('Mother\'s Day coming up May 11th', style: AppTypography.body(color: _recommendationBodyColor)),
+            child: Text(
+              'Mother\'s Day coming up May 11th',
+              style: AppTypography.body(color: _recommendationBodyColor),
+            ),
           ),
         ],
       ),
@@ -1206,7 +1256,11 @@ class _InlineTopicDetails extends StatelessWidget {
 }
 
 class _TopicPill extends StatelessWidget {
-  const _TopicPill({required this.topic, required this.onTap, this.isSelected = false});
+  const _TopicPill({
+    required this.topic,
+    required this.onTap,
+    this.isSelected = false,
+  });
   final String topic;
   final VoidCallback onTap;
   final bool isSelected;
@@ -1242,8 +1296,9 @@ class _TopicPill extends StatelessWidget {
           ),
           child: Text(
             topic,
-            style: AppTypography.body(color: isSelected ? tokens.primaryOn : tokens.primaryOn)
-                .copyWith(fontWeight: FontWeight.w700),
+            style: AppTypography.body(
+              color: isSelected ? tokens.primaryOn : tokens.primaryOn,
+            ).copyWith(fontWeight: FontWeight.w700),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1269,9 +1324,7 @@ void _showTopicSuggestionsSheet(
     context: context,
     backgroundColor: tokens.surfaceRaised,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(AppRadius.lg),
-      ),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
     ),
     builder: (context) {
       final sheetTokens = context.tokens;
@@ -1334,7 +1387,9 @@ void _showTopicSuggestionsSheet(
                         borderRadius: BorderRadius.circular(AppRadius.sm),
                       ),
                       child: Text(
-                        suggestions.isNotEmpty ? suggestions.first : 'Ask an open question about how they\'ve been',
+                        suggestions.isNotEmpty
+                            ? suggestions.first
+                            : 'Ask an open question about how they\'ve been',
                         style: AppTypography.body(color: sheetTokens.ink),
                       ),
                     ),
@@ -1351,9 +1406,13 @@ void _showTopicSuggestionsSheet(
                     Text('Past Conversations:', style: AppTypography.h2()),
                     SizedBox(height: AppSpacing.space2),
                     if (memory != null && memory.history.trim().isNotEmpty)
-                      for (final line in _parseMemoryHistoryLines(memory).take(3))
+                      for (final line in _parseMemoryHistoryLines(
+                        memory,
+                      ).take(3))
                         Padding(
-                          padding: EdgeInsets.symmetric(vertical: AppSpacing.space1),
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.space1,
+                          ),
                           child: Container(
                             width: double.infinity,
                             padding: EdgeInsets.all(AppSpacing.space3),
@@ -1365,7 +1424,10 @@ void _showTopicSuggestionsSheet(
                           ),
                         )
                     else
-                      Text('No recent conversations recorded.', style: AppTypography.body(color: sheetTokens.inkSubtle)),
+                      Text(
+                        'No recent conversations recorded.',
+                        style: AppTypography.body(color: sheetTokens.inkSubtle),
+                      ),
                   ],
                 ),
               ),
@@ -1386,7 +1448,9 @@ void _showTopicSuggestionsSheet(
                         borderRadius: BorderRadius.circular(AppRadius.sm),
                       ),
                       child: Text(
-                        (memory != null && memory.summary.trim().isNotEmpty) ? memory.summary : 'No current context available.',
+                        (memory != null && memory.summary.trim().isNotEmpty)
+                            ? memory.summary
+                            : 'No current context available.',
                         style: AppTypography.body(),
                       ),
                     ),
@@ -1409,7 +1473,10 @@ void _showTopicSuggestionsSheet(
                         color: sheetTokens.recommendationSurface,
                         borderRadius: BorderRadius.circular(AppRadius.sm),
                       ),
-                      child: Text('Mother\'s Day coming up May 11th', style: AppTypography.body(color: sheetTokens.ink)),
+                      child: Text(
+                        'Mother\'s Day coming up May 11th',
+                        style: AppTypography.body(color: sheetTokens.ink),
+                      ),
                     ),
                   ],
                 ),
@@ -1427,7 +1494,11 @@ void _showTopicSuggestionsSheet(
 /// from #033, with an InkWell + Container shape so the gradient renders
 /// (Flutter's FloatingActionButton.extended only accepts a single Color).
 class AiActionFab extends StatelessWidget {
-  const AiActionFab({super.key, required this.onTap, this.label = 'Update with AI'});
+  const AiActionFab({
+    super.key,
+    required this.onTap,
+    this.label = 'Update with AI',
+  });
   final VoidCallback onTap;
   final String label;
 
@@ -1465,8 +1536,9 @@ class AiActionFab extends StatelessWidget {
                   SizedBox(width: AppSpacing.space2),
                   Text(
                     label,
-                    style: AppTypography.bodyLg(color: tokens.primaryOn)
-                        .copyWith(fontWeight: FontWeight.w600),
+                    style: AppTypography.bodyLg(
+                      color: tokens.primaryOn,
+                    ).copyWith(fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
