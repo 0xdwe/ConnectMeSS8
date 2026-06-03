@@ -219,6 +219,12 @@ class FirebaseConnectionStore implements ConnectionStore {
       'notes': c.notes,
       'knownSince': Timestamp.fromDate(c.knownSince),
       'preferredChannels': List<String>.from(c.preferredChannels),
+      'phone': c.phone,
+      'address': c.address,
+      'instagram': c.instagram,
+      'linkedin': c.linkedin,
+      'whatsapp': c.whatsapp,
+      'line': c.line,
       'isSample': c.isSample,
       'schemaVersion': schemaVersion,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -246,6 +252,12 @@ class FirebaseConnectionStore implements ConnectionStore {
       final notes = data['notes'];
       final knownSince = data['knownSince'];
       final preferredChannels = data['preferredChannels'];
+      final phone = data['phone'];
+      final address = data['address'];
+      final instagram = data['instagram'];
+      final linkedin = data['linkedin'];
+      final whatsapp = data['whatsapp'];
+      final line = data['line'];
       final isSample = data['isSample'];
 
       if (id is! String ||
@@ -276,6 +288,12 @@ class FirebaseConnectionStore implements ConnectionStore {
         preferredChannels: List<String>.from(
           preferredChannels.whereType<String>(),
         ),
+        phone: phone is String ? phone : '',
+        address: address is String ? address : '',
+        instagram: instagram is String ? instagram : '',
+        linkedin: linkedin is String ? linkedin : '',
+        whatsapp: whatsapp is String ? whatsapp : '',
+        line: line is String ? line : '',
         isSample: isSample is bool ? isSample : false,
       );
     } catch (_) {

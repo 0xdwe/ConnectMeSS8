@@ -151,6 +151,12 @@ class Connection {
     required this.notes,
     required this.knownSince,
     required this.preferredChannels,
+    this.phone = '',
+    this.address = '',
+    this.instagram = '',
+    this.linkedin = '',
+    this.whatsapp = '',
+    this.line = '',
     this.isSample = false,
   });
 
@@ -165,6 +171,12 @@ class Connection {
   final String notes;
   final DateTime knownSince;
   final List<String> preferredChannels;
+  final String phone;
+  final String address;
+  final String instagram;
+  final String linkedin;
+  final String whatsapp;
+  final String line;
   final bool isSample;
 
   String get role => category;
@@ -188,6 +200,12 @@ class Connection {
     String? notes,
     DateTime? knownSince,
     List<String>? preferredChannels,
+    String? phone,
+    String? address,
+    String? instagram,
+    String? linkedin,
+    String? whatsapp,
+    String? line,
     bool? isSample,
   }) {
     return Connection(
@@ -202,6 +220,12 @@ class Connection {
       notes: notes ?? this.notes,
       knownSince: knownSince ?? this.knownSince,
       preferredChannels: preferredChannels ?? this.preferredChannels,
+      phone: phone ?? this.phone,
+      address: address ?? this.address,
+      instagram: instagram ?? this.instagram,
+      linkedin: linkedin ?? this.linkedin,
+      whatsapp: whatsapp ?? this.whatsapp,
+      line: line ?? this.line,
       isSample: isSample ?? this.isSample,
     );
   }

@@ -514,19 +514,32 @@ class AppController extends Notifier<AppState> {
     required String email,
     required String category,
     required String notes,
+    String phone = '',
+    String address = '',
+    String instagram = '',
+    String linkedin = '',
+    String whatsapp = '',
+    String line = '',
+    String avatar = '👤',
   }) async {
     final connection = Connection(
       id: _uuid.v4(),
       name: name,
       email: email,
       category: category,
-      avatar: '👤',
+      avatar: avatar,
       bondScore: 50,
       nextStep: 'Start first real conversation',
       lastContact: DateTime.now(),
       notes: notes,
       knownSince: DateTime.now(),
       preferredChannels: const ['Text'],
+      phone: phone,
+      address: address,
+      instagram: instagram,
+      linkedin: linkedin,
+      whatsapp: whatsapp,
+      line: line,
     );
     await ref.read(connectionStoreProvider).save(connection);
     return connection;

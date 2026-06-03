@@ -5,7 +5,17 @@ import '../../state/app_state.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 
-Future<void> showAddConnectionModal(BuildContext context) => showModalBottomSheet<void>(context: context, isScrollControlled: true, builder: (_) => const AddConnectionModal());
+Future<void> showAddConnectionModal(BuildContext context) =>
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      isScrollControlled: true,
+      builder: (_) => const AddConnectionModal(),
+    );
 
 class AddConnectionModal extends ConsumerStatefulWidget {
   const AddConnectionModal({super.key});
@@ -14,51 +24,344 @@ class AddConnectionModal extends ConsumerStatefulWidget {
   ConsumerState<AddConnectionModal> createState() => _AddConnectionModalState();
 }
 
+enum _ProfilePictureMode { emoji, image }
+
 class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
   final name = TextEditingController();
   final email = TextEditingController();
+  final avatar = TextEditingController(text: '👤');
+  final phone = TextEditingController();
+  final address = TextEditingController();
+  final instagram = TextEditingController();
+  final linkedin = TextEditingController();
+  final whatsapp = TextEditingController();
+  final line = TextEditingController();
   final notes = TextEditingController();
+
   String? category;
+  _ProfilePictureMode pictureMode = _ProfilePictureMode.emoji;
+
+  @override
+  void dispose() {
+    name.dispose();
+    email.dispose();
+    avatar.dispose();
+    phone.dispose();
+    address.dispose();
+    instagram.dispose();
+    linkedin.dispose();
+    whatsapp.dispose();
+    line.dispose();
+    notes.dispose();
+    super.dispose();
+  }
+
+  InputDecoration _inputDecoration(String label, {IconData? icon}) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: icon == null ? null : Icon(icon),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(appControllerProvider);
     category ??= state.categories.first;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: AppSpacing.space5,
-        right: AppSpacing.space5,
-        top: AppSpacing.space5,
-        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.space5,
-      ),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Add Connection', style: AppTypography.h1()),
-        SizedBox(height: AppSpacing.space3),
-        TextField(key: const Key('add-name-field'), controller: name, decoration: const InputDecoration(labelText: 'Name')),
-        SizedBox(height: AppSpacing.space2),
-        TextField(key: const Key('add-email-field'), controller: email, decoration: const InputDecoration(labelText: 'Email')),
-        SizedBox(height: AppSpacing.space2),
-        DropdownButtonFormField<String>(initialValue: category, decoration: const InputDecoration(labelText: 'Category'), items: state.categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(), onChanged: (value) => setState(() => category = value)),
-        SizedBox(height: AppSpacing.space2),
-        TextField(controller: notes, decoration: const InputDecoration(labelText: 'First connection starter'), minLines: 2, maxLines: 4),
-        SizedBox(height: AppSpacing.space4),
-        FilledButton(
-          key: const Key('save-connection-button'),
-          onPressed: () async {
-            try {
-              await ref.read(appControllerProvider.notifier).addConnection(name: name.text.trim().isEmpty ? 'New Connection' : name.text.trim(), email: email.text.trim().isEmpty ? 'new@email.com' : email.text.trim(), category: category!, notes: notes.text.trim());
-              if (context.mounted) Navigator.pop(context);
-            } catch (_) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Could not add connection. Try again.')),
-                );
-              }
-            }
-          },
-          child: const Text('Save Connection'),
+    final colors = Theme.of(context).colorScheme;
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: AppSpacing.space5,
+          right: AppSpacing.space5,
+          top: AppSpacing.space4,
+          bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.space4,
         ),
-      ]),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('Add Connection', style: AppTypography.h1()),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              SizedBox(height: AppSpacing.space4),
+
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(AppSpacing.space4),
+                decoration: BoxDecoration(
+                  color: colors.surfaceVariant.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Profile Picture', style: AppTypography.caption()),
+                    SizedBox(height: AppSpacing.space3),
+                    Align(
+                      alignment: Alignment.center,
+                      child: CircleAvatar(
+                        radius: 42,
+                        backgroundColor: colors.primary.withOpacity(0.12),
+                        child: Text(
+                          avatar.text.isEmpty ? '👤' : avatar.text,
+                          style: AppTypography.display().copyWith(fontSize: 36),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: AppSpacing.space3),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: pictureMode == _ProfilePictureMode.emoji
+                              ? FilledButton.icon(
+                                  onPressed: () => setState(
+                                    () =>
+                                        pictureMode = _ProfilePictureMode.emoji,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.emoji_emotions_outlined,
+                                  ),
+                                  label: const Text('Emoji'),
+                                )
+                              : OutlinedButton.icon(
+                                  onPressed: () => setState(
+                                    () =>
+                                        pictureMode = _ProfilePictureMode.emoji,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.emoji_emotions_outlined,
+                                  ),
+                                  label: const Text('Emoji'),
+                                ),
+                        ),
+                        SizedBox(width: AppSpacing.space2),
+                        Expanded(
+                          child: pictureMode == _ProfilePictureMode.image
+                              ? FilledButton.icon(
+                                  onPressed: () => setState(
+                                    () =>
+                                        pictureMode = _ProfilePictureMode.image,
+                                  ),
+                                  icon: const Icon(Icons.image_outlined),
+                                  label: const Text('Image'),
+                                )
+                              : OutlinedButton.icon(
+                                  onPressed: () => setState(
+                                    () =>
+                                        pictureMode = _ProfilePictureMode.image,
+                                  ),
+                                  icon: const Icon(Icons.image_outlined),
+                                  label: const Text('Image'),
+                                ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: AppSpacing.space3),
+                    if (pictureMode == _ProfilePictureMode.emoji)
+                      TextField(
+                        controller: avatar,
+                        textAlign: TextAlign.center,
+                        decoration: _inputDecoration('Enter an emoji'),
+                      )
+                    else
+                      Text(
+                        'Image upload is not supported yet. Use Emoji for now.',
+                        style: AppTypography.bodyLg(
+                          color: colors.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: AppSpacing.space4),
+
+              Text('Basic Info', style: AppTypography.caption()),
+              SizedBox(height: AppSpacing.space2),
+
+              TextField(
+                key: const Key('add-name-field'),
+                controller: name,
+                decoration: _inputDecoration(
+                  'Name',
+                  icon: Icons.person_outline,
+                ),
+              ),
+              SizedBox(height: AppSpacing.space3),
+
+              DropdownButtonFormField<String>(
+                initialValue: category,
+                decoration: _inputDecoration(
+                  'Category',
+                  icon: Icons.category_outlined,
+                ),
+                items: state.categories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (value) => setState(() => category = value),
+              ),
+
+              SizedBox(height: AppSpacing.space4),
+
+              Text('Contact Information', style: AppTypography.caption()),
+              SizedBox(height: AppSpacing.space2),
+
+              TextField(
+                key: const Key('add-email-field'),
+                controller: email,
+                decoration: _inputDecoration(
+                  'Email',
+                  icon: Icons.email_outlined,
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              SizedBox(height: AppSpacing.space3),
+
+              TextField(
+                controller: phone,
+                decoration: _inputDecoration(
+                  'Phone',
+                  icon: Icons.phone_outlined,
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              SizedBox(height: AppSpacing.space3),
+
+              TextField(
+                controller: address,
+                decoration: _inputDecoration(
+                  'Address',
+                  icon: Icons.location_on_outlined,
+                ),
+              ),
+
+              SizedBox(height: AppSpacing.space4),
+
+              Text('Social Media', style: AppTypography.caption()),
+              SizedBox(height: AppSpacing.space2),
+
+              TextField(
+                controller: instagram,
+                decoration: _inputDecoration(
+                  'Instagram',
+                  icon: Icons.camera_alt_outlined,
+                ),
+              ),
+              SizedBox(height: AppSpacing.space3),
+
+              TextField(
+                controller: linkedin,
+                decoration: _inputDecoration(
+                  'LinkedIn',
+                  icon: Icons.work_outline,
+                ),
+              ),
+              SizedBox(height: AppSpacing.space3),
+
+              TextField(
+                controller: whatsapp,
+                decoration: _inputDecoration(
+                  'WhatsApp',
+                  icon: Icons.chat_outlined,
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              SizedBox(height: AppSpacing.space3),
+
+              TextField(
+                controller: line,
+                decoration: _inputDecoration(
+                  'LINE',
+                  icon: Icons.forum_outlined,
+                ),
+              ),
+
+              SizedBox(height: AppSpacing.space4),
+
+              TextField(
+                controller: notes,
+                decoration: _inputDecoration(
+                  'First connection starter',
+                  icon: Icons.notes_outlined,
+                ),
+                minLines: 3,
+                maxLines: 4,
+              ),
+
+              SizedBox(height: AppSpacing.space5),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  SizedBox(width: AppSpacing.space3),
+                  Expanded(
+                    child: FilledButton(
+                      key: const Key('save-connection-button'),
+                      onPressed: () async {
+                        try {
+                          await ref
+                              .read(appControllerProvider.notifier)
+                              .addConnection(
+                                name: name.text.trim().isEmpty
+                                    ? 'New Connection'
+                                    : name.text.trim(),
+                                email: email.text.trim().isEmpty
+                                    ? 'new@email.com'
+                                    : email.text.trim(),
+                                category: category!,
+                                notes: notes.text.trim(),
+                                avatar: pictureMode == _ProfilePictureMode.emoji
+                                    ? (avatar.text.trim().isEmpty
+                                          ? '👤'
+                                          : avatar.text.trim())
+                                    : '👤',
+                                phone: phone.text.trim(),
+                                address: address.text.trim(),
+                                instagram: instagram.text.trim(),
+                                linkedin: linkedin.text.trim(),
+                                whatsapp: whatsapp.text.trim(),
+                                line: line.text.trim(),
+                              );
+
+                          if (context.mounted) Navigator.pop(context);
+                        } catch (_) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Could not add connection. Try again.',
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('Save'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

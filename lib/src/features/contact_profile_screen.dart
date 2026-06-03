@@ -69,6 +69,8 @@ class ContactProfileScreen extends ConsumerWidget {
     final memorySummary = (memory != null && memory.summary.trim().isNotEmpty)
         ? memory.summary
         : null;
+    final statusLabel = _connectionStatusLabel(person.bondScore);
+    final statusColor = _connectionStatusColor(tokens, person.bondScore);
     
     return Scaffold(
       backgroundColor: tokens.surface,
@@ -199,7 +201,7 @@ class ContactProfileScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Bond Score',
+                              'Connection Score',
                               style: AppTypography.caption(color: tokens.inkMuted),
                             ),
                             SizedBox(height: AppSpacing.space1),
@@ -219,6 +221,21 @@ class ContactProfileScreen extends ConsumerWidget {
                                       ? tokens.success
                                       : tokens.danger,
                                   size: 20,
+                                ),
+                                SizedBox(width: AppSpacing.space2),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.space2,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withOpacity(0.14),
+                                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                                  ),
+                                  child: Text(
+                                    statusLabel,
+                                    style: AppTypography.caption(color: statusColor),
+                                  ),
                                 ),
                               ],
                             ),
@@ -459,6 +476,20 @@ String _initials(String fullName) {
   return '';
 }
 
+String _connectionStatusLabel(int score) {
+  final label = BondTier.from(score).label;
+  return '${label[0].toUpperCase()}${label.substring(1)}';
+}
+
+Color _connectionStatusColor(AppTokens tokens, int score) {
+  final tier = BondTier.from(score);
+  return switch (tier) {
+    BondTier.close => tokens.primary,
+    BondTier.steady => tokens.inkMuted,
+    BondTier.drifting => tokens.secondary,
+  };
+}
+
 class InteractionDetailsCard extends StatefulWidget {
   const InteractionDetailsCard({
     super.key,
@@ -483,8 +514,12 @@ class _InteractionDetailsCardState extends State<InteractionDetailsCard> {
     final tokens = context.tokens;
     final detailRows = [
       _DetailRow(
-        label: 'Bond Score',
+        label: 'Connection Score',
         value: widget.person.bondScore.toString(),
+      ),
+      _DetailRow(
+        label: 'Status',
+        value: _connectionStatusLabel(widget.person.bondScore),
       ),
       _DetailRow(
         label: 'Known Since',

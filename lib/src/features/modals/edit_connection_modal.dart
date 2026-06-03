@@ -27,8 +27,28 @@ class EditConnectionModal extends ConsumerStatefulWidget {
 class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
   late final name = TextEditingController(text: widget.connection.name);
   late final email = TextEditingController(text: widget.connection.email);
+  late final phone = TextEditingController(text: widget.connection.phone);
+  late final address = TextEditingController(text: widget.connection.address);
+  late final instagram = TextEditingController(text: widget.connection.instagram);
+  late final linkedin = TextEditingController(text: widget.connection.linkedin);
+  late final whatsapp = TextEditingController(text: widget.connection.whatsapp);
+  late final line = TextEditingController(text: widget.connection.line);
   late final notes = TextEditingController(text: widget.connection.notes);
   late String category = widget.connection.category;
+
+  @override
+  void dispose() {
+    name.dispose();
+    email.dispose();
+    phone.dispose();
+    address.dispose();
+    instagram.dispose();
+    linkedin.dispose();
+    whatsapp.dispose();
+    line.dispose();
+    notes.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +62,7 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Edit Connection',
@@ -52,11 +73,6 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
             decoration: const InputDecoration(labelText: 'Name'),
           ),
           SizedBox(height: AppSpacing.space2),
-          TextField(
-            controller: email,
-            decoration: const InputDecoration(labelText: 'Email'),
-          ),
-          SizedBox(height: AppSpacing.space2),
           DropdownButtonFormField<String>(
             initialValue: category,
             decoration: const InputDecoration(labelText: 'Category'),
@@ -64,6 +80,46 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
                 .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                 .toList(),
             onChanged: (v) => setState(() => category = v ?? category),
+          ),
+          SizedBox(height: AppSpacing.space2),
+          Text('Contact Information (Optional)', style: AppTypography.caption()),
+          SizedBox(height: AppSpacing.space2),
+          TextField(
+            controller: email,
+            decoration: const InputDecoration(labelText: 'Email'),
+            keyboardType: TextInputType.emailAddress,
+          ),
+          SizedBox(height: AppSpacing.space2),
+          TextField(
+            controller: phone,
+            decoration: const InputDecoration(labelText: 'Phone'),
+            keyboardType: TextInputType.phone,
+          ),
+          SizedBox(height: AppSpacing.space2),
+          TextField(
+            controller: address,
+            decoration: const InputDecoration(labelText: 'Address'),
+          ),
+          SizedBox(height: AppSpacing.space2),
+          TextField(
+            controller: instagram,
+            decoration: const InputDecoration(labelText: 'Instagram'),
+          ),
+          SizedBox(height: AppSpacing.space2),
+          TextField(
+            controller: linkedin,
+            decoration: const InputDecoration(labelText: 'LinkedIn'),
+          ),
+          SizedBox(height: AppSpacing.space2),
+          TextField(
+            controller: whatsapp,
+            decoration: const InputDecoration(labelText: 'WhatsApp'),
+            keyboardType: TextInputType.phone,
+          ),
+          SizedBox(height: AppSpacing.space2),
+          TextField(
+            controller: line,
+            decoration: const InputDecoration(labelText: 'LINE'),
           ),
           SizedBox(height: AppSpacing.space2),
           TextField(
@@ -80,6 +136,12 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
                       name: name.text,
                       email: email.text,
                       category: category,
+                      phone: phone.text,
+                      address: address.text,
+                      instagram: instagram.text,
+                      linkedin: linkedin.text,
+                      whatsapp: whatsapp.text,
+                      line: line.text,
                       notes: notes.text,
                     ),
                   );
