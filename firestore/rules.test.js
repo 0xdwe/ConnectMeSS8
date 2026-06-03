@@ -866,6 +866,37 @@ describe('users/{uid}/connections/{contactId} — shape validation', () => {
     );
   });
 
+  test('create allowed when optional lastBondDriftAppliedAt is absent', async () => {
+    await assertSucceeds(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection(),
+      ),
+    );
+  });
+
+  test('create allowed when optional lastBondDriftAppliedAt is a timestamp', async () => {
+    await assertSucceeds(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({
+          lastBondDriftAppliedAt: Timestamp.fromDate(
+            new Date('2026-06-04T12:30:00Z'),
+          ),
+        }),
+      ),
+    );
+  });
+
+  test('create denied when lastBondDriftAppliedAt is not a timestamp', async () => {
+    await assertFails(
+      setDoc(
+        connectionDocRef(authedDb(ALICE), ALICE, 'sarah'),
+        wellFormedConnection({ lastBondDriftAppliedAt: '2026-06-04T12:30:00Z' }),
+      ),
+    );
+  });
+
   // ---- S4 (review fix): wrong-type matrix for remaining required strings
 
   test('create denied when id is not a string', async () => {

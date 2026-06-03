@@ -2,6 +2,96 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:connect_me/src/models/social_models.dart';
 
 void main() {
+  group('Connection.lastBondDriftAppliedAt', () {
+    test('defaults to null when not specified', () {
+      final connection = Connection(
+        id: 'test-id',
+        name: 'Test User',
+        email: 'test@example.com',
+        category: 'Friends',
+        avatar: '👤',
+        bondScore: 50,
+        nextStep: 'Follow up',
+        lastContact: DateTime(2026, 5, 1),
+        notes: 'Test notes',
+        knownSince: DateTime(2020, 1, 1),
+        preferredChannels: const ['Text'],
+      );
+
+      expect(connection.lastBondDriftAppliedAt, isNull);
+    });
+
+    test('copyWith preserves lastBondDriftAppliedAt when not changed', () {
+      final appliedAt = DateTime.utc(2026, 6, 4, 12);
+      final connection = Connection(
+        id: 'test-id',
+        name: 'Test User',
+        email: 'test@example.com',
+        category: 'Friends',
+        avatar: '👤',
+        bondScore: 50,
+        nextStep: 'Follow up',
+        lastContact: DateTime(2026, 5, 1),
+        notes: 'Test notes',
+        knownSince: DateTime(2020, 1, 1),
+        preferredChannels: const ['Text'],
+        lastBondDriftAppliedAt: appliedAt,
+      );
+
+      final updated = connection.copyWith(name: 'Updated Name');
+
+      expect(updated.lastBondDriftAppliedAt, appliedAt);
+      expect(updated.name, 'Updated Name');
+    });
+
+    test('copyWith can change lastBondDriftAppliedAt', () {
+      final appliedAt = DateTime.utc(2026, 6, 4, 12);
+      final nextAppliedAt = DateTime.utc(2026, 6, 5, 12);
+      final connection = Connection(
+        id: 'test-id',
+        name: 'Test User',
+        email: 'test@example.com',
+        category: 'Friends',
+        avatar: '👤',
+        bondScore: 50,
+        nextStep: 'Follow up',
+        lastContact: DateTime(2026, 5, 1),
+        notes: 'Test notes',
+        knownSince: DateTime(2020, 1, 1),
+        preferredChannels: const ['Text'],
+        lastBondDriftAppliedAt: appliedAt,
+      );
+
+      final updated = connection.copyWith(
+        lastBondDriftAppliedAt: nextAppliedAt,
+      );
+
+      expect(updated.lastBondDriftAppliedAt, nextAppliedAt);
+    });
+
+    test('copyWith can clear lastBondDriftAppliedAt', () {
+      final appliedAt = DateTime.utc(2026, 6, 4, 12);
+      final connection = Connection(
+        id: 'test-id',
+        name: 'Test User',
+        email: 'test@example.com',
+        category: 'Friends',
+        avatar: '👤',
+        bondScore: 50,
+        nextStep: 'Follow up',
+        lastContact: DateTime(2026, 5, 1),
+        notes: 'Test notes',
+        knownSince: DateTime(2020, 1, 1),
+        preferredChannels: const ['Text'],
+        lastBondDriftAppliedAt: appliedAt,
+      );
+
+      final updated = connection.copyWith(lastBondDriftAppliedAt: null);
+
+      expect(updated.lastBondDriftAppliedAt, isNull);
+    });
+  });
+
   group('Connection.isSample', () {
     test('defaults to false when not specified', () {
       final connection = Connection(

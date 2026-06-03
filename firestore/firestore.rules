@@ -65,8 +65,9 @@ service cloud.firestore {
     // checks. The Dart `Connection` model declares `email` and
     // `notes` as required non-nullable strings, so the rules treat
     // them the same way — empty strings are allowed (PRD §Q8) but
-    // the keys must always be present. Only `isSample` is genuinely
-    // optional, using the "present-and-typed-or-absent" pattern.
+    // the keys must always be present. Only `isSample` and
+    // `lastBondDriftAppliedAt` are genuinely optional, using the
+    // "present-and-typed-or-absent" pattern.
     // The closed shape (`hasOnly`) keeps a buggy or malicious
     // client from poisoning the document with unknown fields.
     // `bondScore` is range-clamped 0..100 server-side mirroring the
@@ -77,7 +78,7 @@ service cloud.firestore {
           'id', 'name', 'email', 'category', 'avatar', 'bondScore',
           'nextStep', 'lastContact', 'notes', 'knownSince',
           'preferredChannels', 'schemaVersion', 'updatedAt',
-          'isSample'
+          'isSample', 'lastBondDriftAppliedAt'
         ])
         && data.keys().hasAll([
           'id', 'name', 'email', 'category', 'avatar', 'bondScore',
@@ -99,7 +100,9 @@ service cloud.firestore {
         && data.preferredChannels is list
         && data.schemaVersion is int
         && data.updatedAt is timestamp
-        && (!('isSample' in data.keys()) || data.isSample is bool);
+        && (!('isSample' in data.keys()) || data.isSample is bool)
+        && (!('lastBondDriftAppliedAt' in data.keys())
+            || data.lastBondDriftAppliedAt is timestamp);
     }
 
     match /users/{uid}/connections/{contactId} {

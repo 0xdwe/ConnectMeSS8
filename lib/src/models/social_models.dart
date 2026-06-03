@@ -12,10 +12,7 @@ enum InteractionType {
   relationshipNote,
 }
 
-enum InteractionSource {
-  manual,
-  aiSuggested,
-}
+enum InteractionSource { manual, aiSuggested }
 
 enum ContactSort { name, lastContact, bondScore }
 
@@ -138,6 +135,8 @@ class CrmInteraction {
   }
 }
 
+const Object _copyWithAbsent = Object();
+
 class Connection {
   const Connection({
     required this.id,
@@ -158,6 +157,7 @@ class Connection {
     this.whatsapp = '',
     this.line = '',
     this.isSample = false,
+    this.lastBondDriftAppliedAt,
   });
 
   final String id;
@@ -178,6 +178,7 @@ class Connection {
   final String whatsapp;
   final String line;
   final bool isSample;
+  final DateTime? lastBondDriftAppliedAt;
 
   String get role => category;
   String get company => email;
@@ -207,6 +208,7 @@ class Connection {
     String? whatsapp,
     String? line,
     bool? isSample,
+    Object? lastBondDriftAppliedAt = _copyWithAbsent,
   }) {
     return Connection(
       id: id,
@@ -227,6 +229,9 @@ class Connection {
       whatsapp: whatsapp ?? this.whatsapp,
       line: line ?? this.line,
       isSample: isSample ?? this.isSample,
+      lastBondDriftAppliedAt: identical(lastBondDriftAppliedAt, _copyWithAbsent)
+          ? this.lastBondDriftAppliedAt
+          : lastBondDriftAppliedAt as DateTime?,
     );
   }
 }
