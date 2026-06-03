@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../models/social_models.dart';
 import 'connection_store.dart';
@@ -19,6 +20,7 @@ import 'connection_store.dart';
 ///  * `lastContact`, `knownSince` (timestamp)
 ///  * `preferredChannels` (list of strings)
 ///  * `isSample` (bool, optional)
+///  * `lastBondDriftAppliedAt` (timestamp, optional)
 ///  * `schemaVersion` (int, literal `1`)
 ///  * `updatedAt` (server timestamp)
 ///
@@ -72,8 +74,8 @@ class FirebaseConnectionStore implements ConnectionStore {
   FirebaseConnectionStore({
     required FirebaseFirestore firestore,
     required String uid,
-  })  : _firestore = firestore,
-        _uid = uid {
+  }) : _firestore = firestore,
+       _uid = uid {
     _subscribe();
   }
 
@@ -125,7 +127,7 @@ class FirebaseConnectionStore implements ConnectionStore {
     if (!snapshot.exists) return null;
     final data = snapshot.data();
     if (data == null) return null;
-    return _decodeData(data);
+    return decode(data);
   }
 
   @override
@@ -207,7 +209,7 @@ class FirebaseConnectionStore implements ConnectionStore {
   /// duplicating field lists, and so the encoder can be tested in
   /// isolation if needed.
   static Map<String, dynamic> encode(Connection c) {
-    return <String, dynamic>{
+    final data = <String, dynamic>{
       'id': c.id,
       'name': c.name,
       'email': c.email,
@@ -229,17 +231,25 @@ class FirebaseConnectionStore implements ConnectionStore {
       'schemaVersion': schemaVersion,
       'updatedAt': FieldValue.serverTimestamp(),
     };
+    final lastBondDriftAppliedAt = c.lastBondDriftAppliedAt;
+    if (lastBondDriftAppliedAt != null) {
+      data['lastBondDriftAppliedAt'] = Timestamp.fromDate(
+        lastBondDriftAppliedAt,
+      );
+    }
+    return data;
   }
 
   Connection? _decode(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
-    return _decodeData(doc.data());
+    return decode(doc.data());
   }
 
   /// Defensive decode. Tolerate malformed documents by returning
   /// null rather than throwing — the rules normally guarantee shape,
   /// but a transient inconsistency (e.g. mid-migration write) should
   /// not poison the snapshot. Mirrors `FirebaseMemoryStore.load`.
-  Connection? _decodeData(Map<String, dynamic> data) {
+  @visibleForTesting
+  static Connection? decode(Map<String, dynamic> data) {
     try {
       final id = data['id'];
       final name = data['name'];
@@ -259,6 +269,7 @@ class FirebaseConnectionStore implements ConnectionStore {
       final whatsapp = data['whatsapp'];
       final line = data['line'];
       final isSample = data['isSample'];
+      final lastBondDriftAppliedAt = data['lastBondDriftAppliedAt'];
 
       if (id is! String ||
           name is! String ||
@@ -270,7 +281,9 @@ class FirebaseConnectionStore implements ConnectionStore {
           lastContact is! Timestamp ||
           notes is! String ||
           knownSince is! Timestamp ||
-          preferredChannels is! List) {
+          preferredChannels is! List ||
+          (lastBondDriftAppliedAt != null &&
+              lastBondDriftAppliedAt is! Timestamp)) {
         return null;
       }
 
@@ -295,6 +308,9 @@ class FirebaseConnectionStore implements ConnectionStore {
         whatsapp: whatsapp is String ? whatsapp : '',
         line: line is String ? line : '',
         isSample: isSample is bool ? isSample : false,
+        lastBondDriftAppliedAt: lastBondDriftAppliedAt is Timestamp
+            ? lastBondDriftAppliedAt.toDate()
+            : null,
       );
     } catch (_) {
       // Defensive — never let a single bad document block the
