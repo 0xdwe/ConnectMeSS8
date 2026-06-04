@@ -13,6 +13,7 @@ Map<String, dynamic> _validBase() => <String, dynamic>{
         'topicsToAdd': <String>['oat milk'],
         'preferencesToAdd': <String>[],
         'upcomingToAdd': <Map<String, dynamic>>[],
+        'topicSuggestions': <Map<String, dynamic>>[],
       },
       'interactionDepth': 50,
       'nextStep': 'Send the article she mentioned',
@@ -33,6 +34,7 @@ void main() {
       expect(r.memoryUpdate.summary, isNull);
       expect(r.memoryUpdate.topicsToAdd, ['oat milk']);
       expect(r.memoryUpdate.upcomingToAdd, isEmpty);
+      expect(r.memoryUpdate.topicSuggestions, isEmpty);
     });
 
     test('omits optional metadata when not provided', () {
@@ -237,6 +239,105 @@ void main() {
       ];
       final r = LlmAiUpdateResponse.fromJson(json);
       expect(r.memoryUpdate.topicsToAdd, ['valid', 'also-valid']);
+    });
+  });
+
+  group('topicSuggestions validation', () {
+    test('parses topic suggestion groups with metadata', () {
+      final json = _validBase();
+      (json['memoryUpdate'] as Map<String, dynamic>)['topicSuggestions'] = [
+        {
+          'topic': 'paris trip',
+          'lastMentionedAt': '2026-06-04',
+          'mentionCount': 2,
+          'expiresAt': '2026-07-01',
+          'suggestions': [
+            {'kind': 'ask', 'text': 'Ask how the Paris plans are coming together.'},
+            {'kind': 'share', 'text': 'Send a café rec if you spot one.'},
+          ],
+        },
+      ];
+
+      final r = LlmAiUpdateResponse.fromJson(json);
+      final group = r.memoryUpdate.topicSuggestions.single;
+      expect(group.topic, 'paris trip');
+      expect(group.lastMentionedAt, '2026-06-04');
+      expect(group.mentionCount, 2);
+      expect(group.expiresAt, '2026-07-01');
+      expect(group.suggestions, hasLength(2));
+      expect(group.suggestions.first.kind, LlmTopicSuggestionKind.ask);
+      expect(group.suggestions.first.text,
+          'Ask how the Paris plans are coming together.');
+    });
+
+    test('rejects unknown topic suggestion kind', () {
+      final json = _validBase();
+      (json['memoryUpdate'] as Map<String, dynamic>)['topicSuggestions'] = [
+        {
+          'topic': 'paris trip',
+          'suggestions': [
+            {'kind': 'nag', 'text': 'Ask about Paris.'},
+          ],
+        },
+      ];
+
+      expect(
+        () => LlmAiUpdateResponse.fromJson(json),
+        throwsA(isA<LlmResponseParseException>()),
+      );
+    });
+
+    test('rejects non-string topic suggestion dates without TypeError', () {
+      final json = _validBase();
+      (json['memoryUpdate'] as Map<String, dynamic>)['topicSuggestions'] = [
+        {
+          'topic': 'paris trip',
+          'lastMentionedAt': 20260604,
+          'expiresAt': {'date': '2026-07-01'},
+          'suggestions': [
+            {'kind': 'ask', 'text': 'Ask how the Paris plans are coming together.'},
+          ],
+        },
+      ];
+
+      expect(
+        () => LlmAiUpdateResponse.fromJson(json),
+        throwsA(isA<LlmResponseParseException>()),
+      );
+    });
+
+    test('rejects topic suggestion text with numeric day-count shame', () {
+      final json = _validBase();
+      (json['memoryUpdate'] as Map<String, dynamic>)['topicSuggestions'] = [
+        {
+          'topic': 'paris trip',
+          'suggestions': [
+            {'kind': 'ask', 'text': "You haven't asked about Paris in 47 days."},
+          ],
+        },
+      ];
+
+      expect(
+        () => LlmAiUpdateResponse.fromJson(json),
+        throwsA(isA<LlmResponseParseException>()),
+      );
+    });
+
+    test('rejects topic suggestion text with non-numeric guilt phrasing', () {
+      final json = _validBase();
+      (json['memoryUpdate'] as Map<String, dynamic>)['topicSuggestions'] = [
+        {
+          'topic': 'paris trip',
+          'suggestions': [
+            {'kind': 'ask', 'text': 'You are neglecting Sarah.'},
+          ],
+        },
+      ];
+
+      expect(
+        () => LlmAiUpdateResponse.fromJson(json),
+        throwsA(isA<LlmResponseParseException>()),
+      );
     });
   });
 

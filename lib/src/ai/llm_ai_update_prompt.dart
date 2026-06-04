@@ -88,6 +88,14 @@ schema; violating these rules causes the update to be rejected):
   possible; use a relative phrase ("next month") only if no date
   can be pinned. Mark the kind: "milestone", "trip",
   "appointment", "celebration", or "other".
+- memoryUpdate.topicSuggestions: for newly-added topics and
+  existing topics clearly touched by this update, prepare at most
+  three gentle action ideas. Each suggestion must use kind "ask",
+  "share", "plan", or "remember" and one brief text. Use today's
+  ISO date for lastMentionedAt. Only set expiresAt when the idea is
+  time-sensitive. Do not generate suggestions for untouched topics.
+  Topic Suggestions must be warm, specific, and non-shaming; never
+  mention numeric day counts or guilt.
 - nextStep: one concrete, gentle suggestion ≤80 chars for the
   user's next interaction. Phrased as something the user could
   do, not something they should feel guilty about not doing.
@@ -116,8 +124,8 @@ Image attachments:
 Failure modes:
 - If the user input is empty AND no images are attached, return
   interactionDepth=0, nextStep=null, summary=null, and empty arrays
-  for topicsToAdd / preferencesToAdd / upcomingToAdd. The
-  newHistoryBullet should record the timestamp with a generic
+  for topicsToAdd / preferencesToAdd / upcomingToAdd /
+  topicSuggestions. The newHistoryBullet should record the timestamp with a generic
   "checked in" note. Do NOT invent content.
 - If the input or an image triggers content concerns, refuse via
   the standard safety mechanism rather than emitting a

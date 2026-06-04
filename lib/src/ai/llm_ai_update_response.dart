@@ -24,6 +24,88 @@ library;
 
 import '../models/social_models.dart' show InteractionType;
 
+/// Suggestion kind for a Gemini-prepared Topic Suggestion.
+enum LlmTopicSuggestionKind { ask, share, plan, remember }
+
+class LlmTopicSuggestion {
+  const LlmTopicSuggestion({required this.kind, required this.text});
+
+  final LlmTopicSuggestionKind kind;
+  final String text;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'kind': kind.name,
+        'text': text,
+      };
+
+  factory LlmTopicSuggestion.fromJson(Map<String, dynamic> json) {
+    final kindRaw = _requireString(json, 'kind');
+    final kind = LlmTopicSuggestionKind.values.firstWhere(
+      (k) => k.name == kindRaw,
+      orElse: () => throw LlmResponseParseException(
+        'topicSuggestions[].suggestions[].kind unknown: "$kindRaw"',
+      ),
+    );
+    final text = _requireString(json, 'text');
+    if (_containsNumericDayCountShame(text)) {
+      throw LlmResponseParseException(
+        'topicSuggestions[].suggestions[].text violates anti-shame guardrail',
+      );
+    }
+    return LlmTopicSuggestion(kind: kind, text: text);
+  }
+}
+
+class LlmTopicSuggestionGroup {
+  const LlmTopicSuggestionGroup({
+    required this.topic,
+    this.lastMentionedAt,
+    this.mentionCount,
+    this.expiresAt,
+    this.suggestions = const [],
+  });
+
+  final String topic;
+  final String? lastMentionedAt;
+  final int? mentionCount;
+  final String? expiresAt;
+  final List<LlmTopicSuggestion> suggestions;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'topic': topic,
+        if (lastMentionedAt != null) 'lastMentionedAt': lastMentionedAt,
+        if (mentionCount != null) 'mentionCount': mentionCount,
+        if (expiresAt != null) 'expiresAt': expiresAt,
+        'suggestions': suggestions.map((s) => s.toJson()).toList(),
+      };
+
+  factory LlmTopicSuggestionGroup.fromJson(Map<String, dynamic> json) {
+    final suggestionsRaw = json['suggestions'];
+    if (suggestionsRaw != null && suggestionsRaw is! List) {
+      throw LlmResponseParseException(
+        'topicSuggestions[].suggestions must be a list but was '
+        '${suggestionsRaw.runtimeType}',
+      );
+    }
+    return LlmTopicSuggestionGroup(
+      topic: _requireString(json, 'topic'),
+      lastMentionedAt: _readOptionalString(json, 'lastMentionedAt'),
+      mentionCount: json['mentionCount'] is int
+          ? json['mentionCount'] as int
+          : (json['mentionCount'] is num
+              ? (json['mentionCount'] as num).toInt()
+              : null),
+      expiresAt: _readOptionalString(json, 'expiresAt'),
+      suggestions: (suggestionsRaw ?? const <dynamic>[])
+          .whereType<Map<String, dynamic>>()
+          .map(LlmTopicSuggestion.fromJson)
+          .take(3)
+          .toList(growable: false)
+          .cast<LlmTopicSuggestion>(),
+    );
+  }
+}
+
 /// Marker exception thrown when an LLM response cannot be parsed
 /// against the structured-output contract.
 ///
@@ -112,6 +194,7 @@ class LlmMemoryUpdate {
     this.topicsToAdd = const [],
     this.preferencesToAdd = const [],
     this.upcomingToAdd = const [],
+    this.topicSuggestions = const [],
   });
 
   /// Full-replacement summary, or null when the input does not
@@ -125,6 +208,7 @@ class LlmMemoryUpdate {
   final List<String> topicsToAdd;
   final List<String> preferencesToAdd;
   final List<LlmUpcomingEntry> upcomingToAdd;
+  final List<LlmTopicSuggestionGroup> topicSuggestions;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'summary': summary,
@@ -132,6 +216,7 @@ class LlmMemoryUpdate {
         'topicsToAdd': topicsToAdd,
         'preferencesToAdd': preferencesToAdd,
         'upcomingToAdd': upcomingToAdd.map((e) => e.toJson()).toList(),
+        'topicSuggestions': topicSuggestions.map((e) => e.toJson()).toList(),
       };
 
   factory LlmMemoryUpdate.fromJson(Map<String, dynamic> json) {
@@ -152,6 +237,7 @@ class LlmMemoryUpdate {
           .whereType<Map<String, dynamic>>()
           .map(LlmUpcomingEntry.fromJson)
           .toList(growable: false),
+      topicSuggestions: _readTopicSuggestionGroups(json),
     );
   }
 }
@@ -266,6 +352,18 @@ String _requireString(Map<String, dynamic> json, String key) {
   return value;
 }
 
+String? _readOptionalString(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  if (value == null) return null;
+  if (value is! String) {
+    throw LlmResponseParseException(
+      '$key must be a string when present but was ${value.runtimeType}',
+    );
+  }
+  if (value.isEmpty) return null;
+  return value;
+}
+
 int _requireInt(Map<String, dynamic> json, String key) {
   final value = json[key];
   if (value is int) return value;
@@ -273,6 +371,41 @@ int _requireInt(Map<String, dynamic> json, String key) {
   throw LlmResponseParseException(
     '$key must be an int but was ${value.runtimeType}',
   );
+}
+
+bool _containsNumericDayCountShame(String text) {
+  final lower = text.toLowerCase();
+  final hasNumericDayCount = RegExp(r'\b\d+\s+days?\b').hasMatch(lower);
+  final hasGuiltPhrase = lower.contains("haven't") ||
+      lower.contains('have not') ||
+      lower.contains('neglect') ||
+      lower.contains('forgot') ||
+      lower.contains('you are letting') ||
+      lower.contains("you're letting") ||
+      lower.contains('you should have') ||
+      lower.contains('you failed');
+  return (hasNumericDayCount && hasGuiltPhrase) ||
+      lower.contains('you are neglecting') ||
+      lower.contains("you're neglecting") ||
+      lower.contains('you neglect') ||
+      lower.contains('you forgot') ||
+      lower.contains('you failed');
+}
+
+List<LlmTopicSuggestionGroup> _readTopicSuggestionGroups(
+  Map<String, dynamic> json,
+) {
+  final value = json['topicSuggestions'];
+  if (value == null) return const [];
+  if (value is! List) {
+    throw LlmResponseParseException(
+      'topicSuggestions must be a list but was ${value.runtimeType}',
+    );
+  }
+  return value
+      .whereType<Map<String, dynamic>>()
+      .map(LlmTopicSuggestionGroup.fromJson)
+      .toList(growable: false);
 }
 
 List<String> _readStringList(Map<String, dynamic> json, String key) {

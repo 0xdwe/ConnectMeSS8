@@ -532,11 +532,18 @@ class LlmAiUpdate implements AiUpdate {
         _toUpcomingEntry(entry, now: now),
     ];
 
+    final mergedTopicSuggestions = _mergeTopicSuggestions(
+      existing: currentMemory.topicSuggestions,
+      incoming: llmResult.memoryUpdate.topicSuggestions,
+      now: now,
+    );
+
     final newMemory = currentMemory.copyWith(
       summary: llmResult.memoryUpdate.summary ?? currentMemory.summary,
       history: updatedHistory,
       preferences: mergedPreferences,
       topics: mergedTopics,
+      topicSuggestions: mergedTopicSuggestions,
       upcoming: List.unmodifiable(newUpcoming),
       lastUpdated: now,
     );
@@ -583,6 +590,65 @@ class LlmAiUpdate implements AiUpdate {
       }
     }
     return existingLines.join('\n');
+  }
+
+  static List<TopicSuggestionGroup> _mergeTopicSuggestions({
+    required List<TopicSuggestionGroup> existing,
+    required List<LlmTopicSuggestionGroup> incoming,
+    required DateTime now,
+  }) {
+    if (incoming.isEmpty) return existing;
+    final byTopic = <String, TopicSuggestionGroup>{
+      for (final group in existing) group.topic.toLowerCase(): group,
+    };
+    final order = <String>[for (final group in existing) group.topic.toLowerCase()];
+    for (final group in incoming) {
+      final topic = group.topic.trim();
+      if (topic.isEmpty) continue;
+      final key = topic.toLowerCase();
+      final prior = byTopic[key];
+      if (prior == null) order.add(key);
+      final incomingSuggestions = group.suggestions
+          .map(
+            (suggestion) => TopicSuggestion(
+              kind: _toMemoryTopicSuggestionKind(suggestion.kind),
+              text: suggestion.text,
+            ),
+          )
+          .take(3)
+          .toList(growable: false);
+      byTopic[key] = TopicSuggestionGroup(
+        topic: prior?.topic ?? topic,
+        lastMentionedAt: _parseLlmDate(group.lastMentionedAt) ?? now,
+        mentionCount: (prior?.mentionCount ?? 0) + 1,
+        expiresAt: _parseLlmDate(group.expiresAt),
+        suggestions: incomingSuggestions.isEmpty && prior != null
+            ? prior.suggestions
+            : List.unmodifiable(incomingSuggestions),
+      );
+    }
+    return List.unmodifiable(order.map((key) => byTopic[key]!).toList());
+  }
+
+  static DateTime? _parseLlmDate(String? value) {
+    if (value == null || value.isEmpty) return null;
+    final normalized = value.contains('T') ? value : '${value}T00:00:00Z';
+    return DateTime.tryParse(normalized);
+  }
+
+  static TopicSuggestionKind _toMemoryTopicSuggestionKind(
+    LlmTopicSuggestionKind kind,
+  ) {
+    switch (kind) {
+      case LlmTopicSuggestionKind.ask:
+        return TopicSuggestionKind.ask;
+      case LlmTopicSuggestionKind.share:
+        return TopicSuggestionKind.share;
+      case LlmTopicSuggestionKind.plan:
+        return TopicSuggestionKind.plan;
+      case LlmTopicSuggestionKind.remember:
+        return TopicSuggestionKind.remember;
+    }
   }
 
   /// Project an [LlmUpcomingEntry] onto an [UpcomingEntry]. Uses
