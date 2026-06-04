@@ -10,13 +10,13 @@ Apply calibrated Bond Drift through the existing AppController write path so Bon
 
 ## Acceptance criteria
 
-- [ ] AppController invokes the Relationship Maintenance policy at the single authoritative lifecycle hook approved in #090 calibration notes.
-- [ ] Bond Drift updates save both clamped `bondScore` and `lastBondDriftAppliedAt` through the existing ConnectionStore write path.
-- [ ] Bond Drift is not applied more than once within the calibrated application window.
-- [ ] Tests prove app-open plus Recommendation-refresh sequencing cannot double-apply Bond Drift.
-- [ ] Bond Drift never bypasses existing Firestore/auth-aware store boundaries.
-- [ ] Targeted tests cover first eligible drift, ineligible/no-drift cases, and repeated app open or refresh without repeated decay.
-- [ ] User-visible copy, if any, preserves the anti-shame guardrail: no numeric day counts or guilt phrasing.
+- [x] AppController invokes the Relationship Maintenance policy at the single authoritative lifecycle hook approved in #090 calibration notes.
+- [x] Bond Drift updates save both clamped `bondScore` and `lastBondDriftAppliedAt` through the existing ConnectionStore write path.
+- [x] Bond Drift is not applied more than once within the calibrated application window.
+- [x] Tests prove app-open plus Recommendation-refresh sequencing cannot double-apply Bond Drift.
+- [x] Bond Drift never bypasses existing Firestore/auth-aware store boundaries.
+- [x] Targeted tests cover first eligible drift, ineligible/no-drift cases, and repeated app open or refresh without repeated decay.
+- [x] User-visible copy, if any, preserves the anti-shame guardrail: no numeric day counts or guilt phrasing.
 
 ## Blocked by
 
