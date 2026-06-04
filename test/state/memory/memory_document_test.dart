@@ -13,6 +13,24 @@ void main() {
         history: 'Met in 2020. Coffee in April.',
         preferences: 'Texts work best on weekends.',
         topics: const ['coffee', 'travel', 'music'],
+        topicSuggestions: [
+          TopicSuggestionGroup(
+            topic: 'travel',
+            lastMentionedAt: DateTime(2026, 5, 19),
+            mentionCount: 2,
+            expiresAt: DateTime(2026, 6, 1),
+            suggestions: const [
+              TopicSuggestion(
+                kind: TopicSuggestionKind.ask,
+                text: 'Ask how the Paris plans are coming together.',
+              ),
+              TopicSuggestion(
+                kind: TopicSuggestionKind.share,
+                text: 'Send a café rec if you spot one.',
+              ),
+            ],
+          ),
+        ],
         upcoming: [
           UpcomingEntry(
             startDate: DateTime(2026, 5, 19),
@@ -35,11 +53,14 @@ void main() {
       expect(parsed.history, original.history);
       expect(parsed.preferences, original.preferences);
       expect(parsed.topics, original.topics);
+      expect(parsed.topicSuggestions, original.topicSuggestions);
       expect(parsed.upcoming, original.upcoming);
       expect(parsed.parseErrors, isEmpty);
       // lastUpdated round-trips at ISO-8601 second precision.
-      expect(parsed.lastUpdated.toIso8601String(),
-          original.lastUpdated.toIso8601String());
+      expect(
+        parsed.lastUpdated.toIso8601String(),
+        original.lastUpdated.toIso8601String(),
+      );
     });
 
     test('missing optional sections parse without error', () {
@@ -68,26 +89,177 @@ A line of history.
       expect(doc.preferences, '');
       expect(doc.upcoming, isEmpty);
       expect(doc.topics, ['school']);
+      expect(doc.topicSuggestions, isEmpty);
     });
 
-    test('malformed frontmatter populates parseErrors but body still parses',
-        () {
-      const raw = '''---
+    test(
+      'parses Topic Suggestions section with metadata and capped suggestions',
+      () {
+        const raw = '''---
+contactId: 'sarah'
+displayName: 'Sarah Johnson'
+lastUpdated: '2026-05-19T00:00:00.000Z'
+version: 1
+---
+
+## Topics
+- Paris trip
+
+## Topic Suggestions
+
+### Paris trip
+lastMentionedAt: 2026-06-04
+mentionCount: 2
+expiresAt: 2026-06-20
+- ask: Ask how the Paris plans are coming together.
+- share: Send a café rec if you spot one.
+- plan: Suggest a quick call before the trip.
+- remember: This fourth suggestion is dropped.
+''';
+
+        final doc = MemoryDocument.parse(raw);
+
+        expect(doc.parseErrors, isEmpty);
+        expect(doc.topicSuggestions, hasLength(1));
+        final group = doc.topicSuggestions.single;
+        expect(group.topic, 'Paris trip');
+        expect(group.lastMentionedAt, DateTime(2026, 6, 4));
+        expect(group.mentionCount, 2);
+        expect(group.expiresAt, DateTime(2026, 6, 20));
+        expect(group.suggestions, hasLength(3));
+        expect(group.suggestions.first.kind, TopicSuggestionKind.ask);
+        expect(
+          group.suggestions.first.text,
+          'Ask how the Paris plans are coming together.',
+        );
+      },
+    );
+
+    test(
+      'malformed Topic Suggestions lines are ignored without parse errors',
+      () {
+        const raw = '''---
+contactId: 'sarah'
+displayName: 'Sarah Johnson'
+lastUpdated: '2026-05-19T00:00:00.000Z'
+version: 1
+---
+
+## Topic Suggestions
+
+### Paris trip
+lastMentionedAt: not-a-date
+mentionCount: nope
+expiresAt: also-bad
+- ask: Ask how planning is going.
+- unknown: Drop this unknown kind.
+- share:
+this line is not metadata or a suggestion
+''';
+
+        final doc = MemoryDocument.parse(raw);
+
+        expect(doc.parseErrors, isEmpty);
+        expect(doc.topicSuggestions, hasLength(1));
+        final group = doc.topicSuggestions.single;
+        expect(group.lastMentionedAt, isNull);
+        expect(group.mentionCount, 0);
+        expect(group.expiresAt, isNull);
+        expect(group.suggestions, [
+          const TopicSuggestion(
+            kind: TopicSuggestionKind.ask,
+            text: 'Ask how planning is going.',
+          ),
+        ]);
+      },
+    );
+
+    test('render emits Topic Suggestions after Topics before Upcoming', () {
+      final doc = MemoryDocument(
+        contactId: 'sarah',
+        displayName: 'Sarah Johnson',
+        lastUpdated: DateTime.utc(2026, 5, 19),
+        topics: const ['Paris trip'],
+        topicSuggestions: [
+          TopicSuggestionGroup(
+            topic: 'Paris trip',
+            lastMentionedAt: DateTime(2026, 6, 4),
+            mentionCount: 2,
+            suggestions: const [
+              TopicSuggestion(
+                kind: TopicSuggestionKind.ask,
+                text: 'Ask how planning is going.',
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final rendered = doc.render();
+
+      expect(
+        rendered.indexOf('## Topics'),
+        lessThan(rendered.indexOf('## Topic Suggestions')),
+      );
+      expect(
+        rendered.indexOf('## Topic Suggestions'),
+        lessThan(rendered.indexOf('## Upcoming')),
+      );
+      expect(rendered, contains('### Paris trip'));
+      expect(rendered, contains('lastMentionedAt: 2026-06-04'));
+      expect(rendered, contains('mentionCount: 2'));
+      expect(rendered, contains('- ask: Ask how planning is going.'));
+    });
+
+    test('render caps Topic Suggestions to three per topic group', () {
+      final doc = MemoryDocument(
+        contactId: 'sarah',
+        displayName: 'Sarah Johnson',
+        lastUpdated: DateTime.utc(2026, 5, 19),
+        topicSuggestions: [
+          TopicSuggestionGroup(
+            topic: 'Paris trip',
+            suggestions: const [
+              TopicSuggestion(kind: TopicSuggestionKind.ask, text: 'First.'),
+              TopicSuggestion(kind: TopicSuggestionKind.share, text: 'Second.'),
+              TopicSuggestion(kind: TopicSuggestionKind.plan, text: 'Third.'),
+              TopicSuggestion(
+                kind: TopicSuggestionKind.remember,
+                text: 'Fourth should not render.',
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final rendered = doc.render();
+
+      expect(rendered, contains('- ask: First.'));
+      expect(rendered, contains('- share: Second.'));
+      expect(rendered, contains('- plan: Third.'));
+      expect(rendered, isNot(contains('Fourth should not render.')));
+    });
+
+    test(
+      'malformed frontmatter populates parseErrors but body still parses',
+      () {
+        const raw = '''---
 not: [valid
 ---
 ## Summary
 Body still here.
 ''';
 
-      final doc = MemoryDocument.parse(raw);
+        final doc = MemoryDocument.parse(raw);
 
-      expect(doc.parseErrors, isNotEmpty);
-      // The body section after the broken frontmatter should still be
-      // recoverable. Either the frontmatter regex bails (treating the
-      // whole input as body) or yaml fails and we fall back to body —
-      // both paths must reach the Summary section.
-      expect(doc.summary, 'Body still here.');
-    });
+        expect(doc.parseErrors, isNotEmpty);
+        // The body section after the broken frontmatter should still be
+        // recoverable. Either the frontmatter regex bails (treating the
+        // whole input as body) or yaml fails and we fall back to body —
+        // both paths must reach the Summary section.
+        expect(doc.summary, 'Body still here.');
+      },
+    );
 
     test('empty string does not throw and yields a parseError', () {
       final doc = MemoryDocument.parse('');
@@ -99,7 +271,8 @@ Body still here.
 
     test('garbage bytes do not throw', () {
       final raw = String.fromCharCodes(
-          List<int>.generate(64, (i) => (i * 7) % 256));
+        List<int>.generate(64, (i) => (i * 7) % 256),
+      );
 
       // The contract: no exception. Anything else is fine.
       expect(() => MemoryDocument.parse(raw), returnsNormally);

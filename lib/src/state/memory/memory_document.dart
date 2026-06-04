@@ -26,10 +26,10 @@ class UpcomingEntry {
 
   @override
   int get hashCode => Object.hash(
-        _dayKey(startDate),
-        endDate == null ? null : _dayKey(endDate!),
-        description,
-      );
+    _dayKey(startDate),
+    endDate == null ? null : _dayKey(endDate!),
+    description,
+  );
 
   static bool _sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
@@ -42,6 +42,61 @@ class UpcomingEntry {
 
   static String _dayKey(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+}
+
+enum TopicSuggestionKind { ask, share, plan, remember }
+
+class TopicSuggestion {
+  const TopicSuggestion({required this.kind, required this.text});
+
+  final TopicSuggestionKind kind;
+  final String text;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TopicSuggestion && kind == other.kind && text == other.text;
+
+  @override
+  int get hashCode => Object.hash(kind, text);
+}
+
+class TopicSuggestionGroup {
+  const TopicSuggestionGroup({
+    required this.topic,
+    this.lastMentionedAt,
+    this.mentionCount = 0,
+    this.expiresAt,
+    this.suggestions = const [],
+  });
+
+  final String topic;
+  final DateTime? lastMentionedAt;
+  final int mentionCount;
+  final DateTime? expiresAt;
+  final List<TopicSuggestion> suggestions;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TopicSuggestionGroup &&
+          topic == other.topic &&
+          MemoryDocument._sameDayNullable(
+            lastMentionedAt,
+            other.lastMentionedAt,
+          ) &&
+          mentionCount == other.mentionCount &&
+          MemoryDocument._sameDayNullable(expiresAt, other.expiresAt) &&
+          MemoryDocument._listEquals(suggestions, other.suggestions);
+
+  @override
+  int get hashCode => Object.hash(
+    topic,
+    lastMentionedAt == null ? null : MemoryDocument._dayKey(lastMentionedAt!),
+    mentionCount,
+    expiresAt == null ? null : MemoryDocument._dayKey(expiresAt!),
+    Object.hashAll(suggestions),
+  );
 }
 
 /// Immutable per-contact memory document. Markdown body + YAML frontmatter.
@@ -59,6 +114,7 @@ class MemoryDocument {
     this.history = '',
     this.preferences = '',
     this.topics = const [],
+    this.topicSuggestions = const [],
     this.upcoming = const [],
     this.parseErrors = const [],
   });
@@ -71,6 +127,7 @@ class MemoryDocument {
   final String history;
   final String preferences;
   final List<String> topics;
+  final List<TopicSuggestionGroup> topicSuggestions;
   final List<UpcomingEntry> upcoming;
   final List<String> parseErrors;
 
@@ -93,8 +150,10 @@ class MemoryDocument {
   /// Maximum number of topics retained on parse and on render.
   static const int topicCap = 8;
 
-  static final RegExp _frontmatterRegExp =
-      RegExp(r'^---\r?\n([\s\S]*?)\r?\n---\r?\n?', multiLine: false);
+  static final RegExp _frontmatterRegExp = RegExp(
+    r'^---\r?\n([\s\S]*?)\r?\n---\r?\n?',
+    multiLine: false,
+  );
 
   /// Total parser. Never throws.
   static MemoryDocument parse(String raw) {
@@ -167,6 +226,7 @@ class MemoryDocument {
     String history = '';
     String preferences = '';
     final topicsRaw = <String>[];
+    final topicSuggestions = <TopicSuggestionGroup>[];
     final upcoming = <UpcomingEntry>[];
 
     sections.forEach((header, sectionBody) {
@@ -183,6 +243,9 @@ class MemoryDocument {
           break;
         case 'Topics':
           topicsRaw.addAll(_parseBullets(trimmed));
+          break;
+        case 'Topic Suggestions':
+          topicSuggestions.addAll(_parseTopicSuggestions(trimmed));
           break;
         case 'Upcoming':
           for (final bullet in _parseBullets(trimmed)) {
@@ -209,6 +272,7 @@ class MemoryDocument {
       history: history,
       preferences: preferences,
       topics: List.unmodifiable(cappedTopics),
+      topicSuggestions: List.unmodifiable(topicSuggestions),
       upcoming: List.unmodifiable(upcoming),
       parseErrors: List.unmodifiable(errors),
     );
@@ -220,8 +284,7 @@ class MemoryDocument {
     buf.writeln('---');
     buf.writeln("contactId: '${_yamlEscape(contactId)}'");
     buf.writeln("displayName: '${_yamlEscape(displayName)}'");
-    buf.writeln(
-        "lastUpdated: '${_yamlEscape(lastUpdated.toIso8601String())}'");
+    buf.writeln("lastUpdated: '${_yamlEscape(lastUpdated.toIso8601String())}'");
     buf.writeln('version: $version');
     buf.writeln('---');
 
@@ -244,6 +307,23 @@ class MemoryDocument {
     }
 
     buf.writeln();
+    buf.writeln('## Topic Suggestions');
+    for (final group in topicSuggestions) {
+      buf.writeln();
+      buf.writeln('### ${group.topic}');
+      buf.writeln(
+        'lastMentionedAt: ${_formatNullableDate(group.lastMentionedAt)}',
+      );
+      buf.writeln('mentionCount: ${group.mentionCount}');
+      buf.writeln('expiresAt: ${_formatNullableDate(group.expiresAt)}');
+      for (final suggestion in group.suggestions.take(3)) {
+        buf.writeln(
+          '- ${_renderTopicSuggestionKind(suggestion.kind)}: ${suggestion.text}',
+        );
+      }
+    }
+
+    buf.writeln();
     buf.writeln('## Upcoming');
     for (final entry in upcoming) {
       buf.writeln('- ${_renderUpcoming(entry)}');
@@ -261,6 +341,7 @@ class MemoryDocument {
     String? history,
     String? preferences,
     List<String>? topics,
+    List<TopicSuggestionGroup>? topicSuggestions,
     List<UpcomingEntry>? upcoming,
     List<String>? parseErrors,
   }) {
@@ -273,6 +354,7 @@ class MemoryDocument {
       history: history ?? this.history,
       preferences: preferences ?? this.preferences,
       topics: topics ?? this.topics,
+      topicSuggestions: topicSuggestions ?? this.topicSuggestions,
       upcoming: upcoming ?? this.upcoming,
       parseErrors: parseErrors ?? this.parseErrors,
     );
@@ -337,12 +419,111 @@ class MemoryDocument {
     return out;
   }
 
+  static List<TopicSuggestionGroup> _parseTopicSuggestions(String body) {
+    final out = <TopicSuggestionGroup>[];
+    String? topic;
+    DateTime? lastMentionedAt;
+    int mentionCount = 0;
+    DateTime? expiresAt;
+    final suggestions = <TopicSuggestion>[];
+
+    void flush() {
+      final currentTopic = topic?.trim();
+      if (currentTopic == null || currentTopic.isEmpty) return;
+      out.add(
+        TopicSuggestionGroup(
+          topic: currentTopic,
+          lastMentionedAt: lastMentionedAt,
+          mentionCount: mentionCount,
+          expiresAt: expiresAt,
+          suggestions: List.unmodifiable(suggestions.take(3).toList()),
+        ),
+      );
+    }
+
+    for (final raw in body.split('\n')) {
+      final line = raw.trim();
+      if (line.isEmpty) continue;
+      if (line.startsWith('### ')) {
+        flush();
+        topic = line.substring(4).trim();
+        lastMentionedAt = null;
+        mentionCount = 0;
+        expiresAt = null;
+        suggestions.clear();
+        continue;
+      }
+      if (topic == null) continue;
+      if (line.startsWith('lastMentionedAt:')) {
+        lastMentionedAt = _tryParseDateOnly(line.substring(16).trim());
+      } else if (line.startsWith('mentionCount:')) {
+        mentionCount = int.tryParse(line.substring(13).trim()) ?? 0;
+      } else if (line.startsWith('expiresAt:')) {
+        expiresAt = _tryParseDateOnly(line.substring(10).trim());
+      } else if (line.startsWith('- ')) {
+        final suggestion = _parseTopicSuggestion(line.substring(2).trim());
+        if (suggestion != null && suggestions.length < 3) {
+          suggestions.add(suggestion);
+        }
+      }
+    }
+    flush();
+    return out;
+  }
+
+  static TopicSuggestion? _parseTopicSuggestion(String raw) {
+    final separator = raw.indexOf(':');
+    if (separator <= 0) return null;
+    final kind = _parseTopicSuggestionKind(raw.substring(0, separator).trim());
+    final text = raw.substring(separator + 1).trim();
+    if (kind == null || text.isEmpty) return null;
+    return TopicSuggestion(kind: kind, text: text);
+  }
+
+  static TopicSuggestionKind? _parseTopicSuggestionKind(String raw) {
+    switch (raw) {
+      case 'ask':
+        return TopicSuggestionKind.ask;
+      case 'share':
+        return TopicSuggestionKind.share;
+      case 'plan':
+        return TopicSuggestionKind.plan;
+      case 'remember':
+        return TopicSuggestionKind.remember;
+    }
+    return null;
+  }
+
+  static String _renderTopicSuggestionKind(TopicSuggestionKind kind) {
+    switch (kind) {
+      case TopicSuggestionKind.ask:
+        return 'ask';
+      case TopicSuggestionKind.share:
+        return 'share';
+      case TopicSuggestionKind.plan:
+        return 'plan';
+      case TopicSuggestionKind.remember:
+        return 'remember';
+    }
+  }
+
+  static DateTime? _tryParseDateOnly(String raw) {
+    if (raw.isEmpty) return null;
+    try {
+      return DateTime.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Parses a single `## Upcoming` bullet body.
   ///
   /// Format: `YYYY-MM-DD[/YYYY-MM-DD] description`. The description is
   /// everything after the first space following the date(s).
   static UpcomingEntry? _parseUpcomingBullet(
-      String bullet, List<String> errors) {
+    String bullet,
+    List<String> errors,
+  ) {
     final spaceIdx = bullet.indexOf(' ');
     if (spaceIdx <= 0) {
       errors.add('upcoming: missing description in "$bullet"');
@@ -392,6 +573,25 @@ class MemoryDocument {
     final day = d.day.toString().padLeft(2, '0');
     return '$y-$m-$day';
   }
+
+  static String _formatNullableDate(DateTime? d) =>
+      d == null ? '' : _formatDate(d);
+
+  static bool _listEquals<T>(List<T> a, List<T> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  static bool _sameDayNullable(DateTime? a, DateTime? b) {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  static String _dayKey(DateTime d) => _formatDate(d);
 
   static String _yamlEscape(String value) =>
       value.replaceAll(r'\', r'\\').replaceAll("'", "''");

@@ -311,12 +311,22 @@ class Recommendation {
     required this.reason,
     required this.insight,
     required this.priority,
+    this.topic,
+    this.action,
   });
 
   final String contactId;
   final String reason;
   final String insight;
   final String priority;
+
+  /// Topic that made the card more specific, when any. Null means the
+  /// recommendation is a regular Maintenance Need or Upcoming card.
+  final String? topic;
+
+  /// Prepared Topic Suggestion text to show as the concrete next action.
+  /// Null when no high-quality, non-expired topic suggestion is eligible.
+  final String? action;
 }
 
 /// Per-contact derived signals consumed by the contact profile UI.

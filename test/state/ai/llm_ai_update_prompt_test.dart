@@ -69,6 +69,19 @@ void main() {
       expect(kLlmAiUpdatePromptV1, contains('newHistoryBullet'));
     });
 
+    test('describes Topic Suggestions generation rules', () {
+      final prompt = kLlmAiUpdatePromptV1;
+      expect(prompt, contains('topicSuggestions'));
+      for (final kind in const ['ask', 'share', 'plan', 'remember']) {
+        expect(prompt, contains(kind));
+      }
+      expect(prompt, contains('at most'));
+      expect(prompt, contains('three'));
+      expect(prompt, contains('lastMentionedAt'));
+      expect(prompt, contains('expiresAt'));
+      expect(prompt.toLowerCase(), contains('non-shaming'));
+    });
+
     test('describes the upcomingToAdd kind enum', () {
       // PRD §Q7 / schema: milestone | trip | appointment |
       // celebration | other. Each has to be in the prompt for the

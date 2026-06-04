@@ -669,6 +669,161 @@ void main() {
       );
     });
 
+    test('topicSuggestions merge into memory for new and touched topics while preserving untouched groups', () {
+      final container = _container();
+      addTearDown(container.dispose);
+      final adapter = _adapter(container);
+      final sarah =
+          _connection(container.read(appControllerProvider), 'sarah');
+      final memory = MemoryDocument(
+        contactId: 'sarah',
+        displayName: 'Sarah Johnson',
+        lastUpdated: DateTime.utc(2026, 5, 19),
+        topics: const ['paris trip', 'pottery'],
+        topicSuggestions: [
+          TopicSuggestionGroup(
+            topic: 'paris trip',
+            lastMentionedAt: DateTime.utc(2026, 5, 1),
+            mentionCount: 1,
+            suggestions: const [
+              TopicSuggestion(
+                kind: TopicSuggestionKind.ask,
+                text: 'Ask what part of Paris she is most excited for.',
+              ),
+            ],
+          ),
+          TopicSuggestionGroup(
+            topic: 'pottery',
+            lastMentionedAt: DateTime.utc(2026, 4, 1),
+            mentionCount: 3,
+            suggestions: const [
+              TopicSuggestion(
+                kind: TopicSuggestionKind.remember,
+                text: 'Remember to ask about her latest pottery class.',
+              ),
+            ],
+          ),
+        ],
+      );
+      final llmResult = LlmAiUpdateResponse(
+        interactionType: InteractionType.sharedActivity,
+        interactionTitle: 'Trip planning',
+        interactionNote: 'Sarah talked about Paris plans.',
+        memoryUpdate: LlmMemoryUpdate(
+          newHistoryBullet: '- 2026-06-04 — Sarah talked about Paris plans.',
+          topicsToAdd: const ['currency'],
+          topicSuggestions: const [
+            LlmTopicSuggestionGroup(
+              topic: 'paris trip',
+              suggestions: [
+                LlmTopicSuggestion(
+                  kind: LlmTopicSuggestionKind.ask,
+                  text: 'Ask how the Paris plans are coming together.',
+                ),
+              ],
+            ),
+            LlmTopicSuggestionGroup(
+              topic: 'currency',
+              expiresAt: '2026-07-01',
+              suggestions: [
+                LlmTopicSuggestion(
+                  kind: LlmTopicSuggestionKind.share,
+                  text: 'Share a gentle travel-money tip if you spot one.',
+                ),
+              ],
+            ),
+          ],
+        ),
+        interactionDepth: 50,
+      );
+
+      final result = debugProjectLlmResponseOntoAiUpdateResult(
+        adapter: adapter,
+        llmResult: llmResult,
+        contact: sarah,
+        currentMemory: memory,
+        attachments: const [],
+        now: DateTime.utc(2026, 6, 4),
+      );
+
+      final groups = result.memoryDocument!.topicSuggestions;
+      final paris = groups.firstWhere((g) => g.topic == 'paris trip');
+      expect(paris.lastMentionedAt, DateTime.utc(2026, 6, 4));
+      expect(paris.mentionCount, 2);
+      expect(paris.suggestions.single.text,
+          'Ask how the Paris plans are coming together.');
+
+      final currency = groups.firstWhere((g) => g.topic == 'currency');
+      expect(currency.lastMentionedAt, DateTime.utc(2026, 6, 4));
+      expect(currency.mentionCount, 1);
+      expect(currency.expiresAt, DateTime.utc(2026, 7, 1));
+      expect(currency.suggestions.single.kind, TopicSuggestionKind.share);
+
+      final pottery = groups.firstWhere((g) => g.topic == 'pottery');
+      expect(pottery.mentionCount, 3);
+      expect(pottery.suggestions.single.text,
+          'Remember to ask about her latest pottery class.');
+    });
+
+    test('empty touched topic suggestion group updates metadata without clearing existing suggestions', () {
+      final container = _container();
+      addTearDown(container.dispose);
+      final adapter = _adapter(container);
+      final sarah =
+          _connection(container.read(appControllerProvider), 'sarah');
+      final memory = MemoryDocument(
+        contactId: 'sarah',
+        displayName: 'Sarah Johnson',
+        lastUpdated: DateTime.utc(2026, 5, 19),
+        topics: const ['paris trip'],
+        topicSuggestions: [
+          TopicSuggestionGroup(
+            topic: 'paris trip',
+            lastMentionedAt: DateTime.utc(2026, 5, 1),
+            mentionCount: 1,
+            expiresAt: DateTime.utc(2026, 7, 1),
+            suggestions: const [
+              TopicSuggestion(
+                kind: TopicSuggestionKind.ask,
+                text: 'Ask what part of Paris she is most excited for.',
+              ),
+            ],
+          ),
+        ],
+      );
+      const llmResult = LlmAiUpdateResponse(
+        interactionType: InteractionType.sharedActivity,
+        interactionTitle: 'Trip planning',
+        interactionNote: 'Sarah talked about Paris plans.',
+        memoryUpdate: LlmMemoryUpdate(
+          newHistoryBullet: '- 2026-06-04 — Sarah talked about Paris plans.',
+          topicSuggestions: [
+            LlmTopicSuggestionGroup(
+              topic: 'paris trip',
+              suggestions: [],
+            ),
+          ],
+        ),
+        interactionDepth: 50,
+      );
+
+      final result = debugProjectLlmResponseOntoAiUpdateResult(
+        adapter: adapter,
+        llmResult: llmResult,
+        contact: sarah,
+        currentMemory: memory,
+        attachments: const [],
+        now: DateTime.utc(2026, 6, 4),
+      );
+
+      final paris = result.memoryDocument!.topicSuggestions.single;
+      expect(paris.lastMentionedAt, DateTime.utc(2026, 6, 4));
+      expect(paris.mentionCount, 2);
+      expect(paris.expiresAt, isNull);
+      expect(paris.suggestions.single.text,
+          'Ask what part of Paris she is most excited for.');
+    });
+
     test('upcomingToAdd with ISO date lands as UpcomingEntry on '
         'memory.upcoming', () {
       final container = _container();

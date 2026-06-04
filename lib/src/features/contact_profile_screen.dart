@@ -17,8 +17,13 @@ import '../widgets/crm_widgets.dart';
 import 'modals/edit_connection_modal.dart';
 
 class ContactProfileScreen extends ConsumerWidget {
-  const ContactProfileScreen({super.key, required this.contactId});
+  const ContactProfileScreen({
+    super.key,
+    required this.contactId,
+    this.initialSelectedTopic,
+  });
   final String contactId;
+  final String? initialSelectedTopic;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -295,6 +300,7 @@ class ContactProfileScreen extends ConsumerWidget {
             insight: insight,
             memorySummary: memorySummary,
             memory: memory,
+            initialSelectedTopic: initialSelectedTopic,
           ),
           CardBox(
             padding: EdgeInsets.zero,

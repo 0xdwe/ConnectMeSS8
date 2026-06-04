@@ -54,6 +54,9 @@ The AI Update flow produces an `AiUpdateResult` value: a new CrmInteraction, an 
 ### Recommendation
 A "you should reach out to X" card on the home screen. Produced by `RecommendationEngine`, a pure function that reads Connections, CrmInteractions, per-contact MemoryDocuments, and `now`; returns up to three cards; and never mutates the Relationship Graph. Upcoming-driven MemoryDocument overlay cards rank first and de-dupe their contacts. Remaining regular cards use Maintenance Need from `RelationshipMaintenancePolicy`: severity first, elapsed/adjusted-cadence ratio second, contact id as the deterministic final tie-break. Connections with `MaintenanceNeed.none` are filtered out. Cached via `recommendationsProvider` with dual invalidation (memory change OR 6h elapsed).
 
+### Topic Suggestion
+A prepared, gentle action idea grouped under a MemoryDocument topic. Usually generated during AI Update, shown when the user taps a topic, and may provide topic-specific copy for a Recommendation. Topic Suggestions do not create relationship urgency by themselves; Maintenance Need or Upcoming context still governs recommendation priority.
+
 ### Relationship Graph
 The shared shape of (Connections, CrmInteractions, PlannerEvents) — the user's people, their history, and their forward plan. NOT a single data structure; rather, the joint result of three Firestore subcollections that are mutated atomically when their cardinality crosses (e.g. deleteConnection cascades to interactions and events in one batched write).
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/social_models.dart';
 import '../../state/app_state.dart';
 import '../../state/memory/memory_providers.dart';
 import '../../state/query_providers.dart';
@@ -9,6 +10,21 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/crm_widgets.dart';
+
+@visibleForTesting
+String contactRouteForRecommendation(Recommendation recommendation) =>
+    _contactRouteForRecommendation(recommendation);
+
+String _contactRouteForRecommendation(Recommendation recommendation) {
+  final topic = recommendation.topic;
+  if (topic == null || topic.trim().isEmpty) {
+    return '/contact/${recommendation.contactId}';
+  }
+  return Uri(
+    path: '/contact/${recommendation.contactId}',
+    queryParameters: {'topic': topic},
+  ).toString();
+}
 
 class HomeTab extends ConsumerStatefulWidget {
   const HomeTab({super.key});
@@ -107,8 +123,9 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                               ),
                               connection: contact,
                               recommendation: recs[i],
-                              onTap: () =>
-                                  context.push('/contact/${recs[i].contactId}'),
+                              onTap: () => context.push(
+                                _contactRouteForRecommendation(recs[i]),
+                              ),
                             );
                           },
                         ),

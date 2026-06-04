@@ -488,6 +488,367 @@ void main() {
       expect(ranked[1].priority, 'medium priority');
       expect(ranked[2].priority, 'low priority');
     });
+    group('topic-aware recommendations (#099)', () {
+      MemoryDocument memoryWithTopic({
+        required String contactId,
+        required String topic,
+        required DateTime? lastMentionedAt,
+        required int mentionCount,
+        DateTime? expiresAt,
+        String text = 'Ask how the Paris plans are coming together.',
+        List<UpcomingEntry> upcoming = const [],
+      }) {
+        return MemoryDocument.empty(
+          contactId: contactId,
+          displayName: contactId,
+          now: now,
+        ).copyWith(
+          topics: [topic],
+          topicSuggestions: [
+            TopicSuggestionGroup(
+              topic: topic,
+              lastMentionedAt: lastMentionedAt,
+              mentionCount: mentionCount,
+              expiresAt: expiresAt,
+              suggestions: [
+                TopicSuggestion(kind: TopicSuggestionKind.ask, text: text),
+              ],
+            ),
+          ],
+          upcoming: upcoming,
+        );
+      }
+
+      test(
+        'topic quality boost breaks ties after Maintenance Need severity',
+        () {
+          final connections = [
+            _connection(
+              id: 'topic',
+              name: 'Topic Taylor',
+              bondScore: 60,
+              lastContact: now.subtract(const Duration(days: 21)),
+            ),
+            _connection(
+              id: 'plain',
+              name: 'Plain Pat',
+              bondScore: 60,
+              lastContact: now.subtract(const Duration(days: 21)),
+            ),
+          ];
+
+          final ranked = rankRecommendations(
+            connections: connections,
+            interactions: const [],
+            memories: {
+              'topic': memoryWithTopic(
+                contactId: 'topic',
+                topic: 'Paris trip',
+                lastMentionedAt: now.subtract(const Duration(days: 10)),
+                mentionCount: 1,
+              ),
+            },
+            now: now,
+          );
+
+          expect(ranked.map((r) => r.contactId).toList(), ['topic', 'plain']);
+          expect(ranked.first.topic, 'Paris trip');
+          expect(
+            ranked.first.action,
+            'Ask how the Paris plans are coming together.',
+          );
+          expect(
+            ranked.first.reason,
+            'Topic Taylor has Paris trip on their mind.',
+          );
+        },
+      );
+
+      test('Maintenance Need severity outranks topic boost', () {
+        final connections = [
+          _connection(
+            id: 'low-topic',
+            name: 'Low Topic',
+            bondScore: 90,
+            lastContact: now.subtract(const Duration(days: 33)),
+          ),
+          _connection(
+            id: 'high-plain',
+            name: 'High Plain',
+            bondScore: 40,
+            lastContact: now.subtract(const Duration(days: 33)),
+          ),
+        ];
+
+        final ranked = rankRecommendations(
+          connections: connections,
+          interactions: const [],
+          memories: {
+            'low-topic': memoryWithTopic(
+              contactId: 'low-topic',
+              topic: 'Paris trip',
+              lastMentionedAt: now.subtract(const Duration(days: 2)),
+              mentionCount: 1,
+            ),
+          },
+          now: now,
+        );
+
+        expect(ranked.first.contactId, 'high-plain');
+      });
+
+      test(
+        'topic suggestions do not create urgency for within-rhythm contacts',
+        () {
+          final ranked = rankRecommendations(
+            connections: [
+              _connection(
+                id: 'fresh-topic',
+                name: 'Fresh Topic',
+                bondScore: 60,
+                lastContact: now.subtract(const Duration(days: 2)),
+              ),
+            ],
+            interactions: const [],
+            memories: {
+              'fresh-topic': memoryWithTopic(
+                contactId: 'fresh-topic',
+                topic: 'Paris trip',
+                lastMentionedAt: now.subtract(const Duration(days: 1)),
+                mentionCount: 3,
+              ),
+            },
+            now: now,
+          );
+
+          expect(ranked, isEmpty);
+        },
+      );
+
+      test('quality gate accepts mention count or recent mention', () {
+        final connections = [
+          _connection(
+            id: 'count',
+            name: 'Count Casey',
+            bondScore: 60,
+            lastContact: now.subtract(const Duration(days: 21)),
+          ),
+          _connection(
+            id: 'recent',
+            name: 'Recent Riley',
+            bondScore: 60,
+            lastContact: now.subtract(const Duration(days: 21)),
+          ),
+          _connection(
+            id: 'stale',
+            name: 'Stale Sam',
+            bondScore: 60,
+            lastContact: now.subtract(const Duration(days: 21)),
+          ),
+        ];
+
+        final ranked = rankRecommendations(
+          connections: connections,
+          interactions: const [],
+          memories: {
+            'count': memoryWithTopic(
+              contactId: 'count',
+              topic: 'Book club',
+              lastMentionedAt: now.subtract(const Duration(days: 90)),
+              mentionCount: 2,
+            ),
+            'recent': memoryWithTopic(
+              contactId: 'recent',
+              topic: 'Garden',
+              lastMentionedAt: now.subtract(const Duration(days: 30)),
+              mentionCount: 1,
+            ),
+            'stale': memoryWithTopic(
+              contactId: 'stale',
+              topic: 'Currency',
+              lastMentionedAt: now.subtract(const Duration(days: 31)),
+              mentionCount: 1,
+            ),
+          },
+          now: now,
+        );
+
+        expect(
+          ranked.where((r) => r.contactId == 'count').single.topic,
+          'Book club',
+        );
+        expect(
+          ranked.where((r) => r.contactId == 'recent').single.topic,
+          'Garden',
+        );
+        expect(
+          ranked.where((r) => r.contactId == 'stale').single.topic,
+          isNull,
+        );
+      });
+
+      test(
+        'same-contact upcoming overlay de-dupes topic regular card',
+        () {
+          final memory = memoryWithTopic(
+            contactId: 'same',
+            topic: 'Tokyo trip',
+            lastMentionedAt: now,
+            mentionCount: 2,
+            upcoming: [
+              UpcomingEntry(startDate: now, description: 'Tokyo trip'),
+            ],
+          );
+
+          final ranked = rankRecommendations(
+            connections: [
+              _connection(
+                id: 'same',
+                name: 'Same Sam',
+                bondScore: 60,
+                lastContact: now.subtract(const Duration(days: 21)),
+              ),
+              _connection(
+                id: 'plain',
+                name: 'Plain Pat',
+                bondScore: 60,
+                lastContact: now.subtract(const Duration(days: 21)),
+              ),
+            ],
+            interactions: const [],
+            memories: {'same': memory},
+            now: now,
+          );
+
+          expect(ranked.where((r) => r.contactId == 'same'), hasLength(1));
+          expect(ranked.first.contactId, 'same');
+          expect(ranked.first.topic, isNull);
+        },
+      );
+
+      test(
+        'upcoming-tied topic passes quality gate but overlay still ranks first',
+        () {
+          final memory = memoryWithTopic(
+            contactId: 'upcoming-topic',
+            topic: 'Tokyo trip',
+            lastMentionedAt: now.subtract(const Duration(days: 90)),
+            mentionCount: 1,
+            upcoming: [
+              UpcomingEntry(
+                startDate: now.add(const Duration(days: 10)),
+                description: 'Tokyo trip',
+              ),
+            ],
+          );
+
+          final ranked = rankRecommendations(
+            connections: [
+              _connection(
+                id: 'upcoming-topic',
+                name: 'Upcoming Uma',
+                bondScore: 60,
+                lastContact: now.subtract(const Duration(days: 21)),
+              ),
+              _connection(
+                id: 'overlay',
+                name: 'Overlay Owen',
+                bondScore: 60,
+                lastContact: now.subtract(const Duration(days: 21)),
+              ),
+            ],
+            interactions: const [],
+            memories: {
+              'upcoming-topic': memory,
+              'overlay':
+                  MemoryDocument.empty(
+                    contactId: 'overlay',
+                    displayName: 'Overlay Owen',
+                    now: now,
+                  ).copyWith(
+                    upcoming: [
+                      UpcomingEntry(startDate: now, description: 'workshop'),
+                    ],
+                  ),
+            },
+            now: now,
+          );
+
+          expect(ranked.first.contactId, 'overlay');
+          final topicCard = ranked.singleWhere(
+            (r) => r.contactId == 'upcoming-topic',
+          );
+          expect(topicCard.topic, 'Tokyo trip');
+        },
+      );
+
+      test(
+        'topic-aware copy contains no numeric day counts or guilt phrasing',
+        () {
+          final ranked = rankRecommendations(
+            connections: [
+              _connection(
+                id: 'topic-copy',
+                name: 'Topic Taylor',
+                bondScore: 60,
+                lastContact: now.subtract(const Duration(days: 21)),
+              ),
+            ],
+            interactions: const [],
+            memories: {
+              'topic-copy': memoryWithTopic(
+                contactId: 'topic-copy',
+                topic: 'Paris trip',
+                lastMentionedAt: now.subtract(const Duration(days: 1)),
+                mentionCount: 2,
+              ),
+            },
+            now: now,
+          );
+
+          final blob =
+              '${ranked.single.reason} ${ranked.single.insight} ${ranked.single.action}'
+                  .toLowerCase();
+          expect(blob, isNot(matches(RegExp(r'\d'))));
+          for (final phrase in [
+            'overdue',
+            'forgot',
+            'neglect',
+            'should have',
+            'too long',
+          ]) {
+            expect(blob, isNot(contains(phrase)));
+          }
+        },
+      );
+
+      test('expired topic suggestions never surface', () {
+        final ranked = rankRecommendations(
+          connections: [
+            _connection(
+              id: 'expired',
+              name: 'Expired Erin',
+              bondScore: 60,
+              lastContact: now.subtract(const Duration(days: 21)),
+            ),
+          ],
+          interactions: const [],
+          memories: {
+            'expired': memoryWithTopic(
+              contactId: 'expired',
+              topic: 'Conference',
+              lastMentionedAt: now.subtract(const Duration(days: 1)),
+              mentionCount: 3,
+              expiresAt: now.subtract(const Duration(days: 1)),
+            ),
+          },
+          now: now,
+        );
+
+        expect(ranked.single.topic, isNull);
+        expect(ranked.single.action, isNull);
+      });
+    });
   });
 
   // -------------------------------------------------------------------

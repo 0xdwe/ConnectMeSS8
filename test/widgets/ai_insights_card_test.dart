@@ -1,4 +1,5 @@
 import 'package:connect_me/src/models/social_models.dart';
+import 'package:connect_me/src/state/memory/memory_document.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
 import 'package:connect_me/src/widgets/crm_widgets.dart';
 import 'package:flutter/material.dart';
@@ -37,9 +38,7 @@ Connection _connection({
   );
 }
 
-ContactInsight _insight({
-  String contactId = 'test',
-}) {
+ContactInsight _insight({String contactId = 'test'}) {
   return ContactInsight(
     contactId: contactId,
     relationshipLabel: 'Close friend',
@@ -49,12 +48,11 @@ ContactInsight _insight({
 
 void main() {
   group('AiInsightsCard', () {
-    testWidgets('renders all three subsections expanded by default',
-        (tester) async {
+    testWidgets('renders all three subsections expanded by default', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        _wrap(
-          AiInsightsCard(connection: _connection(), insight: _insight()),
-        ),
+        _wrap(AiInsightsCard(connection: _connection(), insight: _insight())),
       );
       await tester.pump();
 
@@ -62,12 +60,15 @@ void main() {
       expect(find.text('Recommendation'), findsOneWidget);
       expect(find.text('Person Summary'), findsOneWidget);
       expect(find.text('Conversation Topics'), findsOneWidget);
-      expect(find.text('Click any topic to see AI suggestions.'),
-          findsOneWidget);
+      expect(
+        find.text('Click any topic to see AI suggestions.'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('recommendation copy maps from BondTier (close)',
-        (tester) async {
+    testWidgets('recommendation copy maps from BondTier (close)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           AiInsightsCard(
@@ -83,8 +84,9 @@ void main() {
       );
     });
 
-    testWidgets('recommendation copy maps from BondTier (steady)',
-        (tester) async {
+    testWidgets('recommendation copy maps from BondTier (steady)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           AiInsightsCard(
@@ -100,8 +102,9 @@ void main() {
       );
     });
 
-    testWidgets('recommendation copy maps from BondTier (drifting)',
-        (tester) async {
+    testWidgets('recommendation copy maps from BondTier (drifting)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           AiInsightsCard(
@@ -117,8 +120,9 @@ void main() {
       );
     });
 
-    testWidgets('renders Person Summary body from MemoryDocument.summary',
-        (tester) async {
+    testWidgets('renders Person Summary body from MemoryDocument.summary', (
+      tester,
+    ) async {
       // Pre-#050 this test fed the body via `ContactInsight.why`. After
       // #050 the body comes from `MemoryDocument.summary` threaded
       // through the `memorySummary` parameter on `AiInsightsCard`.
@@ -132,12 +136,15 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text('Bespoke summary string for this test.'),
-          findsOneWidget);
+      expect(
+        find.text('Bespoke summary string for this test.'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('renders four conversation topic pills for known category',
-        (tester) async {
+    testWidgets('renders four conversation topic pills for known category', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           AiInsightsCard(
@@ -153,8 +160,152 @@ void main() {
       expect(find.text('Future plans'), findsOneWidget);
     });
 
-    testWidgets('tapping a topic pill opens the suggestions bottom sheet',
-        (tester) async {
+    testWidgets('initialSelectedTopic opens prepared Topic Suggestions', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          AiInsightsCard(
+            connection: _connection(category: 'Friends'),
+            insight: _insight(),
+            initialSelectedTopic: 'Paris trip',
+            memory: MemoryDocument(
+              contactId: 'test',
+              displayName: 'Test Person',
+              lastUpdated: DateTime.utc(2026, 6, 4),
+              topics: const ['Paris trip'],
+              topicSuggestions: [
+                TopicSuggestionGroup(
+                  topic: 'Paris trip',
+                  suggestions: const [
+                    TopicSuggestion(
+                      kind: TopicSuggestionKind.ask,
+                      text: 'Ask how the Paris plans are coming together.',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Paris trip'), findsWidgets);
+      expect(
+        find.text('Ask how the Paris plans are coming together.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('tapping a topic pill shows prepared Topic Suggestions', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          AiInsightsCard(
+            connection: _connection(category: 'Friends'),
+            insight: _insight(),
+            memory: MemoryDocument(
+              contactId: 'test',
+              displayName: 'Test Person',
+              lastUpdated: DateTime.utc(2026, 6, 4),
+              topics: const ['Paris trip'],
+              topicSuggestions: [
+                TopicSuggestionGroup(
+                  topic: 'Paris trip',
+                  suggestions: const [
+                    TopicSuggestion(
+                      kind: TopicSuggestionKind.ask,
+                      text: 'Ask how the Paris plans are coming together.',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Paris trip'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ask how the Paris plans are coming together.'),
+        findsOneWidget,
+      );
+      expect(find.text("How's the Paris trip going?"), findsNothing);
+    });
+
+    testWidgets(
+      'tapping a topic pill falls back when prepared suggestions are missing',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            AiInsightsCard(
+              connection: _connection(category: 'Friends'),
+              insight: _insight(),
+              memory: MemoryDocument(
+                contactId: 'test',
+                displayName: 'Test Person',
+                lastUpdated: DateTime.utc(2026, 6, 4),
+                topics: const ['Paris trip'],
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text('Paris trip'));
+        await tester.pumpAndSettle();
+
+        expect(find.text("How's the Paris trip going?"), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'tapping a topic pill falls back when prepared suggestions are expired',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            AiInsightsCard(
+              connection: _connection(category: 'Friends'),
+              insight: _insight(),
+              memory: MemoryDocument(
+                contactId: 'test',
+                displayName: 'Test Person',
+                lastUpdated: DateTime.utc(2026, 6, 4),
+                topics: const ['Paris trip'],
+                topicSuggestions: [
+                  TopicSuggestionGroup(
+                    topic: 'Paris trip',
+                    expiresAt: DateTime.utc(2026, 6, 1),
+                    suggestions: const [
+                      TopicSuggestion(
+                        kind: TopicSuggestionKind.ask,
+                        text: 'Ask how the Paris plans are coming together.',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text('Paris trip'));
+        await tester.pumpAndSettle();
+
+        expect(find.text("How's the Paris trip going?"), findsOneWidget);
+        expect(
+          find.text('Ask how the Paris plans are coming together.'),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets('tapping a topic pill opens the suggestions bottom sheet', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           AiInsightsCard(
@@ -170,12 +321,11 @@ void main() {
       expect(find.text('Ask how the family is doing'), findsOneWidget);
     });
 
-    testWidgets('tapping the header collapses and reveals the body again',
-        (tester) async {
+    testWidgets('tapping the header collapses and reveals the body again', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        _wrap(
-          AiInsightsCard(connection: _connection(), insight: _insight()),
-        ),
+        _wrap(AiInsightsCard(connection: _connection(), insight: _insight())),
       );
       await tester.pump();
       // Expanded by default — chevron is "less" (up arrow).
@@ -194,8 +344,9 @@ void main() {
       expect(find.text('Recommendation'), findsOneWidget);
     });
 
-    testWidgets('long topic labels truncate without overflowing',
-        (tester) async {
+    testWidgets('long topic labels truncate without overflowing', (
+      tester,
+    ) async {
       // Use the generic-defaults path with a category that doesn't exist;
       // we don't have a way to inject a 32-char topic externally, so this
       // test mainly asserts no overflow exception fires when the existing
@@ -215,8 +366,9 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('disableAnimations skips the collapse animation',
-        (tester) async {
+    testWidgets('disableAnimations skips the collapse animation', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           AiInsightsCard(connection: _connection(), insight: _insight()),

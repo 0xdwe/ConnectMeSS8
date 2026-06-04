@@ -78,6 +78,62 @@ final Schema kLlmAiUpdateResponseSchema = Schema.object(
               'New stable, factual preferences. Skip ephemeral mood '
               'items.',
         ),
+        'topicSuggestions': Schema.array(
+          description:
+              'Prepared Topic Suggestions for newly-added topics and '
+              'existing topics clearly touched by this update. At most '
+              'three suggestions per topic. Warm, specific, brief, and '
+              'non-shaming; no numeric day-count language.',
+          items: Schema.object(
+            properties: {
+              'topic': Schema.string(
+                description: 'Topic tag this suggestion group belongs to.',
+              ),
+              'lastMentionedAt': Schema.string(
+                description:
+                    'ISO day YYYY-MM-DD when this update mentioned the '
+                    'topic; use today from the prompt.',
+                nullable: true,
+              ),
+              'mentionCount': Schema.integer(
+                description:
+                    'Optional prior count if known; client recomputes the '
+                    'stored count, so omit unless certain.',
+                nullable: true,
+              ),
+              'expiresAt': Schema.string(
+                description:
+                    'ISO day YYYY-MM-DD only for time-sensitive suggestions; '
+                    'null otherwise.',
+                nullable: true,
+              ),
+              'suggestions': Schema.array(
+                items: Schema.object(
+                  properties: {
+                    'kind': Schema.enumString(
+                      enumValues: const [
+                        'ask',
+                        'share',
+                        'plan',
+                        'remember',
+                      ],
+                    ),
+                    'text': Schema.string(
+                      description:
+                          'One gentle action idea. No guilt phrasing and no '
+                          'numeric day counts.',
+                    ),
+                  },
+                ),
+              ),
+            },
+            optionalProperties: const [
+              'lastMentionedAt',
+              'mentionCount',
+              'expiresAt',
+            ],
+          ),
+        ),
         'upcomingToAdd': Schema.array(
           items: Schema.object(
             properties: {

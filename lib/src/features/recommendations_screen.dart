@@ -2,12 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../models/social_models.dart';
 import '../state/memory/memory_providers.dart';
 import '../state/query_providers.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
+
+@visibleForTesting
+String recommendationContactRoute(Recommendation recommendation) {
+  final topic = recommendation.topic;
+  if (topic == null || topic.trim().isEmpty) {
+    return '/contact/${recommendation.contactId}';
+  }
+  return Uri(
+    path: '/contact/${recommendation.contactId}',
+    queryParameters: {'topic': topic},
+  ).toString();
+}
 
 class RecommendationsScreen extends ConsumerWidget {
   const RecommendationsScreen({super.key});
@@ -49,7 +62,7 @@ class RecommendationsScreen extends ConsumerWidget {
                         connection: contact,
                         recommendation: recommendation,
                         onTap: () => context.push(
-                          '/contact/${recommendation.contactId}',
+                          recommendationContactRoute(recommendation),
                         ),
                       );
                     },
