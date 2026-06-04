@@ -17,21 +17,25 @@ ProviderContainer _container() {
   // Pass 4.3 #081: production aiUpdateProvider now constructs
   // LlmAiUpdate; these tests rely on MockAiUpdate's deterministic
   // append behavior so the stagger fixture is stable.
-  return ProviderContainer(overrides: [
-    ...signedInDemoOverrides(),
-    memoryStoreProvider.overrideWithValue(memoryStore),
-    aiUpdateProvider.overrideWith(
-      (ref) => MockAiUpdate(
-        memoryStore: memoryStore,
-        appController: ref.read(appControllerProvider.notifier),
+  return ProviderContainer(
+    overrides: [
+      ...signedInDemoOverrides(),
+      memoryStoreProvider.overrideWithValue(memoryStore),
+      aiUpdateProvider.overrideWith(
+        (ref) => MockAiUpdate(
+          memoryStore: memoryStore,
+          appController: ref.read(appControllerProvider.notifier),
+        ),
       ),
-    ),
-  ]);
+    ],
+  );
 }
 
 void main() {
   group('AI Preview Stagger Animation', () {
-    testWidgets('first card starts with low opacity and fades in', (tester) async {
+    testWidgets('first card starts with low opacity and fades in', (
+      tester,
+    ) async {
       final container = _container();
       addTearDown(container.dispose);
 
@@ -50,10 +54,15 @@ void main() {
       );
 
       // Trigger preview by submitting
-      await tester.enterText(find.byKey(const Key('ai-input-field')), 'Had coffee with Mike today.');
+      await tester.enterText(
+        find.byKey(const Key('ai-input-field')),
+        'Had coffee with Mike today.',
+      );
       await tester.tap(find.byKey(const Key('run-ai-button')));
       await tester.pump(); // Start generating
-      await tester.pump(const Duration(milliseconds: 100)); // Allow AI service to complete
+      await tester.pump(
+        const Duration(milliseconds: 100),
+      ); // Allow AI service to complete
       await tester.pump(); // Render preview with animation at t=0
 
       // At frame 0, first card should have low opacity (0 or close to 0)
@@ -61,20 +70,14 @@ void main() {
       expect(firstCard, findsOneWidget);
 
       final opacity = tester.widget<Opacity>(
-        find.ancestor(
-          of: firstCard,
-          matching: find.byType(Opacity),
-        ).first,
+        find.ancestor(of: firstCard, matching: find.byType(Opacity)).first,
       );
       expect(opacity.opacity, lessThan(0.1));
 
       // Advance animation by 240ms
       await tester.pump(const Duration(milliseconds: 240));
       final opacityAfter = tester.widget<Opacity>(
-        find.ancestor(
-          of: firstCard,
-          matching: find.byType(Opacity),
-        ).first,
+        find.ancestor(of: firstCard, matching: find.byType(Opacity)).first,
       );
       expect(opacityAfter.opacity, closeTo(1.0, 0.05));
     });
@@ -96,10 +99,15 @@ void main() {
         ),
       );
 
-      await tester.enterText(find.byKey(const Key('ai-input-field')), 'Had coffee with Mike. Discussed his job. Reminder to follow up.');
+      await tester.enterText(
+        find.byKey(const Key('ai-input-field')),
+        'Had coffee with Mike. Discussed his job. Reminder to follow up.',
+      );
       await tester.tap(find.byKey(const Key('run-ai-button')));
       await tester.pump(); // Start generating
-      await tester.pump(const Duration(milliseconds: 100)); // Allow AI service to complete
+      await tester.pump(
+        const Duration(milliseconds: 100),
+      ); // Allow AI service to complete
       await tester.pump(); // Render preview with animation at t=0
 
       // At 0ms: card 0 animating, card 1 and 2 not started
@@ -154,10 +162,15 @@ void main() {
         ),
       );
 
-      await tester.enterText(find.byKey(const Key('ai-input-field')), 'Had coffee with Mike today.');
+      await tester.enterText(
+        find.byKey(const Key('ai-input-field')),
+        'Had coffee with Mike today.',
+      );
       await tester.tap(find.byKey(const Key('run-ai-button')));
       await tester.pump(); // Start generating
-      await tester.pump(const Duration(milliseconds: 100)); // Allow AI service to complete
+      await tester.pump(
+        const Duration(milliseconds: 100),
+      ); // Allow AI service to complete
       await tester.pump(); // Render preview with animation at t=0
 
       // Find Transform widget - get the first one which is our animation transform
@@ -180,7 +193,9 @@ void main() {
       expect(matrixAfter.getTranslation().y, closeTo(0, 0.1));
     });
 
-    testWidgets('reduce motion: all cards render at full opacity immediately', (tester) async {
+    testWidgets('reduce motion: all cards render at full opacity immediately', (
+      tester,
+    ) async {
       final container = _container();
       addTearDown(container.dispose);
 
@@ -200,10 +215,15 @@ void main() {
         ),
       );
 
-      await tester.enterText(find.byKey(const Key('ai-input-field')), 'Had coffee with Mike. Discussed his job. Reminder to follow up.');
+      await tester.enterText(
+        find.byKey(const Key('ai-input-field')),
+        'Had coffee with Mike. Discussed his job. Reminder to follow up.',
+      );
       await tester.tap(find.byKey(const Key('run-ai-button')));
       await tester.pump(); // Start generating
-      await tester.pump(const Duration(milliseconds: 100)); // Allow AI service to complete
+      await tester.pump(
+        const Duration(milliseconds: 100),
+      ); // Allow AI service to complete
       await tester.pump(); // Render preview
 
       // All cards should be at full opacity immediately

@@ -1,11 +1,13 @@
+import 'package:connect_me/src/ai/ai_update.dart';
 import 'package:connect_me/src/app/connect_me_app.dart';
-import 'package:connect_me/src/state/firebase_providers.dart';
+import 'package:connect_me/src/state/app_state.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
-import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../test_overrides.dart';
 
 /// Integration coverage for #043: an AI update mentioning known
 /// keywords surfaces those topics on the contact profile pill row.
@@ -15,20 +17,20 @@ import 'package:flutter_test/flutter_test.dart';
 /// the AI flow with a keyword-rich input, save, and assert the new
 /// pills appear on Mike's profile screen.
 Future<void> _pumpAndSignIn(WidgetTester tester) async {
+  await tester.binding.setSurfaceSize(const Size(800, 1000));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
   // #052: AuthScreen sign-in routes through firebaseAuthProvider; tests
   // override with MockFirebaseAuth so the demo login resolves.
+  final memoryStore = InMemoryMemoryStore();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
-        firebaseAuthProvider.overrideWithValue(
-          MockFirebaseAuth(
-            mockUser: MockUser(
-              isAnonymous: false,
-              uid: 'demo-uid',
-              email: 'demo@example.com',
-              displayName: 'Demo',
-            ),
+        ...signedOutDemoOverrides(),
+        memoryStoreProvider.overrideWithValue(memoryStore),
+        aiUpdateProvider.overrideWith(
+          (ref) => MockAiUpdate(
+            memoryStore: memoryStore,
+            appController: ref.read(appControllerProvider.notifier),
           ),
         ),
       ],
@@ -49,60 +51,63 @@ Future<void> _pumpAndSignIn(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets(
-    'AI update with keyword input drives Conversation Topics pills',
-    (tester) async {
-      await _pumpAndSignIn(tester);
+  testWidgets('AI update with keyword input drives Conversation Topics pills', (
+    tester,
+  ) async {
+    await _pumpAndSignIn(tester);
 
-      await tester.tap(find.text('People').last);
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('People').last);
+    await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(
-        find.text('Mike Chen'),
-        120,
-        scrollable: find
-            .descendant(
-              of: find.byKey(const Key('people-tab')),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
-      await tester.tap(find.text('Mike Chen'));
-      await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Mike Chen'),
+      120,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('people-tab')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(
+      find
+          .ancestor(of: find.text('Mike Chen'), matching: find.byType(InkWell))
+          .first,
+    );
+    await tester.pumpAndSettle();
 
-      // Pre-update: the seed-pass writes a single category-derived
-      // topic for each contact (Mike's category is 'High School', so
-      // the seed topic is 'high school'). The static category
-      // defaults only apply when memory.topics is empty, so we
-      // assert against the seeded shape.
-      expect(find.text('high school'), findsOneWidget);
+    // Pre-update: the seed-pass writes a single category-derived
+    // topic for each contact (Mike's category is 'High School', so
+    // the seed topic is 'high school'). The static category
+    // defaults only apply when memory.topics is empty, so we
+    // assert against the seeded shape.
+    expect(find.text('high school'), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('update-with-ai-button')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('update-with-ai-button')));
+    await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.byKey(const Key('ai-input-field')),
-        'Mike got a promotion at his startup.',
-      );
-      await tester.tap(find.byKey(const Key('run-ai-button')));
-      await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('ai-input-field')),
+      'Mike got a promotion at his startup.',
+    );
+    await tester.tap(find.byKey(const Key('run-ai-button')));
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('save-button')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('save-button')));
+    await tester.pumpAndSettle();
 
-      // Save returns to the profile via the AiUpdateScreen pop. Make
-      // sure the pill row is visible — it sits inside the AI Insights
-      // card near the top, but scroll into view defensively.
-      await tester.ensureVisible(find.text('Conversation Topics'));
-      await tester.pumpAndSettle();
+    // Save returns to the profile via the AiUpdateScreen pop. Make
+    // sure the pill row is visible — it sits inside the AI Insights
+    // card near the top, but scroll into view defensively.
+    await tester.ensureVisible(find.text('Conversation Topics'));
+    await tester.pumpAndSettle();
 
-      // Memory-derived pills: keyword extraction filled topics with
-      // 'promotion' and 'startup' (in keyword-list order). They
-      // appear alongside the seeded 'work' topic, all under the cap.
-      expect(find.text('promotion'), findsOneWidget);
-      expect(find.text('startup'), findsOneWidget);
-    },
-  );
+    // Memory-derived pills: keyword extraction filled topics with
+    // 'promotion' and 'startup' (in keyword-list order). They
+    // appear alongside the seeded 'work' topic, all under the cap.
+    expect(find.text('promotion'), findsOneWidget);
+    expect(find.text('startup'), findsOneWidget);
+  });
 
   testWidgets(
     'tapping a memory-extracted pill with no curated entry shows the templated fallback',
@@ -127,7 +132,14 @@ void main() {
             )
             .first,
       );
-      await tester.tap(find.text('Mike Chen'));
+      await tester.tap(
+        find
+            .ancestor(
+              of: find.text('Mike Chen'),
+              matching: find.byType(InkWell),
+            )
+            .first,
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('update-with-ai-button')));
@@ -157,8 +169,7 @@ void main() {
       // Mike's first name.
       expect(find.text("How's the kindergarten going?"), findsOneWidget);
       expect(
-        find.text(
-            'Last time you mentioned kindergarten \u2014 anything new?'),
+        find.text('Last time you mentioned kindergarten \u2014 anything new?'),
         findsOneWidget,
       );
       expect(

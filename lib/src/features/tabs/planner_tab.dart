@@ -31,8 +31,16 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
 
     // Filter events based on selected day (always on or after selected date)
     final filteredEvents = allEvents.where((event) {
-      final eventDateMidnight = DateTime(event.date.year, event.date.month, event.date.day);
-      final selectedMidnight = DateTime(selected.year, selected.month, selected.day);
+      final eventDateMidnight = DateTime(
+        event.date.year,
+        event.date.month,
+        event.date.day,
+      );
+      final selectedMidnight = DateTime(
+        selected.year,
+        selected.month,
+        selected.day,
+      );
       return eventDateMidnight.isAtSameMomentAs(selectedMidnight) ||
           eventDateMidnight.isAfter(selectedMidnight);
     }).toList()..sort((a, b) => a.date.compareTo(b.date));
@@ -40,7 +48,11 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
     // Group events by day
     final groupedEvents = <DateTime, List<PlannerEvent>>{};
     for (final event in filteredEvents) {
-      final dateMidnight = DateTime(event.date.year, event.date.month, event.date.day);
+      final dateMidnight = DateTime(
+        event.date.year,
+        event.date.month,
+        event.date.day,
+      );
       groupedEvents.putIfAbsent(dateMidnight, () => []).add(event);
     }
     final sortedDates = groupedEvents.keys.toList()..sort();
@@ -59,38 +71,45 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
           Row(
             children: [
               IconButton(
-                onPressed: () => setState(() => month = DateTime(month.year, month.month - 1)),
+                onPressed: () => setState(
+                  () => month = DateTime(month.year, month.month - 1),
+                ),
                 icon: Icon(Icons.chevron_left, color: tokens.primary, size: 28),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
               const SizedBox(width: 8),
-              Text(
-                DateFormat.yMMMM().format(month),
-                style: AppTypography.h1(color: tokens.ink),
+              Expanded(
+                child: Text(
+                  DateFormat.yMMMM().format(month),
+                  style: AppTypography.h1(color: tokens.ink),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               const SizedBox(width: 8),
               IconButton(
-                onPressed: () => setState(() => month = DateTime(month.year, month.month + 1)),
-                icon: Icon(Icons.chevron_right, color: tokens.primary, size: 28),
+                onPressed: () => setState(
+                  () => month = DateTime(month.year, month.month + 1),
+                ),
+                icon: Icon(
+                  Icons.chevron_right,
+                  color: tokens.primary,
+                  size: 28,
+                ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
-              const Spacer(),
               // Search Action Button
               Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: tokens.primary.withOpacity(0.12),
+                  color: tokens.primary.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
-                  icon: Icon(
-                    Icons.search,
-                    color: tokens.primary,
-                    size: 20,
-                  ),
+                  icon: Icon(Icons.search, color: tokens.primary, size: 20),
                   onPressed: () {
                     showDialog(
                       context: context,
@@ -110,7 +129,8 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
                 ),
                 child: IconButton(
                   icon: Icon(Icons.add, color: tokens.primaryOn, size: 20),
-                  onPressed: () => showAddEventModal(context, initialDate: selected),
+                  onPressed: () =>
+                      showAddEventModal(context, initialDate: selected),
                 ),
               ),
             ],
@@ -139,10 +159,7 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Upcoming Events',
-                style: AppTypography.h1(),
-              ),
+              Text('Upcoming Events', style: AppTypography.h1()),
               Icon(Icons.calendar_month, color: tokens.primary, size: 22),
             ],
           ),
@@ -224,7 +241,8 @@ class _PlannerSearchDialog extends ConsumerStatefulWidget {
   const _PlannerSearchDialog();
 
   @override
-  ConsumerState<_PlannerSearchDialog> createState() => _PlannerSearchDialogState();
+  ConsumerState<_PlannerSearchDialog> createState() =>
+      _PlannerSearchDialogState();
 }
 
 class _PlannerSearchDialogState extends ConsumerState<_PlannerSearchDialog> {
@@ -316,7 +334,11 @@ class _PlannerSearchDialogState extends ConsumerState<_PlannerSearchDialog> {
                               color: tokens.primaryTint,
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.search, size: 36, color: tokens.primary),
+                            child: Icon(
+                              Icons.search,
+                              size: 36,
+                              color: tokens.primary,
+                            ),
                           ),
                           const SizedBox(height: 20),
                           Text(
@@ -330,48 +352,48 @@ class _PlannerSearchDialogState extends ConsumerState<_PlannerSearchDialog> {
                           const SizedBox(height: 8),
                           Text(
                             'Search by title or contact name',
-                            style: AppTypography.caption(color: tokens.inkMuted).copyWith(
-                              fontSize: 14,
-                            ),
+                            style: AppTypography.caption(
+                              color: tokens.inkMuted,
+                            ).copyWith(fontSize: 14),
                             textAlign: TextAlign.center,
                           ),
                         ],
                       ),
                     )
                   : filteredEvents.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32.0),
-                            child: Text(
-                              'No events found matching "${_searchController.text}"',
-                              style: AppTypography.body(color: tokens.inkMuted),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          shrinkWrap: true,
-                          itemCount: filteredEvents.length,
-                          itemBuilder: (context, index) {
-                            final event = filteredEvents[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12.0),
-                              child: _RedesignedEventCard(
-                                key: ValueKey(event.id),
-                                event: event,
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  _editEvent(context, event);
-                                },
-                                onDelete: () {
-                                  Navigator.pop(context);
-                                  _deleteWithUndo(context, event.id);
-                                },
-                              ),
-                            );
-                          },
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: Text(
+                          'No events found matching "${_searchController.text}"',
+                          style: AppTypography.body(color: tokens.inkMuted),
+                          textAlign: TextAlign.center,
                         ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      shrinkWrap: true,
+                      itemCount: filteredEvents.length,
+                      itemBuilder: (context, index) {
+                        final event = filteredEvents[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: _RedesignedEventCard(
+                            key: ValueKey(event.id),
+                            event: event,
+                            onTap: () {
+                              Navigator.pop(context);
+                              _editEvent(context, event);
+                            },
+                            onDelete: () {
+                              Navigator.pop(context);
+                              _deleteWithUndo(context, event.id);
+                            },
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -431,7 +453,10 @@ class _CalendarGrid extends StatelessWidget {
     final firstOfMonth = DateTime(month.year, month.month, 1);
     final offset = firstOfMonth.weekday % 7;
     final firstGridDate = firstOfMonth.subtract(Duration(days: offset));
-    final gridDates = List.generate(42, (index) => firstGridDate.add(Duration(days: index)));
+    final gridDates = List.generate(
+      42,
+      (index) => firstGridDate.add(Duration(days: index)),
+    );
 
     return Column(
       children: [
@@ -444,11 +469,12 @@ class _CalendarGrid extends StatelessWidget {
                   child: Center(
                     child: Text(
                       d,
-                      style: AppTypography.caption(color: tokens.inkMuted).copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 11,
-                        letterSpacing: 0.05,
-                      ),
+                      style: AppTypography.caption(color: tokens.inkMuted)
+                          .copyWith(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                            letterSpacing: 0.05,
+                          ),
                     ),
                   ),
                 ),
@@ -486,14 +512,14 @@ class _CalendarGrid extends StatelessWidget {
               backgroundColor = tokens.primary;
               textColor = tokens.primaryOn;
             } else if (isToday) {
-              backgroundColor = tokens.primary.withOpacity(0.08);
+              backgroundColor = tokens.primary.withValues(alpha: 0.08);
               textColor = tokens.primary;
               border = Border.all(color: tokens.primary, width: 1.5);
             } else {
               backgroundColor = Colors.transparent;
               textColor = isCurrentMonth
                   ? tokens.ink
-                  : tokens.inkSubtle.withOpacity(0.5);
+                  : tokens.inkSubtle.withValues(alpha: 0.5);
             }
 
             return InkWell(
@@ -511,7 +537,9 @@ class _CalendarGrid extends StatelessWidget {
                     Text(
                       '${day.day}',
                       style: AppTypography.body(color: textColor).copyWith(
-                        fontWeight: isSelected || isToday ? FontWeight.w700 : FontWeight.w600,
+                        fontWeight: isSelected || isToday
+                            ? FontWeight.w700
+                            : FontWeight.w600,
                         fontSize: 14,
                       ),
                     ),
@@ -539,10 +567,7 @@ class _CalendarGrid extends StatelessWidget {
 }
 
 class _DateGroupHeader extends StatelessWidget {
-  const _DateGroupHeader({
-    required this.date,
-    required this.eventCount,
-  });
+  const _DateGroupHeader({required this.date, required this.eventCount});
 
   final DateTime date;
   final int eventCount;
@@ -569,7 +594,10 @@ class _DateGroupHeader extends StatelessWidget {
     }
 
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.space2, horizontal: AppSpacing.space1),
+      padding: EdgeInsets.symmetric(
+        vertical: AppSpacing.space2,
+        horizontal: AppSpacing.space1,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -589,10 +617,9 @@ class _DateGroupHeader extends StatelessWidget {
             ),
             child: Text(
               '$eventCount event${eventCount > 1 ? 's' : ''}',
-              style: AppTypography.caption(color: tokens.primary).copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: 11,
-              ),
+              style: AppTypography.caption(
+                color: tokens.primary,
+              ).copyWith(fontWeight: FontWeight.w700, fontSize: 11),
             ),
           ),
         ],
@@ -625,7 +652,9 @@ class _RedesignedEventCard extends ConsumerWidget {
         color: tokens.surfaceRaised,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: tokens.border, width: 1),
-        boxShadow: AppTokens.elevation1(Theme.of(context).brightness == Brightness.dark),
+        boxShadow: AppTokens.elevation1(
+          Theme.of(context).brightness == Brightness.dark,
+        ),
       ),
       child: Material(
         color: Colors.transparent,
@@ -674,9 +703,9 @@ class _RedesignedEventCard extends ConsumerWidget {
                               const SizedBox(width: 6),
                               Text(
                                 _formatTimeRange(event),
-                                style: AppTypography.caption(color: tokens.inkMuted).copyWith(
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                style: AppTypography.caption(
+                                  color: tokens.inkMuted,
+                                ).copyWith(fontWeight: FontWeight.w500),
                               ),
                             ],
                           ),
@@ -716,9 +745,9 @@ class _RedesignedEventCard extends ConsumerWidget {
                           const SizedBox(width: 8),
                           Text(
                             'with ${contact.name}',
-                            style: AppTypography.caption(color: tokens.inkMuted).copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: AppTypography.caption(
+                              color: tokens.inkMuted,
+                            ).copyWith(fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -746,9 +775,14 @@ class _RedesignedEventCard extends ConsumerWidget {
 
     if (title.contains('coffee') || title.contains('cafe')) {
       emoji = '☕';
-    } else if (title.contains('meeting') || title.contains('sync') || title.contains('team')) {
+    } else if (title.contains('meeting') ||
+        title.contains('sync') ||
+        title.contains('team')) {
       emoji = '👥';
-    } else if (title.contains('lunch') || title.contains('dinner') || title.contains('food') || title.contains('restaurant')) {
+    } else if (title.contains('lunch') ||
+        title.contains('dinner') ||
+        title.contains('food') ||
+        title.contains('restaurant')) {
       emoji = '🍽️';
     } else if (category == 'work') {
       emoji = '💼';
@@ -762,12 +796,7 @@ class _RedesignedEventCard extends ConsumerWidget {
       emoji = '🎉';
     }
 
-    return Center(
-      child: Text(
-        emoji,
-        style: const TextStyle(fontSize: 22),
-      ),
-    );
+    return Center(child: Text(emoji, style: const TextStyle(fontSize: 22)));
   }
 
   String _formatTimeRange(PlannerEvent event) {
@@ -785,4 +814,3 @@ class _RedesignedEventCard extends ConsumerWidget {
     return '$hour12:$minStr $amPm';
   }
 }
-

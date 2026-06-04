@@ -12,6 +12,7 @@ import 'modals/plus_sheet.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/people_tab.dart';
 import 'tabs/planner_tab.dart';
+import 'tabs/you_tab.dart';
 
 class ShellScreen extends ConsumerStatefulWidget {
   const ShellScreen({super.key});
@@ -21,7 +22,7 @@ class ShellScreen extends ConsumerStatefulWidget {
 }
 
 class _ShellScreenState extends ConsumerState<ShellScreen> {
-  static const _tabs = [HomeTab(), PeopleTab(), PlannerTab()];
+  static const _tabs = [HomeTab(), PeopleTab(), PlannerTab(), YouTab()];
 
   @override
   Widget build(BuildContext context) {
@@ -29,48 +30,44 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     final selectedTab = ref.watch(
       appControllerProvider.select((state) => state.selectedTab),
     );
-    final user = ref.watch(
-      appControllerProvider.select((state) => state.user),
-    );
+    final user = ref.watch(appControllerProvider.select((state) => state.user));
     return Scaffold(
       backgroundColor: tokens.surface,
-      appBar: AppBar(
-        toolbarHeight: 55,
-        titleSpacing: 20,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF6D4CFF), Color(0xFF9F7BFF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      appBar: selectedTab == 3
+          ? null
+          : AppBar(
+              toolbarHeight: 55,
+              titleSpacing: 20,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              flexibleSpace: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF6D4CFF), Color(0xFF9F7BFF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+              title: Text(
+                'Connect Me',
+                style: AppTypography.h2(color: Colors.white),
+              ),
+              actions: [
+                IconButton(
+                  icon: UserAvatar(
+                    user: user,
+                    radius: 18,
+                    glyphSize: 14,
+                    backgroundColor: Colors.white,
+                  ),
+                  onPressed: () => context.push('/settings'),
+                ),
+                SizedBox(width: AppSpacing.space2),
+              ],
             ),
-          ),
-        ),
-        title: Text(
-          'Connect Me',
-          style: AppTypography.h2(color: Colors.white),
-        ),
-        actions: [
-          IconButton(
-            icon: UserAvatar(
-              user: user,
-              radius: 18,
-              glyphSize: 14,
-              backgroundColor: Colors.white,
-            ),
-            onPressed: () => context.push('/settings'),
-          ),
-          SizedBox(width: AppSpacing.space2),
-        ],
-      ),
       body: AppSurface(
-        child: SafeArea(
-          top: false,
-          bottom: false,
-          child: _tabs[selectedTab],
-        ),
+        child: SafeArea(top: false, bottom: false, child: _tabs[selectedTab]),
       ),
 
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -87,11 +84,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
             backgroundColor: tokens.primary,
             elevation: 10,
             onPressed: () => showPlusSheet(context),
-            child: const Icon(
-              Icons.add,
-              color: Colors.white,
-              size: 42,
-            ),
+            child: const Icon(Icons.add, color: Colors.white, size: 42),
           ),
         ),
       ),
@@ -105,10 +98,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
 }
 
 class _BottomNav extends StatelessWidget {
-  const _BottomNav({
-    required this.selectedTab,
-    required this.onTab,
-  });
+  const _BottomNav({required this.selectedTab, required this.onTab});
   final int selectedTab;
   final ValueChanged<int> onTab;
 
@@ -122,7 +112,7 @@ class _BottomNav extends StatelessWidget {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: .08),
               offset: const Offset(0, -3),
               blurRadius: 8,
             ),
@@ -162,7 +152,7 @@ class _BottomNav extends StatelessWidget {
                   index: 2,
                   selectedTab: selectedTab,
                   icon: Icons.calendar_month_outlined,
-                  label: 'Planner',
+                  label: 'Plan',
                   onTap: onTab,
                 ),
               ),
@@ -171,8 +161,8 @@ class _BottomNav extends StatelessWidget {
                 child: _NavItem(
                   index: 3,
                   selectedTab: selectedTab,
-                  icon: Icons.settings_outlined,
-                  label: 'Settings',
+                  icon: Icons.person_outline,
+                  label: 'You',
                   onTap: onTab,
                 ),
               ),
@@ -212,9 +202,9 @@ class _NavItem extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-              icon,
-              color: selected ? tokens.primary : tokens.inkMuted,
-              size: 28,
+                icon,
+                color: selected ? tokens.primary : tokens.inkMuted,
+                size: 28,
               ),
               Text(
                 label,
@@ -222,7 +212,7 @@ class _NavItem extends StatelessWidget {
                   color: selected ? tokens.primary : tokens.inkMuted,
                 ),
               ),
-            ],  
+            ],
           ),
         ),
       ),

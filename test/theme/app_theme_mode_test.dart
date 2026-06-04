@@ -1,9 +1,13 @@
 import 'package:connect_me/src/state/app_state.dart';
+import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
+import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
 import 'package:connect_me/src/theme/app_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../test_overrides.dart';
 
 /// Builds a minimal app that resolves the theme from [AppState.themeMode]
 /// and reports the resolved brightness. Mirrors the wiring in
@@ -52,19 +56,30 @@ class _ThemeReader extends StatelessWidget {
 
 void main() {
   testWidgets('themeMode defaults to system', (tester) async {
-    final container = ProviderContainer();
+    final container = ProviderContainer(
+      overrides: [
+        ...signedInDemoOverrides(),
+        memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+      ],
+    );
     addTearDown(container.dispose);
 
-    expect(container.read(appControllerProvider).themeMode,
-        AppThemeMode.system);
+    expect(
+      container.read(appControllerProvider).themeMode,
+      AppThemeMode.system,
+    );
   });
 
-  testWidgets(
-      'system mode follows MediaQuery.platformBrightness (dark)',
-      (tester) async {
+  testWidgets('system mode follows MediaQuery.platformBrightness (dark)', (
+    tester,
+  ) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: _ThemeProbe(platformBrightness: Brightness.dark),
+      ProviderScope(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+        ],
+        child: const _ThemeProbe(platformBrightness: Brightness.dark),
       ),
     );
     await tester.pumpAndSettle();
@@ -73,12 +88,16 @@ void main() {
     expect(find.text('hasTokens:true'), findsOneWidget);
   });
 
-  testWidgets(
-      'system mode follows MediaQuery.platformBrightness (light)',
-      (tester) async {
+  testWidgets('system mode follows MediaQuery.platformBrightness (light)', (
+    tester,
+  ) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: _ThemeProbe(platformBrightness: Brightness.light),
+      ProviderScope(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+        ],
+        child: const _ThemeProbe(platformBrightness: Brightness.light),
       ),
     );
     await tester.pumpAndSettle();
@@ -87,10 +106,15 @@ void main() {
     expect(find.text('hasTokens:true'), findsOneWidget);
   });
 
-  testWidgets(
-      'setThemeMode(dark) overrides system platformBrightness',
-      (tester) async {
-    final container = ProviderContainer();
+  testWidgets('setThemeMode(dark) overrides system platformBrightness', (
+    tester,
+  ) async {
+    final container = ProviderContainer(
+      overrides: [
+        ...signedInDemoOverrides(),
+        memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+      ],
+    );
     addTearDown(container.dispose);
 
     await tester.pumpWidget(
@@ -110,20 +134,23 @@ void main() {
     expect(find.text('brightness:dark'), findsOneWidget);
   });
 
-  testWidgets(
-      'deprecated setDarkMode shim still routes to setThemeMode',
-      (tester) async {
-    final container = ProviderContainer();
+  testWidgets('deprecated setDarkMode shim still routes to setThemeMode', (
+    tester,
+  ) async {
+    final container = ProviderContainer(
+      overrides: [
+        ...signedInDemoOverrides(),
+        memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+      ],
+    );
     addTearDown(container.dispose);
 
     // ignore: deprecated_member_use_from_same_package
     container.read(appControllerProvider.notifier).setDarkMode(true);
-    expect(container.read(appControllerProvider).themeMode,
-        AppThemeMode.dark);
+    expect(container.read(appControllerProvider).themeMode, AppThemeMode.dark);
 
     // ignore: deprecated_member_use_from_same_package
     container.read(appControllerProvider.notifier).setDarkMode(false);
-    expect(container.read(appControllerProvider).themeMode,
-        AppThemeMode.light);
+    expect(container.read(appControllerProvider).themeMode, AppThemeMode.light);
   });
 }

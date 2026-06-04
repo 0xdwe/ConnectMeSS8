@@ -20,62 +20,75 @@ ProviderContainer _container({InMemoryMemoryStore? store}) {
   // keyword extractor; override the provider to pin Mock as the
   // active adapter and reuse the same memoryStore + AppController
   // the screen reads.
-  return ProviderContainer(overrides: [
-    ...signedInDemoOverrides(),
-    memoryStoreProvider.overrideWithValue(memoryStore),
-    aiUpdateProvider.overrideWith(
-      (ref) => MockAiUpdate(
-        memoryStore: memoryStore,
-        appController: ref.read(appControllerProvider.notifier),
+  return ProviderContainer(
+    overrides: [
+      ...signedInDemoOverrides(),
+      memoryStoreProvider.overrideWithValue(memoryStore),
+      aiUpdateProvider.overrideWith(
+        (ref) => MockAiUpdate(
+          memoryStore: memoryStore,
+          appController: ref.read(appControllerProvider.notifier),
+        ),
       ),
-    ),
-  ]);
+    ],
+  );
 }
 
 void main() {
   group('AI Update Preview-and-Confirm Flow', () {
-    test('AiUpdate.run returns AiUpdateResult without mutating state',
-        () async {
-      final container = _container();
-      addTearDown(container.dispose);
+    test(
+      'AiUpdate.run returns AiUpdateResult without mutating state',
+      () async {
+        final container = _container();
+        addTearDown(container.dispose);
 
-      final beforeInteractions =
-          container.read(appControllerProvider).interactions.length;
-      final beforeConnections =
-          container.read(appControllerProvider).connections;
-      final beforeSummary =
-          container.read(appControllerProvider).lastAiSummary;
+        final beforeInteractions = container
+            .read(appControllerProvider)
+            .interactions
+            .length;
+        final beforeConnections = container
+            .read(appControllerProvider)
+            .connections;
+        final beforeSummary = container
+            .read(appControllerProvider)
+            .lastAiSummary;
 
-      final mike = beforeConnections.firstWhere((c) => c.id == 'mike');
-      final memory = await container.read(memoryProvider('mike').future);
+        final mike = beforeConnections.firstWhere((c) => c.id == 'mike');
+        final memory = await container.read(memoryProvider('mike').future);
 
-      final result = await container.read(aiUpdateProvider).run(
-            contact: mike,
-            userInput: 'Had coffee with Mike today. He mentioned his new job.',
-            currentMemory: memory,
-            attachments: const [],
-          );
+        final result = await container
+            .read(aiUpdateProvider)
+            .run(
+              contact: mike,
+              userInput:
+                  'Had coffee with Mike today. He mentioned his new job.',
+              currentMemory: memory,
+              attachments: const [],
+            );
 
-      final afterState = container.read(appControllerProvider);
+        final afterState = container.read(appControllerProvider);
 
-      // State should not change.
-      expect(afterState.interactions.length, beforeInteractions);
-      expect(afterState.connections, beforeConnections);
-      expect(afterState.lastAiSummary, beforeSummary);
+        // State should not change.
+        expect(afterState.interactions.length, beforeInteractions);
+        expect(afterState.connections, beforeConnections);
+        expect(afterState.lastAiSummary, beforeSummary);
 
-      // Result should contain parsed data.
-      expect(result.interactions, isNotEmpty);
-      expect(result.contactId, 'mike');
-      expect(result.summary, isNotEmpty);
-      expect(result.memoryDocument, isNotNull);
-    });
+        // Result should contain parsed data.
+        expect(result.interactions, isNotEmpty);
+        expect(result.contactId, 'mike');
+        expect(result.summary, isNotEmpty);
+        expect(result.memoryDocument, isNotNull);
+      },
+    );
 
     test('AiUpdate.commit applies preview result to state', () async {
       final container = _container();
       addTearDown(container.dispose);
 
-      final beforeInteractions =
-          container.read(appControllerProvider).interactions.length;
+      final beforeInteractions = container
+          .read(appControllerProvider)
+          .interactions
+          .length;
 
       final result = AiUpdateResult(
         summary: 'Test summary',
@@ -101,73 +114,84 @@ void main() {
       // State should be updated.
       expect(afterState.interactions.length, beforeInteractions + 1);
       expect(afterState.interactions.first.id, 'test-interaction');
-      expect(afterState.interactions.first.source, InteractionSource.aiSuggested);
+      expect(
+        afterState.interactions.first.source,
+        InteractionSource.aiSuggested,
+      );
       expect(afterState.lastAiSummary, 'Test summary');
 
       // Contact should be updated.
       final mike = afterState.connections.firstWhere((c) => c.id == 'mike');
       expect(mike.nextStep, 'Follow up next week');
-      expect(mike.bondScore, greaterThan(68)); // Original was 68.
+      expect(mike.bondScore, 68); // No explicit bondScoreDelta supplied.
     });
 
-    test('AiUpdate.commit with edited interactions preserves user changes',
-        () async {
-      final container = _container();
-      addTearDown(container.dispose);
+    test(
+      'AiUpdate.commit with edited interactions preserves user changes',
+      () async {
+        final container = _container();
+        addTearDown(container.dispose);
 
-      final result = AiUpdateResult(
-        summary: 'Test summary',
-        contactId: 'sarah',
-        interactions: [
-          CrmInteraction(
-            id: 'edited-interaction',
-            contactId: 'sarah',
-            type: InteractionType.sharedActivity,
-            title: 'User edited this title',
-            note: 'User edited this note',
-            date: DateTime(2026, 5, 14),
-            source: InteractionSource.aiSuggested,
-          ),
-        ],
-      );
+        final result = AiUpdateResult(
+          summary: 'Test summary',
+          contactId: 'sarah',
+          interactions: [
+            CrmInteraction(
+              id: 'edited-interaction',
+              contactId: 'sarah',
+              type: InteractionType.sharedActivity,
+              title: 'User edited this title',
+              note: 'User edited this note',
+              date: DateTime(2026, 5, 14),
+              source: InteractionSource.aiSuggested,
+            ),
+          ],
+        );
 
-      await container.read(aiUpdateProvider).commit(result);
+        await container.read(aiUpdateProvider).commit(result);
 
-      final afterState = container.read(appControllerProvider);
-      final interaction = afterState.interactions.first;
+        final afterState = container.read(appControllerProvider);
+        final interaction = afterState.interactions.first;
 
-      expect(interaction.title, 'User edited this title');
-      expect(interaction.note, 'User edited this note');
-      expect(interaction.date, DateTime(2026, 5, 14));
-    });
+        expect(interaction.title, 'User edited this title');
+        expect(interaction.note, 'User edited this note');
+        expect(interaction.date, DateTime(2026, 5, 14));
+      },
+    );
 
-    test('AI-suggested interactions are marked with aiSuggested source',
-        () async {
-      final container = _container();
-      addTearDown(container.dispose);
+    test(
+      'AI-suggested interactions are marked with aiSuggested source',
+      () async {
+        final container = _container();
+        addTearDown(container.dispose);
 
-      final emily = container
-          .read(appControllerProvider)
-          .connections
-          .firstWhere((c) => c.id == 'emily');
-      final memory = await container.read(memoryProvider('emily').future);
+        final emily = container
+            .read(appControllerProvider)
+            .connections
+            .firstWhere((c) => c.id == 'emily');
+        final memory = await container.read(memoryProvider('emily').future);
 
-      final result = await container.read(aiUpdateProvider).run(
-            contact: emily,
-            userInput: 'Reminder to ask Emily about her first week',
-            currentMemory: memory,
-            attachments: const [],
-          );
+        final result = await container
+            .read(aiUpdateProvider)
+            .run(
+              contact: emily,
+              userInput: 'Reminder to ask Emily about her first week',
+              currentMemory: memory,
+              attachments: const [],
+            );
 
-      // Run should mark interactions as AI-suggested.
-      expect(result.interactions.first.source, InteractionSource.aiSuggested);
-    });
+        // Run should mark interactions as AI-suggested.
+        expect(result.interactions.first.source, InteractionSource.aiSuggested);
+      },
+    );
 
     test('manual interactions retain manual source', () {
       final container = _container();
       addTearDown(container.dispose);
 
-      container.read(appControllerProvider.notifier).logInteraction(
+      container
+          .read(appControllerProvider.notifier)
+          .logInteraction(
             'david',
             InteractionType.relationshipNote,
             'Manual note',
@@ -189,7 +213,9 @@ void main() {
           .firstWhere((c) => c.id == 'mike');
       final memory = await container.read(memoryProvider('mike').future);
 
-      final result = await container.read(aiUpdateProvider).run(
+      final result = await container
+          .read(aiUpdateProvider)
+          .run(
             contact: mike,
             userInput: 'Had coffee with Mike yesterday',
             currentMemory: memory,
@@ -213,8 +239,10 @@ void main() {
       final container = _container(store: store);
       addTearDown(container.dispose);
 
-      final beforeInteractions =
-          container.read(appControllerProvider).interactions.length;
+      final beforeInteractions = container
+          .read(appControllerProvider)
+          .interactions
+          .length;
 
       final mike = container
           .read(appControllerProvider)
@@ -224,7 +252,9 @@ void main() {
       final preHistory = memory.history;
 
       // Run produces a candidate result, but commit is never called.
-      await container.read(aiUpdateProvider).run(
+      await container
+          .read(aiUpdateProvider)
+          .run(
             contact: mike,
             userInput: 'Cancelled before save',
             currentMemory: memory,
@@ -368,88 +398,82 @@ void main() {
       },
     );
 
-    testWidgets(
-      'memory delta section announces correct semantic label',
-      (tester) async {
-        final container = _container();
-        addTearDown(container.dispose);
+    testWidgets('memory delta section announces correct semantic label', (
+      tester,
+    ) async {
+      final container = _container();
+      addTearDown(container.dispose);
 
-        await pumpScreenAndSubmit(
-          tester,
-          container,
-          input: 'Mike got a big promotion at work today.',
-        );
-        await tester.pumpAndSettle();
+      await pumpScreenAndSubmit(
+        tester,
+        container,
+        input: 'Mike got a big promotion at work today.',
+      );
+      await tester.pumpAndSettle();
 
-        // Header semantic announces "About <Name>, AI suggested".
-        // The merged semantics label includes child text after the
-        // header label, so use a regex prefix match.
-        final semanticsHandle = tester.ensureSemantics();
-        expect(
-          find.bySemanticsLabel(RegExp(r'^About Mike Chen, AI suggested')),
-          findsOneWidget,
-        );
-        // Each new-topic chip announces "<topic>, newly added".
-        expect(
-          find.bySemanticsLabel(RegExp(r'promotion, newly added')),
-          findsWidgets,
-        );
-        semanticsHandle.dispose();
-      },
-    );
+      // Header semantic announces "About <Name>, AI suggested".
+      // The merged semantics label includes child text after the
+      // header label, so use a regex prefix match.
+      final semanticsHandle = tester.ensureSemantics();
+      expect(
+        find.bySemanticsLabel(RegExp(r'^About Mike Chen, AI suggested')),
+        findsOneWidget,
+      );
+      // Each new-topic chip announces "<topic>, newly added".
+      expect(
+        find.bySemanticsLabel(RegExp(r'promotion, newly added')),
+        findsWidgets,
+      );
+      semanticsHandle.dispose();
+    });
 
-    testWidgets(
-      'cancel removes the memory delta section from the preview',
-      (tester) async {
-        final container = _container();
-        addTearDown(container.dispose);
+    testWidgets('cancel removes the memory delta section from the preview', (
+      tester,
+    ) async {
+      final container = _container();
+      addTearDown(container.dispose);
 
-        await pumpScreenAndSubmit(
-          tester,
-          container,
-          input: 'Mike got a big promotion at work today.',
-        );
-        await tester.pumpAndSettle();
+      await pumpScreenAndSubmit(
+        tester,
+        container,
+        input: 'Mike got a big promotion at work today.',
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.byKey(const Key('memory-delta-card')), findsOneWidget);
+      expect(find.byKey(const Key('memory-delta-card')), findsOneWidget);
 
-        await tester.tap(find.byKey(const Key('cancel-button')));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('cancel-button')));
+      await tester.pumpAndSettle();
 
-        // Returned to the input view; delta is gone.
-        expect(find.byKey(const Key('memory-delta-card')), findsNothing);
-        expect(find.byKey(const Key('ai-input-field')), findsOneWidget);
-      },
-    );
+      // Returned to the input view; delta is gone.
+      expect(find.byKey(const Key('memory-delta-card')), findsNothing);
+      expect(find.byKey(const Key('ai-input-field')), findsOneWidget);
+    });
 
-    testWidgets(
-      'cancel leaves memoryProvider unchanged',
-      (tester) async {
-        final store = InMemoryMemoryStore();
-        final container = _container(store: store);
-        addTearDown(container.dispose);
+    testWidgets('cancel leaves memoryProvider unchanged', (tester) async {
+      final store = InMemoryMemoryStore();
+      final container = _container(store: store);
+      addTearDown(container.dispose);
 
-        // Read pre-run memory once so the lazy-create path runs and the
-        // store is populated with the empty doc.
-        final preMemory =
-            await container.read(memoryProvider('mike').future);
+      // Read pre-run memory once so the lazy-create path runs and the
+      // store is populated with the empty doc.
+      final preMemory = await container.read(memoryProvider('mike').future);
 
-        await pumpScreenAndSubmit(
-          tester,
-          container,
-          input: 'Mike got a big promotion at work today.',
-        );
-        await tester.pumpAndSettle();
+      await pumpScreenAndSubmit(
+        tester,
+        container,
+        input: 'Mike got a big promotion at work today.',
+      );
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.byKey(const Key('cancel-button')));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('cancel-button')));
+      await tester.pumpAndSettle();
 
-        final afterCancel = await store.load('mike');
-        expect(afterCancel, isNotNull);
-        expect(afterCancel!.history, preMemory.history);
-        expect(afterCancel.topics, preMemory.topics);
-      },
-    );
+      final afterCancel = await store.load('mike');
+      expect(afterCancel, isNotNull);
+      expect(afterCancel!.history, preMemory.history);
+      expect(afterCancel.topics, preMemory.topics);
+    });
 
     testWidgets(
       'reduce motion: memory delta card visible at full opacity immediately',
@@ -484,11 +508,13 @@ void main() {
         // whose memoryDocument is identical to the pre-run memory — no
         // new topics, no new history bullet — to force the empty-
         // additions edge case.
-        final stubContainer = ProviderContainer(overrides: [
-          ...signedInDemoOverrides(),
-          memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
-          aiUpdateProvider.overrideWith((ref) => _NoDeltaAiUpdate()),
-        ]);
+        final stubContainer = ProviderContainer(
+          overrides: [
+            ...signedInDemoOverrides(),
+            memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+            aiUpdateProvider.overrideWith((ref) => _NoDeltaAiUpdate()),
+          ],
+        );
         addTearDown(stubContainer.dispose);
 
         await tester.pumpWidget(
@@ -528,23 +554,29 @@ void main() {
         // commit failure must not log an interaction or persist
         // memory; the user sees a retryable error.
         final store = InMemoryMemoryStore();
-        final container = ProviderContainer(overrides: [
-          ...signedInDemoOverrides(),
-          memoryStoreProvider.overrideWithValue(store),
-          aiUpdateProvider.overrideWith((ref) => MockAiUpdate(
+        final container = ProviderContainer(
+          overrides: [
+            ...signedInDemoOverrides(),
+            memoryStoreProvider.overrideWithValue(store),
+            aiUpdateProvider.overrideWith(
+              (ref) => MockAiUpdate(
                 memoryStore: ref.watch(memoryStoreProvider),
                 appController: ref.read(appControllerProvider.notifier),
                 failOnSave: true,
-              )),
-        ]);
+              ),
+            ),
+          ],
+        );
         addTearDown(container.dispose);
 
         // Drive the seed pass so memory mirrors the seed shape.
         await container.read(memorySeedingProvider.future);
 
         final priorMemory = await store.load('mike');
-        final priorInteractionCount =
-            container.read(appControllerProvider).interactions.length;
+        final priorInteractionCount = container
+            .read(appControllerProvider)
+            .interactions
+            .length;
 
         await tester.pumpWidget(
           UncontrolledProviderScope(
@@ -571,10 +603,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Snackbar surfaces.
-        expect(
-          find.textContaining("Couldn't save update"),
-          findsOneWidget,
-        );
+        expect(find.textContaining("Couldn't save update"), findsOneWidget);
         // Preview view stays — the screen did NOT pop.
         expect(find.byKey(const Key('save-button')), findsOneWidget);
         // Memory unchanged.
