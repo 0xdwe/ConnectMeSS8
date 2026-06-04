@@ -1,12 +1,16 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
+import 'package:connect_me/src/features/contact_profile_screen.dart';
 import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
+import 'package:connect_me/src/theme/app_theme.dart';
 import 'package:connect_me/src/widgets/bond_ring.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../test_overrides.dart';
 
 // Helper to pump ContactProfileScreen with full app context. #041:
 // override memoryStoreProvider so the seed pass doesn't hit real disk
@@ -33,7 +37,7 @@ Future<void> pumpProfileScreen(WidgetTester tester, String contactId) async {
     ),
   );
   await tester.pumpAndSettle();
-  
+
   // Sign in
   await tester.enterText(
     find.byKey(const Key('login-email-field')),
@@ -45,18 +49,15 @@ Future<void> pumpProfileScreen(WidgetTester tester, String contactId) async {
   );
   await tester.tap(find.byKey(const Key('sign-in-button')));
   await tester.pumpAndSettle();
-  
+
   // Navigate to People tab
   await tester.tap(find.text('People').last);
   await tester.pumpAndSettle();
-  
+
   // Find and tap the contact
-  final contactNames = {
-    'jessica': 'Jessica Taylor',
-    'mike': 'Mike Chen',
-  };
+  final contactNames = {'jessica': 'Jessica Taylor', 'mike': 'Mike Chen'};
   final contactName = contactNames[contactId] ?? contactId;
-  
+
   await tester.scrollUntilVisible(
     find.text(contactName),
     120,
@@ -75,7 +76,9 @@ Future<void> pumpProfileScreen(WidgetTester tester, String contactId) async {
 
 void main() {
   group('Contact Profile Redesign (#017)', () {
-    testWidgets('profile header shows BondRing at size 96 with avatar', (tester) async {
+    testWidgets('profile header shows BondRing at size 96 with avatar', (
+      tester,
+    ) async {
       await pumpProfileScreen(tester, 'jessica');
 
       // BondRing should be present at size 96
@@ -99,7 +102,9 @@ void main() {
       expect(categoryDots, findsAtLeastNWidgets(1));
     });
 
-    testWidgets('profile shows insight summary in header (not yellow card)', (tester) async {
+    testWidgets('profile shows insight summary in header (not yellow card)', (
+      tester,
+    ) async {
       await pumpProfileScreen(tester, 'jessica');
 
       // Insight summary should be visible as text in header
@@ -111,7 +116,7 @@ void main() {
 
       // "Strong connection!" text should not appear (was in _BondScorePanel)
       expect(find.text('Strong connection!'), findsNothing);
-      
+
       // "Bond Score" heading should not appear
       expect(find.text('Bond Score'), findsNothing);
     });
@@ -121,27 +126,33 @@ void main() {
 
       // Orange "Recommended Action!" card should not appear
       expect(find.text('Recommended Action!'), findsNothing);
-      
+
       // "You can gain X% Connection Score" should not appear
       expect(find.textContaining('You can gain'), findsNothing);
       expect(find.textContaining('Connection Score'), findsNothing);
     });
 
-    testWidgets('profile does NOT show CommunicationChannelsCard', (tester) async {
+    testWidgets('profile does NOT show CommunicationChannelsCard', (
+      tester,
+    ) async {
       await pumpProfileScreen(tester, 'jessica');
 
       // "Top Communication Channels" should not appear
       expect(find.text('Top Communication Channels'), findsNothing);
     });
 
-    testWidgets('profile does NOT show InteractionFrequencyCard', (tester) async {
+    testWidgets('profile does NOT show InteractionFrequencyCard', (
+      tester,
+    ) async {
       await pumpProfileScreen(tester, 'jessica');
 
       // Interaction heatmap heading should appear (we render a 12-month view)
       expect(find.text('Interaction Frequency (12 months)'), findsOneWidget);
     });
 
-    testWidgets('profile shows AI Insights card with three subsections', (tester) async {
+    testWidgets('profile shows AI Insights card with three subsections', (
+      tester,
+    ) async {
       await pumpProfileScreen(tester, 'jessica');
 
       // The new AI Insights card replaces RelationshipFactsCard.
@@ -151,14 +162,19 @@ void main() {
       expect(find.text('Conversation Topics'), findsOneWidget);
     });
 
-    testWidgets('profile shows Communication Channels and Interaction Details cards', (tester) async {
-      await pumpProfileScreen(tester, 'jessica');
+    testWidgets(
+      'profile shows Communication Channels and Interaction Details cards',
+      (tester) async {
+        await pumpProfileScreen(tester, 'jessica');
 
-      expect(find.text('Communication Channels'), findsOneWidget);
-      expect(find.text('Interaction Details'), findsOneWidget);
-    });
+        expect(find.text('Communication Channels'), findsOneWidget);
+        expect(find.text('Interaction Details'), findsOneWidget);
+      },
+    );
 
-    testWidgets('profile shows Activity Log section with interactions', (tester) async {
+    testWidgets('profile shows Activity Log section with interactions', (
+      tester,
+    ) async {
       await pumpProfileScreen(tester, 'mike');
 
       // Activity Log sits below the new cards; scroll first to the
@@ -177,7 +193,9 @@ void main() {
       expect(find.textContaining('Job'), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('profile shows warm empty copy when no activity log', (tester) async {
+    testWidgets('profile shows warm empty copy when no activity log', (
+      tester,
+    ) async {
       await pumpProfileScreen(tester, 'jessica');
 
       // Jessica has no interactions. The Activity Log header is always
@@ -206,37 +224,68 @@ void main() {
       expect(find.text('Update with AI'), findsOneWidget);
     });
 
-    testWidgets('header renders name and Edit pill side-by-side without overlap at 320pt', (tester) async {
-      // Pump at default size first so navigation through the People tab
-      // works in a comfortable viewport.
-      await pumpProfileScreen(tester, 'jessica');
+    testWidgets(
+      'header renders name and Edit pill side-by-side without overlap at 320pt',
+      (tester) async {
+        // Pump at default size first so navigation through the People tab
+        // works in a comfortable viewport.
+        await pumpProfileScreen(tester, 'jessica');
 
-      // Now simulate iPhone SE 1st gen (320 logical px) and let the
-      // profile screen relayout.
+        // Now simulate iPhone SE 1st gen (320 logical px) and let the
+        // profile screen relayout.
+        tester.view.physicalSize = const Size(320 * 2, 800 * 2);
+        tester.view.devicePixelRatio = 2.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpAndSettle();
+
+        // The name and the Edit pill must both render — the structural
+        // Row+Expanded layout (replacing the previous Stack+Positioned)
+        // ensures the name ellipsizes rather than sliding under the pill.
+        expect(find.text('Jessica Taylor'), findsAtLeastNWidgets(1));
+        expect(find.byKey(const Key('edit-connection-button')), findsOneWidget);
+
+        // Anchor the structural fix: the header's name Text renders with
+        // maxLines: 1, which is what makes ellipsis work in the new Row.
+        final headerNameText = find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.data == 'Jessica Taylor' &&
+              widget.maxLines == 1,
+        );
+        expect(headerNameText, findsOneWidget);
+      },
+    );
+
+    testWidgets('connection score row does not overflow at 320pt', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(320 * 2, 800 * 2);
       tester.view.devicePixelRatio = 2.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...signedInDemoOverrides(),
+            memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.data(false),
+            home: const ContactProfileScreen(contactId: 'jessica'),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      // The name and the Edit pill must both render — the structural
-      // Row+Expanded layout (replacing the previous Stack+Positioned)
-      // ensures the name ellipsizes rather than sliding under the pill.
-      expect(find.text('Jessica Taylor'), findsAtLeastNWidgets(1));
-      expect(find.byKey(const Key('edit-connection-button')), findsOneWidget);
-
-      // Anchor the structural fix: the header's name Text renders with
-      // maxLines: 1, which is what makes ellipsis work in the new Row.
-      final headerNameText = find.byWidgetPredicate(
-        (widget) =>
-            widget is Text &&
-            widget.data == 'Jessica Taylor' &&
-            widget.maxLines == 1,
-      );
-      expect(headerNameText, findsOneWidget);
+      expect(find.text('Connection Score'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('profile shows Edit action in header card pill', (tester) async {
+    testWidgets('profile shows Edit action in header card pill', (
+      tester,
+    ) async {
       await pumpProfileScreen(tester, 'jessica');
 
       // Edit pill now lives on the header card, not the AppBar.
@@ -246,7 +295,9 @@ void main() {
       expect(find.widgetWithIcon(IconButton, Icons.edit), findsNothing);
     });
 
-    testWidgets('activity log rows render inline AI badge in the dense list', (tester) async {
+    testWidgets('activity log rows render inline AI badge in the dense list', (
+      tester,
+    ) async {
       // Mike's seed history is 1 interaction — so this asserts the
       // single-row branch lays out, with no dividers (n - 1 = 0).
       await pumpProfileScreen(tester, 'mike');
@@ -265,19 +316,22 @@ void main() {
       expect(find.byType(Divider), findsNothing);
     });
 
-    testWidgets('empty activity log renders inside the Activity Log card with zero dividers', (tester) async {
-      await pumpProfileScreen(tester, 'jessica');
+    testWidgets(
+      'empty activity log renders inside the Activity Log card with zero dividers',
+      (tester) async {
+        await pumpProfileScreen(tester, 'jessica');
 
-      // The empty-state copy lives inside the same card, so the
-      // section header is now visible even with no interactions.
-      await tester.scrollUntilVisible(
-        find.text('Activity Log'),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.text('Activity Log'), findsOneWidget);
-      // No interactions → no dividers (n - 1 with n = 0).
-      expect(find.byType(Divider), findsNothing);
-    });
+        // The empty-state copy lives inside the same card, so the
+        // section header is now visible even with no interactions.
+        await tester.scrollUntilVisible(
+          find.text('Activity Log'),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.text('Activity Log'), findsOneWidget);
+        // No interactions → no dividers (n - 1 with n = 0).
+        expect(find.byType(Divider), findsNothing);
+      },
+    );
   });
 }

@@ -24,7 +24,7 @@ class ContactProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
     final person = ref.watch(contactByIdProvider(contactId));
-    
+
     // Handle missing contact gracefully
     if (person == null) {
       return Scaffold(
@@ -57,7 +57,7 @@ class ContactProfileScreen extends ConsumerWidget {
         ),
       );
     }
-    
+
     final state = ref.watch(appControllerProvider);
     final insight = state.contactInsightFor(contactId);
     final history = ref.watch(interactionsByContactProvider(contactId));
@@ -71,7 +71,7 @@ class ContactProfileScreen extends ConsumerWidget {
         : null;
     final statusLabel = _connectionStatusLabel(person.bondScore);
     final statusColor = _connectionStatusColor(tokens, person.bondScore);
-    
+
     return Scaffold(
       backgroundColor: tokens.surface,
       appBar: AppBar(
@@ -139,8 +139,11 @@ class ContactProfileScreen extends ConsumerWidget {
                                 key: const Key('edit-connection-button'),
                                 onPressed: () =>
                                     showEditConnectionModal(context, person),
-                                icon: Icon(Icons.edit,
-                                    size: 16, color: tokens.primary),
+                                icon: Icon(
+                                  Icons.edit,
+                                  size: 16,
+                                  color: tokens.primary,
+                                ),
                                 label: Text(
                                   'Edit',
                                   style: TextStyle(
@@ -152,15 +155,17 @@ class ContactProfileScreen extends ConsumerWidget {
                                   backgroundColor: tokens.surfaceRaised,
                                   side: BorderSide(color: tokens.surfaceRaised),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(AppRadius.pill),
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.pill,
+                                    ),
                                   ),
                                   padding: EdgeInsets.symmetric(
                                     horizontal: AppSpacing.space3,
                                     vertical: AppSpacing.space2,
                                   ),
                                   minimumSize: const Size(0, 36),
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                   visualDensity: VisualDensity.compact,
                                 ),
                               ),
@@ -169,7 +174,9 @@ class ContactProfileScreen extends ConsumerWidget {
                           SizedBox(height: AppSpacing.space2),
                           Text(
                             person.category,
-                            style: AppTypography.caption(color: tokens.inkMuted),
+                            style: AppTypography.caption(
+                              color: tokens.inkMuted,
+                            ),
                           ),
                           SizedBox(height: AppSpacing.space1),
                           Text(
@@ -191,63 +198,70 @@ class ContactProfileScreen extends ConsumerWidget {
                     color: tokens.surfaceRaised,
                     borderRadius: BorderRadius.circular(AppRadius.lg),
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                  child: Wrap(
+                    spacing: AppSpacing.space4,
+                    runSpacing: AppSpacing.space4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       BondRing(connection: person, size: 72),
-                      SizedBox(width: AppSpacing.space4),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Connection Score',
-                              style: AppTypography.caption(color: tokens.inkMuted),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Connection Score',
+                            style: AppTypography.caption(
+                              color: tokens.inkMuted,
                             ),
-                            SizedBox(height: AppSpacing.space1),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  person.bondScore.toString(),
-                                  style: AppTypography.display(),
+                          ),
+                          SizedBox(height: AppSpacing.space1),
+                          Wrap(
+                            spacing: AppSpacing.space2,
+                            runSpacing: AppSpacing.space1,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                person.bondScore.toString(),
+                                style: AppTypography.display(),
+                              ),
+                              Icon(
+                                person.bondTrend == BondTrend.up
+                                    ? Icons.trending_up
+                                    : Icons.trending_down,
+                                color: person.bondTrend == BondTrend.up
+                                    ? tokens.success
+                                    : tokens.danger,
+                                size: 20,
+                              ),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.space2,
+                                  vertical: 4,
                                 ),
-                                SizedBox(width: AppSpacing.space2),
-                                Icon(
-                                  person.bondTrend == BondTrend.up
-                                      ? Icons.trending_up
-                                      : Icons.trending_down,
-                                  color: person.bondTrend == BondTrend.up
-                                      ? tokens.success
-                                      : tokens.danger,
-                                  size: 20,
-                                ),
-                                SizedBox(width: AppSpacing.space2),
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.space2,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: statusColor.withOpacity(0.14),
-                                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                                  ),
-                                  child: Text(
-                                    statusLabel,
-                                    style: AppTypography.caption(color: statusColor),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.14),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.pill,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
-                        ),
+                                child: Text(
+                                  statusLabel,
+                                  style: AppTypography.caption(
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
                             'Known Since',
-                            style: AppTypography.caption(color: tokens.inkMuted),
+                            style: AppTypography.caption(
+                              color: tokens.inkMuted,
+                            ),
                           ),
                           SizedBox(height: AppSpacing.space1),
                           Text(
@@ -257,7 +271,9 @@ class ContactProfileScreen extends ConsumerWidget {
                           SizedBox(height: AppSpacing.space3),
                           Text(
                             'Last contact',
-                            style: AppTypography.caption(color: tokens.inkMuted),
+                            style: AppTypography.caption(
+                              color: tokens.inkMuted,
+                            ),
                           ),
                           SizedBox(height: AppSpacing.space1),
                           Text(
@@ -319,8 +335,7 @@ class ContactProfileScreen extends ConsumerWidget {
                           ),
                           decoration: BoxDecoration(
                             color: tokens.primary,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.pill),
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
                           ),
                           child: Text(
                             channel,
@@ -383,7 +398,9 @@ class ContactProfileScreen extends ConsumerWidget {
                             width: 96,
                             child: Text(
                               DateFormat('yyyy-MM-dd').format(history[i].date),
-                              style: AppTypography.caption(color: tokens.inkMuted),
+                              style: AppTypography.caption(
+                                color: tokens.inkMuted,
+                              ),
                             ),
                           ),
                           SizedBox(width: AppSpacing.space3),
@@ -402,7 +419,8 @@ class ContactProfileScreen extends ConsumerWidget {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    if (history[i].source == InteractionSource.aiSuggested) ...[
+                                    if (history[i].source ==
+                                        InteractionSource.aiSuggested) ...[
                                       SizedBox(width: AppSpacing.space2),
                                       Container(
                                         padding: EdgeInsets.symmetric(
@@ -411,7 +429,9 @@ class ContactProfileScreen extends ConsumerWidget {
                                         ),
                                         decoration: BoxDecoration(
                                           color: tokens.primaryTint,
-                                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                                          borderRadius: BorderRadius.circular(
+                                            AppRadius.sm,
+                                          ),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
@@ -424,7 +444,13 @@ class ContactProfileScreen extends ConsumerWidget {
                                             SizedBox(width: 4),
                                             Text(
                                               'AI',
-                                              style: AppTypography.caption(color: tokens.primary).copyWith(fontSize: 10, height: 1),
+                                              style:
+                                                  AppTypography.caption(
+                                                    color: tokens.primary,
+                                                  ).copyWith(
+                                                    fontSize: 10,
+                                                    height: 1,
+                                                  ),
                                             ),
                                           ],
                                         ),
@@ -436,7 +462,9 @@ class ContactProfileScreen extends ConsumerWidget {
                                   SizedBox(height: AppSpacing.space2),
                                   Text(
                                     history[i].note,
-                                    style: AppTypography.bodyLg(color: tokens.inkMuted),
+                                    style: AppTypography.bodyLg(
+                                      color: tokens.inkMuted,
+                                    ),
                                   ),
                                 ],
                               ],
@@ -446,11 +474,7 @@ class ContactProfileScreen extends ConsumerWidget {
                       ),
                     ),
                     if (i < history.length - 1)
-                      Divider(
-                        color: tokens.border,
-                        height: 1,
-                        thickness: 1,
-                      ),
+                      Divider(color: tokens.border, height: 1, thickness: 1),
                   ],
               ],
             ),
@@ -580,11 +604,18 @@ class _InteractionDetailsCardState extends State<InteractionDetailsCard> {
                       children: [
                         // Heatmap: last 12 months interaction counts
                         Padding(
-                          padding: EdgeInsets.symmetric(vertical: AppSpacing.space2),
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.space2,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Interaction Frequency (12 months)', style: AppTypography.caption(color: tokens.inkMuted)),
+                              Text(
+                                'Interaction Frequency (12 months)',
+                                style: AppTypography.caption(
+                                  color: tokens.inkMuted,
+                                ),
+                              ),
                               SizedBox(height: AppSpacing.space2),
                               _buildHeatmap(context, widget.history),
                             ],
@@ -602,13 +633,12 @@ class _InteractionDetailsCardState extends State<InteractionDetailsCard> {
                                 Expanded(
                                   child: Text(
                                     row.label,
-                                    style: AppTypography.caption(color: tokens.inkMuted),
+                                    style: AppTypography.caption(
+                                      color: tokens.inkMuted,
+                                    ),
                                   ),
                                 ),
-                                Text(
-                                  row.value,
-                                  style: AppTypography.bodyLg(),
-                                ),
+                                Text(row.value, style: AppTypography.bodyLg()),
                               ],
                             ),
                           ),
@@ -650,13 +680,18 @@ class _InteractionDetailsCardState extends State<InteractionDetailsCard> {
           Padding(
             padding: EdgeInsets.only(right: AppSpacing.space2),
             child: Tooltip(
-              message: '${DateFormat.MMM().format(m)}\n${counts[_monthKey(m)]} interactions',
+              message:
+                  '${DateFormat.MMM().format(m)}\n${counts[_monthKey(m)]} interactions',
               child: Container(
                 width: 18,
                 height: 18,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _heatColor(tokens, counts[_monthKey(m)] ?? 0, maxCount),
+                  color: _heatColor(
+                    tokens,
+                    counts[_monthKey(m)] ?? 0,
+                    maxCount,
+                  ),
                 ),
               ),
             ),
@@ -665,14 +700,15 @@ class _InteractionDetailsCardState extends State<InteractionDetailsCard> {
     );
   }
 
-  String _monthKey(DateTime dt) => '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
+  String _monthKey(DateTime dt) =>
+      '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
 
   Color _heatColor(AppTokens tokens, int count, int maxCount) {
     if (maxCount <= 0 || count <= 0) return tokens.surfaceRaised;
     final intensity = count / maxCount; // 0..1
     // Map intensity to an opacity of the success color for visibility.
     final base = tokens.success;
-    return base.withOpacity(0.25 + (0.7 * intensity));
+    return base.withValues(alpha: 0.25 + (0.7 * intensity));
   }
 }
 
