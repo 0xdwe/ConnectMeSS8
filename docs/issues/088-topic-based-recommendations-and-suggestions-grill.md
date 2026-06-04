@@ -10,12 +10,12 @@ Run a design grill for how Gemini-written `MemoryDocument.topics` should power u
 
 ## Acceptance criteria
 
-- [ ] Decide whether topic suggestions are generated eagerly during AI Update, lazily on tap, or via a template + memory hybrid.
-- [ ] Decide whether generated suggestions are persisted, cached, or ephemeral.
-- [ ] Decide how topic quality is controlled so stale/noisy topics do not spam recommendations.
-- [ ] Decide ranking/priority rules between upcoming-driven cards, recency cards, and topic-driven cards.
-- [ ] Preserve the anti-shame voice: no numeric day counts or guilt phrasing.
-- [ ] Write a PRD or issue set capturing the approved design.
+- [x] Decide whether topic suggestions are generated eagerly during AI Update, lazily on tap, or via a template + memory hybrid. Decided: prepared eagerly during AI Update; deterministic template/hybrid fallback when missing.
+- [x] Decide whether generated suggestions are persisted, cached, or ephemeral. Decided: persisted in a new `MemoryDocument` `Topic Suggestions` section.
+- [x] Decide how topic quality is controlled so stale/noisy topics do not spam recommendations. Decided: per-topic `lastMentionedAt`, `mentionCount`, optional `expiresAt`; Home uses stricter gates than topic taps.
+- [x] Decide ranking/priority rules between upcoming-driven cards, recency cards, and topic-driven cards. Decided: Upcoming overlay first; regular cards remain Maintenance Need-primary with topic quality boost.
+- [x] Preserve the anti-shame voice: no numeric day counts or guilt phrasing.
+- [x] Write a PRD or issue set capturing the approved design. See `docs/prd/2026-06-04-topic-suggestions-prd.md` and #096–#099.
 
 ## Blocked by
 
