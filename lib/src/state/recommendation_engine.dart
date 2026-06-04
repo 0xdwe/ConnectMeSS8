@@ -1,16 +1,18 @@
 import '../models/social_models.dart';
 import '../widgets/bond_ring.dart';
 import 'memory/memory_document.dart';
+import 'relationship_maintenance_policy.dart';
 
 /// Pure-function recommendation engine.
 ///
 /// Reads connections, interactions, per-contact memory map, and `now`;
 /// returns up to 3 ranked [Recommendation]s.
 ///
-/// PRD Q11 ranking:
-///   score = daysSinceContact * tierWeight
-///   tierWeight = { drifting: 1.5, steady: 1.0, close: 0.8 }
-///   filter daysSinceContact < 1 (24h cooldown)
+/// Maintenance ranking:
+///   primary = RelationshipMaintenancePolicy Maintenance Need
+///   tie-break = elapsed / adjusted cadence ratio
+///   deterministic final tie-break = contact id
+///   filter MaintenanceNeed.none
 ///   top N = 3
 ///
 /// Mock-path narrative copy is deterministic and respects the PRD's
@@ -18,9 +20,8 @@ import 'memory/memory_document.dart';
 /// Recency buckets ('a few days ago', 'a few weeks ago', 'a while
 /// back') are the rendered cadence.
 ///
-/// `interactions` and `memories` are accepted but unused in #047.
-/// They sit in the signature so the engine stays stable through
-/// #048 (caching) and #049 (memory-driven cards).
+/// `interactions` feed latest-touch Maintenance Need calculations;
+/// `memories` feed upcoming-driven overlay cards.
 List<Recommendation> rankRecommendations({
   required List<Connection> connections,
   required List<CrmInteraction> interactions,
@@ -32,7 +33,7 @@ List<Recommendation> rankRecommendations({
   //    Surface a special recommendation when a `MemoryDocument.upcoming`
   //    entry's endDate (or startDate if no endDate) falls in the
   //    window [now - 3d, now + 1d]. These cards rank ABOVE the
-  //    bond-tier-weighted ranking and reduce the remaining slot count
+  //    Maintenance Need ranking and reduce the remaining slot count
   //    accordingly — we'd rather surface "Wondering how Sam's
   //    USA trip went?" than a third drifting reminder.
   //
@@ -62,26 +63,30 @@ List<Recommendation> rankRecommendations({
     return special.take(3).toList(growable: false);
   }
 
-  // 2. Bond-tier-weighted recency for the remaining slots (PRD Q11).
+  // 2. Maintenance Need ranking for the remaining slots (#094).
   final specialIds = {for (final r in special) r.contactId};
   final scored = <_Scored>[];
   for (final connection in connections) {
     if (specialIds.contains(connection.id)) continue; // de-dupe
-    final daysSince = now.difference(connection.lastContact).inDays;
-    if (daysSince < 1) continue; // 24h cooldown
-    final tier = BondTier.from(connection.bondScore);
-    final weight = _tierWeight(tier);
-    final score = daysSince * weight;
+    final result = RelationshipMaintenancePolicy.evaluate(
+      connection: connection,
+      interactions: interactions,
+      now: now,
+    );
+    if (result.maintenanceNeed == MaintenanceNeed.none) continue;
+    final elapsed = now.difference(result.latestTouchAt).inMilliseconds;
+    final ratio = elapsed / result.adjustedCadence.inMilliseconds;
     scored.add(
       _Scored(
         connection: connection,
-        tier: tier,
-        daysSince: daysSince,
-        score: score,
+        tier: BondTier.from(connection.bondScore),
+        need: result.maintenanceNeed,
+        daysSince: now.difference(result.latestTouchAt).inDays,
+        ratio: ratio,
       ),
     );
   }
-  scored.sort((a, b) => b.score.compareTo(a.score));
+  scored.sort(_compareScored);
   final ranked = scored.take(remainingSlots).map(_toRecommendation);
 
   // Reference `byId` so the variable isn't dead in builds where the
@@ -92,24 +97,35 @@ List<Recommendation> rankRecommendations({
   return [...special, ...ranked];
 }
 
-double _tierWeight(BondTier tier) => switch (tier) {
-  BondTier.drifting => 1.5,
-  BondTier.steady => 1.0,
-  BondTier.close => 0.8,
+int _compareScored(_Scored a, _Scored b) {
+  final need = _needRank(b.need).compareTo(_needRank(a.need));
+  if (need != 0) return need;
+  final ratio = b.ratio.compareTo(a.ratio);
+  if (ratio != 0) return ratio;
+  return a.connection.id.compareTo(b.connection.id);
+}
+
+int _needRank(MaintenanceNeed need) => switch (need) {
+  MaintenanceNeed.high => 3,
+  MaintenanceNeed.medium => 2,
+  MaintenanceNeed.low => 1,
+  MaintenanceNeed.none => 0,
 };
 
 class _Scored {
   const _Scored({
     required this.connection,
     required this.tier,
+    required this.need,
     required this.daysSince,
-    required this.score,
+    required this.ratio,
   });
 
   final Connection connection;
   final BondTier tier;
+  final MaintenanceNeed need;
   final int daysSince;
-  final double score;
+  final double ratio;
 }
 
 Recommendation _toRecommendation(_Scored s) {
@@ -118,7 +134,7 @@ Recommendation _toRecommendation(_Scored s) {
     contactId: s.connection.id,
     reason: _reasonFor(s.tier, s.connection.name),
     insight: _insightFor(s.tier, bucket),
-    priority: _priorityFor(s.tier),
+    priority: _priorityFor(s.need),
   );
 }
 
@@ -143,13 +159,13 @@ String _insightFor(BondTier tier, String bucket) => switch (tier) {
   BondTier.drifting => "It's been $bucket — a quick hello goes a long way.",
 };
 
-/// Priority field is filled deterministically from tier so the
-/// existing UI keeps compiling. UI-side rendering of priority is out
-/// of scope for #047.
-String _priorityFor(BondTier tier) => switch (tier) {
-  BondTier.drifting => 'high priority',
-  BondTier.steady => 'medium priority',
-  BondTier.close => 'low priority',
+/// Priority field is filled deterministically from Maintenance Need so
+/// the existing UI keeps receiving stable priority strings.
+String _priorityFor(MaintenanceNeed need) => switch (need) {
+  MaintenanceNeed.high => 'high priority',
+  MaintenanceNeed.medium => 'medium priority',
+  MaintenanceNeed.low => 'low priority',
+  MaintenanceNeed.none => 'low priority',
 };
 
 // ---------------------------------------------------------------------------

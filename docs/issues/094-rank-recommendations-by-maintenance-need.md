@@ -10,14 +10,14 @@ Update Recommendation ranking to use Maintenance Need from the Relationship Main
 
 ## Acceptance criteria
 
-- [ ] RecommendationEngine uses Maintenance Need from the policy module when ranking recency/maintenance-driven Recommendations.
-- [ ] Raw `daysSince`-style recency is no longer the sole ranking signal for maintenance Recommendations.
-- [ ] High-Bond Score, low-maintenance Connections receive appropriate grace according to #090 calibration.
-- [ ] Recent CrmInteraction activity lowers Maintenance Need as expected.
-- [ ] Existing upcoming-driven and MemoryDocument-aware Recommendation behavior remains intact unless #090 explicitly recalibrates priority.
-- [ ] Recommendation copy preserves the anti-shame guardrail: no numeric day counts or guilt phrasing.
-- [ ] RecommendationEngine ranking does not mutate `bondScore` or `lastBondDriftAppliedAt`.
-- [ ] Add targeted tests for category cadence, Bond Score durability, recent interaction suppression, and ranking order.
+- [x] RecommendationEngine uses Maintenance Need from the policy module when ranking recency/maintenance-driven Recommendations.
+- [x] Raw `daysSince`-style recency is no longer the sole ranking signal for maintenance Recommendations.
+- [x] High-Bond Score, low-maintenance Connections receive appropriate grace according to #090 calibration.
+- [x] Recent CrmInteraction activity lowers Maintenance Need as expected.
+- [x] Existing upcoming-driven and MemoryDocument-aware Recommendation behavior remains intact unless #090 explicitly recalibrates priority.
+- [x] Recommendation copy preserves the anti-shame guardrail: no numeric day counts or guilt phrasing.
+- [x] RecommendationEngine ranking does not mutate `bondScore` or `lastBondDriftAppliedAt`.
+- [x] Add targeted tests for category cadence, Bond Score durability, recent interaction suppression, and ranking order.
 
 ## Blocked by
 

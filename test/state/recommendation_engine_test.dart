@@ -8,12 +8,13 @@ Connection _connection({
   required String name,
   required int bondScore,
   required DateTime lastContact,
+  String category = 'Friends',
 }) {
   return Connection(
     id: id,
     name: name,
     email: '$id@test.com',
-    category: 'Friends',
+    category: category,
     avatar: '👤',
     bondScore: bondScore,
     nextStep: 'Say hi',
@@ -29,28 +30,29 @@ void main() {
   final now = DateTime.utc(2026, 5, 19, 12);
 
   group('rankRecommendations', () {
-    test('Q11 score = daysSinceContact * tierWeight orders results', () {
-      // drifting (40) at 10d → 10 * 1.5 = 15.0
-      // steady   (60) at 12d → 12 * 1.0 = 12.0
-      // close    (90) at 14d → 14 * 0.8 = 11.2
+    test('maintenance need severity outranks raw days-since recency', () {
+      // Drifting Friends at 20d: adjusted cadence 16d → medium need.
+      // Steady Friends at 31d: adjusted cadence 21d → medium need.
+      // Close Friends at 40d: adjusted cadence 32d → medium need.
+      // Medium-need ratio breaks ties, replacing raw days * tier weight.
       final connections = [
         _connection(
           id: 'a',
           name: 'Drifting Dana',
           bondScore: 40,
-          lastContact: now.subtract(const Duration(days: 10)),
+          lastContact: now.subtract(const Duration(days: 20)),
         ),
         _connection(
           id: 'b',
           name: 'Steady Sam',
           bondScore: 60,
-          lastContact: now.subtract(const Duration(days: 12)),
+          lastContact: now.subtract(const Duration(days: 31)),
         ),
         _connection(
           id: 'c',
           name: 'Close Cory',
           bondScore: 90,
-          lastContact: now.subtract(const Duration(days: 14)),
+          lastContact: now.subtract(const Duration(days: 40)),
         ),
       ];
 
@@ -61,11 +63,104 @@ void main() {
         now: now,
       );
 
-      expect(ranked.map((r) => r.contactId).toList(), ['a', 'b', 'c']);
+      expect(ranked.map((r) => r.contactId).toList(), ['b', 'a', 'c']);
     });
 
-    test('ranks drifting before steady before close at equal recency', () {
-      const days = 7;
+    test(
+      'category cadence creates maintenance need before raw recency wins',
+      () {
+        final connections = [
+          _connection(
+            id: 'family',
+            name: 'Family Fran',
+            category: 'Family',
+            bondScore: 60,
+            lastContact: now.subtract(const Duration(days: 15)),
+          ),
+          _connection(
+            id: 'college',
+            name: 'College Casey',
+            category: 'College',
+            bondScore: 60,
+            lastContact: now.subtract(const Duration(days: 30)),
+          ),
+        ];
+
+        final ranked = rankRecommendations(
+          connections: connections,
+          interactions: const [],
+          memories: const {},
+          now: now,
+        );
+
+        expect(ranked.map((r) => r.contactId).toList(), ['family']);
+      },
+    );
+
+    test('close-tier Bond Score durability gives grace before ranking', () {
+      final connections = [
+        _connection(
+          id: 'close',
+          name: 'Close Cory',
+          bondScore: 90,
+          lastContact: now.subtract(const Duration(days: 24)),
+        ),
+        _connection(
+          id: 'steady',
+          name: 'Steady Sam',
+          bondScore: 60,
+          lastContact: now.subtract(const Duration(days: 18)),
+        ),
+      ];
+
+      final ranked = rankRecommendations(
+        connections: connections,
+        interactions: const [],
+        memories: const {},
+        now: now,
+      );
+
+      expect(ranked.map((r) => r.contactId).toList(), ['steady', 'close']);
+    });
+
+    test('recent interaction suppresses maintenance need via latest-touch', () {
+      final connections = [
+        _connection(
+          id: 'touched',
+          name: 'Touched Taylor',
+          bondScore: 60,
+          lastContact: now.subtract(const Duration(days: 40)),
+        ),
+        _connection(
+          id: 'quiet',
+          name: 'Quiet Quinn',
+          bondScore: 60,
+          lastContact: now.subtract(const Duration(days: 25)),
+        ),
+      ];
+      final interactions = [
+        CrmInteraction(
+          id: 'i1',
+          contactId: 'touched',
+          type: InteractionType.interaction,
+          title: 'Lunch',
+          note: '',
+          date: now.subtract(const Duration(days: 2)),
+        ),
+      ];
+
+      final ranked = rankRecommendations(
+        connections: connections,
+        interactions: interactions,
+        memories: const {},
+        now: now,
+      );
+
+      expect(ranked.map((r) => r.contactId).toList(), ['quiet']);
+    });
+
+    test('ranks by maintenance need before tier at equal recency', () {
+      const days = 20;
       final connections = [
         _connection(
           id: 'close',
@@ -94,14 +189,38 @@ void main() {
         now: now,
       );
 
-      expect(ranked.map((r) => r.contactId).toList(), [
-        'drifting',
-        'steady',
-        'close',
-      ]);
+      expect(ranked.map((r) => r.contactId).toList(), ['drifting', 'steady']);
     });
 
-    test('24h cooldown filters connections with daysSinceContact < 1', () {
+    test('equal normalized urgency sorts deterministically by contact id', () {
+      final connections = [
+        _connection(
+          id: 'z-family',
+          name: 'Family Fran',
+          category: 'Family',
+          bondScore: 60,
+          lastContact: now.subtract(const Duration(days: 14)),
+        ),
+        _connection(
+          id: 'a-friend',
+          name: 'Friend Alex',
+          category: 'Friends',
+          bondScore: 60,
+          lastContact: now.subtract(const Duration(days: 21)),
+        ),
+      ];
+
+      final ranked = rankRecommendations(
+        connections: connections,
+        interactions: const [],
+        memories: const {},
+        now: now,
+      );
+
+      expect(ranked.map((r) => r.contactId).toList(), ['a-friend', 'z-family']);
+    });
+
+    test('within-rhythm filtering excludes fresh connections', () {
       final connections = [
         _connection(
           id: 'fresh',
@@ -113,7 +232,7 @@ void main() {
           id: 'eligible',
           name: 'Eligible Ed',
           bondScore: 60,
-          lastContact: now.subtract(const Duration(days: 5)),
+          lastContact: now.subtract(const Duration(days: 25)),
         ),
       ];
 
@@ -135,7 +254,7 @@ void main() {
             id: 'c$i',
             name: 'Contact $i',
             bondScore: 40,
-            lastContact: now.subtract(Duration(days: 5 + i)),
+            lastContact: now.subtract(Duration(days: 40 + i)),
           ),
       ];
 
@@ -212,6 +331,26 @@ void main() {
           reason: 'insight must not contain digits: ${rec.insight}',
         );
       }
+    });
+
+    test('ranking does not mutate Bond Score or drift timestamp', () {
+      final driftAppliedAt = now.subtract(const Duration(days: 30));
+      final connection = _connection(
+        id: 'safe',
+        name: 'Safe Sam',
+        bondScore: 40,
+        lastContact: now.subtract(const Duration(days: 45)),
+      ).copyWith(lastBondDriftAppliedAt: driftAppliedAt);
+
+      rankRecommendations(
+        connections: [connection],
+        interactions: const [],
+        memories: const {},
+        now: now,
+      );
+
+      expect(connection.bondScore, 40);
+      expect(connection.lastBondDriftAppliedAt, driftAppliedAt);
     });
 
     test('narrative copy is deterministic for fixed inputs', () {
@@ -304,32 +443,32 @@ void main() {
       }
     });
 
-    test('sample fixture: top 3 ordered by score descending', () {
-      // Mirrors the explicit fixture from the issue spec.
+    test('sample fixture: top 3 ordered by maintenance need descending', () {
+      // Mirrors #094 ranking: need severity first, ratio tie-break.
       final connections = [
         _connection(
           id: 'drifting',
           name: 'Drifting Dana',
           bondScore: 40,
-          lastContact: now.subtract(const Duration(days: 10)), // 15.0
+          lastContact: now.subtract(const Duration(days: 40)), // high
         ),
         _connection(
           id: 'steady',
           name: 'Steady Sam',
           bondScore: 60,
-          lastContact: now.subtract(const Duration(days: 12)), // 12.0
+          lastContact: now.subtract(const Duration(days: 24)), // medium
         ),
         _connection(
           id: 'close',
           name: 'Close Cory',
           bondScore: 90,
-          lastContact: now.subtract(const Duration(days: 14)), // 11.2
+          lastContact: now.subtract(const Duration(days: 28)), // low
         ),
         _connection(
           id: 'recent',
           name: 'Recent Rae',
           bondScore: 60,
-          lastContact: now.subtract(const Duration(hours: 2)), // filtered
+          lastContact: now.subtract(const Duration(hours: 2)), // none
         ),
       ];
 
@@ -366,7 +505,7 @@ void main() {
       id: 'sam',
       name: 'Sam',
       bondScore: 70,
-      lastContact: lastContact ?? now.subtract(const Duration(days: 5)),
+      lastContact: lastContact ?? now.subtract(const Duration(days: 25)),
     );
 
     MemoryDocument memoryWith(
@@ -465,7 +604,7 @@ void main() {
         ),
       );
 
-      // Far-past sam: only the bond-tier ranking should surface.
+      // Far-past Sam: only the Maintenance Need ranking should surface.
       final pastRanked = rankRecommendations(
         connections: [sam()],
         interactions: const [],
@@ -486,7 +625,7 @@ void main() {
       expect(futureRanked.first.reason, isNot(contains('is coming up')));
     });
 
-    test('upcoming card outranks the bond-tier ranking', () {
+    test('upcoming card outranks the Maintenance Need ranking', () {
       // Sam has a fresh post-trip card. Mike is drifting, hasn't been
       // contacted in a long time — normally he'd be the top pick.
       final samMemory = memoryWith(
@@ -560,19 +699,19 @@ void main() {
             id: 'drifting',
             name: 'D',
             bondScore: 30,
-            lastContact: now.subtract(const Duration(days: 10)),
+            lastContact: now.subtract(const Duration(days: 40)),
           ),
           _connection(
             id: 'steady',
             name: 'S',
             bondScore: 60,
-            lastContact: now.subtract(const Duration(days: 12)),
+            lastContact: now.subtract(const Duration(days: 24)),
           ),
           _connection(
             id: 'close',
             name: 'C',
             bondScore: 90,
-            lastContact: now.subtract(const Duration(days: 14)),
+            lastContact: now.subtract(const Duration(days: 28)),
           ),
         ];
         final memories = {

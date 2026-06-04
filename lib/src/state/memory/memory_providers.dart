@@ -220,8 +220,8 @@ class _RecommendationsCache {
   final List<CrmInteraction> interactions;
 }
 
-/// Bond-tier-weighted recency recommendations with PRD Q2 dual
-/// invalidation: recompute when **either** any memory has been saved
+/// Maintenance Need recommendations with PRD Q2 dual invalidation:
+/// recompute when **either** any memory has been saved
 /// since `computedAt` (signalled via [memoryEpochProvider]) **or**
 /// `now - computedAt > recommendationsFreshness`. Otherwise serve
 /// the cached list.
