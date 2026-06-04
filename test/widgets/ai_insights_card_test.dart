@@ -160,6 +160,44 @@ void main() {
       expect(find.text('Future plans'), findsOneWidget);
     });
 
+    testWidgets('initialSelectedTopic opens prepared Topic Suggestions', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          AiInsightsCard(
+            connection: _connection(category: 'Friends'),
+            insight: _insight(),
+            initialSelectedTopic: 'Paris trip',
+            memory: MemoryDocument(
+              contactId: 'test',
+              displayName: 'Test Person',
+              lastUpdated: DateTime.utc(2026, 6, 4),
+              topics: const ['Paris trip'],
+              topicSuggestions: [
+                TopicSuggestionGroup(
+                  topic: 'Paris trip',
+                  suggestions: const [
+                    TopicSuggestion(
+                      kind: TopicSuggestionKind.ask,
+                      text: 'Ask how the Paris plans are coming together.',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Paris trip'), findsWidgets);
+      expect(
+        find.text('Ask how the Paris plans are coming together.'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('tapping a topic pill shows prepared Topic Suggestions', (
       tester,
     ) async {

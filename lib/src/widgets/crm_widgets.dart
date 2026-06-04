@@ -447,6 +447,15 @@ class RecommendationCard extends StatelessWidget {
                   recommendation.insight,
                   style: AppTypography.body(color: tokens.inkMuted),
                 ),
+                if (recommendation.action case final action?) ...[
+                  SizedBox(height: AppSpacing.space2),
+                  Text(
+                    action,
+                    style: AppTypography.body(color: tokens.primary),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
@@ -947,6 +956,7 @@ class AiInsightsCard extends StatefulWidget {
     required this.insight,
     this.memorySummary,
     this.memory,
+    this.initialSelectedTopic,
   });
   final Connection connection;
   final ContactInsight insight;
@@ -960,6 +970,9 @@ class AiInsightsCard extends StatefulWidget {
   /// Topics pill row via `memory.topics` (#043). Null when memory is
   /// still loading or unavailable — falls back to category defaults.
   final MemoryDocument? memory;
+
+  /// Optional topic to select when opening from a topic-aware Home card.
+  final String? initialSelectedTopic;
 
   @override
   State<AiInsightsCard> createState() => _AiInsightsCardState();
@@ -1027,6 +1040,7 @@ class _AiInsightsCardState extends State<AiInsightsCard> {
                       insight: widget.insight,
                       memorySummary: widget.memorySummary,
                       memory: widget.memory,
+                      initialSelectedTopic: widget.initialSelectedTopic,
                       tier: tier,
                       tokens: tokens,
                     ),
@@ -1050,6 +1064,7 @@ class _AiInsightsCardState extends State<AiInsightsCard> {
                         insight: widget.insight,
                         memorySummary: widget.memorySummary,
                         memory: widget.memory,
+                        initialSelectedTopic: widget.initialSelectedTopic,
                         tier: tier,
                         tokens: tokens,
                       ),
@@ -1073,12 +1088,14 @@ class _AiInsightsBody extends StatefulWidget {
     required this.tokens,
     this.memorySummary,
     this.memory,
+    this.initialSelectedTopic,
   });
 
   final Connection connection;
   final ContactInsight insight;
   final String? memorySummary;
   final MemoryDocument? memory;
+  final String? initialSelectedTopic;
   final BondTier tier;
   final AppTokens tokens;
 
@@ -1087,7 +1104,7 @@ class _AiInsightsBody extends StatefulWidget {
 }
 
 class _AiInsightsBodyState extends State<_AiInsightsBody> {
-  String? _selectedTopic;
+  late String? _selectedTopic = widget.initialSelectedTopic;
 
   @override
   Widget build(BuildContext context) {

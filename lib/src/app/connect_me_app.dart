@@ -23,7 +23,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/me', builder: (context, state) => const ProfileScreen()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
       GoRoute(path: '/edit-profile', builder: (context, state) => const EditProfileScreen()),
-      GoRoute(path: '/contact/:id', builder: (context, state) => ContactProfileScreen(contactId: state.pathParameters['id']!)),
+      GoRoute(
+        path: '/contact/:id',
+        builder: (context, state) => ContactProfileScreen(
+          contactId: state.pathParameters['id']!,
+          initialSelectedTopic: state.uri.queryParameters['topic'],
+        ),
+      ),
       GoRoute(path: '/ai-update/:id', builder: (context, state) => AiUpdateScreen(contactId: state.pathParameters['id']!)),
       GoRoute(path: '/recommendations', builder: (context, state) => const RecommendationsScreen()),
     ],

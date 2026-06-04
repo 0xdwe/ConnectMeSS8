@@ -10,7 +10,8 @@ import 'relationship_maintenance_policy.dart';
 ///
 /// Maintenance ranking:
 ///   primary = RelationshipMaintenancePolicy Maintenance Need
-///   tie-break = elapsed / adjusted cadence ratio
+///   tie-break 1 = eligible Topic Suggestion quality boost
+///   tie-break 2 = elapsed / adjusted cadence ratio
 ///   deterministic final tie-break = contact id
 ///   filter MaintenanceNeed.none
 ///   top N = 3
@@ -83,6 +84,10 @@ List<Recommendation> rankRecommendations({
         need: result.maintenanceNeed,
         daysSince: now.difference(result.latestTouchAt).inDays,
         ratio: ratio,
+        topic: _eligibleTopicSuggestion(
+          memory: memories[connection.id],
+          now: now,
+        ),
       ),
     );
   }
@@ -100,6 +105,8 @@ List<Recommendation> rankRecommendations({
 int _compareScored(_Scored a, _Scored b) {
   final need = _needRank(b.need).compareTo(_needRank(a.need));
   if (need != 0) return need;
+  final topic = b.topic.qualityRank.compareTo(a.topic.qualityRank);
+  if (topic != 0) return topic;
   final ratio = b.ratio.compareTo(a.ratio);
   if (ratio != 0) return ratio;
   return a.connection.id.compareTo(b.connection.id);
@@ -119,6 +126,7 @@ class _Scored {
     required this.need,
     required this.daysSince,
     required this.ratio,
+    required this.topic,
   });
 
   final Connection connection;
@@ -126,10 +134,22 @@ class _Scored {
   final MaintenanceNeed need;
   final int daysSince;
   final double ratio;
+  final _TopicRecommendation topic;
 }
 
 Recommendation _toRecommendation(_Scored s) {
   final bucket = _recencyBucket(s.daysSince);
+  final topic = s.topic;
+  if (topic.isEligible) {
+    return Recommendation(
+      contactId: s.connection.id,
+      reason: '${s.connection.name} has ${topic.topic} on their mind.',
+      insight: 'A recent update mentioned ${topic.topic}.',
+      priority: _priorityFor(s.need),
+      topic: topic.topic,
+      action: topic.action,
+    );
+  }
   return Recommendation(
     contactId: s.connection.id,
     reason: _reasonFor(s.tier, s.connection.name),
@@ -137,6 +157,98 @@ Recommendation _toRecommendation(_Scored s) {
     priority: _priorityFor(s.need),
   );
 }
+
+class _TopicRecommendation {
+  const _TopicRecommendation({
+    required this.topic,
+    required this.action,
+    required this.qualityRank,
+  });
+
+  static const none = _TopicRecommendation(
+    topic: '',
+    action: '',
+    qualityRank: 0,
+  );
+
+  final String topic;
+  final String action;
+  final int qualityRank;
+
+  bool get isEligible => qualityRank > 0;
+}
+
+_TopicRecommendation _eligibleTopicSuggestion({
+  required MemoryDocument? memory,
+  required DateTime now,
+}) {
+  if (memory == null) return _TopicRecommendation.none;
+  _TopicRecommendation best = _TopicRecommendation.none;
+  for (final group in memory.topicSuggestions) {
+    final topic = group.topic.trim();
+    if (topic.isEmpty) continue;
+    if (_isExpired(group.expiresAt, now)) continue;
+    final action = _firstPreparedSuggestion(group);
+    if (action == null) continue;
+    final qualityRank = _topicQualityRank(group, memory, now);
+    if (qualityRank > best.qualityRank) {
+      best = _TopicRecommendation(
+        topic: topic,
+        action: action,
+        qualityRank: qualityRank,
+      );
+    }
+  }
+  return best;
+}
+
+String? _firstPreparedSuggestion(TopicSuggestionGroup group) {
+  for (final suggestion in group.suggestions) {
+    final text = suggestion.text.trim();
+    if (text.isNotEmpty) return text;
+  }
+  return null;
+}
+
+int _topicQualityRank(
+  TopicSuggestionGroup group,
+  MemoryDocument memory,
+  DateTime now,
+) {
+  var rank = 0;
+  if (_hasUpcomingTie(group.topic, memory, now)) rank = 3;
+  if (_isRecent(group.lastMentionedAt, now)) rank = rank < 2 ? 2 : rank;
+  if (group.mentionCount >= 2) rank = rank < 1 ? 1 : rank;
+  return rank;
+}
+
+bool _isExpired(DateTime? expiresAt, DateTime now) {
+  if (expiresAt == null) return false;
+  return _day(expiresAt).isBefore(_day(now));
+}
+
+bool _isRecent(DateTime? lastMentionedAt, DateTime now) {
+  if (lastMentionedAt == null) return false;
+  final elapsed = _day(now).difference(_day(lastMentionedAt));
+  return !elapsed.isNegative && elapsed <= const Duration(days: 30);
+}
+
+bool _hasUpcomingTie(String topic, MemoryDocument memory, DateTime now) {
+  final normalizedTopic = topic.trim().toLowerCase();
+  if (normalizedTopic.isEmpty) return false;
+  for (final entry in memory.upcoming) {
+    final effective = entry.endDate ?? entry.startDate;
+    if (_day(effective).isBefore(_day(now))) continue;
+    final description = entry.description.toLowerCase();
+    if (description.contains(normalizedTopic) ||
+        normalizedTopic.contains(description)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 
 /// Coarse recency buckets. Day counts never reach the user.
 String _recencyBucket(int days) {

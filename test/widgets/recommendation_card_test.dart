@@ -69,8 +69,9 @@ void main() {
       expect(bondRing.connection?.id, 'test-1');
     });
 
-    testWidgets('renders conversational headline with bodyLg typography',
-        (tester) async {
+    testWidgets('renders conversational headline with bodyLg typography', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestCard());
 
       final headlineFinder = find.text("Mike's been quiet for a while.");
@@ -82,26 +83,31 @@ void main() {
       expect(headlineWidget.style?.fontWeight, FontWeight.w500);
     });
 
-    testWidgets('renders insight text with body typography and inkMuted color',
-        (tester) async {
-      await tester.pumpWidget(buildTestCard());
+    testWidgets(
+      'renders insight text with body typography and inkMuted color',
+      (tester) async {
+        await tester.pumpWidget(buildTestCard());
 
-      final insightFinder =
-          find.text("It's been about 5 weeks since you talked.");
-      expect(insightFinder, findsOneWidget);
+        final insightFinder = find.text(
+          "It's been about 5 weeks since you talked.",
+        );
+        expect(insightFinder, findsOneWidget);
 
-      // Verify it's using body style (15pt, weight 400)
-      final insightWidget = tester.widget<Text>(insightFinder);
-      expect(insightWidget.style?.fontSize, 15);
-      expect(insightWidget.style?.fontWeight, FontWeight.w400);
-    });
+        // Verify it's using body style (15pt, weight 400)
+        final insightWidget = tester.widget<Text>(insightFinder);
+        expect(insightWidget.style?.fontSize, 15);
+        expect(insightWidget.style?.fontWeight, FontWeight.w400);
+      },
+    );
 
     testWidgets('does NOT render Update Connection button', (tester) async {
       await tester.pumpWidget(buildTestCard());
 
       // Action buttons removed in #029. Whole card is the tap target.
-      expect(find.widgetWithText(FilledButton, 'Update Connection'),
-          findsNothing);
+      expect(
+        find.widgetWithText(FilledButton, 'Update Connection'),
+        findsNothing,
+      );
     });
 
     testWidgets('does NOT render Open profile button', (tester) async {
@@ -170,19 +176,44 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    testWidgets('action buttons removed; whole card is tappable', (tester) async {
+    testWidgets('action buttons removed; whole card is tappable', (
+      tester,
+    ) async {
       var tapped = false;
       await tester.pumpWidget(buildTestCard(onTap: () => tapped = true));
 
       // Action buttons removed in #029.
-      expect(find.widgetWithText(FilledButton, 'Update Connection'),
-          findsNothing);
+      expect(
+        find.widgetWithText(FilledButton, 'Update Connection'),
+        findsNothing,
+      );
       expect(find.widgetWithText(TextButton, 'Open profile'), findsNothing);
 
       // Tapping anywhere on the card still navigates via onTap.
       await tester.tap(find.byType(RecommendationCard));
       await tester.pumpAndSettle();
       expect(tapped, isTrue);
+    });
+
+    testWidgets('renders topic-specific action when present', (tester) async {
+      await tester.pumpWidget(
+        buildTestCard(
+          recommendation: const Recommendation(
+            contactId: 'test-1',
+            reason: 'Mike Chen has Paris trip on their mind.',
+            insight: 'A recent update mentioned Paris trip.',
+            priority: 'medium priority',
+            topic: 'Paris trip',
+            action: 'Ask how the Paris plans are coming together.',
+          ),
+        ),
+      );
+
+      expect(
+        find.text('Ask how the Paris plans are coming together.'),
+        findsOneWidget,
+      );
+      expect(find.text('Paris trip'), findsNothing);
     });
   });
 }
