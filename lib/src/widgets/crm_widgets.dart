@@ -1228,7 +1228,12 @@ class _InlineTopicDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final suggestions = suggestionsForTopic(category, topic, contactName);
+    final suggestions = preferredSuggestionsForTopic(
+      category: category,
+      topic: topic,
+      contactName: contactName,
+      memory: memory,
+    );
     return Container(
       width: double.infinity,
       margin: EdgeInsets.only(top: AppSpacing.space3),
