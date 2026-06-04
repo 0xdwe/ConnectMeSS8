@@ -19,6 +19,7 @@ import 'connections/firebase_connection_store.dart';
 import 'firebase_providers.dart';
 import 'memory/memory_providers.dart';
 import 'planner_event_normalizer.dart';
+import 'relationship_maintenance_policy.dart';
 
 final appControllerProvider = NotifierProvider<AppController, AppState>(
   AppController.new,
@@ -325,6 +326,11 @@ class AppController extends Notifier<AppState> {
   StreamSubscription<Map<String, CrmInteraction>>? _interactionsSub;
   StreamSubscription<Map<String, PlannerEvent>>? _eventsSub;
   StreamSubscription<UserDocSnapshot>? _userDocSub;
+  bool _hasConnectionsSnapshot = false;
+  bool _hasInteractionsSnapshot = false;
+  bool _bondDriftCheckScheduled = false;
+  final Map<String, DateTime> _pendingBondDriftAppliedAtById =
+      <String, DateTime>{};
 
   @override
   AppState build() {
@@ -344,6 +350,10 @@ class AppController extends Notifier<AppState> {
     _interactionsSub = null;
     _eventsSub = null;
     _userDocSub = null;
+    _hasConnectionsSnapshot = false;
+    _hasInteractionsSnapshot = false;
+    _bondDriftCheckScheduled = false;
+    _pendingBondDriftAppliedAtById.clear();
 
     final connectionStore = ref.watch(connectionStoreProvider);
     final interactionStore = ref.watch(interactionStoreProvider);
@@ -368,6 +378,8 @@ class AppController extends Notifier<AppState> {
         // can override with their own InMemory store and rely on
         // its broadcast order.
         state = state.copyWith(connections: snapshot.values.toList());
+        _hasConnectionsSnapshot = true;
+        _scheduleBondDriftCheck();
       },
       onError: (_) {
         // Listener errors leave the last-known-good state in place.
@@ -383,6 +395,8 @@ class AppController extends Notifier<AppState> {
       final values = snapshot.values.toList()
         ..sort((a, b) => b.date.compareTo(a.date));
       state = state.copyWith(interactions: values);
+      _hasInteractionsSnapshot = true;
+      _scheduleBondDriftCheck();
     }, onError: (_) {});
 
     _eventsSub = eventStore.snapshot().listen((snapshot) {
@@ -422,6 +436,50 @@ class AppController extends Notifier<AppState> {
     // unless the test populates it, in which case the snapshot
     // overwrites the seed on the first emission.
     return AppState.seeded();
+  }
+
+  void _scheduleBondDriftCheck() {
+    if (!_hasConnectionsSnapshot || !_hasInteractionsSnapshot) return;
+    if (_bondDriftCheckScheduled) return;
+    _bondDriftCheckScheduled = true;
+    Future(() async {
+      _bondDriftCheckScheduled = false;
+      await _applyEligibleBondDrift();
+    });
+  }
+
+  Future<void> _applyEligibleBondDrift() async {
+    final now = ref.read(clockProvider)();
+    final connectionStore = ref.read(connectionStoreProvider);
+    for (final connection in state.connections) {
+      final pendingAppliedAt = _pendingBondDriftAppliedAtById[connection.id];
+      if (pendingAppliedAt != null) {
+        if (connection.lastBondDriftAppliedAt == pendingAppliedAt) {
+          _pendingBondDriftAppliedAtById.remove(connection.id);
+        } else {
+          continue;
+        }
+      }
+
+      final result = RelationshipMaintenancePolicy.evaluate(
+        connection: connection,
+        interactions: state.interactions,
+        now: now,
+      );
+      if (!result.isBondDriftApplicationEligible) continue;
+      if (result.candidateBondDrift >= 0) continue;
+
+      final updated = connection.copyWith(
+        bondScore: connection.bondScore + result.candidateBondDrift,
+        lastBondDriftAppliedAt: now,
+      );
+      _pendingBondDriftAppliedAtById[connection.id] = now;
+      try {
+        await connectionStore.save(updated);
+      } catch (_) {
+        _pendingBondDriftAppliedAtById.remove(connection.id);
+      }
+    }
   }
 
   void signIn() => state = state.copyWith(isAuthed: true);
@@ -746,7 +804,9 @@ class AppController extends Notifier<AppState> {
       now: DateTime.now(),
     );
 
-    await ref.read(batchedWritesProvider).commitAiUpdate(
+    await ref
+        .read(batchedWritesProvider)
+        .commitAiUpdate(
           interaction: plan.interaction,
           updatedConnection: plan.updatedConnection,
         );
