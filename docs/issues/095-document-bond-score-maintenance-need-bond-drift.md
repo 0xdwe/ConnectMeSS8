@@ -10,12 +10,12 @@ Update project documentation to make the Relationship Graph maintenance concepts
 
 ## Acceptance criteria
 
-- [ ] Update `CONTEXT.md` with glossary entries for Maintenance Need and Bond Drift.
-- [ ] Clarify the Bond Score glossary entry so it is not confused with raw recency or an activity streak.
-- [ ] Document the AppController / policy / Firestore responsibility split for applying Bond Drift.
-- [ ] Document how Recommendation ranking uses Maintenance Need.
-- [ ] Update `progress.md` at closeout, or the relevant PRD/issue closeout notes, with shipped status and deferred follow-ups.
-- [ ] Preserve the anti-shame guardrail in all docs and examples: no numeric day-count shame copy.
+- [x] Update `CONTEXT.md` with glossary entries for Maintenance Need and Bond Drift.
+- [x] Clarify the Bond Score glossary entry so it is not confused with raw recency or an activity streak.
+- [x] Document the AppController / policy / Firestore responsibility split for applying Bond Drift.
+- [x] Document how Recommendation ranking uses Maintenance Need.
+- [x] Update `progress.md` at closeout, or the relevant PRD/issue closeout notes, with shipped status and deferred follow-ups.
+- [x] Preserve the anti-shame guardrail in all docs and examples: no numeric day-count shame copy.
 
 ## Blocked by
 

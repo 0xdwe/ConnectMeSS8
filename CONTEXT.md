@@ -41,10 +41,10 @@ A 0..100 integer on each Connection that represents relationship strength. Store
 A coarse bucketing of Bond Score: close (80..100), steady (50..79), drifting (0..49). Used by `BondRing` for ring color and by relationship-maintenance policy for durability and Bond Drift caps.
 
 ### Maintenance Need
-A derived, not stored, recommendation-urgency signal for a Connection. It compares elapsed time since the latest touch to the Connection's adjusted maintenance cadence. Latest touch is `max(Connection.lastContact, latest CrmInteraction.date for the same Connection)`, falling back to `Connection.lastContact` when no interactions exist. Maintenance Need can rise before Bond Drift applies and never mutates data.
+A derived, not stored, recommendation-urgency signal for a Connection. `RelationshipMaintenancePolicy` computes it by comparing elapsed time since the latest touch to the Connection's adjusted maintenance cadence. Latest touch is `max(Connection.lastContact, latest CrmInteraction.date for the same Connection)`, falling back to `Connection.lastContact` when no interactions exist. Adjusted cadence comes from category cadence plus Bond Score durability. Maintenance Need can rise before Bond Drift applies and never mutates data.
 
 ### Bond Drift
-A bounded Bond Score decrease applied rarely when a Connection is clearly outside its calibrated maintenance rhythm. Bond Drift is bucketed, not continuous, capped at -3 per application, and guarded by `Connection.lastBondDriftAppliedAt` with a 7-day minimum application window. `AppController` is the only application hook; `RecommendationEngine` never mutates state.
+A bounded Bond Score decrease applied rarely when a Connection is clearly outside its calibrated maintenance rhythm. `RelationshipMaintenancePolicy` returns a candidate drift amount; `AppController` is the only hook that applies it after current Connection and CrmInteraction snapshots are loaded. Drift is bucketed, not continuous, capped at -3 per application, clamped so Bond Score never drops below 0, and guarded by `Connection.lastBondDriftAppliedAt` with a 7-day minimum application window. The updated `bondScore` and `lastBondDriftAppliedAt` are saved through `ConnectionStore`; Firestore stores the optional timestamp and rules require it to be a timestamp when present. `RecommendationEngine` never applies Bond Drift or mutates state.
 
 ### AI Update
 The user-level operation "tap Update with AI on a contact, see what changed, accept or cancel." Implemented by the `AiUpdate` interface (Pass 3 §Q1) — one method `run` (purely constructive: returns a result, doesn't write) and one method `commit` (writes memory, then state, all-or-nothing rollback on failure). Today the only adapter is `MockAiUpdate`; Pass 4.3 will add `LlmAiUpdate`.
@@ -52,7 +52,7 @@ The user-level operation "tap Update with AI on a contact, see what changed, acc
 The AI Update flow produces an `AiUpdateResult` value: a new CrmInteraction, an updated MemoryDocument, a bondScore bump.
 
 ### Recommendation
-A "you should reach out to X" card on the home screen. Produced by `RecommendationEngine` (a pure function ranking the live Connection list by bond-tier-weighted recency, top 3, 24h cooldown). Cached via `recommendationsProvider` with dual invalidation (memory change OR 6h elapsed).
+A "you should reach out to X" card on the home screen. Produced by `RecommendationEngine`, a pure function that reads Connections, CrmInteractions, per-contact MemoryDocuments, and `now`; returns up to three cards; and never mutates the Relationship Graph. Upcoming-driven MemoryDocument overlay cards rank first and de-dupe their contacts. Remaining regular cards use Maintenance Need from `RelationshipMaintenancePolicy`: severity first, elapsed/adjusted-cadence ratio second, contact id as the deterministic final tie-break. Connections with `MaintenanceNeed.none` are filtered out. Cached via `recommendationsProvider` with dual invalidation (memory change OR 6h elapsed).
 
 ### Relationship Graph
 The shared shape of (Connections, CrmInteractions, PlannerEvents) — the user's people, their history, and their forward plan. NOT a single data structure; rather, the joint result of three Firestore subcollections that are mutated atomically when their cardinality crosses (e.g. deleteConnection cascades to interactions and events in one batched write).
@@ -93,6 +93,9 @@ Pass 4.5 seam for multi-store atomic writes. Three named operations: `commitDele
 ### `AiUpdate`
 Pass 3 §Q1 carve. The "Update with AI" flow as a single module. Adapters: `MockAiUpdate` (deterministic Pass 3), `LlmAiUpdate` (Pass 4.3, not yet built).
 
+### `RelationshipMaintenancePolicy`
+Pure relationship-maintenance policy module. It accepts a Connection, the current CrmInteractions, and an injected `now`, then returns Bond durability tier, adjusted cadence, latest touch, Maintenance Need, candidate Bond Drift, and drift-window eligibility. It contains cadence/bucket/cap constants from the #090 calibration PRD and performs no persistence.
+
 ### `AppController`
 Currently the umbrella Notifier holding 27 mutating methods. Pass 4.5 made every mutating method write through one of the seams above. AppController itself is NOT a clean seam (the deletion test would mostly redistribute, not concentrate); see `docs/adr/` for any future carve decisions.
 
@@ -106,6 +109,7 @@ After Pass 4.5 (commit `2889b59`):
 - **Cross-instance writes flow in via snapshot listeners.** A write on device A propagates to device B's listener, into the mirror, into AppController state, into the UI.
 - **First-launch initialization is via `ConnectionSeeder`**, not a migration. Sentinels (`*SeededAt`, `migratedFromDiskAt`) gate idempotency.
 - **Multi-store writes are atomic** via `BatchedWrites`. `deleteConnection`, `applyAiUpdateResult`, `removeSampleConnections` all use Firestore `WriteBatch`. On commit failure, AppController state is not advanced.
+- **Relationship maintenance has a strict split.** `RelationshipMaintenancePolicy` derives Maintenance Need and candidate Bond Drift; `RecommendationEngine` uses Maintenance Need for ranking only; `AppController` applies eligible Bond Drift; `ConnectionStore` / Firestore persist the resulting `bondScore` and optional `lastBondDriftAppliedAt` timestamp.
 - **Sign-out is trivial** post-#070. The auth-aware provider rebuild + listener teardown clears state on sign-out; the next sign-in's snapshot listeners refill from Firestore.
 
 ---
