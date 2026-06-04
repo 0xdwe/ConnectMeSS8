@@ -40,8 +40,7 @@ void main() {
     late Directory tempRoot;
 
     setUp(() {
-      tempRoot =
-          Directory.systemTemp.createTempSync('connectme_memory_test_');
+      tempRoot = Directory.systemTemp.createTempSync('connectme_memory_test_');
     });
 
     tearDown(() {
@@ -74,8 +73,7 @@ void main() {
       expect(await store.load('nope'), isNull);
     });
 
-    test('delete removes the file; load after delete returns null',
-        () async {
+    test('delete removes the file; load after delete returns null', () async {
       final store = FileMemoryStore(directoryOverride: tempRoot);
       await store.save(_doc('mike'));
       await store.delete('mike');
@@ -121,30 +119,32 @@ void main() {
       expect(names.where((n) => n.endsWith('.md.tmp')), isEmpty);
     });
 
-    test('an orphan .md.tmp from a previous crash is replaced on save',
-        () async {
-      final store = FileMemoryStore(directoryOverride: tempRoot);
-      // First save creates the memories directory.
-      await store.save(_doc('sarah', summary: 'first'));
+    test(
+      'an orphan .md.tmp from a previous crash is replaced on save',
+      () async {
+        final store = FileMemoryStore(directoryOverride: tempRoot);
+        // First save creates the memories directory.
+        await store.save(_doc('sarah', summary: 'first'));
 
-      final memoriesDir = Directory('${tempRoot.path}/memories');
-      final orphan = File('${memoriesDir.path}/sarah.md.tmp');
-      await orphan.writeAsString('half-written garbage');
+        final memoriesDir = Directory('${tempRoot.path}/memories');
+        final orphan = File('${memoriesDir.path}/sarah.md.tmp');
+        await orphan.writeAsString('half-written garbage');
 
-      // Save overwrites; rename of the new tmp claims the same path.
-      await store.save(_doc('sarah', summary: 'second'));
+        // Save overwrites; rename of the new tmp claims the same path.
+        await store.save(_doc('sarah', summary: 'second'));
 
-      final loaded = await store.load('sarah');
-      expect(loaded!.summary, 'second');
-      // The new save's rename consumes its tmp; the pre-existing
-      // orphan from the manual write was replaced by that rename.
-      final orphans = memoriesDir
-          .listSync()
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.md.tmp'))
-          .toList();
-      expect(orphans, isEmpty);
-    });
+        final loaded = await store.load('sarah');
+        expect(loaded!.summary, 'second');
+        // The new save's rename consumes its tmp; the pre-existing
+        // orphan from the manual write was replaced by that rename.
+        final orphans = memoriesDir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.md.tmp'))
+            .toList();
+        expect(orphans, isEmpty);
+      },
+    );
 
     test('listAll skips files whose parsed contactId is empty', () async {
       final store = FileMemoryStore(directoryOverride: tempRoot);
@@ -152,20 +152,22 @@ void main() {
 
       // Drop a non-memory markdown file alongside the real one.
       final memoriesDir = Directory('${tempRoot.path}/memories');
-      await File('${memoriesDir.path}/garbage.md')
-          .writeAsString('no frontmatter here\n## Summary\nnope\n');
+      await File(
+        '${memoriesDir.path}/garbage.md',
+      ).writeAsString('no frontmatter here\n## Summary\nnope\n');
 
       final all = await store.listAll();
       expect(all.keys, ['sarah']);
     });
 
-    test('64KB cap drops oldest history bullets until the doc fits',
-        () async {
+    test('64KB cap drops oldest history bullets until the doc fits', () async {
       final store = FileMemoryStore(directoryOverride: tempRoot);
       // 100 bullets × ~1KB each = ~100KB of history, well over 64KB.
       final big = _doc('sarah', history: _bulletyHistory(100));
-      final inputBulletCount =
-          big.history.split('\n').where((l) => l.startsWith('- ')).length;
+      final inputBulletCount = big.history
+          .split('\n')
+          .where((l) => l.startsWith('- '))
+          .length;
       expect(inputBulletCount, 100);
 
       await store.save(big);
@@ -177,14 +179,11 @@ void main() {
           .length;
       expect(keptBullets, lessThan(inputBulletCount));
       // The on-disk file fits in the cap.
-      final size = await File(
-              '${tempRoot.path}/memories/sarah.md')
-          .length();
+      final size = await File('${tempRoot.path}/memories/sarah.md').length();
       expect(size, lessThanOrEqualTo(64 * 1024));
     });
 
-    test(
-        '64KB cap throws when no history bullets remain and doc still '
+    test('64KB cap throws when no history bullets remain and doc still '
         'exceeds the cap', () async {
       final store = FileMemoryStore(directoryOverride: tempRoot);
       final hugeSummary = 'x' * (70 * 1024);
@@ -196,34 +195,55 @@ void main() {
       );
     });
 
-    test('cap-dropped save preserves Topics, Summary, Preferences, Upcoming',
-        () async {
-      final store = FileMemoryStore(directoryOverride: tempRoot);
-      final doc = MemoryDocument(
-        contactId: 'sarah',
-        displayName: 'Sarah Chen',
-        lastUpdated: DateTime.utc(2026, 5, 19),
-        summary: 'persistent summary',
-        history: _bulletyHistory(100),
-        preferences: 'texts on weekends',
-        topics: const ['coffee', 'travel'],
-        upcoming: [
-          UpcomingEntry(
-            startDate: DateTime(2026, 6, 1),
-            description: 'birthday',
-          ),
-        ],
-      );
+    test(
+      'cap-dropped save preserves Topics, Summary, Preferences, Upcoming',
+      () async {
+        final store = FileMemoryStore(directoryOverride: tempRoot);
+        final doc = MemoryDocument(
+          contactId: 'sarah',
+          displayName: 'Sarah Chen',
+          lastUpdated: DateTime.utc(2026, 5, 19),
+          summary: 'persistent summary',
+          history: _bulletyHistory(100),
+          preferences: 'texts on weekends',
+          topics: const ['coffee', 'travel'],
+          topicSuggestions: [
+            TopicSuggestionGroup(
+              topic: 'travel',
+              lastMentionedAt: DateTime(2026, 5, 19),
+              mentionCount: 2,
+              suggestions: const [
+                TopicSuggestion(
+                  kind: TopicSuggestionKind.ask,
+                  text: 'Ask how the trip planning is going.',
+                ),
+              ],
+            ),
+          ],
+          upcoming: [
+            UpcomingEntry(
+              startDate: DateTime(2026, 6, 1),
+              description: 'birthday',
+            ),
+          ],
+        );
 
-      await store.save(doc);
-      final loaded = await store.load('sarah');
+        await store.save(doc);
+        final loaded = await store.load('sarah');
 
-      expect(loaded!.summary, 'persistent summary');
-      expect(loaded.preferences, 'texts on weekends');
-      expect(loaded.topics, ['coffee', 'travel']);
-      expect(loaded.upcoming, hasLength(1));
-      expect(loaded.upcoming.first.description, 'birthday');
-    });
+        expect(loaded!.summary, 'persistent summary');
+        expect(loaded.preferences, 'texts on weekends');
+        expect(loaded.topics, ['coffee', 'travel']);
+        expect(loaded.topicSuggestions, hasLength(1));
+        expect(loaded.topicSuggestions.single.topic, 'travel');
+        expect(
+          loaded.topicSuggestions.single.suggestions.single.text,
+          'Ask how the trip planning is going.',
+        );
+        expect(loaded.upcoming, hasLength(1));
+        expect(loaded.upcoming.first.description, 'birthday');
+      },
+    );
   });
 
   group('trimToCap (pure)', () {
@@ -260,8 +280,7 @@ void main() {
       expect(out.history.contains('newest'), isTrue);
     });
 
-    test('throws when no history bullets remain and doc still exceeds cap',
-        () {
+    test('throws when no history bullets remain and doc still exceeds cap', () {
       final doc = MemoryDocument(
         contactId: 'sarah',
         displayName: 'Sarah Chen',
@@ -271,6 +290,53 @@ void main() {
       expect(
         () => trimToCap(doc, capBytes: 100),
         throwsA(isA<MemoryCapExceededException>()),
+      );
+    });
+
+    test('counts Topic Suggestions toward cap and drops oldest history first', () {
+      final history = [
+        '- 2026-05-01 oldest',
+        '- 2026-05-02 middle',
+        '- 2026-05-03 newest',
+      ].join('\n');
+      final doc = MemoryDocument(
+        contactId: 'sarah',
+        displayName: 'Sarah Chen',
+        lastUpdated: DateTime.utc(2026, 5, 19),
+        history: history,
+        topicSuggestions: [
+          TopicSuggestionGroup(
+            topic: 'Paris trip',
+            suggestions: [
+              TopicSuggestion(
+                kind: TopicSuggestionKind.ask,
+                text: 'Ask how planning is going ${'x' * 120}.',
+              ),
+              TopicSuggestion(
+                kind: TopicSuggestionKind.share,
+                text: 'Share a café recommendation ${'y' * 120}.',
+              ),
+              TopicSuggestion(
+                kind: TopicSuggestionKind.plan,
+                text: 'Plan a quick catch-up ${'z' * 120}.',
+              ),
+            ],
+          ),
+        ],
+      );
+      final capThatFitsOnlyNewest = utf8.encode(
+        doc.copyWith(history: '- 2026-05-03 newest').render(),
+      ).length;
+
+      final out = trimToCap(doc, capBytes: capThatFitsOnlyNewest);
+
+      expect(out.topicSuggestions, doc.topicSuggestions);
+      expect(out.history.contains('oldest'), isFalse);
+      expect(out.history.contains('middle'), isFalse);
+      expect(out.history.contains('newest'), isTrue);
+      expect(
+        utf8.encode(out.render()).length,
+        lessThanOrEqualTo(capThatFitsOnlyNewest),
       );
     });
   });

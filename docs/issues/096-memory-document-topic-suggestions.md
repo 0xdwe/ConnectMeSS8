@@ -10,14 +10,14 @@ Extend the `MemoryDocument` model/parser/renderer with a new `Topic Suggestions`
 
 ## Acceptance criteria
 
-- [ ] `MemoryDocument` exposes Topic Suggestions grouped by topic without changing the existing `topics: List<String>` contract.
-- [ ] Each topic group stores `lastMentionedAt`, `mentionCount`, optional `expiresAt`, and up to three suggestions.
-- [ ] Each suggestion stores `kind` (`ask`, `share`, `plan`, `remember`) and `text`.
-- [ ] `MemoryDocument.render()` emits a deterministic `## Topic Suggestions` section after `## Topics` and before `## Upcoming`.
-- [ ] `MemoryDocument.parse()` remains total: malformed metadata or suggestion lines are ignored, not thrown.
-- [ ] Existing memories without the section parse as having no prepared Topic Suggestions.
-- [ ] Existing 64KB cap behavior still trims oldest history first; Topic Suggestions do not bypass the cap.
-- [ ] Unit tests cover round-trip render/parse, missing section, malformed section, cap behavior, and deterministic ordering.
+- [x] `MemoryDocument` exposes Topic Suggestions grouped by topic without changing the existing `topics: List<String>` contract.
+- [x] Each topic group stores `lastMentionedAt`, `mentionCount`, optional `expiresAt`, and up to three suggestions.
+- [x] Each suggestion stores `kind` (`ask`, `share`, `plan`, `remember`) and `text`.
+- [x] `MemoryDocument.render()` emits a deterministic `## Topic Suggestions` section after `## Topics` and before `## Upcoming`.
+- [x] `MemoryDocument.parse()` remains total: malformed metadata or suggestion lines are ignored, not thrown.
+- [x] Existing memories without the section parse as having no prepared Topic Suggestions.
+- [x] Existing 64KB cap behavior still trims oldest history first; Topic Suggestions do not bypass the cap.
+- [x] Unit tests cover round-trip render/parse, missing section, malformed section, cap behavior, and deterministic ordering.
 
 ## Blocked by
 
