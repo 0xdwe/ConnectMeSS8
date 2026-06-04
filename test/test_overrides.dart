@@ -38,7 +38,7 @@ import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 /// `flutter_riverpod` public surface; spreading the list into
 /// `ProviderContainer(overrides: [...])` works either way and
 /// avoids an extra import path.
-List<dynamic> signedInDemoOverrides({String uid = 'demo-uid'}) {
+List<dynamic> headlessStoreOverrides() {
   final connections = InMemoryConnectionStore();
   connections.seedSync(SeederSampleSource.connections());
 
@@ -55,17 +55,6 @@ List<dynamic> signedInDemoOverrides({String uid = 'demo-uid'}) {
     eventStore: events,
   );
   return <dynamic>[
-    firebaseAuthProvider.overrideWithValue(
-      MockFirebaseAuth(
-        signedIn: true,
-        mockUser: MockUser(
-          uid: uid,
-          isAnonymous: false,
-          email: 'demo@example.com',
-          displayName: 'Demo',
-        ),
-      ),
-    ),
     // Pass 4.3 #081: aiUpdateProvider now constructs LlmAiUpdate for
     // signed-in users, which reaches firebaseAiProvider. The real
     // factory boots the SDK against FirebaseApp.instance which is
@@ -79,5 +68,38 @@ List<dynamic> signedInDemoOverrides({String uid = 'demo-uid'}) {
     eventStoreProvider.overrideWithValue(events),
     userDocStoreProvider.overrideWithValue(userDoc),
     batchedWritesProvider.overrideWithValue(batched),
+  ];
+}
+
+List<dynamic> signedOutDemoOverrides({String uid = 'demo-uid'}) {
+  return <dynamic>[
+    firebaseAuthProvider.overrideWithValue(
+      MockFirebaseAuth(
+        mockUser: MockUser(
+          uid: uid,
+          isAnonymous: false,
+          email: 'demo@example.com',
+          displayName: 'Demo',
+        ),
+      ),
+    ),
+    ...headlessStoreOverrides(),
+  ];
+}
+
+List<dynamic> signedInDemoOverrides({String uid = 'demo-uid'}) {
+  return <dynamic>[
+    firebaseAuthProvider.overrideWithValue(
+      MockFirebaseAuth(
+        signedIn: true,
+        mockUser: MockUser(
+          uid: uid,
+          isAnonymous: false,
+          email: 'demo@example.com',
+          displayName: 'Demo',
+        ),
+      ),
+    ),
+    ...headlessStoreOverrides(),
   ];
 }

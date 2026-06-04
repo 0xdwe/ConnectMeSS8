@@ -79,9 +79,13 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
                 constraints: const BoxConstraints(),
               ),
               const SizedBox(width: 8),
-              Text(
-                DateFormat.yMMMM().format(month),
-                style: AppTypography.h1(color: tokens.ink),
+              Expanded(
+                child: Text(
+                  DateFormat.yMMMM().format(month),
+                  style: AppTypography.h1(color: tokens.ink),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               const SizedBox(width: 8),
               IconButton(
@@ -96,7 +100,6 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
-              const Spacer(),
               // Search Action Button
               Container(
                 width: 40,

@@ -1,29 +1,22 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
 import 'package:connect_me/src/state/app_state.dart';
-import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
-import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../test_overrides.dart';
+
 Future<ProviderContainer> _pumpAndSignIn(WidgetTester tester) async {
+  await tester.binding.setSurfaceSize(const Size(800, 1000));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
   // #052: AuthScreen sign-in routes through firebaseAuthProvider; tests
   // override with MockFirebaseAuth so the demo login resolves.
   final container = ProviderContainer(
     overrides: [
+      ...signedOutDemoOverrides(),
       memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
-      firebaseAuthProvider.overrideWithValue(
-        MockFirebaseAuth(
-          mockUser: MockUser(
-            isAnonymous: false,
-            uid: 'demo-uid',
-            email: 'demo@example.com',
-            displayName: 'Demo',
-          ),
-        ),
-      ),
     ],
   );
   addTearDown(container.dispose);
