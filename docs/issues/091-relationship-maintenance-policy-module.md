@@ -10,14 +10,14 @@ Add a pure Relationship Maintenance policy module that calculates Maintenance Ne
 
 ## Acceptance criteria
 
-- [ ] Add a pure module for Relationship Maintenance policy.
-- [ ] Expose a calculation path for Maintenance Need using Connection data, recent CrmInteraction history or latest interaction timestamp, and calibrated policy from #090.
-- [ ] Expose a calculation path for Bond Drift using Connection data, recent CrmInteraction history or latest interaction timestamp, and calibrated policy from #090.
-- [ ] Accept an injected `now`/clock input so tests and callers do not depend on wall-clock time.
-- [ ] Keep the module independent of AppController, Firestore, Firebase Auth, and widget/UI dependencies.
-- [ ] Add table-driven tests covering high-Bond Score durability, lower-Bond Score drift, category cadence differences, no-drift cases, and calibrated application-window boundaries.
-- [ ] Do not persist `lastBondDriftAppliedAt` or mutate Bond Score in this issue.
-- [ ] If the policy returns reason codes, keep them domain-coded rather than user-copy strings; UI copy remains responsible for anti-shame wording.
+- [x] Add a pure module for Relationship Maintenance policy.
+- [x] Expose a calculation path for Maintenance Need using Connection data, recent CrmInteraction history or latest interaction timestamp, and calibrated policy from #090.
+- [x] Expose a calculation path for Bond Drift using Connection data, recent CrmInteraction history or latest interaction timestamp, and calibrated policy from #090.
+- [x] Accept an injected `now`/clock input so tests and callers do not depend on wall-clock time.
+- [x] Keep the module independent of AppController, Firestore, Firebase Auth, and widget/UI dependencies.
+- [x] Add table-driven tests covering high-Bond Score durability, lower-Bond Score drift, category cadence differences, no-drift cases, and calibrated application-window boundaries.
+- [x] Do not persist `lastBondDriftAppliedAt` or mutate Bond Score in this issue.
+- [x] If the policy returns reason codes, keep them domain-coded rather than user-copy strings; UI copy remains responsible for anti-shame wording.
 
 ## Blocked by
 
