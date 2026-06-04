@@ -35,10 +35,16 @@ A per-contact narrative document. Pass 3's central artifact. Markdown with YAML 
 MemoryDocument is the LLM-readable shape of a relationship; CrmInteraction is the timeline event shape; both reference the same Connection.
 
 ### Bond Score
-A 0..100 integer on each Connection that represents relationship strength. Stored, not derived (PRD §Q11 of Pass 4.5). Mutated by `applyAiUpdateResult` using the diminishing-returns curve `floor(interactionDepth × (100 − currentBond) / 160)`, where `interactionDepth` is the LLM's 0..100 judgment of how content-rich the AI Update input was (Pass 4.3 PRD §Q6 / #085). Same input moves a low-bond contact much more than a high-bond contact. The seeded values (95/85/73/68/92) have no derivation rule. The `BondRing` widget visualizes it as a ring with a tier color.
+A 0..100 integer on each Connection that represents relationship strength. Stored, not derived (PRD §Q11 of Pass 4.5). Mutated by `applyAiUpdateResult` using the diminishing-returns curve `floor(interactionDepth × (100 − currentBond) / 160)`, where `interactionDepth` is the LLM's 0..100 judgment of how content-rich the AI Update input was (Pass 4.3 PRD §Q6 / #085). Same input moves a low-bond contact much more than a high-bond contact. The seeded values (95/85/73/68/92) have no derivation rule. Bond Score is not a raw recency counter or activity streak; Relationship Graph maintenance uses separate Maintenance Need and Bond Drift concepts. The `BondRing` widget visualizes it as a ring with a tier color.
 
 ### Bond Tier
-A coarse bucketing of Bond Score for visual purposes: high / medium / low. Used by `BondRing` for ring color and by the recommendation engine for ranking (high-tier connections weight higher).
+A coarse bucketing of Bond Score: close (80..100), steady (50..79), drifting (0..49). Used by `BondRing` for ring color and by relationship-maintenance policy for durability and Bond Drift caps.
+
+### Maintenance Need
+A derived, not stored, recommendation-urgency signal for a Connection. It compares elapsed time since the latest touch to the Connection's adjusted maintenance cadence. Latest touch is `max(Connection.lastContact, latest CrmInteraction.date for the same Connection)`, falling back to `Connection.lastContact` when no interactions exist. Maintenance Need can rise before Bond Drift applies and never mutates data.
+
+### Bond Drift
+A bounded Bond Score decrease applied rarely when a Connection is clearly outside its calibrated maintenance rhythm. Bond Drift is bucketed, not continuous, capped at -3 per application, and guarded by `Connection.lastBondDriftAppliedAt` with a 7-day minimum application window. `AppController` is the only application hook; `RecommendationEngine` never mutates state.
 
 ### AI Update
 The user-level operation "tap Update with AI on a contact, see what changed, accept or cancel." Implemented by the `AiUpdate` interface (Pass 3 §Q1) — one method `run` (purely constructive: returns a result, doesn't write) and one method `commit` (writes memory, then state, all-or-nothing rollback on failure). Today the only adapter is `MockAiUpdate`; Pass 4.3 will add `LlmAiUpdate`.
@@ -107,7 +113,7 @@ After Pass 4.5 (commit `2889b59`):
 ## Anti-patterns / things this codebase deliberately rejects
 
 - **`fake_cloud_firestore`** is forbidden (Pass 4.2 PRD §Q9 + Pass 4.5 PRD §Q9). Headless tests use `InMemory*Store` adapters; emulator tests use the real Firebase emulator.
-- **Numeric day counts in user-visible copy** (Pass 3 anti-shame guardrail): "you haven't talked to Mike in 47 days" is rejected; the recommendation copy is gentler ("Mike could use a check-in").
+- **Numeric overdue/shame copy in proactive nudges** (Pass 3 anti-shame guardrail, refined by #090): recommendation cards must not say "you haven't talked to Mike in 47 days" or frame silence as neglect/decay. The copy is gentler ("Mike could use a check-in"). Neutral elapsed-time facts are allowed on user-pulled detail surfaces such as contact profile (for example, "Last connected: 3 weeks ago") when not framed as guilt.
 - **Background scheduling** is out of scope; Pass 4.4's FCM push will fill that gap. Today, the recommendation cache invalidates on app open or memory change.
 - **`AppUser` is dead code** (PRD Q13 of Pass 4.5). It duplicates `currentUserProvider`. Cleanup is filed but deferred.
 
