@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
 import '../state/firebase_providers.dart';
+import '../state/user_profile/user_profile_service.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
@@ -131,14 +132,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     setState(() => _busy = true);
     try {
-      final cred = await ref
+      await ref
           .read(firebaseAuthProvider)
           .createUserWithEmailAndPassword(email: email, password: password);
-      try {
-        await cred.user?.updateDisplayName(name);
-      } catch (_) {
-        /* ignore */
-      }
+      await ref.read(userProfileServiceProvider).updateDisplayName(name);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -154,6 +151,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           default:
             _signupEmailError = _firebaseAuthMessage(e);
         }
+      });
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _signupEmailError = 'Something went sideways — try again.';
       });
       return;
     }

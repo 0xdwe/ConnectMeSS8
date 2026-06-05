@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/app_state.dart';
+import '../state/user_profile/user_profile_service.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
-import '../widgets/user_avatar.dart';
+import '../widgets/account_avatar.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -16,7 +17,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
     final state = ref.watch(appControllerProvider);
-    final user = state.user;
+    final profile = ref.watch(accountProfileProvider);
     return Scaffold(
       backgroundColor: tokens.surface,
       appBar: AppBar(
@@ -42,20 +43,20 @@ class ProfileScreen extends ConsumerWidget {
             ),
             child: Column(
               children: [
-                UserAvatar(
-                  user: user,
+                AccountAvatar(
+                  profile: profile,
                   radius: 66,
                   glyphSize: 54,
                   backgroundColor: tokens.primaryTint,
                 ),
                 SizedBox(height: AppSpacing.space5),
                 Text(
-                  user.name,
+                  profile?.name ?? 'Your profile',
                   style: AppTypography.display(),
                 ),
                 SizedBox(height: AppSpacing.space3),
                 Text(
-                  user.email,
+                  profile?.email ?? '',
                   style: AppTypography.h2(color: tokens.inkMuted),
                 ),
               ],
