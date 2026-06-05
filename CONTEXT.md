@@ -60,6 +60,9 @@ A prepared, gentle action idea grouped under a MemoryDocument topic. Usually gen
 ### Relationship Graph
 The shared shape of (Connections, CrmInteractions, PlannerEvents) — the user's people, their history, and their forward plan. NOT a single data structure; rather, the joint result of three Firestore subcollections that are mutated atomically when their cardinality crosses (e.g. deleteConnection cascades to interactions and events in one batched write).
 
+### User Profile
+The signed-in user's own account identity shown on the Profile screen. Email is read-only from Firebase Auth. Display name is Firebase Auth `displayName`. Profile photo is uploaded to Firebase Storage under the user's own namespace and exposed through Firebase Auth `photoURL`. User Profile is distinct from a Connection and should not revive the legacy `AppUser` model as a durable source of truth.
+
 ---
 
 ## Architectural terms

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Active [FirebaseAuth] instance (Pass 4.1, #052).
@@ -25,6 +26,11 @@ final firebaseAuthProvider = Provider<FirebaseAuth>(
 /// having to reach for `FirebaseFirestore.instance` directly.
 final firestoreProvider = Provider<FirebaseFirestore>(
   (ref) => FirebaseFirestore.instance,
+);
+
+/// Active [FirebaseStorage] instance for user-uploaded profile photos.
+final firebaseStorageProvider = Provider<FirebaseStorage>(
+  (ref) => FirebaseStorage.instance,
 );
 
 /// Enables Firestore's local-disk persistent cache so writes issued

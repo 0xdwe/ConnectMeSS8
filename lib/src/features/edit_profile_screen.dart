@@ -1,15 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../models/social_models.dart';
-import '../state/app_state.dart';
+import '../state/user_profile/user_profile_service.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/crm_widgets.dart';
-import '../widgets/user_avatar.dart';
+import '../widgets/account_avatar.dart';
 
 /// A premium, full-page route that handles editing user profile details
 /// including name, email, and advanced avatar configuration (Emoji/Photo).
@@ -33,22 +34,18 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
-  late final name = TextEditingController(
-    text: ref.read(appControllerProvider).user.name,
-  );
-  late final email = TextEditingController(
-    text: ref.read(appControllerProvider).user.email,
-  );
-  late final avatar = TextEditingController(
-    text: ref.read(appControllerProvider).user.avatar,
-  );
-  late AvatarKind avatarKind = ref.read(appControllerProvider).user.avatarKind;
+  late final AccountProfile? _initialProfile = ref.read(accountProfileProvider);
+  late final name = TextEditingController(text: _initialProfile?.name ?? '');
+  late final email = TextEditingController(text: _initialProfile?.email ?? '');
+  File? _pickedAvatar;
+  bool _removePhoto = false;
+  bool _saving = false;
+  String? _nameError;
 
   @override
   void dispose() {
     name.dispose();
     email.dispose();
-    avatar.dispose();
     super.dispose();
   }
 
@@ -63,8 +60,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       );
       if (image != null) {
         setState(() {
-          avatar.text = image.path;
-          avatarKind = AvatarKind.image;
+          _pickedAvatar = File(image.path);
+          _removePhoto = false;
         });
       }
     } catch (e) {
@@ -112,25 +109,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 },
               ),
               ListTile(
-                leading: Icon(
-                  Icons.emoji_emotions_outlined,
-                  color: tokens.secondary,
-                ),
-                title: Text(
-                  'Use Emoji',
-                  style: AppTypography.body(color: tokens.ink),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  setState(() {
-                    avatarKind = AvatarKind.emoji;
-                    if (avatar.text.isEmpty || avatar.text.length > 2) {
-                      avatar.text = '👤';
-                    }
-                  });
-                },
-              ),
-              ListTile(
                 leading: Icon(Icons.delete_outline, color: tokens.danger),
                 title: Text(
                   'Remove Photo',
@@ -139,8 +117,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 onTap: () {
                   Navigator.pop(context);
                   setState(() {
-                    avatarKind = AvatarKind.emoji;
-                    avatar.text = '👤';
+                    _pickedAvatar = null;
+                    _removePhoto = true;
                   });
                 },
               ),
@@ -151,27 +129,46 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 
-  void _saveChanges() {
-    ref
-        .read(appControllerProvider.notifier)
-        .updateUser(
-          name: name.text,
-          email: email.text,
-          avatar: avatar.text,
-          avatarKind: avatarKind,
-        );
-    Navigator.of(context).pop();
+  Future<void> _saveChanges() async {
+    final trimmedName = name.text.trim();
+    if (trimmedName.isEmpty) {
+      setState(() => _nameError = 'Enter your name');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _nameError = null;
+    });
+    try {
+      final service = ref.read(userProfileServiceProvider);
+      if (_pickedAvatar != null) {
+        await service.uploadAvatarAndUpdatePhotoUrl(_pickedAvatar!);
+      } else if (_removePhoto) {
+        await service.removeAvatar();
+      }
+      await service.updateDisplayName(trimmedName);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Couldn’t update profile. Try again.')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    final userMock = AppUser(
-      name: name.text,
+    final previewProfile = AccountProfile(
+      uid: _initialProfile?.uid ?? '',
       email: email.text,
-      avatar: avatar.text,
-      avatarKind: avatarKind,
+      name: name.text.trim().isEmpty
+          ? (_initialProfile?.name ?? '')
+          : name.text.trim(),
+      photoUrl: _removePhoto ? null : _initialProfile?.photoUrl,
     );
 
     return Scaffold(
@@ -214,7 +211,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   color: tokens.primary,
                   size: 18,
                 ),
-                onPressed: _saveChanges,
+                onPressed: _saving ? null : _saveChanges,
                 padding: EdgeInsets.zero,
               ),
             ),
@@ -245,11 +242,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           width: 4,
                         ),
                       ),
-                      child: UserAvatar(
-                        user: userMock,
+                      child: AccountAvatar(
+                        profile: previewProfile,
                         radius: 64,
                         glyphSize: 48,
                         backgroundColor: tokens.primaryTint,
+                        localImage: _pickedAvatar == null
+                            ? null
+                            : FileImage(_pickedAvatar!),
                       ),
                     ),
                     Positioned(
@@ -297,8 +297,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 child: OutlinedButton(
                   onPressed: () {
                     setState(() {
-                      avatarKind = AvatarKind.emoji;
-                      avatar.text = '👤';
+                      _pickedAvatar = null;
+                      _removePhoto = true;
                     });
                   },
                   style: OutlinedButton.styleFrom(
@@ -341,15 +341,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           ),
                     ),
                     TextField(
+                      key: const Key('profile-name-field'),
                       controller: name,
+                      onChanged: (_) => setState(() => _nameError = null),
                       style: AppTypography.body(
                         color: tokens.ink,
                       ).copyWith(fontSize: 16, fontWeight: FontWeight.w600),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Name',
+                        errorText: _nameError,
                         border: InputBorder.none,
                         isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -365,9 +368,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           ),
                     ),
                     TextField(
+                      key: const Key('profile-email-field'),
                       controller: email,
+                      readOnly: true,
                       style: AppTypography.body(
-                        color: tokens.ink,
+                        color: tokens.inkMuted,
                       ).copyWith(fontSize: 16, fontWeight: FontWeight.w600),
                       decoration: const InputDecoration(
                         labelText: 'Email',
@@ -424,9 +429,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             borderRadius: BorderRadius.circular(30),
                           ),
                         ),
-                        onPressed: _saveChanges,
+                        key: const Key('profile-save-button'),
+                        onPressed: _saving ? null : _saveChanges,
                         child: Text(
-                          'Save Changes',
+                          _saving ? 'Saving…' : 'Save Changes',
                           style: AppTypography.body(
                             color: Colors.white,
                           ).copyWith(fontWeight: FontWeight.w600),
