@@ -439,6 +439,23 @@ void main() {
   });
 
   group('Calendar layout regressions', () {
+    testWidgets('month navigation arrows stay grouped with month name', (
+      tester,
+    ) async {
+      final today = DateTime(2026, 6, 12);
+      await _pumpPlanner(tester, now: today, events: const []);
+
+      final monthRect = tester.getRect(find.text('June'));
+      final previousRect = tester.getRect(find.byIcon(Icons.chevron_left));
+      final nextRect = tester.getRect(find.byIcon(Icons.chevron_right));
+      final searchRect = tester.getRect(find.byIcon(Icons.search));
+
+      expect(previousRect.right, lessThan(monthRect.left));
+      expect(monthRect.right, lessThan(nextRect.left));
+      expect(nextRect.left - monthRect.left, lessThanOrEqualTo(160));
+      expect(nextRect.right, lessThan(searchRect.left));
+    });
+
     testWidgets('day cells with events do not overflow at narrow phone width', (
       tester,
     ) async {
