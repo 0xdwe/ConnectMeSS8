@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -442,9 +444,15 @@ void main() {
     testWidgets('month navigation arrows stay grouped with month name', (
       tester,
     ) async {
+      tester.view.physicalSize = const Size(360 * 2, 800 * 2);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       final today = DateTime(2026, 5, 12);
       await _pumpPlanner(tester, now: today, events: const []);
 
+      final mayMonthRect = tester.getRect(find.text('May'));
       final mayPreviousRect = tester.getRect(find.byIcon(Icons.chevron_left));
       final mayNextRect = tester.getRect(
         find.byIcon(Icons.chevron_right).first,
@@ -464,9 +472,19 @@ void main() {
         find.byIcon(Icons.chevron_right).first,
       );
       final searchRect = tester.getRect(find.byIcon(Icons.search));
+      final monthSlotRect = tester.getRect(
+        find.byKey(const Key('planner-month-label')),
+      );
+      final monthText = tester.widget<Text>(find.text('September'));
+      final monthPainter = TextPainter(
+        text: TextSpan(text: 'September', style: monthText.style),
+        textDirection: ui.TextDirection.ltr,
+      )..layout();
 
       expect(septemberPreviousRect.left, closeTo(mayPreviousRect.left, 0.1));
       expect(septemberNextRect.left, closeTo(mayNextRect.left, 0.1));
+      expect(monthRect.height, closeTo(mayMonthRect.height, 0.1));
+      expect(monthPainter.width, lessThanOrEqualTo(monthSlotRect.width));
       expect(septemberPreviousRect.right, lessThan(monthRect.left));
       expect(monthRect.right, lessThan(septemberNextRect.left));
       expect(septemberNextRect.right, lessThan(searchRect.left));

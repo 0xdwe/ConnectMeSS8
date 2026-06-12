@@ -40,8 +40,9 @@ clear, predictable effect on the event list.
 - The header shows only the month name, without the year, to keep it compact on
   narrow screens.
 - The month name occupies a fixed-width centered slot so the previous and next
-  controls do not move when month-name length changes. Longer names scale down
-  within the slot instead of being clipped.
+  controls do not move when month-name length changes.
+- Every English month uses the same 21pt heading style. The slot is wide enough
+  for the longest month name, so text is neither scaled nor clipped.
 - Flexible space remains between month navigation and the search/add actions.
 
 ## Implementation

@@ -95,14 +95,14 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
               ),
               const SizedBox(width: 8),
               SizedBox(
-                width: 104,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    DateFormat.MMMM().format(month),
-                    style: AppTypography.h1(color: tokens.ink),
-                    maxLines: 1,
-                  ),
+                key: const Key('planner-month-label'),
+                width: 112,
+                child: Text(
+                  DateFormat.MMMM().format(month),
+                  style: AppTypography.h2(color: tokens.ink),
+                  maxLines: 1,
+                  softWrap: false,
+                  textAlign: TextAlign.center,
                 ),
               ),
               const SizedBox(width: 8),
