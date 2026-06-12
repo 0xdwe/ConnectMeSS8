@@ -12,6 +12,7 @@ import '../features/settings_screen.dart';
 import '../features/shell_screen.dart';
 import '../state/app_state.dart';
 import '../state/memory/memory_providers.dart';
+import '../state/notifications/notification_providers.dart';
 import '../theme/app_theme.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -21,8 +22,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
       GoRoute(path: '/app', builder: (context, state) => const ShellScreen()),
       GoRoute(path: '/me', builder: (context, state) => const ProfileScreen()),
-      GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
-      GoRoute(path: '/edit-profile', builder: (context, state) => const EditProfileScreen()),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/edit-profile',
+        builder: (context, state) => const EditProfileScreen(),
+      ),
       GoRoute(
         path: '/contact/:id',
         builder: (context, state) => ContactProfileScreen(
@@ -30,8 +37,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           initialSelectedTopic: state.uri.queryParameters['topic'],
         ),
       ),
-      GoRoute(path: '/ai-update/:id', builder: (context, state) => AiUpdateScreen(contactId: state.pathParameters['id']!)),
-      GoRoute(path: '/recommendations', builder: (context, state) => const RecommendationsScreen()),
+      GoRoute(
+        path: '/ai-update/:id',
+        builder: (context, state) =>
+            AiUpdateScreen(contactId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/recommendations',
+        builder: (context, state) => const RecommendationsScreen(),
+      ),
     ],
   );
 });
@@ -48,6 +62,8 @@ class ConnectMeApp extends ConsumerWidget {
     // override memoryStoreProvider with a pre-populated store, which
     // makes the seeding a no-op.
     final seeding = ref.watch(memorySeedingProvider);
+    ref.watch(notificationLifecycleProvider);
+    ref.watch(notificationSyncProvider);
     return MaterialApp.router(
       title: 'Connect Me',
       debugShowCheckedModeBanner: false,

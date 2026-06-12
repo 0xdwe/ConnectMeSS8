@@ -85,6 +85,37 @@ function userDocRef(db, uid) {
   return doc(db, 'users', uid);
 }
 
+function notificationTokenDocRef(db, uid, tokenHash = 'token-hash') {
+  return doc(db, 'users', uid, 'notificationTokens', tokenHash);
+}
+
+function wellFormedNotificationPreferences(overrides = {}) {
+  return {
+    enabled: true,
+    suggestedCheckIns: true,
+    plannerReminders: true,
+    birthdayReminders: true,
+    defaultReminderMinutes: 60,
+    quietHoursEnabled: true,
+    quietStartMinutes: 1320,
+    quietEndMinutes: 480,
+    timeZone: 'Asia/Taipei',
+    schemaVersion: 1,
+    ...overrides,
+  };
+}
+
+function wellFormedNotificationToken(overrides = {}) {
+  return {
+    token: 'fcm-token-value',
+    platform: 'android',
+    timeZone: 'Asia/Taipei',
+    updatedAt: Timestamp.fromDate(new Date('2026-06-12T00:00:00Z')),
+    schemaVersion: 1,
+    ...overrides,
+  };
+}
+
 function wellFormedUserDoc(overrides = {}) {
   return {
     migratedFromDiskAt: Timestamp.fromDate(new Date('2026-05-24T00:00:00Z')),
@@ -351,6 +382,68 @@ describe('users/{uid} — sentinel ownership', () => {
   test('owner cannot delete their own user doc (locked)', async () => {
     await seedUserDoc(ALICE);
     await assertFails(deleteDoc(userDocRef(authedDb(ALICE), ALICE)));
+  });
+
+  test('owner can persist a well-formed notification preferences map', async () => {
+    await assertSucceeds(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        notificationPreferences: wellFormedNotificationPreferences(),
+      }),
+    );
+  });
+
+  test('owner cannot persist malformed notification preferences', async () => {
+    await assertFails(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        notificationPreferences: wellFormedNotificationPreferences({
+          defaultReminderMinutes: 99,
+        }),
+      }),
+    );
+  });
+});
+
+describe('users/{uid}/notificationTokens/{tokenHash}', () => {
+  test('owner can create, read, and delete a well-formed token', async () => {
+    const tokenHash = 'abc123';
+    const db = () => authedDb(ALICE);
+    await assertSucceeds(
+      setDoc(
+        notificationTokenDocRef(db(), ALICE, tokenHash),
+        wellFormedNotificationToken(),
+      ),
+    );
+    await assertSucceeds(
+      getDoc(notificationTokenDocRef(db(), ALICE, tokenHash)),
+    );
+    await assertSucceeds(
+      deleteDoc(notificationTokenDocRef(db(), ALICE, tokenHash)),
+    );
+  });
+
+  test('another user and an anonymous caller are denied', async () => {
+    const refFor = (db) => notificationTokenDocRef(db, ALICE, 'abc123');
+    await assertFails(
+      setDoc(refFor(authedDb(BOB)), wellFormedNotificationToken()),
+    );
+    await assertFails(
+      setDoc(refFor(anonDb()), wellFormedNotificationToken()),
+    );
+  });
+
+  test('owner cannot write an unknown platform or extra field', async () => {
+    await assertFails(
+      setDoc(
+        notificationTokenDocRef(authedDb(ALICE), ALICE),
+        wellFormedNotificationToken({ platform: 'windows' }),
+      ),
+    );
+    await assertFails(
+      setDoc(
+        notificationTokenDocRef(authedDb(ALICE), ALICE),
+        wellFormedNotificationToken({ extra: true }),
+      ),
+    );
   });
 });
 
