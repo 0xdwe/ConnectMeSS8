@@ -94,11 +94,16 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
                 constraints: const BoxConstraints(),
               ),
               const SizedBox(width: 8),
-              Text(
-                DateFormat.MMMM().format(month),
-                style: AppTypography.h1(color: tokens.ink),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              SizedBox(
+                width: 104,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    DateFormat.MMMM().format(month),
+                    style: AppTypography.h1(color: tokens.ink),
+                    maxLines: 1,
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
               IconButton(

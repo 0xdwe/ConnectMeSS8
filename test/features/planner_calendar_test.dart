@@ -442,18 +442,34 @@ void main() {
     testWidgets('month navigation arrows stay grouped with month name', (
       tester,
     ) async {
-      final today = DateTime(2026, 6, 12);
+      final today = DateTime(2026, 5, 12);
       await _pumpPlanner(tester, now: today, events: const []);
 
-      final monthRect = tester.getRect(find.text('June'));
-      final previousRect = tester.getRect(find.byIcon(Icons.chevron_left));
-      final nextRect = tester.getRect(find.byIcon(Icons.chevron_right));
+      final mayPreviousRect = tester.getRect(find.byIcon(Icons.chevron_left));
+      final mayNextRect = tester.getRect(
+        find.byIcon(Icons.chevron_right).first,
+      );
+
+      for (var i = 0; i < 4; i++) {
+        await tester.tap(find.byIcon(Icons.chevron_right).first);
+        await tester.pumpAndSettle();
+      }
+
+      expect(find.text('September'), findsOneWidget);
+      final monthRect = tester.getRect(find.text('September'));
+      final septemberPreviousRect = tester.getRect(
+        find.byIcon(Icons.chevron_left),
+      );
+      final septemberNextRect = tester.getRect(
+        find.byIcon(Icons.chevron_right).first,
+      );
       final searchRect = tester.getRect(find.byIcon(Icons.search));
 
-      expect(previousRect.right, lessThan(monthRect.left));
-      expect(monthRect.right, lessThan(nextRect.left));
-      expect(nextRect.left - monthRect.left, lessThanOrEqualTo(160));
-      expect(nextRect.right, lessThan(searchRect.left));
+      expect(septemberPreviousRect.left, closeTo(mayPreviousRect.left, 0.1));
+      expect(septemberNextRect.left, closeTo(mayNextRect.left, 0.1));
+      expect(septemberPreviousRect.right, lessThan(monthRect.left));
+      expect(monthRect.right, lessThan(septemberNextRect.left));
+      expect(septemberNextRect.right, lessThan(searchRect.left));
     });
 
     testWidgets('day cells with events do not overflow at narrow phone width', (

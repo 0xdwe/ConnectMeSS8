@@ -39,8 +39,10 @@ clear, predictable effect on the event list.
 - They do not alter the selected date or event-list mode.
 - The header shows only the month name, without the year, to keep it compact on
   narrow screens.
-- The previous and next controls remain grouped beside the month name, with
-  flexible space before the search and add actions.
+- The month name occupies a fixed-width centered slot so the previous and next
+  controls do not move when month-name length changes. Longer names scale down
+  within the slot instead of being clipped.
+- Flexible space remains between month navigation and the search/add actions.
 
 ## Implementation
 
