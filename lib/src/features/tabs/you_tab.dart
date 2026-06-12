@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../models/social_models.dart';
 import '../../state/app_state.dart';
+import '../../state/user_profile/user_profile_service.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/account_avatar.dart';
 import '../../widgets/crm_widgets.dart';
-import '../../widgets/user_avatar.dart';
 import '../edit_profile_screen.dart';
 
 class YouTab extends ConsumerWidget {
@@ -18,14 +18,14 @@ class YouTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
     final state = ref.watch(appControllerProvider);
-    final user = state.user;
+    final profile = ref.watch(accountProfileProvider);
 
     return ListView(
       key: const Key('you-tab'),
       padding: EdgeInsets.only(bottom: AppSpacing.pageBottomPadding),
       children: [
         _YouHero(
-          user: user,
+          profile: profile,
           onEditProfile: () => EditProfileScreen.navigateTo(context),
           onSettings: () => context.push('/settings'),
         ),
@@ -81,12 +81,12 @@ class YouTab extends ConsumerWidget {
 
 class _YouHero extends StatelessWidget {
   const _YouHero({
-    required this.user,
+    required this.profile,
     required this.onEditProfile,
     required this.onSettings,
   });
 
-  final AppUser user;
+  final AccountProfile? profile;
   final VoidCallback onEditProfile;
   final VoidCallback onSettings;
 
@@ -125,8 +125,8 @@ class _YouHero extends StatelessWidget {
                     width: 3,
                   ),
                 ),
-                child: UserAvatar(
-                  user: user,
+                child: AccountAvatar(
+                  profile: profile,
                   radius: 50,
                   glyphSize: 42,
                   backgroundColor: tokens.primaryTint,
@@ -157,13 +157,13 @@ class _YouHero extends StatelessWidget {
           ),
           SizedBox(height: AppSpacing.space4),
           Text(
-            user.name,
+            profile?.name ?? 'Your profile',
             textAlign: TextAlign.center,
             style: AppTypography.h1(color: Colors.white),
           ),
           SizedBox(height: AppSpacing.space1),
           Text(
-            user.email,
+            profile?.email ?? '',
             textAlign: TextAlign.center,
             style: AppTypography.bodyLg(
               color: Colors.white.withValues(alpha: .9),

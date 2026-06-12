@@ -148,6 +148,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       }
       await service.updateDisplayName(trimmedName);
       if (!mounted) return;
+      ref.invalidate(accountProfileProvider);
       Navigator.of(context).pop();
     } catch (_) {
       if (!mounted) return;
