@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Open Plan on the current date, filter explicit date selections to one day, provide a visible Today reset, and identify selected past dates neutrally.
+**Goal:** Open Plan on the current date, filter explicit date selections to one day, keep the month header compact, and identify selected past dates neutrally.
 
 **Architecture:** Keep the behavior local to `PlannerTab`. Add an injectable clock callback to make date-sensitive widget tests deterministic, and track whether the selected date came from the default state or an explicit calendar tap. Reuse the existing event grouping and calendar components.
 
@@ -21,21 +21,17 @@ Create a helper that pumps `PlannerTab(now: () => fixedNow)` inside the app them
 
 - [ ] **Step 2: Add failing default-state coverage**
 
-Assert that a fixed June 12, 2026 clock displays `June 2026`, `Today & Upcoming`, and both a today event and a future event.
+Assert that a fixed June 12, 2026 clock displays `June`, `Today & Upcoming`, and both a today event and a future event.
 
 - [ ] **Step 3: Add failing explicit-selection coverage**
 
 Tap a future date and assert that the heading changes to the formatted date, only that date’s event remains, and unrelated future events disappear.
 
-- [ ] **Step 4: Add failing Today-reset coverage**
-
-After selecting another date, tap the `Today` button and assert that the calendar and event list return to `Today & Upcoming`.
-
-- [ ] **Step 5: Add failing past-date and empty-state coverage**
+- [ ] **Step 4: Add failing past-date and empty-state coverage**
 
 Select a past date and assert that `Past date` appears. Select a date without events and assert `No events planned for this date.`
 
-- [ ] **Step 6: Run the focused tests and confirm RED**
+- [ ] **Step 5: Run the focused tests and confirm RED**
 
 Run:
 
@@ -43,7 +39,7 @@ Run:
 flutter test test/features/planner_calendar_test.dart
 ```
 
-Expected: the new tests fail because Plan is still initialized to April 2026, has no Today reset, and filters selected dates as selected-and-later.
+Expected: the new tests fail because Plan is still initialized to April 2026, renders a long month-and-year heading, and filters selected dates as selected-and-later.
 
 ### Task 2: Implement current-date initialization and explicit date filtering
 
@@ -56,15 +52,15 @@ Add an optional `DateTime Function()? now` to `PlannerTab`. In `initState`, norm
 
 - [ ] **Step 2: Track default versus explicit selection mode**
 
-Add a boolean such as `_hasExplicitDateSelection`. Default it to `false`, set it to `true` on a calendar tap, and reset it to `false` through the Today button.
+Add a boolean such as `_hasExplicitDateSelection`. Default it to `false` and set it to `true` on a calendar tap.
 
 - [ ] **Step 3: Apply the two filtering modes**
 
 When `_hasExplicitDateSelection` is false, include events on or after today. When true, include only events where `DateUtils.isSameDay(event.date, selected)`.
 
-- [ ] **Step 4: Add the Today button and contextual event heading**
+- [ ] **Step 4: Add the compact month and contextual event headings**
 
-Place a compact text button in the existing calendar header. Its handler recalculates today, updates month and selected date, and exits explicit selection mode. Render `Today & Upcoming` in default mode or `DateFormat('EEEE, MMMM d')` in explicit mode.
+Render only `DateFormat.MMMM()` in the calendar header. Render `Today & Upcoming` in default mode or `DateFormat('EEEE, MMMM d')` in explicit mode.
 
 - [ ] **Step 5: Add neutral past-date treatment**
 

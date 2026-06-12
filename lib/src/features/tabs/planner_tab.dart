@@ -96,7 +96,7 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  DateFormat.yMMMM().format(month),
+                  DateFormat.MMMM().format(month),
                   style: AppTypography.h1(color: tokens.ink),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -114,23 +114,6 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
                 ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-              ),
-              TextButton(
-                key: const Key('planner-today-button'),
-                onPressed: () {
-                  final today = _today();
-                  setState(() {
-                    month = DateTime(today.year, today.month);
-                    selected = today;
-                    _hasExplicitDateSelection = false;
-                  });
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: tokens.primary,
-                  minimumSize: const Size(48, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                ),
-                child: const Text('Today'),
               ),
               // Search Action Button
               Container(

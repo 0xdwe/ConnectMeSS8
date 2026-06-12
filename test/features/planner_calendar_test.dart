@@ -178,7 +178,9 @@ void main() {
         ],
       );
 
-      expect(find.text(DateFormat.yMMMM().format(today)), findsOneWidget);
+      expect(find.text(DateFormat.MMMM().format(today)), findsOneWidget);
+      expect(find.text(DateFormat.yMMMM().format(today)), findsNothing);
+      expect(find.byKey(const Key('planner-today-button')), findsNothing);
       expect(find.text('Today & Upcoming'), findsOneWidget);
       expect(find.text('Today event'), findsOneWidget);
       await _scrollPlannerTo(tester, 'Future event');
@@ -213,32 +215,6 @@ void main() {
       );
       expect(find.text('Selected date event'), findsOneWidget);
       expect(find.text('Later event should stay hidden'), findsNothing);
-    });
-
-    testWidgets('Today button restores today and upcoming mode', (
-      tester,
-    ) async {
-      final today = DateTime(2026, 6, 12);
-      final selectedDate = today.add(const Duration(days: 1));
-      await _pumpPlanner(
-        tester,
-        now: today,
-        events: [
-          _event('today', 'Today event', today),
-          _event('selected', 'Selected date event', selectedDate),
-        ],
-      );
-
-      await tester.tap(_calendarCellFor(today, selectedDate));
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(TextButton, 'Today'));
-      await tester.pumpAndSettle();
-
-      expect(find.text(DateFormat.yMMMM().format(today)), findsOneWidget);
-      expect(find.text('Today & Upcoming'), findsOneWidget);
-      expect(find.text('Today event'), findsOneWidget);
-      await _scrollPlannerTo(tester, 'Selected date event');
-      expect(find.text('Selected date event'), findsOneWidget);
     });
 
     testWidgets('tapping today filters to today only', (tester) async {

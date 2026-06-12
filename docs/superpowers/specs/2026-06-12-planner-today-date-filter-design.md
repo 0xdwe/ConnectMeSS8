@@ -25,15 +25,6 @@ clear, predictable effect on the event list.
   only today’s events.
 - A selected date with no events shows `No events planned for this date.`
 
-### Returning to today
-
-- A visible `Today` button appears in the calendar header.
-- Tapping it returns the calendar to the current month, selects today, and exits
-  the explicit date filter.
-- The event list returns to `Today & Upcoming`.
-- The current date is recalculated when the button is tapped so a long-running
-  app can cross midnight correctly.
-
 ### Past-date context
 
 - Past dates remain selectable.
@@ -46,7 +37,8 @@ clear, predictable effect on the event list.
 
 - Previous/next month controls only change the visible calendar month.
 - They do not alter the selected date or event-list mode.
-- The `Today` button is the explicit reset path.
+- The header shows only the month name, without the year, to keep it compact on
+  narrow screens.
 
 ## Implementation
 
@@ -66,7 +58,6 @@ Targeted widget tests cover:
 - current month and today on initial entry
 - default today-and-upcoming mode
 - explicit date selection showing only that date
-- `Today` restoring default mode
 - selected past-date indicator and neutral styling
 - selected-date empty state
 
