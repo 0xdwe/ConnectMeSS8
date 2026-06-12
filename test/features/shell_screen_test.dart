@@ -1,6 +1,7 @@
 import 'package:connect_me/src/features/shell_screen.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
+import 'package:connect_me/src/state/user_profile/user_profile_service.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,15 +10,26 @@ import 'package:go_router/go_router.dart';
 
 import '../test_overrides.dart';
 
+List<dynamic> _shellOverrides() {
+  return [
+    ...signedInDemoOverrides(),
+    accountProfileProvider.overrideWithValue(
+      const AccountProfile(
+        uid: 'demo-uid',
+        email: 'demo@example.com',
+        name: 'Demo',
+      ),
+    ),
+    memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+  ];
+}
+
 void main() {
   group('ShellScreen bottom navigation', () {
     testWidgets('bottom nav shows Home, People, Plan, and You', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            ...signedInDemoOverrides(),
-            memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
-          ],
+          overrides: [..._shellOverrides()],
           child: MaterialApp(
             theme: AppTheme.data(false),
             home: const ShellScreen(),
@@ -38,10 +50,7 @@ void main() {
     testWidgets('tab labels use Plan and You', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            ...signedInDemoOverrides(),
-            memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
-          ],
+          overrides: [..._shellOverrides()],
           child: MaterialApp(
             theme: AppTheme.data(false),
             home: const ShellScreen(),
@@ -60,10 +69,7 @@ void main() {
     testWidgets('tapping nav items switches between tabs', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            ...signedInDemoOverrides(),
-            memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
-          ],
+          overrides: [..._shellOverrides()],
           child: MaterialApp(
             theme: AppTheme.data(false),
             home: const ShellScreen(),
@@ -111,10 +117,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            ...signedInDemoOverrides(),
-            memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
-          ],
+          overrides: [..._shellOverrides()],
           child: MaterialApp.router(
             theme: AppTheme.data(false),
             routerConfig: router,

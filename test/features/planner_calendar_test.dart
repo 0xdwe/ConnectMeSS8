@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,8 +7,25 @@ import 'package:flutter_test/flutter_test.dart';
 import '../test_overrides.dart';
 
 import 'package:connect_me/src/app/connect_me_app.dart';
+import 'package:connect_me/src/features/tabs/planner_tab.dart';
+import 'package:connect_me/src/models/social_models.dart';
+import 'package:connect_me/src/state/connections/batched_writes.dart';
+import 'package:connect_me/src/state/connections/batched_writes_providers.dart';
+import 'package:connect_me/src/state/connections/connection_providers.dart';
+import 'package:connect_me/src/state/connections/event_providers.dart';
+import 'package:connect_me/src/state/connections/in_memory_connection_store.dart';
+import 'package:connect_me/src/state/connections/in_memory_event_store.dart';
+import 'package:connect_me/src/state/connections/in_memory_interaction_store.dart';
+import 'package:connect_me/src/state/connections/in_memory_user_doc_store.dart';
+import 'package:connect_me/src/state/connections/interaction_providers.dart';
+import 'package:connect_me/src/state/connections/user_doc_store_providers.dart';
+import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
+import 'package:connect_me/src/theme/app_theme.dart';
+import 'package:connect_me/src/theme/app_tokens.dart';
+import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
+import 'package:intl/intl.dart';
 
 Widget _bootedApp() {
   // #041: production memoryStoreProvider returns FileMemoryStore. Real
@@ -50,7 +69,233 @@ Future<void> authenticateAndNavigateToPlanner(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+DateTime _dateOnly(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
+
+PlannerEvent _event(String id, String title, DateTime date) {
+  return PlannerEvent(
+    id: id,
+    title: title,
+    category: 'Friends',
+    date: date,
+    note: '',
+    eventType: 'Plan',
+  );
+}
+
+Future<void> _pumpPlanner(
+  WidgetTester tester, {
+  required DateTime now,
+  required List<PlannerEvent> events,
+}) async {
+  final connections = InMemoryConnectionStore();
+  final interactions = InMemoryInteractionStore();
+  final eventStore = InMemoryEventStore();
+  final userDoc = InMemoryUserDocStore();
+  for (final event in events) {
+    await eventStore.save(event);
+  }
+
+  await tester.binding.setSurfaceSize(const Size(800, 1000));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        firebaseAuthProvider.overrideWithValue(
+          MockFirebaseAuth(
+            signedIn: true,
+            mockUser: MockUser(
+              uid: 'planner-test-user',
+              email: 'planner@example.com',
+              displayName: 'Planner Test',
+            ),
+          ),
+        ),
+        memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+        connectionStoreProvider.overrideWithValue(connections),
+        interactionStoreProvider.overrideWithValue(interactions),
+        eventStoreProvider.overrideWithValue(eventStore),
+        userDocStoreProvider.overrideWithValue(userDoc),
+        batchedWritesProvider.overrideWithValue(
+          InMemoryBatchedWrites(
+            connectionStore: connections,
+            interactionStore: interactions,
+            eventStore: eventStore,
+          ),
+        ),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.data(false),
+        home: Scaffold(body: PlannerTab(now: () => now)),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Finder _calendarCellFor(DateTime visibleMonth, DateTime date) {
+  final firstOfMonth = DateTime(visibleMonth.year, visibleMonth.month);
+  final firstGridDate = firstOfMonth.subtract(
+    Duration(days: firstOfMonth.weekday % 7),
+  );
+  final index = _dateOnly(date).difference(firstGridDate).inDays;
+  final cells = find.descendant(
+    of: find.byType(GridView),
+    matching: find.byType(InkWell),
+  );
+  return cells.at(index);
+}
+
+Future<void> _scrollPlannerTo(WidgetTester tester, String text) async {
+  await tester.scrollUntilVisible(
+    find.text(text),
+    240,
+    scrollable: find
+        .descendant(
+          of: find.byKey(const Key('planner-tab')),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  group('Planner date filtering', () {
+    testWidgets('opens on the current month with today and upcoming events', (
+      tester,
+    ) async {
+      final today = DateTime(2026, 6, 12);
+      await _pumpPlanner(
+        tester,
+        now: today,
+        events: [
+          _event(
+            'past',
+            'Past event should stay hidden',
+            today.subtract(const Duration(days: 1)),
+          ),
+          _event('today', 'Today event', today),
+          _event('future', 'Future event', today.add(const Duration(days: 1))),
+        ],
+      );
+
+      expect(find.text(DateFormat.MMMM().format(today)), findsOneWidget);
+      expect(find.text(DateFormat.yMMMM().format(today)), findsNothing);
+      expect(find.byKey(const Key('planner-today-button')), findsNothing);
+      expect(find.text('Today & Upcoming'), findsOneWidget);
+      expect(find.text('Today event'), findsOneWidget);
+      await _scrollPlannerTo(tester, 'Future event');
+      expect(find.text('Future event'), findsOneWidget);
+      expect(find.text('Past event should stay hidden'), findsNothing);
+    });
+
+    testWidgets('tapping a date shows only events on that date', (
+      tester,
+    ) async {
+      final today = DateTime(2026, 6, 12);
+      final selectedDate = today.add(const Duration(days: 1));
+      await _pumpPlanner(
+        tester,
+        now: today,
+        events: [
+          _event('selected', 'Selected date event', selectedDate),
+          _event(
+            'later',
+            'Later event should stay hidden',
+            selectedDate.add(const Duration(days: 1)),
+          ),
+        ],
+      );
+
+      await tester.tap(_calendarCellFor(today, selectedDate));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(DateFormat('EEEE, MMMM d').format(selectedDate)),
+        findsOneWidget,
+      );
+      expect(find.text('Selected date event'), findsOneWidget);
+      expect(find.text('Later event should stay hidden'), findsNothing);
+    });
+
+    testWidgets('tapping today filters to today only', (tester) async {
+      final today = DateTime(2026, 6, 12);
+      await _pumpPlanner(
+        tester,
+        now: today,
+        events: [
+          _event('today', 'Today event', today),
+          _event(
+            'future',
+            'Future event should stay hidden',
+            today.add(const Duration(days: 1)),
+          ),
+        ],
+      );
+
+      await tester.tap(_calendarCellFor(today, today));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(DateFormat('EEEE, MMMM d').format(today)),
+        findsOneWidget,
+      );
+      expect(find.text('Today event'), findsOneWidget);
+      expect(find.text('Future event should stay hidden'), findsNothing);
+    });
+
+    testWidgets('selected past date shows neutral past indicator', (
+      tester,
+    ) async {
+      final today = DateTime(2026, 6, 12);
+      final pastDate = today.subtract(const Duration(days: 1));
+      await _pumpPlanner(
+        tester,
+        now: today,
+        events: [_event('past', 'Past event', pastDate)],
+      );
+
+      final pastCell = _calendarCellFor(today, pastDate);
+      await tester.tap(pastCell);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Past date'), findsOneWidget);
+      final cellContainer = find.descendant(
+        of: pastCell,
+        matching: find.byType(Container),
+      );
+      final decoration =
+          tester.widget<Container>(cellContainer.first).decoration
+              as BoxDecoration;
+      expect(decoration.color, isNot(AppTokens.light().primary));
+    });
+
+    testWidgets('selected date without events shows focused empty state', (
+      tester,
+    ) async {
+      final today = DateTime(2026, 6, 12);
+      final emptyDate = today.add(const Duration(days: 2));
+      await _pumpPlanner(
+        tester,
+        now: today,
+        events: [
+          _event(
+            'later',
+            'Later event should stay hidden',
+            emptyDate.add(const Duration(days: 1)),
+          ),
+        ],
+      );
+
+      await tester.tap(_calendarCellFor(today, emptyDate));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No events planned for this date.'), findsOneWidget);
+      expect(find.text('Later event should stay hidden'), findsNothing);
+    });
+  });
+
   group('Calendar accessibility', () {
     testWidgets('day cells have minimum 44pt touch target', (tester) async {
       // Arrange: authenticate and navigate to Planner
@@ -196,6 +441,55 @@ void main() {
   });
 
   group('Calendar layout regressions', () {
+    testWidgets('month navigation arrows stay grouped with month name', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360 * 2, 800 * 2);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final today = DateTime(2026, 5, 12);
+      await _pumpPlanner(tester, now: today, events: const []);
+
+      final mayMonthRect = tester.getRect(find.text('May'));
+      final mayPreviousRect = tester.getRect(find.byIcon(Icons.chevron_left));
+      final mayNextRect = tester.getRect(
+        find.byIcon(Icons.chevron_right).first,
+      );
+
+      for (var i = 0; i < 4; i++) {
+        await tester.tap(find.byIcon(Icons.chevron_right).first);
+        await tester.pumpAndSettle();
+      }
+
+      expect(find.text('September'), findsOneWidget);
+      final monthRect = tester.getRect(find.text('September'));
+      final septemberPreviousRect = tester.getRect(
+        find.byIcon(Icons.chevron_left),
+      );
+      final septemberNextRect = tester.getRect(
+        find.byIcon(Icons.chevron_right).first,
+      );
+      final searchRect = tester.getRect(find.byIcon(Icons.search));
+      final monthSlotRect = tester.getRect(
+        find.byKey(const Key('planner-month-label')),
+      );
+      final monthText = tester.widget<Text>(find.text('September'));
+      final monthPainter = TextPainter(
+        text: TextSpan(text: 'September', style: monthText.style),
+        textDirection: ui.TextDirection.ltr,
+      )..layout();
+
+      expect(septemberPreviousRect.left, closeTo(mayPreviousRect.left, 0.1));
+      expect(septemberNextRect.left, closeTo(mayNextRect.left, 0.1));
+      expect(monthRect.height, closeTo(mayMonthRect.height, 0.1));
+      expect(monthPainter.width, lessThanOrEqualTo(monthSlotRect.width));
+      expect(septemberPreviousRect.right, lessThan(monthRect.left));
+      expect(monthRect.right, lessThan(septemberNextRect.left));
+      expect(septemberNextRect.right, lessThan(searchRect.left));
+    });
+
     testWidgets('day cells with events do not overflow at narrow phone width', (
       tester,
     ) async {
