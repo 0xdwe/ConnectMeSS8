@@ -12,37 +12,52 @@ import '../../widgets/crm_widgets.dart';
 import '../modals/add_event_modal.dart';
 
 class PlannerTab extends ConsumerStatefulWidget {
-  const PlannerTab({super.key});
+  const PlannerTab({super.key, this.now});
+
+  final DateTime Function()? now;
 
   @override
   ConsumerState<PlannerTab> createState() => _PlannerTabState();
 }
 
 class _PlannerTabState extends ConsumerState<PlannerTab> {
-  DateTime month = DateTime(2026, 4);
-  DateTime selected = DateTime(2026, 4, 27);
+  late DateTime month;
+  late DateTime selected;
+  bool _hasExplicitDateSelection = false;
+
+  DateTime _today() {
+    final now = (widget.now ?? DateTime.now)();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final today = _today();
+    month = DateTime(today.year, today.month);
+    selected = today;
+  }
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final today = _today();
+    final selectedIsPast =
+        _hasExplicitDateSelection && selected.isBefore(today);
     final allEvents = ref.watch(
       appControllerProvider.select((state) => state.events),
     );
 
-    // Filter events based on selected day (always on or after selected date)
     final filteredEvents = allEvents.where((event) {
-      final eventDateMidnight = DateTime(
+      final eventDay = DateTime(
         event.date.year,
         event.date.month,
         event.date.day,
       );
-      final selectedMidnight = DateTime(
-        selected.year,
-        selected.month,
-        selected.day,
-      );
-      return eventDateMidnight.isAtSameMomentAs(selectedMidnight) ||
-          eventDateMidnight.isAfter(selectedMidnight);
+      if (_hasExplicitDateSelection) {
+        return DateUtils.isSameDay(eventDay, selected);
+      }
+      return !eventDay.isBefore(today);
     }).toList()..sort((a, b) => a.date.compareTo(b.date));
 
     // Group events by day
@@ -100,6 +115,23 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
+              TextButton(
+                key: const Key('planner-today-button'),
+                onPressed: () {
+                  final today = _today();
+                  setState(() {
+                    month = DateTime(today.year, today.month);
+                    selected = today;
+                    _hasExplicitDateSelection = false;
+                  });
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: tokens.primary,
+                  minimumSize: const Size(48, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                ),
+                child: const Text('Today'),
+              ),
               // Search Action Button
               Container(
                 width: 40,
@@ -143,11 +175,13 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
             child: _CalendarGrid(
               month: month,
               selected: selected,
+              selectedIsPast: selectedIsPast,
               events: allEvents,
               onSelect: (day) => setState(() {
                 selected = day;
+                _hasExplicitDateSelection = true;
                 // Sync month if they select prev/next month day
-                if (day.month != month.month) {
+                if (day.year != month.year || day.month != month.month) {
                   month = DateTime(day.year, day.month);
                 }
               }),
@@ -155,18 +189,60 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
           ),
           SizedBox(height: AppSpacing.space4),
 
-          // Upcoming Events Section Header
+          // Event Section Header
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Upcoming Events', style: AppTypography.h1()),
+              Expanded(
+                child: Text(
+                  _hasExplicitDateSelection
+                      ? DateFormat('EEEE, MMMM d').format(selected)
+                      : 'Today & Upcoming',
+                  key: const Key('planner-event-section-title'),
+                  style: AppTypography.h1(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (selectedIsPast) ...[
+                SizedBox(width: AppSpacing.space2),
+                Container(
+                  key: const Key('planner-past-date-indicator'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tokens.surfaceSunken,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    border: Border.all(color: tokens.border),
+                  ),
+                  child: Text(
+                    'Past date',
+                    style: AppTypography.caption(
+                      color: tokens.inkMuted,
+                    ).copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+              SizedBox(width: AppSpacing.space2),
               Icon(Icons.calendar_month, color: tokens.primary, size: 22),
             ],
           ),
           SizedBox(height: AppSpacing.space3),
 
           // Event List
-          if (allEvents.isEmpty)
+          if (_hasExplicitDateSelection && filteredEvents.isEmpty)
+            Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.space8),
+                child: Text(
+                  'No events planned for this date.',
+                  style: AppTypography.body(color: tokens.inkMuted),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          else if (allEvents.isEmpty)
             Center(
               child: Padding(
                 padding: EdgeInsets.all(AppSpacing.space8),
@@ -182,7 +258,7 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
               child: Padding(
                 padding: EdgeInsets.all(AppSpacing.space8),
                 child: Text(
-                  'No events found matching filters.',
+                  'No upcoming events.',
                   style: AppTypography.body(color: tokens.inkMuted),
                   textAlign: TextAlign.center,
                 ),
@@ -436,12 +512,14 @@ class _CalendarGrid extends StatelessWidget {
   const _CalendarGrid({
     required this.month,
     required this.selected,
+    required this.selectedIsPast,
     required this.events,
     required this.onSelect,
   });
 
   final DateTime month;
   final DateTime selected;
+  final bool selectedIsPast;
   final List<PlannerEvent> events;
   final ValueChanged<DateTime> onSelect;
 
@@ -509,8 +587,14 @@ class _CalendarGrid extends StatelessWidget {
             Border? border;
 
             if (isSelected) {
-              backgroundColor = tokens.primary;
-              textColor = tokens.primaryOn;
+              if (selectedIsPast) {
+                backgroundColor = tokens.surfaceSunken;
+                textColor = tokens.inkMuted;
+                border = Border.all(color: tokens.border, width: 1.5);
+              } else {
+                backgroundColor = tokens.primary;
+                textColor = tokens.primaryOn;
+              }
             } else if (isToday) {
               backgroundColor = tokens.primary.withValues(alpha: 0.08);
               textColor = tokens.primary;
@@ -550,7 +634,11 @@ class _CalendarGrid extends StatelessWidget {
                       height: 4,
                       decoration: BoxDecoration(
                         color: hasEvent
-                            ? (isSelected ? tokens.primaryOn : tokens.primary)
+                            ? (isSelected
+                                  ? (selectedIsPast
+                                        ? tokens.inkMuted
+                                        : tokens.primaryOn)
+                                  : tokens.primary)
                             : Colors.transparent,
                         shape: BoxShape.circle,
                       ),
