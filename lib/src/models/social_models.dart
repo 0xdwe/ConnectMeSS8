@@ -86,9 +86,14 @@ extension InteractionTypeLabel on InteractionType {
 }
 
 class AttachmentRef {
-  const AttachmentRef({required this.name, required this.path});
+  const AttachmentRef({
+    required this.name,
+    required this.path,
+    this.storageUrl,
+  });
   final String name;
   final String? path;
+  final String? storageUrl;
 }
 
 class CrmInteraction {

@@ -513,6 +513,23 @@ class ContactProfileScreen extends ConsumerWidget {
                                     ),
                                   ),
                                 ],
+                                if (history[i].attachments.isNotEmpty) ...[
+                                  SizedBox(height: AppSpacing.space3),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      for (final attachment in history[i].attachments)
+                                        _AttachmentChip(
+                                          attachment: attachment,
+                                          onTap: () => _showAttachmentViewer(
+                                            context,
+                                            attachment,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -544,6 +561,98 @@ String _initials(String fullName) {
     return words.first.substring(0, min(2, words.first.length)).toUpperCase();
   }
   return '';
+}
+
+bool _isImageAttachment(AttachmentRef attachment) {
+  final lower = attachment.name.toLowerCase();
+  return lower.endsWith('.png') ||
+      lower.endsWith('.jpg') ||
+      lower.endsWith('.jpeg') ||
+      lower.endsWith('.gif') ||
+      lower.endsWith('.webp') ||
+      lower.endsWith('.heic');
+}
+
+Future<void> _showAttachmentViewer(
+  BuildContext context,
+  AttachmentRef attachment,
+) async {
+  if (!_isImageAttachment(attachment) ||
+      attachment.storageUrl == null ||
+      attachment.storageUrl!.isEmpty) {
+    return;
+  }
+
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return Dialog(
+        insetPadding: const EdgeInsets.all(20),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      attachment.name,
+                      style: AppTypography.h2(),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                child: Image.network(
+                  attachment.storageUrl!,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return SizedBox(
+                      width: 320,
+                      height: 240,
+                      child: Center(
+                        child: Text(
+                          'Image unavailable',
+                          style: AppTypography.bodyLg(),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _AttachmentChip extends StatelessWidget {
+  const _AttachmentChip({required this.attachment, required this.onTap});
+
+  final AttachmentRef attachment;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isImage = _isImageAttachment(attachment);
+    return ActionChip(
+      avatar: Icon(isImage ? Icons.image_outlined : Icons.attach_file),
+      label: Text(attachment.name),
+      onPressed: isImage && attachment.storageUrl != null
+          ? onTap
+          : null,
+    );
+  }
 }
 
 ImageProvider<Object>? _contactAvatarImage(String avatar) {
