@@ -76,7 +76,7 @@ void main() {
         expect(prompt, contains(kind));
       }
       expect(prompt, contains('at most'));
-      expect(prompt, contains('three'));
+      expect(prompt, contains('two'));
       expect(prompt, contains('lastMentionedAt'));
       expect(prompt, contains('expiresAt'));
       expect(prompt.toLowerCase(), contains('non-shaming'));
@@ -89,7 +89,7 @@ void main() {
         expect(prompt, contains(kind));
       }
       expect(prompt, contains('at most'));
-      expect(prompt, contains('three'));
+      expect(prompt, contains('two'));
       expect(prompt, contains('lastMentionedAt'));
       expect(prompt, contains('expiresAt'));
       expect(prompt.toLowerCase(), contains('non-shaming'));
@@ -104,7 +104,7 @@ void main() {
         expect(prompt, contains(kind));
       }
       expect(prompt, contains('at most'));
-      expect(prompt, contains('three'));
+      expect(prompt, contains('two'));
       expect(prompt, contains('lastMentionedAt'));
       expect(prompt, contains('expiresAt'));
       expect(prompt.toLowerCase(), contains('non-shaming'));

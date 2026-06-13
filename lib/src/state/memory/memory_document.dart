@@ -320,7 +320,7 @@ class MemoryDocument {
       );
       buf.writeln('mentionCount: ${group.mentionCount}');
       buf.writeln('expiresAt: ${_formatNullableDate(group.expiresAt)}');
-      for (final suggestion in group.suggestions.take(3)) {
+      for (final suggestion in group.suggestions.take(2)) {
         if (suggestion.context != null && suggestion.context!.isNotEmpty) {
           buf.writeln(
             '- ${_renderTopicSuggestionKind(suggestion.kind)}: ${suggestion.text} | ${suggestion.context}',
@@ -446,7 +446,7 @@ class MemoryDocument {
           lastMentionedAt: lastMentionedAt,
           mentionCount: mentionCount,
           expiresAt: expiresAt,
-          suggestions: List.unmodifiable(suggestions.take(3).toList()),
+          suggestions: List.unmodifiable(suggestions.take(2).toList()),
         ),
       );
     }
@@ -472,7 +472,7 @@ class MemoryDocument {
         expiresAt = _tryParseDateOnly(line.substring(10).trim());
       } else if (line.startsWith('- ')) {
         final suggestion = _parseTopicSuggestion(line.substring(2).trim());
-        if (suggestion != null && suggestions.length < 3) {
+        if (suggestion != null && suggestions.length < 2) {
           suggestions.add(suggestion);
         }
       }

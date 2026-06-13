@@ -107,7 +107,7 @@ class LlmTopicSuggestionGroup {
       suggestions: (suggestionsRaw ?? const <dynamic>[])
           .whereType<Map<String, dynamic>>()
           .map(LlmTopicSuggestion.fromJson)
-          .take(3)
+          .take(2)
           .toList(growable: false)
           .cast<LlmTopicSuggestion>(),
     );

@@ -252,7 +252,6 @@ class ContactProfileScreen extends ConsumerWidget {
                     runSpacing: AppSpacing.space4,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      BondRing(connection: person, size: 72),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -306,18 +305,6 @@ class ContactProfileScreen extends ConsumerWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(
-                            'Known Since',
-                            style: AppTypography.caption(
-                              color: tokens.inkMuted,
-                            ),
-                          ),
-                          SizedBox(height: AppSpacing.space1),
-                          Text(
-                            '${insight.knownSinceYears} years',
-                            style: AppTypography.bodyLg(),
-                          ),
-                          SizedBox(height: AppSpacing.space3),
                           Text(
                             'Last contact',
                             style: AppTypography.caption(

@@ -157,15 +157,10 @@ void main() {
           text: 'Last time you mentioned kindergarten \u2014 anything new?',
           context: null,
         ),
-        const TopicSuggestion(
-          kind: TopicSuggestionKind.ask,
-          text: "Curious how Sarah's kindergarten is going.",
-          context: null,
-        ),
       ]);
     });
 
-    test('drops blank prepared suggestions and caps at three', () {
+    test('drops blank prepared suggestions and caps at two', () {
       final suggestions = preferredSuggestionsForTopic(
         connection: _connection(category: 'Friends', name: 'Sarah Chen'),
         topic: 'Paris trip',
@@ -204,11 +199,6 @@ void main() {
           text: 'Second.',
           context: null,
         ),
-        const TopicSuggestion(
-          kind: TopicSuggestionKind.plan,
-          text: 'Third.',
-          context: null,
-        ),
       ]);
     });
 
@@ -239,11 +229,6 @@ void main() {
         const TopicSuggestion(
           kind: TopicSuggestionKind.ask,
           text: 'Last time you mentioned Paris trip \u2014 anything new?',
-          context: null,
-        ),
-        const TopicSuggestion(
-          kind: TopicSuggestionKind.ask,
-          text: "Curious how Sarah's Paris trip is going.",
           context: null,
         ),
       ]);
@@ -280,11 +265,6 @@ void main() {
         const TopicSuggestion(
           kind: TopicSuggestionKind.ask,
           text: 'Last time you mentioned Paris trip \u2014 anything new?',
-          context: null,
-        ),
-        const TopicSuggestion(
-          kind: TopicSuggestionKind.ask,
-          text: "Curious how Sarah's Paris trip is going.",
           context: null,
         ),
       ]);

@@ -35,7 +35,7 @@ const int kMemoryTopicEnricherPromptVersion = 3;
 
 /// System instruction prompt.
 const String kMemoryTopicEnricherPromptV1 = '''
-You are an AI relationship assistant. Your task is to analyze a contact's memory document and recent interaction history, then extract up to 8 conversation topics and prepare up to 3 high-quality, gentle, topic-scoped conversation suggestions for those topics.
+You are an AI relationship assistant. Your task is to analyze a contact's memory document and recent interaction history, then extract up to 8 conversation topics and prepare up to 2 high-quality, gentle, topic-scoped conversation suggestions for those topics.
 
 Strict Guardrails:
 1. Topics: Extracted topics must be lowercase, <= 3 words, and ranked by current relevance/importance. Do NOT include generic topics (like 'family', 'friends', 'work', 'college', 'high school') if there are more specific and useful topics available in the contact's context.
@@ -45,7 +45,7 @@ Strict Guardrails:
 ''';
 
 const String kMemoryTopicEnricherPromptV2 = '''
-You are an AI relationship assistant. Your task is to analyze a contact's memory document and recent interaction history, then extract up to 8 conversation topics and prepare up to 3 high-quality, gentle, topic-scoped conversation suggestions for those topics.
+You are an AI relationship assistant. Your task is to analyze a contact's memory document and recent interaction history, then extract up to 8 conversation topics and prepare up to 2 high-quality, gentle, topic-scoped conversation suggestions for those topics.
 
 Strict Guardrails:
 1. Topics: Extracted topics must be lowercase, <= 3 words, and ranked by current relevance/importance. Do NOT include generic topics (like 'family', 'friends', 'work', 'college', 'high school') if there are more specific and useful topics available in the contact's context.
@@ -277,7 +277,7 @@ class LlmMemoryTopicEnricher implements MemoryTopicEnricher {
                 context: s.context,
               ),
             )
-            .take(3)
+            .take(2)
             .toList(growable: false);
         result.add(
           TopicSuggestionGroup(
@@ -346,7 +346,7 @@ final Schema kMemoryTopicEnricherResponseSchema = Schema.object(
       description: 'Extracted topics. lowercase, <=3 words, ranked.',
     ),
     'topicSuggestions': Schema.array(
-      description: 'Prepared suggestions per topic. Capped at 3.',
+      description: 'Prepared suggestions per topic. Capped at 2.',
       items: Schema.object(
         properties: {
           'topic': Schema.string(description: 'Associated topic.'),

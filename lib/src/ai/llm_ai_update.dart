@@ -610,7 +610,7 @@ class LlmAiUpdate implements AiUpdate {
               context: suggestion.context,
             ),
           )
-          .take(3)
+          .take(2)
           .toList(growable: false);
       byTopic[key] = TopicSuggestionGroup(
         topic: prior?.topic ?? topic,
