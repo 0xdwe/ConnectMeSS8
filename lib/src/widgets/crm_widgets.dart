@@ -1,11 +1,15 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../models/social_models.dart';
 import '../state/conversation_topics.dart';
 import '../state/memory/memory_document.dart';
+import '../state/memory/memory_providers.dart';
+import '../state/memory/memory_topic_backfill_runner.dart';
+import '../state/query_providers.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
@@ -1003,7 +1007,7 @@ const Color _recommendationTitleColor = Color(0xFF7B4F12);
 const Color _recommendationBodyColor = Color(0xFF6B4513);
 const Color _recommendationIconColor = Color(0xFFB7791F);
 
-class AiInsightsCard extends StatefulWidget {
+class AiInsightsCard extends ConsumerStatefulWidget {
   const AiInsightsCard({
     super.key,
     required this.connection,
@@ -1029,11 +1033,68 @@ class AiInsightsCard extends StatefulWidget {
   final String? initialSelectedTopic;
 
   @override
-  State<AiInsightsCard> createState() => _AiInsightsCardState();
+  ConsumerState<AiInsightsCard> createState() => _AiInsightsCardState();
 }
 
-class _AiInsightsCardState extends State<AiInsightsCard> {
+class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
   bool expanded = true;
+  bool _isRefreshing = false;
+
+  Future<void> _handleRefresh() async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+
+    try {
+      final enricher = ref.read(memoryTopicEnricherProvider);
+      final store = ref.read(memoryStoreProvider);
+      final clock = ref.read(clockProvider);
+      final interactions = ref.read(
+        interactionsByContactProvider(widget.connection.id),
+      );
+
+      // Limit to 10 most recent interactions, sorted desc by date
+      final sortedInteractions = List<CrmInteraction>.from(interactions)
+        ..sort((a, b) => b.date.compareTo(a.date));
+      final limitedInteractions = sortedInteractions.take(10).toList();
+
+      final currentMemory =
+          widget.memory ??
+          MemoryDocument.empty(
+            contactId: widget.connection.id,
+            displayName: widget.connection.name,
+            now: clock(),
+          );
+
+      final enriched = await enricher.enrich(
+        contact: widget.connection,
+        currentMemory: currentMemory,
+        recentInteractions: limitedInteractions,
+      );
+
+      await store.save(enriched);
+
+      // Bump memory epoch so downstream caches/providers refresh
+      ref.read(memoryEpochProvider.notifier).bump(clock());
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('AI Insights refreshed.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to refresh AI Insights: ${e.toString()}'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1065,6 +1126,28 @@ class _AiInsightsCardState extends State<AiInsightsCard> {
                   Expanded(
                     child: Text('AI Insights', style: AppTypography.h2()),
                   ),
+                  _isRefreshing
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: tokens.primary,
+                          ),
+                        )
+                      : IconButton(
+                          key: const Key('ai-insights-refresh-button'),
+                          icon: Icon(
+                            Icons.refresh,
+                            size: 20,
+                            color: tokens.inkMuted,
+                          ),
+                          onPressed: _handleRefresh,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          splashRadius: 20,
+                        ),
+                  SizedBox(width: AppSpacing.space3),
                   Icon(
                     expanded ? Icons.expand_less : Icons.expand_more,
                     color: tokens.inkMuted,
@@ -1359,18 +1442,25 @@ class _InlineTopicDetails extends StatelessWidget {
                     SizedBox(height: AppSpacing.space1),
                     Text(
                       suggestion.text,
-                      style: AppTypography.body(color: _recommendationBodyColor),
+                      style: AppTypography.body(
+                        color: _recommendationBodyColor,
+                      ),
                     ),
-                    if (suggestion.context != null && suggestion.context!.trim().isNotEmpty) ...[
+                    if (suggestion.context != null &&
+                        suggestion.context!.trim().isNotEmpty) ...[
                       SizedBox(height: AppSpacing.space3),
                       Text(
                         'Context :',
-                        style: AppTypography.h2(color: _recommendationTitleColor),
+                        style: AppTypography.h2(
+                          color: _recommendationTitleColor,
+                        ),
                       ),
                       SizedBox(height: AppSpacing.space1),
                       Text(
                         suggestion.context!,
-                        style: AppTypography.body(color: _recommendationBodyColor),
+                        style: AppTypography.body(
+                          color: _recommendationBodyColor,
+                        ),
                       ),
                     ],
                   ],
