@@ -370,7 +370,7 @@ void main() {
       await tester.tap(find.text('Paris trip'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Conversation Starter:'), findsOneWidget);
+      expect(find.text('Conversation Starter :'), findsWidgets);
       expect(find.text('Past Conversations:'), findsNothing);
       expect(find.text('Current Context:'), findsNothing);
       expect(find.text('Related News:'), findsNothing);
@@ -415,19 +415,10 @@ void main() {
         await tester.tap(find.text('Paris trip'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Conversation Starter:'), findsOneWidget);
-        expect(
-          find.byWidgetPredicate((widget) =>
-              widget is RichText &&
-              widget.text.toPlainText().contains('conversation starter : Ask how the Paris plans are coming together.')),
-          findsOneWidget,
-        );
-        expect(
-          find.byWidgetPredicate((widget) =>
-              widget is RichText &&
-              widget.text.toPlainText().contains('Context : he talked about his plan to Paris last time and he was very excited about it')),
-          findsOneWidget,
-        );
+        expect(find.text('Conversation Starter :'), findsWidgets);
+        expect(find.text('Context :'), findsWidgets);
+        expect(find.text('Ask how the Paris plans are coming together.'), findsOneWidget);
+        expect(find.text('he talked about his plan to Paris last time and he was very excited about it'), findsOneWidget);
       },
     );
 

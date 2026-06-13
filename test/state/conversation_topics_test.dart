@@ -128,10 +128,12 @@ void main() {
         const TopicSuggestion(
           kind: TopicSuggestionKind.ask,
           text: 'Ask how the Paris plans are coming together.',
+          context: "Based on the conversation topic 'Paris trip' associated with Sarah.",
         ),
         const TopicSuggestion(
           kind: TopicSuggestionKind.share,
           text: 'Send a café rec if you spot one.',
+          context: "Based on the conversation topic 'Paris trip' associated with Sarah.",
         ),
       ]);
     });
@@ -149,14 +151,17 @@ void main() {
         const TopicSuggestion(
           kind: TopicSuggestionKind.ask,
           text: "How's the kindergarten going?",
+          context: "Based on the conversation topic 'kindergarten' associated with Sarah.",
         ),
         const TopicSuggestion(
           kind: TopicSuggestionKind.ask,
           text: 'Last time you mentioned kindergarten \u2014 anything new?',
+          context: "Based on the conversation topic 'kindergarten' associated with Sarah.",
         ),
         const TopicSuggestion(
           kind: TopicSuggestionKind.ask,
           text: "Curious how Sarah's kindergarten is going.",
+          context: "Based on the conversation topic 'kindergarten' associated with Sarah.",
         ),
       ]);
     });
@@ -191,9 +196,21 @@ void main() {
       );
 
       expect(suggestions, [
-        const TopicSuggestion(kind: TopicSuggestionKind.ask, text: 'First.'),
-        const TopicSuggestion(kind: TopicSuggestionKind.share, text: 'Second.'),
-        const TopicSuggestion(kind: TopicSuggestionKind.plan, text: 'Third.'),
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.ask,
+          text: 'First.',
+          context: "Based on the conversation topic 'Paris trip' associated with Sarah.",
+        ),
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.share,
+          text: 'Second.',
+          context: "Based on the conversation topic 'Paris trip' associated with Sarah.",
+        ),
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.plan,
+          text: 'Third.',
+          context: "Based on the conversation topic 'Paris trip' associated with Sarah.",
+        ),
       ]);
     });
 
@@ -220,14 +237,17 @@ void main() {
         const TopicSuggestion(
           kind: TopicSuggestionKind.ask,
           text: "How's the Paris trip going?",
+          context: "Based on the conversation topic 'Paris trip' associated with Sarah.",
         ),
         const TopicSuggestion(
           kind: TopicSuggestionKind.ask,
           text: 'Last time you mentioned Paris trip \u2014 anything new?',
+          context: "Based on the conversation topic 'Paris trip' associated with Sarah.",
         ),
         const TopicSuggestion(
           kind: TopicSuggestionKind.ask,
           text: "Curious how Sarah's Paris trip is going.",
+          context: "Based on the conversation topic 'Paris trip' associated with Sarah.",
         ),
       ]);
     });
@@ -259,14 +279,17 @@ void main() {
         const TopicSuggestion(
           kind: TopicSuggestionKind.ask,
           text: "How's the Paris trip going?",
+          context: "Based on the conversation topic 'Paris trip' associated with Sarah.",
         ),
         const TopicSuggestion(
           kind: TopicSuggestionKind.ask,
           text: 'Last time you mentioned Paris trip \u2014 anything new?',
+          context: "Based on the conversation topic 'Paris trip' associated with Sarah.",
         ),
         const TopicSuggestion(
           kind: TopicSuggestionKind.ask,
           text: "Curious how Sarah's Paris trip is going.",
+          context: "Based on the conversation topic 'Paris trip' associated with Sarah.",
         ),
       ]);
     });
