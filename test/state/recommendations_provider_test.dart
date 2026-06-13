@@ -289,7 +289,7 @@ void main() {
     test(
       'memory load failure falls back to recency-only recommendations',
       () async {
-        final clock = _FakeClock(DateTime(2026, 6, 1, 12));
+        final clock = _FakeClock(DateTime.now());
         final container = ProviderContainer(
           overrides: [
             firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
