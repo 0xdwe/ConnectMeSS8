@@ -109,7 +109,10 @@ class ProfileScreen extends ConsumerWidget {
             ],
           ),
           SizedBox(height: AppSpacing.space5),
-          HeatmapCard(connections: state.connections),
+          HeatmapCard(
+            connections: state.connections,
+            interactions: state.interactions,
+          ),
         ],
       ),
     );

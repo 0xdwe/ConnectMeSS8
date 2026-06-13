@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -506,8 +507,13 @@ Color categoryColor(String category, AppTokens tokens) {
 }
 
 class HeatmapCard extends StatelessWidget {
-  const HeatmapCard({super.key, required this.connections});
+  const HeatmapCard({
+    super.key,
+    required this.connections,
+    required this.interactions,
+  });
   final List<Connection> connections;
+  final List<CrmInteraction> interactions;
 
   @override
   Widget build(BuildContext context) {
@@ -583,6 +589,9 @@ class HeatmapCard extends StatelessWidget {
                   .where((c) => c.category == categories[i].label)
                   .length,
               color: categoryColor(categories[i].label, tokens),
+              connections: connections,
+              interactions: interactions,
+              categoryLabel: categories[i].label,
             ),
             if (i != categories.length - 1)
               Divider(height: AppSpacing.space5, color: tokens.border),
@@ -610,10 +619,16 @@ class _HeatmapRow extends StatelessWidget {
     required this.category,
     required this.count,
     required this.color,
+    required this.connections,
+    required this.interactions,
+    required this.categoryLabel,
   });
   final _HeatmapCategory category;
   final int count;
   final Color color;
+  final List<Connection> connections;
+  final List<CrmInteraction> interactions;
+  final String categoryLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -670,32 +685,96 @@ class _HeatmapRow extends StatelessWidget {
               ),
               SizedBox(height: AppSpacing.space3),
               Row(
-                children: List.generate(12, (i) {
-                  final activity = (i * 19 + category.label.length * 7) % 100;
-                  final muted = i > 8 && activity.isEven;
-                  return Expanded(
-                    child: Container(
-                      height: 18,
-                      margin: EdgeInsets.only(
-                        right: i == 11 ? 0 : AppSpacing.space2,
-                      ),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: muted
-                            ? tokens.surfaceSunken
-                            : color.withValues(
-                                alpha: .35 + (activity % 55) / 100,
-                              ),
-                      ),
-                    ),
-                  );
-                }),
+                children: _buildMonthHeatmap(context),
               ),
             ],
           ),
         ),
       ],
     );
+  }
+
+  List<Widget> _buildMonthHeatmap(BuildContext context) {
+    final tokens = context.tokens;
+    final now = DateTime.now();
+
+    // Build month buckets for the last 12 months (oldest first)
+    final months = List<DateTime>.generate(12, (i) {
+      final dt = DateTime(now.year, now.month - (11 - i), 1);
+      return dt;
+    });
+
+    // Only count interactions for connections in this category.
+    final categoryContactIds = this.connections
+        .where((c) => c.category == categoryLabel)
+        .map((c) => c.id)
+        .toSet();
+
+    final counts = Map<String, Set<String>>.fromEntries(
+      months.map((m) => MapEntry(_monthKey(m), <String>{})),
+    );
+
+    for (final interaction in interactions) {
+      if (!categoryContactIds.contains(interaction.contactId)) continue;
+      final key = _monthKey(
+        DateTime(interaction.date.year, interaction.date.month, 1),
+      );
+      if (counts.containsKey(key)) {
+        counts[key]!.add(interaction.contactId);
+      }
+    }
+
+    return months.asMap().entries.map((entry) {
+      final i = entry.key;
+      final m = entry.value;
+      final count = counts[_monthKey(m)]?.length ?? 0;
+      final activity = (i * 19 + category.label.length * 7) % 100;
+      final muted = i > 8 && activity.isEven;
+
+      return Expanded(
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: i == 0 ? 0 : AppSpacing.space1,
+            right: i == 11 ? 0 : AppSpacing.space1,
+          ),
+          child: Tooltip(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.18),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            textStyle: TextStyle(color: tokens.ink),
+            message: '${DateFormat.MMM().format(m)}\n$count connections',
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: muted
+                    ? tokens.surfaceSunken
+                    : color.withValues(alpha: .35 + (activity % 55) / 100),
+              ),
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  String _monthKey(DateTime dt) =>
+      '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
+
+  Color _getHeatColor(AppTokens tokens, int count, int maxCount) {
+    if (maxCount <= 0 || count <= 0) return tokens.surfaceRaised;
+    final intensity = count / maxCount; // 0..1
+    // Map intensity to an opacity of the category color
+    return color.withValues(alpha: 0.25 + (0.75 * intensity));
   }
 }
 

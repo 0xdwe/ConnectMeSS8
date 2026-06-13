@@ -70,7 +70,10 @@ class YouTab extends ConsumerWidget {
                 },
               ),
               SizedBox(height: AppSpacing.space3),
-              HeatmapCard(connections: state.connections),
+              HeatmapCard(
+                connections: state.connections,
+                interactions: state.interactions,
+              ),
             ],
           ),
         ),
