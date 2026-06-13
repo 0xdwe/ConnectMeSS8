@@ -195,7 +195,7 @@ Recommendation ranking originally shipped in Pass 3 and now ranks regular cards 
 - **The `## Upcoming` section in memory format is currently empty in production** because `MockAiUpdate` doesn't populate it (extracting "tomorrow" / "for a week" deterministically is too brittle for a mock). Demo paths can hand-edit a memory file under `<app_documents>/memories/` to see the engine's special cards fire.
 - **Notification delivery is now implemented on `feat/notifications`.** Planner and birthday reminders are local; suggested check-ins use an hourly Cloud Function plus FCM. Production deployment and end-to-end push evidence remain pending.
 - **Firebase project ID: `connect-me-e20b1`.** Free trial credits in use. `connect-me-rules-test` is a separate emulator-only project namespace, not a typo.
-- **JS rules tests need Java 21+ on `PATH`.** `brew install openjdk@21`, then `export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home` + `export PATH=/opt/homebrew/opt/openjdk@21/bin:$PATH` before `firebase emulators:exec --only firestore --project demo-test 'npm test'`.
+- **JS rules tests need Java 21+ on `PATH`.** `brew install openjdk@21`, then `export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home` + `export PATH=/opt/homebrew/opt/openjdk@21/bin:$PATH` before `firebase emulators:exec --only firestore,storage --project demo-test 'npm test'`.
 - **UI-merge regression on `main`.** The `ui-login-page` and `fix-navbar` merges (commits `7694253`, `88ebfcc`) brought 32–33 widget-test failures onto `main`. Out of scope for Pass 4.2 / Pass 4.5; deserves its own hotfix issue.
 
 ## Pass 3 grilling outcomes (Q1–Q13, locked)

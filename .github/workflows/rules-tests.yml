@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'firestore/**'
+      - 'storage.rules'
       - '.github/workflows/rules-tests.yml'
 
 permissions:
@@ -38,4 +39,4 @@ jobs:
         run: npm ci
 
       - name: Run rules tests against emulator
-        run: firebase emulators:exec --only firestore --project connect-me-rules-test "cd firestore && npm test"
+        run: firebase emulators:exec --only firestore,storage --project connect-me-rules-test "cd firestore && npm test"
