@@ -7,6 +7,20 @@ import '../../models/social_models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/crm_widgets.dart';
+
+String _contactAvatarGlyph(String avatar, String fullName) {
+  final trimmed = avatar.trim();
+  if (trimmed.isNotEmpty && !trimmed.startsWith('data:image/')) {
+    return trimmed;
+  }
+  final words = fullName
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((word) => word.isNotEmpty);
+  final initials = words.take(2).map((word) => word[0]).join();
+  return initials.isNotEmpty ? initials : '?';
+}
 
 Future<PlannerEvent?> showAddEventModal(
   BuildContext context, {
@@ -296,6 +310,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                   Divider(color: tokens.border, height: 24, thickness: 1),
                   DropdownButtonFormField<String?>(
                     initialValue: contactId,
+                    isExpanded: true,
                     style: AppTypography.body(color: tokens.ink),
                     decoration: InputDecoration(
                       labelText: 'LINK TO CONTACT (OPTIONAL)',
@@ -317,7 +332,30 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                       ...state.connections.map(
                         (person) => DropdownMenuItem<String?>(
                           value: person.id,
-                          child: Text(person.name),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundColor: const Color(0xFFEDE9FE),
+                                backgroundImage: connectionAvatarImage(
+                                  person.avatar,
+                                ),
+                                child:
+                                    connectionAvatarImage(person.avatar) == null
+                                    ? Text(
+                                        _contactAvatarGlyph(
+                                          person.avatar,
+                                          person.name,
+                                        ),
+                                        style: const TextStyle(fontSize: 11),
+                                      )
+                                    : null,
+                              ),
+                              const SizedBox(width: 10),
+                              Flexible(child: Text(person.name)),
+                            ],
+                          ),
                         ),
                       ),
                     ],
