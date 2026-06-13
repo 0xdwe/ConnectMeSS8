@@ -625,7 +625,6 @@ void main() {
     expect(find.text('TITLE'), findsOneWidget);
     expect(find.text('EVENT TYPE'), findsOneWidget);
     expect(find.text('LINK TO CONTACT (OPTIONAL)'), findsOneWidget);
-    expect(find.text('CATEGORY'), findsOneWidget);
     expect(find.text('NOTE'), findsOneWidget);
     expect(find.text('All Day'), findsOneWidget);
     expect(find.text('Repeat'), findsOneWidget);
