@@ -6,6 +6,7 @@ import '../state/app_state.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
+import '../widgets/chain_logo.dart';
 import '../widgets/crm_widgets.dart';
 import '../widgets/user_avatar.dart';
 import 'modals/plus_sheet.dart';
@@ -49,9 +50,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
                   ),
                 ),
               ),
-              title: Text(
-                'Connect Me',
-                style: AppTypography.h2(color: Colors.white),
+              title: const LinkedChainLogo(
+                size: 45, 
+                color: Colors.white,
               ),
               actions: [
                 IconButton(
