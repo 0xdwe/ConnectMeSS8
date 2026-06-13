@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
+import '../../widgets/chain_logo.dart';
 import '../tabs/about_features.dart';
 
 Future<void> showAboutBottomSheet(BuildContext context) {
@@ -24,150 +25,157 @@ class AboutModal extends StatelessWidget {
       top: false,
       child: Align(
         alignment: Alignment.bottomCenter,
-        child: ClipRRect(
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppRadius.lg),
-          ),
-          child: Material(
-            color: tokens.surfaceSunken,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.space4,
-                AppSpacing.space2,
-                AppSpacing.space4,
-                AppSpacing.space6,
+        child: FractionallySizedBox(
+          heightFactor: .94,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.space3),
+            child: ClipRRect(
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppRadius.lg),
               ),
-              child: SingleChildScrollView(
+              child: Material(
+                color: tokens.surfaceRaised,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: tokens.border,
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        key: const Key('about-feature-scroll'),
+                        padding: EdgeInsets.fromLTRB(
+                          AppSpacing.space5,
+                          AppSpacing.space5,
+                          AppSpacing.space5,
+                          AppSpacing.space6,
                         ),
-                      ),
-                    ),
-                    SizedBox(height: AppSpacing.space4),
-                    Center(
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          gradient: tokens.aiGradient,
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          boxShadow: [
-                            BoxShadow(
-                              color: tokens.primary.withValues(alpha: .24),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.diversity_3,
-                          color: tokens.primaryOn,
-                          size: 28,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: AppSpacing.space3),
-                    Center(
-                      child: Text(
-                        'Connect Me',
-                        style: AppTypography.glyph(
-                          24,
-                          color: tokens.ink,
-                          weight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: AppSpacing.space1),
-                    Center(
-                      child: Text(
-                        'Version 3.0.0 (Build 42)',
-                        style: AppTypography.caption(color: tokens.inkSubtle),
-                      ),
-                    ),
-                    SizedBox(height: AppSpacing.space5),
-                    Text(
-                      "WHAT'S NEW IN V3",
-                      style: AppTypography.caption(color: tokens.inkSubtle)
-                          .copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.8,
-                          ),
-                    ),
-                    SizedBox(height: AppSpacing.space3),
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: kAboutFeatures.length,
-                      separatorBuilder: (_, _) =>
-                          SizedBox(height: AppSpacing.space3),
-                      itemBuilder: (context, index) {
-                        final feature = kAboutFeatures[index];
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Container(
-                              width: 16,
-                              height: 24,
-                              alignment: Alignment.center,
+                            Center(
                               child: Container(
-                                width: 6,
-                                height: 6,
+                                width: 66,
+                                height: 66,
                                 decoration: BoxDecoration(
-                                  color: tokens.primary,
-                                  shape: BoxShape.circle,
+                                  gradient: tokens.aiGradient,
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.md,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: tokens.primary.withValues(
+                                        alpha: .26,
+                                      ),
+                                      blurRadius: 14,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                alignment: Alignment.center,
+                                child: const LinkedChainLogo(
+                                  size: 42,
+                                  color: Colors.white,
                                 ),
                               ),
                             ),
-                            SizedBox(width: AppSpacing.space3),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    feature.title,
-                                    style: AppTypography.bodyLg(
-                                      color: tokens.ink,
-                                    ).copyWith(fontWeight: FontWeight.w700),
+                            SizedBox(height: AppSpacing.space4),
+                            Text(
+                              'Connect Me',
+                              textAlign: TextAlign.center,
+                              style: AppTypography.glyph(
+                                26,
+                                color: tokens.ink,
+                                weight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: AppSpacing.space2),
+                            Center(
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.space3,
+                                  vertical: AppSpacing.space1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: tokens.primaryTint,
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.pill,
                                   ),
-                                  SizedBox(height: AppSpacing.space1),
-                                  Text(
-                                    feature.description,
-                                    style: AppTypography.caption(
-                                      color: tokens.inkMuted,
-                                    ),
+                                ),
+                                child: Text(
+                                  'Version 3.0.0 (Build 42)',
+                                  style:
+                                      AppTypography.caption(
+                                        color: tokens.inkMuted,
+                                      ).copyWith(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: .6,
+                                      ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: AppSpacing.space6),
+                            Text(
+                              "WHAT'S NEW IN V3",
+                              textAlign: TextAlign.center,
+                              style:
+                                  AppTypography.caption(
+                                    color: tokens.inkSubtle,
+                                  ).copyWith(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.4,
                                   ),
-                                ],
+                            ),
+                            SizedBox(height: AppSpacing.space3),
+                            Divider(color: tokens.border, height: 1),
+                            SizedBox(height: AppSpacing.space4),
+                            ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: kAboutFeatures.length,
+                              separatorBuilder: (_, _) =>
+                                  SizedBox(height: AppSpacing.space5),
+                              itemBuilder: (context, index) => _AboutFeatureRow(
+                                feature: kAboutFeatures[index],
+                                icon: _featureIcons[index],
                               ),
                             ),
                           ],
-                        );
-                      },
-                    ),
-                    SizedBox(height: AppSpacing.space6),
-                    ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: tokens.primary,
-                        foregroundColor: tokens.primaryOn,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: Text(
-                        'Done',
-                        style: AppTypography.body().copyWith(
-                          fontWeight: FontWeight.w600,
+                    ),
+                    Container(
+                      padding: EdgeInsets.fromLTRB(
+                        AppSpacing.space5,
+                        AppSpacing.space4,
+                        AppSpacing.space5,
+                        AppSpacing.space5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: tokens.surfaceSunken,
+                        border: Border(top: BorderSide(color: tokens.border)),
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          key: const Key('about-done-button'),
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: tokens.primary,
+                            foregroundColor: tokens.primaryOn,
+                            elevation: 5,
+                            shadowColor: tokens.primary.withValues(alpha: .3),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.pill,
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                          ),
+                          child: Text(
+                            'Done',
+                            style: AppTypography.body().copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -178,6 +186,81 @@ class AboutModal extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+const _featureIcons = <IconData>[
+  Icons.psychology_outlined,
+  Icons.favorite_border,
+  Icons.cloud_sync_outlined,
+  Icons.notifications_none,
+  Icons.person_outline,
+];
+
+class _AboutFeatureRow extends StatelessWidget {
+  const _AboutFeatureRow({required this.feature, required this.icon});
+
+  final AboutFeature feature;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: tokens.primaryTint,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, color: tokens.primary, size: 21),
+        ),
+        SizedBox(width: AppSpacing.space4),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                feature.title,
+                style: AppTypography.bodyLg(
+                  color: tokens.ink,
+                ).copyWith(fontWeight: FontWeight.w700),
+              ),
+              SizedBox(height: AppSpacing.space2),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 7),
+                    child: Container(
+                      width: 4,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: tokens.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: AppSpacing.space2),
+                  Expanded(
+                    child: Text(
+                      feature.description,
+                      style: AppTypography.caption(
+                        color: tokens.inkMuted,
+                      ).copyWith(height: 1.45),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
