@@ -333,58 +333,6 @@ class ContactProfileScreen extends ConsumerWidget {
             memory: memory,
             initialSelectedTopic: initialSelectedTopic,
           ),
-          CardBox(
-            padding: EdgeInsets.zero,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.space5,
-                    AppSpacing.space5,
-                    AppSpacing.space5,
-                    AppSpacing.space4,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.chat_bubble_outline, color: tokens.primary),
-                      SizedBox(width: AppSpacing.space3),
-                      Text('Communication Channels', style: AppTypography.h2()),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.space5,
-                    0,
-                    AppSpacing.space5,
-                    AppSpacing.space5,
-                  ),
-                  child: Wrap(
-                    spacing: AppSpacing.space2,
-                    runSpacing: AppSpacing.space2,
-                    children: [
-                      for (final channel in person.preferredChannels)
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.space3,
-                            vertical: AppSpacing.space2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: tokens.primary,
-                            borderRadius: BorderRadius.circular(AppRadius.pill),
-                          ),
-                          child: Text(
-                            channel,
-                            style: AppTypography.body(color: tokens.surface),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
           InteractionDetailsCard(
             person: person,
             insight: insight,

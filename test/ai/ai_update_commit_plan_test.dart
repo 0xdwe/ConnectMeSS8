@@ -56,7 +56,12 @@ void main() {
         expect(plan.updatedConnection.id, 'contact-1');
         expect(plan.updatedConnection.bondScore, 75);
         expect(plan.updatedConnection.nextStep, 'Send photos');
-        expect(plan.updatedConnection.lastContact, now);
+        // lastContact reflects the interaction date, not `now`, so a
+        // user-chosen past date is honoured on the connection and heatmap.
+        expect(
+          plan.updatedConnection.lastContact,
+          acceptedInteraction.date,
+        );
       },
     );
 
