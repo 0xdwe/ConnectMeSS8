@@ -110,10 +110,7 @@ enum AttachmentDegradeReason {
 /// past the per-call cap, or an image whose bytes couldn't be
 /// resolved.
 class PreparedAttachment {
-  const PreparedAttachment({
-    required this.name,
-    required this.softFailReason,
-  });
+  const PreparedAttachment({required this.name, required this.softFailReason});
 
   final String name;
   final AttachmentDegradeReason softFailReason;
@@ -122,10 +119,7 @@ class PreparedAttachment {
 /// Result of a single preparation pass: the bounded image set and
 /// the name-only entries.
 class PreparedAttachments {
-  const PreparedAttachments({
-    required this.images,
-    required this.nameOnly,
-  });
+  const PreparedAttachments({required this.images, required this.nameOnly});
 
   /// Inline image attachments, ordered by input order, capped at
   /// [kMaxImagesPerCall].
@@ -196,15 +190,9 @@ Uint8List? _downscaleAndEncode(img.Image decoded) {
   if (working.width > kImageMaxDimension ||
       working.height > kImageMaxDimension) {
     if (working.width >= working.height) {
-      working = img.copyResize(
-        working,
-        width: kImageMaxDimension,
-      );
+      working = img.copyResize(working, width: kImageMaxDimension);
     } else {
-      working = img.copyResize(
-        working,
-        height: kImageMaxDimension,
-      );
+      working = img.copyResize(working, height: kImageMaxDimension);
     }
   }
 
@@ -230,19 +218,23 @@ Future<PreparedAttachments> prepareAttachments(
 
   for (final ref in attachments) {
     if (!_hasImageExtension(ref.name)) {
-      nameOnly.add(PreparedAttachment(
-        name: ref.name,
-        softFailReason: AttachmentDegradeReason.notAnImage,
-      ));
+      nameOnly.add(
+        PreparedAttachment(
+          name: ref.name,
+          softFailReason: AttachmentDegradeReason.notAnImage,
+        ),
+      );
       continue;
     }
 
     final path = ref.path;
     if (path == null || path.isEmpty) {
-      nameOnly.add(PreparedAttachment(
-        name: ref.name,
-        softFailReason: AttachmentDegradeReason.fileNotFound,
-      ));
+      nameOnly.add(
+        PreparedAttachment(
+          name: ref.name,
+          softFailReason: AttachmentDegradeReason.fileNotFound,
+        ),
+      );
       continue;
     }
 
@@ -253,17 +245,21 @@ Future<PreparedAttachments> prepareAttachments(
       bytes = null;
     }
     if (bytes == null) {
-      nameOnly.add(PreparedAttachment(
-        name: ref.name,
-        softFailReason: AttachmentDegradeReason.fileNotFound,
-      ));
+      nameOnly.add(
+        PreparedAttachment(
+          name: ref.name,
+          softFailReason: AttachmentDegradeReason.fileNotFound,
+        ),
+      );
       continue;
     }
     if (bytes.isEmpty) {
-      nameOnly.add(PreparedAttachment(
-        name: ref.name,
-        softFailReason: AttachmentDegradeReason.readError,
-      ));
+      nameOnly.add(
+        PreparedAttachment(
+          name: ref.name,
+          softFailReason: AttachmentDegradeReason.readError,
+        ),
+      );
       continue;
     }
 
@@ -274,10 +270,12 @@ Future<PreparedAttachments> prepareAttachments(
       decoded = null;
     }
     if (decoded == null) {
-      nameOnly.add(PreparedAttachment(
-        name: ref.name,
-        softFailReason: AttachmentDegradeReason.decodeError,
-      ));
+      nameOnly.add(
+        PreparedAttachment(
+          name: ref.name,
+          softFailReason: AttachmentDegradeReason.decodeError,
+        ),
+      );
       continue;
     }
 
@@ -291,10 +289,12 @@ Future<PreparedAttachments> prepareAttachments(
 
     final encoded = _downscaleAndEncode(decoded);
     if (encoded == null) {
-      nameOnly.add(PreparedAttachment(
-        name: ref.name,
-        softFailReason: AttachmentDegradeReason.decodeError,
-      ));
+      nameOnly.add(
+        PreparedAttachment(
+          name: ref.name,
+          softFailReason: AttachmentDegradeReason.decodeError,
+        ),
+      );
       continue;
     }
 
@@ -303,32 +303,38 @@ Future<PreparedAttachments> prepareAttachments(
     // decode+encode per overflow image; realistic attachment lists
     // are small enough that the cost is irrelevant.
     if (images.length >= maxImages) {
-      nameOnly.add(PreparedAttachment(
-        name: ref.name,
-        softFailReason: AttachmentDegradeReason.perCallImageCap,
-      ));
+      nameOnly.add(
+        PreparedAttachment(
+          name: ref.name,
+          softFailReason: AttachmentDegradeReason.perCallImageCap,
+        ),
+      );
       continue;
     }
 
-    final resizedWidth = decoded.width > kImageMaxDimension ||
+    final resizedWidth =
+        decoded.width > kImageMaxDimension ||
             decoded.height > kImageMaxDimension
         ? (decoded.width >= decoded.height
-            ? kImageMaxDimension
-            : (decoded.width * kImageMaxDimension / decoded.height).round())
+              ? kImageMaxDimension
+              : (decoded.width * kImageMaxDimension / decoded.height).round())
         : decoded.width;
-    final resizedHeight = decoded.width > kImageMaxDimension ||
+    final resizedHeight =
+        decoded.width > kImageMaxDimension ||
             decoded.height > kImageMaxDimension
         ? (decoded.width >= decoded.height
-            ? (decoded.height * kImageMaxDimension / decoded.width).round()
-            : kImageMaxDimension)
+              ? (decoded.height * kImageMaxDimension / decoded.width).round()
+              : kImageMaxDimension)
         : decoded.height;
 
-    images.add(PreparedImageAttachment(
-      name: ref.name,
-      bytes: encoded,
-      width: resizedWidth,
-      height: resizedHeight,
-    ));
+    images.add(
+      PreparedImageAttachment(
+        name: ref.name,
+        bytes: encoded,
+        width: resizedWidth,
+        height: resizedHeight,
+      ),
+    );
   }
 
   return PreparedAttachments(images: images, nameOnly: nameOnly);

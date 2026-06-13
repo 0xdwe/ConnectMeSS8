@@ -114,8 +114,10 @@ void main() {
       expect(out, contains('- Name: Sarah Johnson'));
       expect(out, contains('- Category: Friends'));
       expect(out, contains('- Bond score: 73'));
-      expect(out,
-          contains('- Current next-step suggestion: "Send the article'));
+      expect(
+        out,
+        contains('- Current next-step suggestion: "Send the article'),
+      );
     });
 
     test('emits "none" for empty next step', () {
@@ -299,12 +301,18 @@ void main() {
       );
       // Most recent 5 (i3..i7) appear; older 3 (i0..i2) do not.
       for (final keep in const ['I3', 'I4', 'I5', 'I6', 'I7']) {
-        expect(out, contains('"$keep"'),
-            reason: '$keep should be present in the recent set');
+        expect(
+          out,
+          contains('"$keep"'),
+          reason: '$keep should be present in the recent set',
+        );
       }
       for (final drop in const ['I0', 'I1', 'I2']) {
-        expect(out, isNot(contains('"$drop"')),
-            reason: '$drop should be excluded by the recent-cap');
+        expect(
+          out,
+          isNot(contains('"$drop"')),
+          reason: '$drop should be excluded by the recent-cap',
+        );
       }
     });
 
@@ -471,17 +479,20 @@ void main() {
       expect(out, contains('- good.jpg (image, included)'));
       // Soft-failed image gets a clarifying degrade label so the
       // model knows we tried.
-      expect(out, contains('- broken.jpg (image, name only — could not decode)'));
-      expect(out, contains('- overflow.jpg (image, name only — over per-call image cap)'));
+      expect(
+        out,
+        contains('- broken.jpg (image, name only — could not decode)'),
+      );
+      expect(
+        out,
+        contains('- overflow.jpg (image, name only — over per-call image cap)'),
+      );
       // Non-image attachment retains its existing label.
       expect(out, contains('- doc.pdf (non-image, name only)'));
     });
 
     test('emits "Attachments: none." when prepared has no entries', () {
-      const prepared = PreparedAttachments(
-        images: [],
-        nameOnly: [],
-      );
+      const prepared = PreparedAttachments(images: [], nameOnly: []);
       final out = buildLlmAiUpdateUserMessage(
         today: DateTime.utc(2026, 5, 27),
         contact: _connection(),

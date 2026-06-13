@@ -10,9 +10,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.data(false),
-          home: const Scaffold(
-            body: ConnectionScoreHero(score: 73),
-          ),
+          home: const Scaffold(body: ConnectionScoreHero(score: 73)),
         ),
       );
 
@@ -20,7 +18,7 @@ void main() {
       expect(find.text('73'), findsOneWidget);
       expect(find.text('Connection score'), findsOneWidget);
       expect(find.text('Keep nurturing your relationships!'), findsOneWidget);
-      
+
       // Verify BondRing is present
       expect(find.byType(BondRing), findsOneWidget);
     });
@@ -29,14 +27,12 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.data(false),
-          home: const Scaffold(
-            body: ConnectionScoreHero(score: 90),
-          ),
+          home: const Scaffold(body: ConnectionScoreHero(score: 90)),
         ),
       );
 
       expect(find.byType(BondRing), findsOneWidget);
-      
+
       // Verify tier is close
       expect(BondTier.from(90), BondTier.close);
     });
@@ -45,30 +41,28 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.data(false),
-          home: const Scaffold(
-            body: ConnectionScoreHero(score: 60),
-          ),
+          home: const Scaffold(body: ConnectionScoreHero(score: 60)),
         ),
       );
 
       expect(find.byType(BondRing), findsOneWidget);
-      
+
       // Verify tier is steady
       expect(BondTier.from(60), BondTier.steady);
     });
 
-    testWidgets('score 30 uses drifting tier color (secondary)', (tester) async {
+    testWidgets('score 30 uses drifting tier color (secondary)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.data(false),
-          home: const Scaffold(
-            body: ConnectionScoreHero(score: 30),
-          ),
+          home: const Scaffold(body: ConnectionScoreHero(score: 30)),
         ),
       );
 
       expect(find.byType(BondRing), findsOneWidget);
-      
+
       // Verify tier is drifting
       expect(BondTier.from(30), BondTier.drifting);
     });
@@ -77,16 +71,16 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.data(false),
-          home: const Scaffold(
-            body: ConnectionScoreHero(score: 75),
-          ),
+          home: const Scaffold(body: ConnectionScoreHero(score: 75)),
         ),
       );
 
       expect(find.byType(CardBox), findsOneWidget);
     });
 
-    testWidgets('renders without overflow on narrow phone width', (tester) async {
+    testWidgets('renders without overflow on narrow phone width', (
+      tester,
+    ) async {
       // Simulate a narrow phone (iPhone SE 1st gen at 320 logical px).
       tester.view.physicalSize = const Size(320 * 2, 800 * 2);
       tester.view.devicePixelRatio = 2.0;
@@ -112,21 +106,20 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.data(false),
-          home: const Scaffold(
-            body: ConnectionScoreHero(score: 73),
-          ),
+          home: const Scaffold(body: ConnectionScoreHero(score: 73)),
         ),
       );
 
       // Find the Semantics widget
       final semanticsFinder = find.byWidgetPredicate(
-        (widget) => widget is Semantics && 
-                     widget.properties.label != null &&
-                     widget.properties.label!.contains('Connection score'),
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label != null &&
+            widget.properties.label!.contains('Connection score'),
       );
-      
+
       expect(semanticsFinder, findsOneWidget);
-      
+
       final semantics = tester.widget<Semantics>(semanticsFinder);
       expect(semantics.properties.label, contains('73'));
       expect(semantics.properties.label, contains('steady'));
@@ -210,13 +203,14 @@ void main() {
       );
 
       final semanticsFinder = find.byWidgetPredicate(
-        (widget) => widget is Semantics && 
-                     widget.properties.label != null &&
-                     widget.properties.label!.contains('Overall health'),
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label != null &&
+            widget.properties.label!.contains('Overall health'),
       );
-      
+
       expect(semanticsFinder, findsOneWidget);
-      
+
       final semantics = tester.widget<Semantics>(semanticsFinder);
       expect(semantics.properties.label, contains('steady'));
     });

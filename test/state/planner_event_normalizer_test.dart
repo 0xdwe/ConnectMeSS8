@@ -42,13 +42,16 @@ void main() {
       expect(normalized.recurrencePattern, isNull);
     });
 
-    test('preserves timed recurring fields when they are valid for the event flags', () {
-      final original = event();
-      final normalized = normalizePlannerEvent(original);
+    test(
+      'preserves timed recurring fields when they are valid for the event flags',
+      () {
+        final original = event();
+        final normalized = normalizePlannerEvent(original);
 
-      expect(normalized.startTimeMinutes, 9 * 60);
-      expect(normalized.endTimeMinutes, 10 * 60);
-      expect(normalized.recurrencePattern, RecurrencePattern.weekly);
-    });
+        expect(normalized.startTimeMinutes, 9 * 60);
+        expect(normalized.endTimeMinutes, 10 * 60);
+        expect(normalized.recurrencePattern, RecurrencePattern.weekly);
+      },
+    );
   });
 }

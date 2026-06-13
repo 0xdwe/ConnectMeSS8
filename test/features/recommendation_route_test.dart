@@ -20,20 +20,23 @@ void main() {
       expect(route, '/contact/sarah?topic=Paris+trip');
     });
 
-    test('recommendations screen route includes topic query for topic-aware cards', () {
-      final route = recommendationContactRoute(
-        const Recommendation(
-          contactId: 'sarah',
-          reason: 'Sarah has Paris on her mind.',
-          insight: 'A recent update mentioned Paris.',
-          priority: 'Medium',
-          topic: 'Paris trip',
-          action: 'Ask how the Paris plans are coming together.',
-        ),
-      );
+    test(
+      'recommendations screen route includes topic query for topic-aware cards',
+      () {
+        final route = recommendationContactRoute(
+          const Recommendation(
+            contactId: 'sarah',
+            reason: 'Sarah has Paris on her mind.',
+            insight: 'A recent update mentioned Paris.',
+            priority: 'Medium',
+            topic: 'Paris trip',
+            action: 'Ask how the Paris plans are coming together.',
+          ),
+        );
 
-      expect(route, '/contact/sarah?topic=Paris+trip');
-    });
+        expect(route, '/contact/sarah?topic=Paris+trip');
+      },
+    );
 
     test('routes omit topic query for regular cards', () {
       const recommendation = Recommendation(

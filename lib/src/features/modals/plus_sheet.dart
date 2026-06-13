@@ -24,9 +24,7 @@ class _PlusSheet extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: tokens.surfaceRaised,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppRadius.lg),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
       ),
       padding: EdgeInsets.symmetric(vertical: AppSpacing.space5),
       child: SafeArea(
@@ -104,11 +102,7 @@ class _PlusSheetAction extends StatelessWidget {
                 color: backgroundColor,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
-              child: Icon(
-                icon,
-                color: iconColor,
-                size: 24,
-              ),
+              child: Icon(icon, color: iconColor, size: 24),
             ),
             SizedBox(width: AppSpacing.space4),
             Expanded(
@@ -116,10 +110,7 @@ class _PlusSheetAction extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    label,
-                    style: AppTypography.bodyLg(color: tokens.ink),
-                  ),
+                  Text(label, style: AppTypography.bodyLg(color: tokens.ink)),
                   if (caption != null)
                     Text(
                       caption!,

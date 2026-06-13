@@ -26,8 +26,10 @@ AiUpdateCommitPlan buildAiUpdateCommitPlan({
     );
   }
 
-  final nextScore =
-      (connection.bondScore + result.bondScoreDelta).clamp(0, 100);
+  final nextScore = (connection.bondScore + result.bondScoreDelta).clamp(
+    0,
+    100,
+  );
   final updatedConnection = connection.copyWith(
     nextStep: result.nextStep ?? connection.nextStep,
     lastContact: now,

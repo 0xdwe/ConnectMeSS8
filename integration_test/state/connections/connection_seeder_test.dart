@@ -44,8 +44,7 @@ void main() {
     return user!.uid;
   }
 
-  Future<DocumentSnapshot<Map<String, dynamic>>> readUserDoc(
-      String uid) async {
+  Future<DocumentSnapshot<Map<String, dynamic>>> readUserDoc(String uid) async {
     return firestore.collection('users').doc(uid).get();
   }
 
@@ -58,25 +57,26 @@ void main() {
     return query.docs.length;
   }
 
-  test('samples branch: fresh UID writes 5 connections + 3 interactions + 5 events',
-      () async {
-    final uid = currentUid();
-    final seeder = ConnectionSeeder(firestore: firestore, uid: uid);
+  test(
+    'samples branch: fresh UID writes 5 connections + 3 interactions + 5 events',
+    () async {
+      final uid = currentUid();
+      final seeder = ConnectionSeeder(firestore: firestore, uid: uid);
 
-    final result = await seeder.run(choice: SeederChoice.samples);
-    expect(result.didSeed, isTrue);
-    expect(result.didNoOp, isFalse);
-    expect(result.connectionsWritten, 5);
-    expect(result.interactionsWritten, 3);
-    expect(result.eventsWritten, 5);
+      final result = await seeder.run(choice: SeederChoice.samples);
+      expect(result.didSeed, isTrue);
+      expect(result.didNoOp, isFalse);
+      expect(result.connectionsWritten, 5);
+      expect(result.interactionsWritten, 3);
+      expect(result.eventsWritten, 5);
 
-    expect(await countCollection(uid, 'connections'), 5);
-    expect(await countCollection(uid, 'interactions'), 3);
-    expect(await countCollection(uid, 'events'), 5);
-  });
+      expect(await countCollection(uid, 'connections'), 5);
+      expect(await countCollection(uid, 'interactions'), 3);
+      expect(await countCollection(uid, 'events'), 5);
+    },
+  );
 
-  test('samples branch: all five sentinels land on the user doc',
-      () async {
+  test('samples branch: all five sentinels land on the user doc', () async {
     final uid = currentUid();
     final seeder = ConnectionSeeder(firestore: firestore, uid: uid);
     await seeder.run(choice: SeederChoice.samples);
@@ -85,8 +85,11 @@ void main() {
     expect(userDoc.exists, isTrue);
     final data = userDoc.data()!;
     for (final sentinel in SeederSentinels.all) {
-      expect(data[sentinel], isA<Timestamp>(),
-          reason: 'sentinel $sentinel must be a Timestamp after seeding');
+      expect(
+        data[sentinel],
+        isA<Timestamp>(),
+        reason: 'sentinel $sentinel must be a Timestamp after seeding',
+      );
     }
     expect(data['categories'], isA<List<dynamic>>());
     expect(data['eventTypes'], isA<List<dynamic>>());
@@ -94,35 +97,48 @@ void main() {
     expect((data['eventTypes'] as List).length, isPositive);
   });
 
-  test('fresh branch: writes empty collections but seeds categories + eventTypes',
-      () async {
-    final uid = currentUid();
-    final seeder = ConnectionSeeder(firestore: firestore, uid: uid);
+  test(
+    'fresh branch: writes empty collections but seeds categories + eventTypes',
+    () async {
+      final uid = currentUid();
+      final seeder = ConnectionSeeder(firestore: firestore, uid: uid);
 
-    final result = await seeder.run(choice: SeederChoice.fresh);
-    expect(result.didSeed, isFalse,
-        reason: 'fresh branch is sentinel-only for the three collections');
-    expect(result.didNoOp, isFalse,
-        reason: 'fresh branch still writes categories + eventTypes + '
-            'three sentinel-only timestamps');
-    expect(result.connectionsWritten, 0);
-    expect(result.interactionsWritten, 0);
-    expect(result.eventsWritten, 0);
+      final result = await seeder.run(choice: SeederChoice.fresh);
+      expect(
+        result.didSeed,
+        isFalse,
+        reason: 'fresh branch is sentinel-only for the three collections',
+      );
+      expect(
+        result.didNoOp,
+        isFalse,
+        reason:
+            'fresh branch still writes categories + eventTypes + '
+            'three sentinel-only timestamps',
+      );
+      expect(result.connectionsWritten, 0);
+      expect(result.interactionsWritten, 0);
+      expect(result.eventsWritten, 0);
 
-    expect(await countCollection(uid, 'connections'), 0);
-    expect(await countCollection(uid, 'interactions'), 0);
-    expect(await countCollection(uid, 'events'), 0);
+      expect(await countCollection(uid, 'connections'), 0);
+      expect(await countCollection(uid, 'interactions'), 0);
+      expect(await countCollection(uid, 'events'), 0);
 
-    final userDoc = await readUserDoc(uid);
-    final data = userDoc.data()!;
-    for (final sentinel in SeederSentinels.all) {
-      expect(data[sentinel], isA<Timestamp>(),
-          reason: 'fresh branch must still set $sentinel so a future '
-              'launch does not re-prompt or re-seed');
-    }
-    expect(data['categories'], isA<List<dynamic>>());
-    expect(data['eventTypes'], isA<List<dynamic>>());
-  });
+      final userDoc = await readUserDoc(uid);
+      final data = userDoc.data()!;
+      for (final sentinel in SeederSentinels.all) {
+        expect(
+          data[sentinel],
+          isA<Timestamp>(),
+          reason:
+              'fresh branch must still set $sentinel so a future '
+              'launch does not re-prompt or re-seed',
+        );
+      }
+      expect(data['categories'], isA<List<dynamic>>());
+      expect(data['eventTypes'], isA<List<dynamic>>());
+    },
+  );
 
   test('idempotency: re-running with samples is a no-op', () async {
     final uid = currentUid();
@@ -149,29 +165,27 @@ void main() {
     expect(first.didNoOp, isFalse);
 
     final second = await seeder.run(choice: SeederChoice.fresh);
-    expect(second.didNoOp, isTrue,
-        reason: 'second fresh run must be a true no-op');
+    expect(
+      second.didNoOp,
+      isTrue,
+      reason: 'second fresh run must be a true no-op',
+    );
 
     expect(await countCollection(uid, 'connections'), 0);
     expect(await countCollection(uid, 'interactions'), 0);
     expect(await countCollection(uid, 'events'), 0);
   });
 
-  test(
-      'partial-state recovery: with categoriesSeededAt pre-set, the seeder '
-      'still writes the other targets',
-      () async {
+  test('partial-state recovery: with categoriesSeededAt pre-set, the seeder '
+      'still writes the other targets', () async {
     final uid = currentUid();
 
     // Manually pre-seed a categories sentinel as if a previous run
     // had succeeded for that branch only.
-    await firestore.collection('users').doc(uid).set(
-      {
-        SeederSentinels.categories: FieldValue.serverTimestamp(),
-        'categories': const ['Custom-Cat'],
-      },
-      SetOptions(merge: true),
-    );
+    await firestore.collection('users').doc(uid).set({
+      SeederSentinels.categories: FieldValue.serverTimestamp(),
+      'categories': const ['Custom-Cat'],
+    }, SetOptions(merge: true));
 
     final seeder = ConnectionSeeder(firestore: firestore, uid: uid);
     final result = await seeder.run(choice: SeederChoice.samples);
@@ -183,34 +197,39 @@ void main() {
 
     final userDoc = await readUserDoc(uid);
     final data = userDoc.data()!;
-    expect(data['categories'], <String>['Custom-Cat'],
-        reason: 'pre-existing categories must not be overwritten when '
-            'the categoriesSeededAt sentinel was already set.');
+    expect(
+      data['categories'],
+      <String>['Custom-Cat'],
+      reason:
+          'pre-existing categories must not be overwritten when '
+          'the categoriesSeededAt sentinel was already set.',
+    );
   });
 
   test(
-      'samples branch coexists with Pass 4.2 #059 migratedFromDiskAt',
-      () async {
-    final uid = currentUid();
+    'samples branch coexists with Pass 4.2 #059 migratedFromDiskAt',
+    () async {
+      final uid = currentUid();
 
-    // A user who came in via Pass 4.2 already has migratedFromDiskAt
-    // on their user doc. Pass 4.5's seeder must not clobber it.
-    await firestore.collection('users').doc(uid).set(
-      {
+      // A user who came in via Pass 4.2 already has migratedFromDiskAt
+      // on their user doc. Pass 4.5's seeder must not clobber it.
+      await firestore.collection('users').doc(uid).set({
         'migratedFromDiskAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
+      }, SetOptions(merge: true));
 
-    final seeder = ConnectionSeeder(firestore: firestore, uid: uid);
-    await seeder.run(choice: SeederChoice.samples);
+      final seeder = ConnectionSeeder(firestore: firestore, uid: uid);
+      await seeder.run(choice: SeederChoice.samples);
 
-    final userDoc = await readUserDoc(uid);
-    final data = userDoc.data()!;
-    expect(data['migratedFromDiskAt'], isA<Timestamp>(),
-        reason: 'Pass 4.2 sentinel must survive the Pass 4.5 seeder.');
-    for (final sentinel in SeederSentinels.all) {
-      expect(data[sentinel], isA<Timestamp>());
-    }
-  });
+      final userDoc = await readUserDoc(uid);
+      final data = userDoc.data()!;
+      expect(
+        data['migratedFromDiskAt'],
+        isA<Timestamp>(),
+        reason: 'Pass 4.2 sentinel must survive the Pass 4.5 seeder.',
+      );
+      for (final sentinel in SeederSentinels.all) {
+        expect(data[sentinel], isA<Timestamp>());
+      }
+    },
+  );
 }

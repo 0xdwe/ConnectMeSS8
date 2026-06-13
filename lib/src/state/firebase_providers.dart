@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 /// Active [FirebaseAuth] instance (Pass 4.1, #052).
 ///
 /// Production resolves to `FirebaseAuth.instance`. Tests override
@@ -129,7 +130,8 @@ Future<void> activateAppCheck() async {
   // Linux, debug) routes through the debug provider so a release
   // build on a non-launch target does not crash on missing
   // attestation infrastructure.
-  final isMobileLaunchTarget = !kIsWeb &&
+  final isMobileLaunchTarget =
+      !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS);
 
@@ -222,4 +224,3 @@ final currentUserProvider = Provider<User?>((ref) {
   ref.onDispose(sub.cancel);
   return auth.currentUser;
 });
-

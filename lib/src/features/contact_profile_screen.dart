@@ -125,7 +125,10 @@ class ContactProfileScreen extends ConsumerWidget {
                           backgroundImage: _contactAvatarImage(person.avatar),
                           child: _contactAvatarImage(person.avatar) == null
                               ? Text(
-                                  _contactAvatarGlyph(person.avatar, person.name),
+                                  _contactAvatarGlyph(
+                                    person.avatar,
+                                    person.name,
+                                  ),
                                   style: AppTypography.bodyLg(
                                     color: tokens.primary,
                                   ),
@@ -140,7 +143,8 @@ class ContactProfileScreen extends ConsumerWidget {
                             shape: const CircleBorder(),
                             child: InkWell(
                               customBorder: const CircleBorder(),
-                              onTap: () => showEditConnectionModal(context, person),
+                              onTap: () =>
+                                  showEditConnectionModal(context, person),
                               child: Container(
                                 width: 26,
                                 height: 26,

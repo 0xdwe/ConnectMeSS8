@@ -36,7 +36,8 @@ const int kRecentInteractionsLimit = 5;
 /// the visual tier the user sees prevents subtle voice mismatches
 /// (the LLM treating "medium" while the ring shows "close").
 String _bondTierLabel(int bondScore) {
-  if (bondScore >= 80) return 'close — regular touch, the relationship is healthy';
+  if (bondScore >= 80)
+    return 'close — regular touch, the relationship is healthy';
   if (bondScore >= 50) return 'steady — stable, periodic touch';
   return 'drifting — contact has thinned, gentle re-entry helps';
 }

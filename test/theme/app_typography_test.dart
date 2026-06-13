@@ -22,7 +22,7 @@ void main() {
       expect(style.fontWeight, FontWeight.w700);
       // Font family check removed: google_fonts triggers async loading
       // that completes after test finishes. Inter is verified in widget tests.
-      
+
       // Wait for any pending async font loading to complete
       await Future.delayed(Duration.zero);
     });
@@ -110,17 +110,15 @@ void main() {
   });
 
   group('AppTypography in widget tree', () {
-    testWidgets('rendered Text inherits Inter family from a token',
-        (tester) async {
+    testWidgets('rendered Text inherits Inter family from a token', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.data(false),
           home: Scaffold(
             body: Builder(
-              builder: (context) => Text(
-                'Hi',
-                style: AppTypography.h2(),
-              ),
+              builder: (context) => Text('Hi', style: AppTypography.h2()),
             ),
           ),
         ),
@@ -133,8 +131,9 @@ void main() {
       expect(textWidget.style!.fontWeight, FontWeight.w600);
     });
 
-    testWidgets('AppTheme.data textTheme uses Inter on default slots',
-        (tester) async {
+    testWidgets('AppTheme.data textTheme uses Inter on default slots', (
+      tester,
+    ) async {
       late ThemeData captured;
       await tester.pumpWidget(
         MaterialApp(

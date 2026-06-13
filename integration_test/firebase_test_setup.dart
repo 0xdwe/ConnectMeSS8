@@ -148,9 +148,7 @@ Future<void> clearAuthEmulator() async {
     final res = await req.close();
     await res.drain<void>();
     if (res.statusCode != HttpStatus.ok) {
-      throw StateError(
-        'Auth emulator wipe failed: HTTP ${res.statusCode}',
-      );
+      throw StateError('Auth emulator wipe failed: HTTP ${res.statusCode}');
     }
   } finally {
     client.close(force: true);

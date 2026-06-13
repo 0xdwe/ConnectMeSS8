@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -19,21 +18,6 @@ class AppSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       ColoredBox(color: context.tokens.surface, child: child);
-}
-
-/// Parse the memory.history field into display-friendly lines.
-List<String> _parseMemoryHistoryLines(MemoryDocument memory) {
-  final lines = <String>[];
-  for (final raw in memory.history.split('\n')) {
-    final trimmed = raw.trim();
-    if (trimmed.isEmpty) continue;
-    // Drop leading '- ' bullets if present.
-    final line = trimmed.startsWith('- ')
-        ? trimmed.substring(2).trim()
-        : trimmed;
-    lines.add(line);
-  }
-  return lines;
 }
 
 ImageProvider<Object>? connectionAvatarImage(String avatar) {
@@ -684,9 +668,7 @@ class _HeatmapRow extends StatelessWidget {
                 ],
               ),
               SizedBox(height: AppSpacing.space3),
-              Row(
-                children: _buildMonthHeatmap(context),
-              ),
+              Row(children: _buildMonthHeatmap(context)),
             ],
           ),
         ),
@@ -769,13 +751,6 @@ class _HeatmapRow extends StatelessWidget {
 
   String _monthKey(DateTime dt) =>
       '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
-
-  Color _getHeatColor(AppTokens tokens, int count, int maxCount) {
-    if (maxCount <= 0 || count <= 0) return tokens.surfaceRaised;
-    final intensity = count / maxCount; // 0..1
-    // Map intensity to an opacity of the category color
-    return color.withValues(alpha: 0.25 + (0.75 * intensity));
-  }
 }
 
 class SectionTitle extends StatelessWidget {
@@ -1330,6 +1305,14 @@ class _InlineTopicDetails extends StatelessWidget {
       contactName: contactName,
       memory: memory,
     );
+    final displaySuggestions = suggestions.isNotEmpty
+        ? suggestions
+        : const <TopicSuggestion>[
+            TopicSuggestion(
+              kind: TopicSuggestionKind.ask,
+              text: 'Ask an open question about how they\'ve been',
+            ),
+          ];
     return Container(
       width: double.infinity,
       margin: EdgeInsets.only(top: AppSpacing.space3),
@@ -1344,119 +1327,61 @@ class _InlineTopicDetails extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.lightbulb_outline, color: tokens.secondary, size: 18),
+              Icon(Icons.lightbulb_outline, color: tokens.secondary, size: 24),
               SizedBox(width: AppSpacing.space3),
               Expanded(
                 child: Text(
                   topic,
-                  style: AppTypography.h2().copyWith(
-                    fontWeight: FontWeight.w700,
+                  style: AppTypography.h1().copyWith(
                     color: _recommendationTitleColor,
                   ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: AppSpacing.space3),
-          Text(
-            'Conversation Starter:',
-            style: AppTypography.h2(
-              color: _recommendationTitleColor,
-            ).copyWith(fontSize: 14),
-          ),
-          SizedBox(height: AppSpacing.space2),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(AppSpacing.space3),
-            decoration: BoxDecoration(
-              color: tokens.surfaceRaised,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              boxShadow: [
-                BoxShadow(
-                  color: tokens.border.withOpacity(0.04),
-                  blurRadius: 6,
+          SizedBox(height: AppSpacing.space4),
+          for (final suggestion in displaySuggestions)
+            Padding(
+              padding: EdgeInsets.only(bottom: AppSpacing.space3),
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(AppSpacing.space4),
+                decoration: BoxDecoration(
+                  color: tokens.surfaceRaised,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  boxShadow: [
+                    BoxShadow(
+                      color: tokens.border.withOpacity(0.04),
+                      blurRadius: 6,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Text(
-              suggestions.isNotEmpty
-                  ? suggestions.first
-                  : 'Ask an open question about how they\'ve been',
-              style: AppTypography.body(color: _recommendationBodyColor),
-            ),
-          ),
-          SizedBox(height: AppSpacing.space3),
-          Text(
-            'Past Conversations:',
-            style: AppTypography.h2(
-              color: _recommendationTitleColor,
-            ).copyWith(fontSize: 14),
-          ),
-          SizedBox(height: AppSpacing.space2),
-          if (memory != null && memory!.history.trim().isNotEmpty)
-            for (final line in _parseMemoryHistoryLines(memory!).take(3))
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.space1),
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(AppSpacing.space3),
-                  decoration: BoxDecoration(
-                    color: tokens.recommendationSurface,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: Text(
-                    line,
-                    style: AppTypography.body(color: _recommendationBodyColor),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Conversation Starter :',
+                      style: AppTypography.h2(color: _recommendationTitleColor),
+                    ),
+                    SizedBox(height: AppSpacing.space1),
+                    Text(
+                      suggestion.text,
+                      style: AppTypography.body(color: _recommendationBodyColor),
+                    ),
+                    SizedBox(height: AppSpacing.space3),
+                    Text(
+                      'Context :',
+                      style: AppTypography.h2(color: _recommendationTitleColor),
+                    ),
+                    SizedBox(height: AppSpacing.space1),
+                    Text(
+                      suggestion.context ?? '',
+                      style: AppTypography.body(color: _recommendationBodyColor),
+                    ),
+                  ],
                 ),
-              )
-          else
-            Text(
-              'No recent conversations recorded.',
-              style: AppTypography.body(color: tokens.inkSubtle),
+              ),
             ),
-          SizedBox(height: AppSpacing.space3),
-          Text(
-            'Current Context:',
-            style: AppTypography.h2(
-              color: _recommendationTitleColor,
-            ).copyWith(fontSize: 14),
-          ),
-          SizedBox(height: AppSpacing.space2),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(AppSpacing.space3),
-            decoration: BoxDecoration(
-              color: tokens.surfaceRaised,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-            ),
-            child: Text(
-              (memory != null && memory!.summary.trim().isNotEmpty)
-                  ? memory!.summary
-                  : 'No current context available.',
-              style: AppTypography.body(color: _recommendationBodyColor),
-            ),
-          ),
-          SizedBox(height: AppSpacing.space3),
-          Text(
-            'Related News:',
-            style: AppTypography.h2(
-              color: _recommendationTitleColor,
-            ).copyWith(fontSize: 14),
-          ),
-          SizedBox(height: AppSpacing.space2),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(AppSpacing.space3),
-            decoration: BoxDecoration(
-              color: tokens.recommendationSurface,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-            ),
-            child: Text(
-              'Mother\'s Day coming up May 11th',
-              style: AppTypography.body(color: _recommendationBodyColor),
-            ),
-          ),
         ],
       ),
     );
@@ -1514,188 +1439,6 @@ class _TopicPill extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Opens a read-only bottom sheet listing 3-5 conversation suggestions
-/// for the given (category, topic, contactName) tuple.
-// ignore: unused_element
-void _showTopicSuggestionsSheet(
-  BuildContext context,
-  String category,
-  String topic,
-  String contactName,
-  String contactId,
-  MemoryDocument? memory,
-) {
-  final tokens = context.tokens;
-  final suggestions = suggestionsForTopic(category, topic, contactName);
-  showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: tokens.surfaceRaised,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-    ),
-    builder: (context) {
-      final sheetTokens = context.tokens;
-      return SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.space5,
-            AppSpacing.space3,
-            AppSpacing.space5,
-            AppSpacing.space5,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Drag handle
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: sheetTokens.border,
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
-                ),
-              ),
-              SizedBox(height: AppSpacing.space4),
-              Row(
-                children: [
-                  Icon(
-                    Icons.chat_bubble_outline,
-                    size: 20,
-                    color: sheetTokens.secondary,
-                  ),
-                  SizedBox(width: AppSpacing.space2),
-                  Expanded(
-                    child: Text(
-                      topic,
-                      style: AppTypography.h2(),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: AppSpacing.space4),
-              // Conversation Starter
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.space2),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Conversation Starter:', style: AppTypography.h2()),
-                    SizedBox(height: AppSpacing.space2),
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(AppSpacing.space3),
-                      decoration: BoxDecoration(
-                        color: sheetTokens.recommendationSurface,
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                      child: Text(
-                        suggestions.isNotEmpty
-                            ? suggestions.first
-                            : 'Ask an open question about how they\'ve been',
-                        style: AppTypography.body(color: sheetTokens.ink),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: AppSpacing.space3),
-              // Past Conversations (from memory.history) — show up to 3 bullets
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.space2),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Past Conversations:', style: AppTypography.h2()),
-                    SizedBox(height: AppSpacing.space2),
-                    if (memory != null && memory.history.trim().isNotEmpty)
-                      for (final line in _parseMemoryHistoryLines(
-                        memory,
-                      ).take(3))
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                            vertical: AppSpacing.space1,
-                          ),
-                          child: Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.all(AppSpacing.space3),
-                            decoration: BoxDecoration(
-                              color: sheetTokens.surfaceRaised,
-                              borderRadius: BorderRadius.circular(AppRadius.sm),
-                            ),
-                            child: Text(line, style: AppTypography.body()),
-                          ),
-                        )
-                    else
-                      Text(
-                        'No recent conversations recorded.',
-                        style: AppTypography.body(color: sheetTokens.inkSubtle),
-                      ),
-                  ],
-                ),
-              ),
-              SizedBox(height: AppSpacing.space3),
-              // Current Context (memory.summary)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.space2),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Current Context:', style: AppTypography.h2()),
-                    SizedBox(height: AppSpacing.space2),
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(AppSpacing.space3),
-                      decoration: BoxDecoration(
-                        color: sheetTokens.surfaceRaised,
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                      child: Text(
-                        (memory != null && memory.summary.trim().isNotEmpty)
-                            ? memory.summary
-                            : 'No current context available.',
-                        style: AppTypography.body(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: AppSpacing.space3),
-              // Related News — placeholder static item for now
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.space2),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Related News:', style: AppTypography.h2()),
-                    SizedBox(height: AppSpacing.space2),
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(AppSpacing.space3),
-                      decoration: BoxDecoration(
-                        color: sheetTokens.recommendationSurface,
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                      child: Text(
-                        'Mother\'s Day coming up May 11th',
-                        style: AppTypography.body(color: sheetTokens.ink),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
 }
 
 /// Pill-shaped, gradient floating action button used for "Update with AI"

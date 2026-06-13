@@ -12,6 +12,7 @@ import '../features/settings_screen.dart';
 import '../features/shell_screen.dart';
 import '../state/app_state.dart';
 import '../state/memory/memory_providers.dart';
+import '../state/memory/memory_topic_backfill_runner.dart';
 import '../theme/app_theme.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -38,9 +39,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/ai-update/:id',
-        builder: (context, state) => AiUpdateScreen(
-          contactId: state.pathParameters['id']!,
-        ),
+        builder: (context, state) =>
+            AiUpdateScreen(contactId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/recommendations',
@@ -64,6 +64,9 @@ class _ConnectMeAppState extends ConsumerState<ConnectMeApp> {
   Widget build(BuildContext context) {
     final appState = ref.watch(appControllerProvider);
     final seeding = ref.watch(memorySeedingProvider);
+
+    // Start the memory topic backfill in the background silently.
+    ref.watch(memoryTopicBackfillProvider);
 
     ref.listen<AsyncValue<void>>(memorySeedingProvider, (previous, next) {
       if (!mounted) return;

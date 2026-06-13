@@ -35,7 +35,7 @@ List<String> topicsForContact(Connection connection, MemoryDocument? memory) {
 /// blank prepared strings dropped and the result capped to three. When
 /// prepared suggestions are missing, expired, or blank after trimming,
 /// this falls back to [suggestionsForTopic].
-List<String> preferredSuggestionsForTopic({
+List<TopicSuggestion> preferredSuggestionsForTopic({
   required String category,
   required String topic,
   required String contactName,
@@ -47,8 +47,25 @@ List<String> preferredSuggestionsForTopic({
     topic,
     now ?? DateTime.now(),
   );
-  if (prepared.isNotEmpty) return prepared;
-  return suggestionsForTopic(category, topic, contactName);
+  if (prepared.isNotEmpty) {
+    return prepared.map((s) {
+      if (s.context == null || s.context!.trim().isEmpty) {
+        return TopicSuggestion(
+          kind: s.kind,
+          text: s.text,
+          context: _fallbackContext(category, topic, contactName),
+        );
+      }
+      return s;
+    }).toList(growable: false);
+  }
+  return suggestionsForTopic(category, topic, contactName)
+      .map((str) => TopicSuggestion(
+            kind: TopicSuggestionKind.ask,
+            text: str,
+            context: _fallbackContext(category, topic, contactName),
+          ))
+      .toList(growable: false);
 }
 
 /// Returns 3-5 deterministic conversation-starter suggestions for a
@@ -90,7 +107,7 @@ List<String> suggestionsForTopic(
   ];
 }
 
-List<String> _preparedSuggestionsForTopic(
+List<TopicSuggestion> _preparedSuggestionsForTopic(
   MemoryDocument? memory,
   String topic,
   DateTime now,
@@ -106,8 +123,7 @@ List<String> _preparedSuggestionsForTopic(
       return const [];
     }
     return group.suggestions
-        .map((suggestion) => suggestion.text.trim())
-        .where((text) => text.isNotEmpty)
+        .where((suggestion) => suggestion.text.trim().isNotEmpty)
         .take(3)
         .toList(growable: false);
   }
@@ -272,3 +288,66 @@ const List<String> _genericSuggestions = [
   'Share a recent update from your own life',
   'Suggest meeting up',
 ];
+
+String _fallbackContext(String category, String topic, String contactName) {
+  final firstName = _firstNameOf(contactName.trim());
+  final lowerTopic = topic.trim().toLowerCase();
+  
+  if (lowerTopic == 'family updates') {
+    return 'Based on family relations with $firstName.';
+  }
+  if (lowerTopic == 'shared memories') {
+    return 'Based on past shared experiences with $firstName.';
+  }
+  if (lowerTopic == 'daily life') {
+    return 'Based on daily life updates from $firstName.';
+  }
+  if (lowerTopic == 'future plans') {
+    return 'Based on future plans discussed with $firstName.';
+  }
+  if (lowerTopic == 'recent meetups') {
+    return 'Based on recent hangouts and meetups with $firstName.';
+  }
+  if (lowerTopic == 'inside jokes') {
+    return 'Based on inside jokes and funny moments shared with $firstName.';
+  }
+  if (lowerTopic == 'plans together') {
+    return 'Based on plans you want to make together with $firstName.';
+  }
+  if (lowerTopic == 'life updates') {
+    return 'Based on general life updates from $firstName.';
+  }
+  if (lowerTopic == 'old classes') {
+    return 'Based on college classes taken with $firstName.';
+  }
+  if (lowerTopic == 'mutual friends') {
+    return 'Based on mutual friends shared with $firstName.';
+  }
+  if (lowerTopic == 'career') {
+    return 'Based on career and professional updates from $firstName.';
+  }
+  if (lowerTopic == 'reunions') {
+    return 'Based on upcoming reunions or get-togethers with $firstName.';
+  }
+  if (lowerTopic == 'old times') {
+    return 'Based on old memories and high school times shared with $firstName.';
+  }
+  if (lowerTopic == 'where they are now') {
+    return 'Based on catching up with where $firstName is now.';
+  }
+  if (lowerTopic == 'projects') {
+    return 'Based on professional projects worked on with $firstName.';
+  }
+  if (lowerTopic == 'industry news') {
+    return 'Based on industry updates and news relevant to $firstName.';
+  }
+  if (lowerTopic == 'team updates') {
+    return 'Based on team and workplace updates from $firstName.';
+  }
+  
+  final trimmedTopic = topic.trim();
+  if (trimmedTopic.isNotEmpty) {
+    return "Based on the conversation topic '$trimmedTopic' associated with $firstName.";
+  }
+  return "General relationship check-in suggestion for $firstName.";
+}

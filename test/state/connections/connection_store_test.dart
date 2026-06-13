@@ -100,23 +100,26 @@ void main() {
       await store.save(makeConnection('sarah'));
       final snapshot = await store.listAll();
       expect(
-          () => snapshot['mike'] = makeConnection('mike'),
-          throwsUnsupportedError,
-          reason:
-              'listAll must return an unmodifiable view to keep callers from '
-              'mutating the underlying store by accident.');
+        () => snapshot['mike'] = makeConnection('mike'),
+        throwsUnsupportedError,
+        reason:
+            'listAll must return an unmodifiable view to keep callers from '
+            'mutating the underlying store by accident.',
+      );
     });
   });
 
   group('InMemoryConnectionStore — snapshot stream', () {
-    test('snapshotSync starts null until the first event has emitted',
-        () async {
-      final store = InMemoryConnectionStore();
-      // Before anyone subscribes / before any save, the mirror has not
-      // yet been published. Mirrors the FirebaseConnectionStore contract
-      // documented in #065 ACs.
-      expect(store.snapshotSync(), isNull);
-    });
+    test(
+      'snapshotSync starts null until the first event has emitted',
+      () async {
+        final store = InMemoryConnectionStore();
+        // Before anyone subscribes / before any save, the mirror has not
+        // yet been published. Mirrors the FirebaseConnectionStore contract
+        // documented in #065 ACs.
+        expect(store.snapshotSync(), isNull);
+      },
+    );
 
     test('snapshot emits the current state on first subscribe', () async {
       final store = InMemoryConnectionStore();
@@ -162,25 +165,27 @@ void main() {
       await sub.cancel();
     });
 
-    test('snapshot is a broadcast stream — multiple listeners both receive',
-        () async {
-      final store = InMemoryConnectionStore();
+    test(
+      'snapshot is a broadcast stream — multiple listeners both receive',
+      () async {
+        final store = InMemoryConnectionStore();
 
-      final aEvents = <Map<String, Connection>>[];
-      final bEvents = <Map<String, Connection>>[];
-      final subA = store.snapshot().listen(aEvents.add);
-      final subB = store.snapshot().listen(bEvents.add);
-      await Future<void>.delayed(Duration.zero);
+        final aEvents = <Map<String, Connection>>[];
+        final bEvents = <Map<String, Connection>>[];
+        final subA = store.snapshot().listen(aEvents.add);
+        final subB = store.snapshot().listen(bEvents.add);
+        await Future<void>.delayed(Duration.zero);
 
-      await store.save(makeConnection('sarah'));
-      await Future<void>.delayed(Duration.zero);
+        await store.save(makeConnection('sarah'));
+        await Future<void>.delayed(Duration.zero);
 
-      expect(aEvents.last.keys, contains('sarah'));
-      expect(bEvents.last.keys, contains('sarah'));
+        expect(aEvents.last.keys, contains('sarah'));
+        expect(bEvents.last.keys, contains('sarah'));
 
-      await subA.cancel();
-      await subB.cancel();
-    });
+        await subA.cancel();
+        await subB.cancel();
+      },
+    );
 
     test('clear empties the store and emits an empty map', () async {
       final store = InMemoryConnectionStore();

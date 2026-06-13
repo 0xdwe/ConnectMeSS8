@@ -57,6 +57,9 @@ A "you should reach out to X" card on the home screen. Produced by `Recommendati
 ### Topic Suggestion
 A prepared, gentle action idea grouped under a MemoryDocument topic. Usually generated during AI Update, shown when the user taps a topic, and may provide topic-specific copy for a Recommendation. Topic Suggestions do not create relationship urgency by themselves; Maintenance Need or Upcoming context still governs recommendation priority.
 
+### Memory Topic Backfill
+A one-shot, silent, background process that enriches existing Connections' memories with Gemini-ranked topics and topic-scoped suggestions. Runs automatically after memory seeding completes for signed-in users. Bounded to eligible contacts (lacking prepared suggestions, has useful context or interactions). Does not alter Bond Score, create CrmInteractions, or append memory history. Tracks completion via a user-document sentinel `topicSuggestionsBackfillV1CompletedAt`.
+
 ### Relationship Graph
 The shared shape of (Connections, CrmInteractions, PlannerEvents) — the user's people, their history, and their forward plan. NOT a single data structure; rather, the joint result of three Firestore subcollections that are mutated atomically when their cardinality crosses (e.g. deleteConnection cascades to interactions and events in one batched write).
 
@@ -108,6 +111,9 @@ Pass 4.5 seam for multi-store atomic writes. Three named operations: `commitDele
 ### `AiUpdate`
 Pass 3 §Q1 carve. The "Update with AI" flow as a single module. Adapters: `MockAiUpdate` (deterministic Pass 3), `LlmAiUpdate` (Pass 4.3, not yet built).
 
+### `MemoryTopicEnricher`
+Memory-only AI topic enrichment seam. Given a Connection, MemoryDocument, and recent CrmInteractions, returns an enriched MemoryDocument with Gemini-ranked topics and topic-scoped Topic Suggestions. Adapters: `LlmMemoryTopicEnricher` (Gemini-backed production) and `FakeMemoryTopicEnricher` (unit tests).
+
 ### `RelationshipMaintenancePolicy`
 Pure relationship-maintenance policy module. It accepts a Connection, the current CrmInteractions, and an injected `now`, then returns Bond durability tier, adjusted cadence, latest touch, Maintenance Need, candidate Bond Drift, and drift-window eligibility. It contains cadence/bucket/cap constants from the #090 calibration PRD and performs no persistence.
 
@@ -123,6 +129,7 @@ After Pass 4.5 (commit `2889b59`):
 - **Firestore is the source of truth** for connections, interactions, events, categories, event types, and per-contact memory. AppController state is a denormalization of the four store snapshot mirrors plus the in-memory user-doc snapshot.
 - **Cross-instance writes flow in via snapshot listeners.** A write on device A propagates to device B's listener, into the mirror, into AppController state, into the UI.
 - **First-launch initialization is via `ConnectionSeeder`**, not a migration. Sentinels (`*SeededAt`, `migratedFromDiskAt`) gate idempotency.
+- **Memory topic backfill runs silently in the background** on launch once memory seeding completes. A versioned completion sentinel `topicSuggestionsBackfillV1CompletedAt` stored on the user document gates the one-shot run.
 - **Multi-store writes are atomic** via `BatchedWrites`. `deleteConnection`, `applyAiUpdateResult`, `removeSampleConnections` all use Firestore `WriteBatch`. On commit failure, AppController state is not advanced.
 - **Relationship maintenance has a strict split.** `RelationshipMaintenancePolicy` derives Maintenance Need and candidate Bond Drift; `RecommendationEngine` uses Maintenance Need for ranking only; `AppController` applies eligible Bond Drift; `ConnectionStore` / Firestore persist the resulting `bondScore` and optional `lastBondDriftAppliedAt` timestamp.
 - **Notification settings are durable user-document state.** Local planner and birthday reminders are derived from PlannerEvents and replaced as one schedule set. Suggested check-ins are selected server-side from Firestore state and delivered only to registered device tokens.

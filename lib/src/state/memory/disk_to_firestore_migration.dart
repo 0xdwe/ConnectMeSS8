@@ -39,14 +39,13 @@ class FirestoreMigrationSentinel implements MigrationSentinel {
   FirestoreMigrationSentinel({
     required FirebaseFirestore firestore,
     required String uid,
-  })  : _firestore = firestore,
-        _uid = uid;
+  }) : _firestore = firestore,
+       _uid = uid;
 
   /// Field name on the `users/{uid}` document. Pinned as a constant
   /// so tests, integration tests, and downstream tooling reference
   /// the same key.
-  static const String fieldName =
-      DiskToFirestoreMigration.sentinelField;
+  static const String fieldName = DiskToFirestoreMigration.sentinelField;
 
   final FirebaseFirestore _firestore;
   final String _uid;
@@ -64,11 +63,9 @@ class FirestoreMigrationSentinel implements MigrationSentinel {
   @override
   Future<void> set(DateTime timestamp) async {
     await _firestore.runTransaction<void>((tx) async {
-      tx.set(
-        _userDocRef,
-        <String, dynamic>{fieldName: Timestamp.fromDate(timestamp)},
-        SetOptions(merge: true),
-      );
+      tx.set(_userDocRef, <String, dynamic>{
+        fieldName: Timestamp.fromDate(timestamp),
+      }, SetOptions(merge: true));
     });
   }
 }
@@ -119,10 +116,10 @@ class DiskToFirestoreMigration {
     required MemoryStore target,
     required MigrationSentinel sentinel,
     DateTime Function() clock = DateTime.now,
-  })  : _source = source,
-        _target = target,
-        _sentinel = sentinel,
-        _clock = clock;
+  }) : _source = source,
+       _target = target,
+       _sentinel = sentinel,
+       _clock = clock;
 
   /// Sentinel field name on the `users/{uid}` document. Public so
   /// callers and integration tests reference the same key.

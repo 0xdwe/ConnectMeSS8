@@ -19,10 +19,10 @@ enum BondTier {
   }
 
   String get label => switch (this) {
-        BondTier.close => 'close',
-        BondTier.steady => 'steady',
-        BondTier.drifting => 'drifting',
-      };
+    BondTier.close => 'close',
+    BondTier.steady => 'steady',
+    BondTier.drifting => 'drifting',
+  };
 }
 
 /// Bond trend direction (up/down/flat).
@@ -32,10 +32,10 @@ enum BondTrend {
   flat;
 
   IconData get icon => switch (this) {
-        BondTrend.up => Icons.arrow_upward,
-        BondTrend.down => Icons.arrow_downward,
-        BondTrend.flat => Icons.remove,
-      };
+    BondTrend.up => Icons.arrow_upward,
+    BondTrend.down => Icons.arrow_downward,
+    BondTrend.flat => Icons.remove,
+  };
 }
 
 /// BondRing: avatar wrapped by tier-colored arc showing bond strength.
@@ -102,7 +102,8 @@ class BondRing extends StatefulWidget {
   State<BondRing> createState() => _BondRingState();
 }
 
-class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin {
+class _BondRingState extends State<BondRing>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -116,23 +117,20 @@ class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin
     _animation = Tween<double>(
       begin: widget.score / 100,
       end: widget.score / 100,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutQuart,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
   }
 
   @override
   void didUpdateWidget(BondRing oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     final oldScore = oldWidget.score;
     final newScore = widget.score;
-    
+
     // Only animate if score changed.
     if (oldScore != newScore) {
       final disableAnimations = MediaQuery.of(context).disableAnimations;
-      
+
       if (disableAnimations) {
         // Skip animation, render immediately
         setState(() {
@@ -145,13 +143,13 @@ class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin
         // Animate from old to new score
         _controller.reset();
         setState(() {
-          _animation = Tween<double>(
-            begin: oldScore / 100,
-            end: newScore / 100,
-          ).animate(CurvedAnimation(
-            parent: _controller,
-            curve: Curves.easeOutQuart,
-          ));
+          _animation = Tween<double>(begin: oldScore / 100, end: newScore / 100)
+              .animate(
+                CurvedAnimation(
+                  parent: _controller,
+                  curve: Curves.easeOutQuart,
+                ),
+              );
         });
         _controller.forward();
       }
@@ -178,11 +176,13 @@ class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin
     };
 
     // Trend color mapping
-    final trendColor = currentTrend == null ? tokens.inkMuted : switch (currentTrend) {
-      BondTrend.up => tokens.success,
-      BondTrend.down => tokens.secondary,
-      BondTrend.flat => tokens.inkMuted,
-    };
+    final trendColor = currentTrend == null
+        ? tokens.inkMuted
+        : switch (currentTrend) {
+            BondTrend.up => tokens.success,
+            BondTrend.down => tokens.secondary,
+            BondTrend.flat => tokens.inkMuted,
+          };
 
     final semanticLabel = currentTrend != null && currentTrend != BondTrend.flat
         ? '${widget.label}, ${tier.label}, trending ${currentTrend.name}'
@@ -239,11 +239,7 @@ class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin
                 Positioned(
                   right: widget.size * 0.05,
                   bottom: widget.size * 0.15,
-                  child: Icon(
-                    currentTrend.icon,
-                    size: 12,
-                    color: trendColor,
-                  ),
+                  child: Icon(currentTrend.icon, size: 12, color: trendColor),
                 ),
             ],
           );
@@ -253,11 +249,7 @@ class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin
 
     // Wrap in minimum touch target if needed
     final touchTargetWidget = widget.size < 44
-        ? SizedBox(
-            width: 44,
-            height: 44,
-            child: Center(child: ringWidget),
-          )
+        ? SizedBox(width: 44, height: 44, child: Center(child: ringWidget))
         : ringWidget;
 
     // Wrap in Semantics and optional GestureDetector
@@ -265,10 +257,7 @@ class _BondRingState extends State<BondRing> with SingleTickerProviderStateMixin
       label: semanticLabel,
       button: widget.onTap != null,
       child: widget.onTap != null
-          ? GestureDetector(
-              onTap: widget.onTap,
-              child: touchTargetWidget,
-            )
+          ? GestureDetector(onTap: widget.onTap, child: touchTargetWidget)
           : touchTargetWidget,
     );
   }

@@ -293,51 +293,54 @@ void main() {
       );
     });
 
-    test('counts Topic Suggestions toward cap and drops oldest history first', () {
-      final history = [
-        '- 2026-05-01 oldest',
-        '- 2026-05-02 middle',
-        '- 2026-05-03 newest',
-      ].join('\n');
-      final doc = MemoryDocument(
-        contactId: 'sarah',
-        displayName: 'Sarah Chen',
-        lastUpdated: DateTime.utc(2026, 5, 19),
-        history: history,
-        topicSuggestions: [
-          TopicSuggestionGroup(
-            topic: 'Paris trip',
-            suggestions: [
-              TopicSuggestion(
-                kind: TopicSuggestionKind.ask,
-                text: 'Ask how planning is going ${'x' * 120}.',
-              ),
-              TopicSuggestion(
-                kind: TopicSuggestionKind.share,
-                text: 'Share a café recommendation ${'y' * 120}.',
-              ),
-              TopicSuggestion(
-                kind: TopicSuggestionKind.plan,
-                text: 'Plan a quick catch-up ${'z' * 120}.',
-              ),
-            ],
-          ),
-        ],
-      );
-      final capThatFitsOnlyNewest = utf8.encode(
-        doc.copyWith(history: '- 2026-05-03 newest').render(),
-      ).length;
+    test(
+      'counts Topic Suggestions toward cap and drops oldest history first',
+      () {
+        final history = [
+          '- 2026-05-01 oldest',
+          '- 2026-05-02 middle',
+          '- 2026-05-03 newest',
+        ].join('\n');
+        final doc = MemoryDocument(
+          contactId: 'sarah',
+          displayName: 'Sarah Chen',
+          lastUpdated: DateTime.utc(2026, 5, 19),
+          history: history,
+          topicSuggestions: [
+            TopicSuggestionGroup(
+              topic: 'Paris trip',
+              suggestions: [
+                TopicSuggestion(
+                  kind: TopicSuggestionKind.ask,
+                  text: 'Ask how planning is going ${'x' * 120}.',
+                ),
+                TopicSuggestion(
+                  kind: TopicSuggestionKind.share,
+                  text: 'Share a café recommendation ${'y' * 120}.',
+                ),
+                TopicSuggestion(
+                  kind: TopicSuggestionKind.plan,
+                  text: 'Plan a quick catch-up ${'z' * 120}.',
+                ),
+              ],
+            ),
+          ],
+        );
+        final capThatFitsOnlyNewest = utf8
+            .encode(doc.copyWith(history: '- 2026-05-03 newest').render())
+            .length;
 
-      final out = trimToCap(doc, capBytes: capThatFitsOnlyNewest);
+        final out = trimToCap(doc, capBytes: capThatFitsOnlyNewest);
 
-      expect(out.topicSuggestions, doc.topicSuggestions);
-      expect(out.history.contains('oldest'), isFalse);
-      expect(out.history.contains('middle'), isFalse);
-      expect(out.history.contains('newest'), isTrue);
-      expect(
-        utf8.encode(out.render()).length,
-        lessThanOrEqualTo(capThatFitsOnlyNewest),
-      );
-    });
+        expect(out.topicSuggestions, doc.topicSuggestions);
+        expect(out.history.contains('oldest'), isFalse);
+        expect(out.history.contains('middle'), isFalse);
+        expect(out.history.contains('newest'), isTrue);
+        expect(
+          utf8.encode(out.render()).length,
+          lessThanOrEqualTo(capThatFitsOnlyNewest),
+        );
+      },
+    );
   });
 }

@@ -292,10 +292,13 @@ service cloud.firestore {
           'eventTypesSeededAt',
           'categories',
           'eventTypes',
-          'notificationPreferences'
+          'notificationPreferences',
+          'topicSuggestionsBackfillV1CompletedAt'
         ])
         && (!('migratedFromDiskAt' in data.keys())
             || data.migratedFromDiskAt is timestamp)
+        && (!('topicSuggestionsBackfillV1CompletedAt' in data.keys())
+            || data.topicSuggestionsBackfillV1CompletedAt is timestamp)
         && (!('connectionsSeededAt' in data.keys())
             || data.connectionsSeededAt is timestamp)
         && (!('interactionsSeededAt' in data.keys())

@@ -102,17 +102,20 @@ void main() {
       expect(profile.name, 'james');
     });
 
-    test('falls back to Your profile when displayName and email are missing', () {
-      final profile = AccountProfile.fromAuthValues(
-        uid: 'uid-1',
-        email: null,
-        displayName: null,
-        photoUrl: null,
-      );
+    test(
+      'falls back to Your profile when displayName and email are missing',
+      () {
+        final profile = AccountProfile.fromAuthValues(
+          uid: 'uid-1',
+          email: null,
+          displayName: null,
+          photoUrl: null,
+        );
 
-      expect(profile.name, 'Your profile');
-      expect(profile.email, '');
-    });
+        expect(profile.name, 'Your profile');
+        expect(profile.email, '');
+      },
+    );
   });
 
   group('UserProfileService mutation behavior', () {
@@ -145,16 +148,21 @@ void main() {
       expect(account.reloadCount, 0);
     });
 
-    test('avatar upload uses exact path, metadata, download URL, and reloads', () async {
-      await service.uploadAvatarAndUpdatePhotoUrl(image);
+    test(
+      'avatar upload uses exact path, metadata, download URL, and reloads',
+      () async {
+        await service.uploadAvatarAndUpdatePhotoUrl(image);
 
-      expect(storage.uploadedPath, 'users/uid-1/profile/avatar.jpg');
-      expect(storage.uploadedFile, image);
-      expect(storage.uploadedContentType, 'image/png');
-      expect(account.updatePhotoUrlCalls, ['https://download.example/avatar.jpg']);
-      expect(account.photoUrl, 'https://download.example/avatar.jpg');
-      expect(account.reloadCount, 1);
-    });
+        expect(storage.uploadedPath, 'users/uid-1/profile/avatar.jpg');
+        expect(storage.uploadedFile, image);
+        expect(storage.uploadedContentType, 'image/png');
+        expect(account.updatePhotoUrlCalls, [
+          'https://download.example/avatar.jpg',
+        ]);
+        expect(account.photoUrl, 'https://download.example/avatar.jpg');
+        expect(account.reloadCount, 1);
+      },
+    );
 
     test('avatar upload propagates failure before photoURL update', () async {
       storage.uploadError = Exception('upload failed');
@@ -187,7 +195,10 @@ void main() {
         code: 'unauthorized',
       );
 
-      await expectLater(service.removeAvatar(), throwsA(isA<FirebaseException>()));
+      await expectLater(
+        service.removeAvatar(),
+        throwsA(isA<FirebaseException>()),
+      );
       expect(account.updatePhotoUrlCalls, isEmpty);
       expect(account.reloadCount, 0);
     });

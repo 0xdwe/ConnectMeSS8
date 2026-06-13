@@ -28,10 +28,7 @@ final eventStoreProvider = Provider<EventStore>((ref) {
     return const _SignedOutEventStore();
   }
   final firestore = ref.watch(firestoreProvider);
-  final store = FirebaseEventStore(
-    firestore: firestore,
-    uid: user.uid,
-  );
+  final store = FirebaseEventStore(firestore: firestore, uid: user.uid);
   ref.onDispose(store.dispose);
   return store;
 });
@@ -46,34 +43,26 @@ final eventStoreProvider = Provider<EventStore>((ref) {
 class _SignedOutEventStore implements EventStore {
   const _SignedOutEventStore();
 
-  static const String _msg =
-      'Events are not available while signed out.';
+  static const String _msg = 'Events are not available while signed out.';
 
   @override
-  Future<PlannerEvent?> load(String eventId) =>
-      Future.error(StateError(_msg));
+  Future<PlannerEvent?> load(String eventId) => Future.error(StateError(_msg));
 
   @override
-  Future<void> save(PlannerEvent event) =>
-      Future.error(StateError(_msg));
+  Future<void> save(PlannerEvent event) => Future.error(StateError(_msg));
 
   @override
-  Future<void> delete(String eventId) =>
-      Future.error(StateError(_msg));
+  Future<void> delete(String eventId) => Future.error(StateError(_msg));
 
   @override
-  Future<Map<String, PlannerEvent>> listAll() =>
-      Future.error(StateError(_msg));
+  Future<Map<String, PlannerEvent>> listAll() => Future.error(StateError(_msg));
 
   @override
   Stream<Map<String, PlannerEvent>> snapshot() =>
-      Stream<Map<String, PlannerEvent>>.value(
-        const <String, PlannerEvent>{},
-      );
+      Stream<Map<String, PlannerEvent>>.value(const <String, PlannerEvent>{});
 
   @override
-  Map<String, PlannerEvent>? snapshotSync() =>
-      const <String, PlannerEvent>{};
+  Map<String, PlannerEvent>? snapshotSync() => const <String, PlannerEvent>{};
 
   @override
   Future<void> dispose() async {}

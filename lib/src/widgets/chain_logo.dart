@@ -50,8 +50,8 @@ class _LinkedChainPainter extends CustomPainter {
 
     canvas.drawArc(
       leftRect,
-      math.pi * 0.03,    // Start angle (36 degrees)
-      math.pi * 1.6,    // Sweep angle (288 degrees)
+      math.pi * 0.03, // Start angle (36 degrees)
+      math.pi * 1.6, // Sweep angle (288 degrees)
       false,
       paint,
     );
@@ -64,8 +64,8 @@ class _LinkedChainPainter extends CustomPainter {
 
     canvas.drawArc(
       rightRect,
-      -math.pi * 0.93,   // Start angle (-144 degrees)
-      math.pi * 1.6,    // Sweep angle (288 degrees)
+      -math.pi * 0.93, // Start angle (-144 degrees)
+      math.pi * 1.6, // Sweep angle (288 degrees)
       false,
       paint,
     );
