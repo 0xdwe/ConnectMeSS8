@@ -9,6 +9,7 @@ import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/crm_widgets.dart';
 import '../edit_profile_screen.dart';
+import '../modals/about_modal.dart';
 import '../modals/manage_categories_modal.dart';
 import '../modals/manage_event_types_modal.dart';
 import '../modals/notifications_modal.dart';
@@ -132,8 +133,7 @@ class SettingsTab extends ConsumerWidget {
             icon: Icons.info_outline,
             iconColor: const Color(0xFF5B8DEF),
             label: 'About Connect Me',
-            onTap: () =>
-                _info(context, 'Connect Me v3.0\nMaking relationships matter'),
+            onTap: () => showAboutBottomSheet(context),
           ),
         ),
 
