@@ -3,6 +3,7 @@ import 'package:connect_me/src/features/modals/about_modal.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
+import 'package:connect_me/src/widgets/chain_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -49,6 +50,10 @@ void main() {
     expect(find.text('Connect Me'), findsWidgets);
     expect(find.text('Version 3.0.0 (Build 42)'), findsOneWidget);
     expect(find.text("WHAT'S NEW IN V3"), findsOneWidget);
+    expect(find.byType(LinkedChainLogo), findsOneWidget);
+    expect(find.byIcon(Icons.diversity_3), findsNothing);
+    expect(find.byKey(const Key('about-feature-scroll')), findsOneWidget);
+    expect(find.byKey(const Key('about-done-button')), findsOneWidget);
 
     // Verify a sample feature highlight is listed
     expect(find.text('AI Memory Updates'), findsOneWidget);
@@ -58,10 +63,17 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(
+      find.text(
+        'Tracks relationship health (0–100) with Bond Rings and automatic cadence-based Bond Drift.',
+      ),
+      findsOneWidget,
+    );
 
-    // Verify buttons are present
+    // The About sheet has one clear dismissal action.
     expect(find.text('Done'), findsOneWidget);
-    expect(find.text('Send Feedback'), findsOneWidget);
+    expect(find.text('Send Feedback'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Done button dismisses the AboutModal', (
@@ -77,15 +89,20 @@ void main() {
     expect(find.byType(AboutModal), findsNothing);
   });
 
-  testWidgets('Send Feedback shows a SnackBar', (
+  testWidgets('Done stays visible while feature highlights scroll', (
     WidgetTester tester,
   ) async {
     await _pumpSettings(tester);
     await _openAboutSheet(tester);
 
-    await tester.tap(find.text('Send Feedback'));
+    await tester.drag(
+      find.byKey(const Key('about-feature-scroll')),
+      const Offset(0, -500),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.text('Feedback features coming soon!'), findsOneWidget);
+    expect(find.byKey(const Key('about-done-button')), findsOneWidget);
+    expect(find.text('Auth-Backed Profiles'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

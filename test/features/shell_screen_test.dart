@@ -3,6 +3,7 @@ import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:connect_me/src/state/user_profile/user_profile_service.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
+import 'package:connect_me/src/widgets/account_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,14 +11,15 @@ import 'package:go_router/go_router.dart';
 
 import '../test_overrides.dart';
 
-List<dynamic> _shellOverrides() {
+List<dynamic> _shellOverrides({String? photoUrl}) {
   return [
     ...signedInDemoOverrides(),
     accountProfileProvider.overrideWithValue(
-      const AccountProfile(
+      AccountProfile(
         uid: 'demo-uid',
         email: 'demo@example.com',
         name: 'Demo',
+        photoUrl: photoUrl,
       ),
     ),
     memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
@@ -138,6 +140,35 @@ void main() {
 
       // Should navigate to settings
       expect(find.text('Settings Screen'), findsOneWidget);
+    });
+
+    testWidgets('header avatar uses the uploaded account photo', (
+      tester,
+    ) async {
+      const photoUrl = 'https://example.com/uploaded-avatar.jpg';
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [..._shellOverrides(photoUrl: photoUrl)],
+          child: MaterialApp(
+            theme: AppTheme.data(false),
+            home: const ShellScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(AccountAvatar), findsOneWidget);
+      final avatar = tester.widget<CircleAvatar>(
+        find.descendant(
+          of: find.byType(AccountAvatar),
+          matching: find.byType(CircleAvatar),
+        ),
+      );
+      expect(avatar.backgroundImage, isA<NetworkImage>());
+      expect((avatar.backgroundImage! as NetworkImage).url, photoUrl);
+      // Widget tests block real HTTP image loads. The assertion above verifies
+      // that the uploaded Auth photo URL is wired into the header avatar.
+      expect(tester.takeException(), isNotNull);
     });
   });
 }
