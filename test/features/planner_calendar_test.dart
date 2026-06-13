@@ -73,13 +73,23 @@ DateTime _dateOnly(DateTime value) =>
     DateTime(value.year, value.month, value.day);
 
 PlannerEvent _event(String id, String title, DateTime date) {
+  return _eventWithType(id, title, date);
+}
+
+PlannerEvent _eventWithType(
+  String id,
+  String title,
+  DateTime date, {
+  String category = 'Friends',
+  String eventType = 'Plan',
+}) {
   return PlannerEvent(
     id: id,
     title: title,
-    category: 'Friends',
+    category: category,
     date: date,
     note: '',
-    eventType: 'Plan',
+    eventType: eventType,
   );
 }
 
@@ -269,6 +279,28 @@ void main() {
           tester.widget<Container>(cellContainer.first).decoration
               as BoxDecoration;
       expect(decoration.color, isNot(AppTokens.light().primary));
+    });
+
+    testWidgets('event icon follows event type instead of category', (
+      tester,
+    ) async {
+      final today = DateTime(2026, 6, 12);
+      await _pumpPlanner(
+        tester,
+        now: today,
+        events: [
+          _eventWithType(
+            'meeting',
+            'Check-in',
+            today,
+            category: 'Family',
+            eventType: 'Meeting',
+          ),
+        ],
+      );
+
+      expect(find.text('👥'), findsOneWidget);
+      expect(find.text('🏠'), findsNothing);
     });
 
     testWidgets('selected date without events shows focused empty state', (

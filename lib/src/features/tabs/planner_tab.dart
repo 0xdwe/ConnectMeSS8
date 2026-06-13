@@ -721,6 +721,7 @@ class _RedesignedEventCard extends ConsumerWidget {
     final contact = event.contactId != null
         ? ref.watch(contactByIdProvider(event.contactId!))
         : null;
+    final iconTint = _iconTintForEventType(event.eventType);
 
     return Container(
       decoration: BoxDecoration(
@@ -749,7 +750,7 @@ class _RedesignedEventCard extends ConsumerWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: tokens.primaryTint,
+                        color: iconTint,
                         borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: _getEventIcon(event),
@@ -766,6 +767,13 @@ class _RedesignedEventCard extends ConsumerWidget {
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                             ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            event.eventType,
+                            style: AppTypography.caption(
+                              color: tokens.inkMuted,
+                            ).copyWith(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 4),
                           Row(
@@ -843,35 +851,90 @@ class _RedesignedEventCard extends ConsumerWidget {
   }
 
   Widget _getEventIcon(PlannerEvent event) {
-    final title = event.title.toLowerCase();
-    final category = event.category.toLowerCase();
-
-    String emoji = '📅'; // Default calendar emoji
-
-    if (title.contains('coffee') || title.contains('cafe')) {
-      emoji = '☕';
-    } else if (title.contains('meeting') ||
-        title.contains('sync') ||
-        title.contains('team')) {
-      emoji = '👥';
-    } else if (title.contains('lunch') ||
-        title.contains('dinner') ||
-        title.contains('food') ||
-        title.contains('restaurant')) {
-      emoji = '🍽️';
-    } else if (category == 'work') {
-      emoji = '💼';
-    } else if (category == 'family') {
-      emoji = '🏠';
-    } else if (category == 'friends') {
-      emoji = '🤝';
-    } else if (title.contains('call') || title.contains('phone')) {
-      emoji = '📞';
-    } else if (title.contains('party') || title.contains('celebrate')) {
-      emoji = '🎉';
-    }
-
+    final emoji = _emojiForEventType(event.eventType);
     return Center(child: Text(emoji, style: const TextStyle(fontSize: 22)));
+  }
+
+  String _emojiForEventType(String eventType) {
+    final value = eventType.toLowerCase().trim();
+    if (value.contains('coffee') || value.contains('cafe')) return '☕';
+    if (value.contains('meeting') ||
+        value.contains('sync') ||
+        value.contains('team')) {
+      return '👥';
+    }
+    if (value.contains('lunch') ||
+        value.contains('dinner') ||
+        value.contains('food') ||
+        value.contains('restaurant')) {
+      return '🍽️';
+    }
+    if (value.contains('call') || value.contains('phone')) return '📞';
+    if (value.contains('party') || value.contains('celebrate')) return '🎉';
+    if (value.contains('birth') || value.contains('anniversary')) return '🎂';
+    if (value.contains('remind') || value.contains('alert')) return '🔔';
+    if (value.contains('workshop') ||
+        value.contains('class') ||
+        value.contains('study') ||
+        value.contains('school')) {
+      return '📚';
+    }
+    if (value.contains('travel') ||
+        value.contains('trip') ||
+        value.contains('flight')) {
+      return '✈️';
+    }
+    if (value.contains('plan') || value.contains('schedule')) return '📅';
+    if (value.contains('gift')) return '🎁';
+    return '🗒️';
+  }
+
+  Color _iconTintForEventType(String eventType) {
+    final value = eventType.toLowerCase().trim();
+    if (value.contains('coffee') || value.contains('cafe')) {
+      return const Color(0xFFFFE8D6);
+    }
+    if (value.contains('meeting') ||
+        value.contains('sync') ||
+        value.contains('team')) {
+      return const Color(0xFFDDEBFF);
+    }
+    if (value.contains('lunch') ||
+        value.contains('dinner') ||
+        value.contains('food') ||
+        value.contains('restaurant')) {
+      return const Color(0xFFFFEDD5);
+    }
+    if (value.contains('call') || value.contains('phone')) {
+      return const Color(0xFFDDF7F4);
+    }
+    if (value.contains('party') ||
+        value.contains('celebrate') ||
+        value.contains('birth') ||
+        value.contains('anniversary')) {
+      return const Color(0xFFFCE7F3);
+    }
+    if (value.contains('remind') || value.contains('alert')) {
+      return const Color(0xFFFEF3C7);
+    }
+    if (value.contains('workshop') ||
+        value.contains('class') ||
+        value.contains('study') ||
+        value.contains('school')) {
+      return const Color(0xFFEDE9FE);
+    }
+    if (value.contains('travel') ||
+        value.contains('trip') ||
+        value.contains('flight')) {
+      return const Color(0xFFDFF6FF);
+    }
+    if (value.contains('gift')) {
+      return const Color(0xFFFDE68A);
+    }
+    if (value.contains('plan') || value.contains('schedule')) {
+      return const Color(0xFFE0F2FE);
+    }
+    return const Color(0xFFEDE9FE);
   }
 
   String _formatTimeRange(PlannerEvent event) {
