@@ -30,6 +30,7 @@ Future<PlannerEvent?> showAddEventModal(
   return showModalBottomSheet<PlannerEvent?>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.4),
     builder: (_) => AddEventModal(initialDate: initialDate, event: event),
@@ -118,7 +119,9 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                   ),
                 ),
                 IconButton(
-                  onPressed: Navigator.of(context).pop,
+                  onPressed: () {
+                    Navigator.of(context, rootNavigator: true).maybePop();
+                  },
                   icon: Icon(Icons.close, color: tokens.inkSubtle),
                 ),
               ],
