@@ -35,8 +35,12 @@ Quick scan; full detail in `progress.md`.
 - **Pass 4.1** (Firebase Auth) — shipped (#052)
 - **Pass 4.2** (FirebaseMemoryStore) — code shipped, device evidence deferred per ADR-0003
 - **Pass 4.5** (connection / interaction / event persistence) — shipped 2026-05-26 (#063–#070, #072). Firestore is now the source of truth per ADR-0004; sign-out hotfix removed; orphan-memory bug fixed via multi-store atomic batches.
+- **Pass 4.3** (real LLM `AiUpdate` via Firebase AI Logic / Gemini) — shipped. `LlmAiUpdate` adapter, prompt v1–v4, schema-constrained structured output, image attachments, bond score delta, Bond Drift + Maintenance Need chain (#076–#095).
+- **Auth-backed User Profile** — shipped 2026-06-05 (#100–#104). Profile reads Firebase Auth identity; signup requires name; avatar uploads/removes via Firebase Storage.
+- **Memory Topic Backfill & Scoped Panels** — shipped 2026-06-13 (#105–#108). Topic tap shows only that topic's AI-prepared suggestions; `MemoryTopicEnricher` (Gemini-backed) enriches per-contact; silent background backfill runner on launch; 2-suggestion cap end-to-end.
+- **Personalized AI Insights** — shipped 2026-06-13. Local history/notes scanner extracts keyword-matched context; AI prompts generate detail-rich, non-templated suggestions; `Context:` section hidden when no match found; conversation starters capped at 2 throughout the full pipeline.
 
-Test baseline: `flutter test test/state/` 232 passed + 2 skipped (#074 follow-up). JS rules tests 184 passed. Default `flutter test` sweep 273 passed / 33 failed (the 33 are widget-test fixture drift from unrelated UI merges, tracked separately).
+Test baseline: `flutter test test/state/` passing (0 skipped after #074/#075). JS rules tests 223 passed. Default `flutter test` sweep 273 passed / 33 failed (the 33 are widget-test fixture drift from unrelated UI merges, tracked separately). Targeted topic/widget tests: 57 passing.
 
 ---
 
@@ -44,15 +48,14 @@ Test baseline: `flutter test test/state/` 232 passed + 2 skipped (#074 follow-up
 
 The genuine product moves:
 
-- **Pass 4.3** — real LLM behind the `AiUpdate` seam. Replaces the Mock keyword extractor.
-- **Pass 4.4** — Cloud Functions on Firestore writes; FCM push notifications.
+- **Pass 4.4** — Cloud Functions on Firestore writes; FCM push notifications. `feat/notifications` branch has functional implementation; production deployment and end-to-end push evidence pending review and merge.
 
 Polish / debt:
 
-- **#074** — `memoryProvider` dep narrowing; re-enables 2 skipped recommendations tests.
-- **#075** — sign-out auth-rebuild test gap.
 - **#053 / #060 device half / #071 / #073** — cross-device evidence chain. Deferred per ADR-0003; revisit when triggers fire.
 - **The 33 widget test failures** on `main` from `ui-login-page` + `fix-navbar` UI merges. Out of Pass 4 scope.
+- **AppUser cleanup** — `AppUser` in `social_models.dart` duplicates `currentUserProvider`. Three callers. File as Pass 4.6 follow-up.
+- **#089** — tappable history entries grill. Independent; no blocker.
 
 ---
 
