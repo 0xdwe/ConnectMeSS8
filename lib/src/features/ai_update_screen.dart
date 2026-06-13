@@ -5,10 +5,12 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import '../ai/ai_update.dart';
 import '../models/social_models.dart';
 import '../state/app_state.dart';
+import '../state/firebase_providers.dart';
 import '../state/memory/memory_document.dart';
 import '../state/memory/memory_providers.dart';
 import '../state/query_providers.dart';
@@ -99,6 +101,56 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
         lower.endsWith('.gif') ||
         lower.endsWith('.webp') ||
         lower.endsWith('.heic');
+  }
+
+  Future<AttachmentRef> _persistAttachment(
+    Connection person,
+    CrmInteraction interaction,
+    AttachmentRef attachment,
+    int index,
+  ) async {
+    final path = attachment.path;
+    if (path == null || path.isEmpty || !_isImage(attachment.name)) {
+      return attachment;
+    }
+
+    final file = File(path);
+    if (!await file.exists()) {
+      return attachment;
+    }
+
+    final storage = ref.read(firebaseStorageProvider);
+    final safeName = attachment.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    final storagePath = 'users/${person.id}/interactions/${interaction.id}/$index-$safeName';
+    final contentType = attachment.name.toLowerCase().endsWith('.png')
+        ? 'image/png'
+        : attachment.name.toLowerCase().endsWith('.webp')
+            ? 'image/webp'
+            : 'image/jpeg';
+
+    final storageRef = storage.ref().child(storagePath);
+    await storageRef.putFile(file, SettableMetadata(contentType: contentType));
+    final url = await storageRef.getDownloadURL();
+
+    return AttachmentRef(
+      name: attachment.name,
+      path: attachment.path,
+      storageUrl: url,
+    );
+  }
+
+  Future<CrmInteraction> _persistInteractionAttachments(
+    Connection person,
+    CrmInteraction interaction,
+  ) async {
+    if (interaction.attachments.isEmpty) return interaction;
+    final persisted = <AttachmentRef>[];
+    for (var i = 0; i < interaction.attachments.length; i++) {
+      persisted.add(
+        await _persistAttachment(person, interaction, interaction.attachments[i], i),
+      );
+    }
+    return interaction.copyWith(attachments: persisted);
   }
 
   Future<void> submit() async {
@@ -267,6 +319,11 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     if (previewResult == null) return;
 
     setState(() => currentState = AiUpdateState.saving);
+    final person = ref.read(contactByIdProvider(widget.contactId));
+    if (person == null) {
+      setState(() => currentState = AiUpdateState.previewing);
+      return;
+    }
 
     // Build edited result with user changes
     final editedInteractions = <CrmInteraction>[];
@@ -280,10 +337,17 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       );
     }
 
+    final persistedInteractions = <CrmInteraction>[];
+    for (final interaction in editedInteractions) {
+      persistedInteractions.add(
+        await _persistInteractionAttachments(person, interaction),
+      );
+    }
+
     final editedResult = AiUpdateResult(
       summary: previewResult!.summary,
       contactId: previewResult!.contactId,
-      interactions: editedInteractions,
+      interactions: persistedInteractions,
       nextStep: previewResult!.nextStep,
       // Pass through the memory delta unchanged — the user only edits
       // interaction title/note in this slice; the memory append is
@@ -315,7 +379,6 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     priorMemory = null;
 
     if (mounted) {
-      final person = ref.read(contactByIdProvider(widget.contactId));
       final count = editedInteractions.length;
       final plural = count == 1 ? '' : 's';
       final message = person == null

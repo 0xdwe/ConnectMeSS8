@@ -186,6 +186,7 @@ function wellFormedInteraction(overrides = {}) {
     updatedAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
     // Optional fields included by default; specific tests omit them.
     attachments: ['notes.md'],
+    attachmentUrls: [''],
     source: 'manual',
     ...overrides,
   };

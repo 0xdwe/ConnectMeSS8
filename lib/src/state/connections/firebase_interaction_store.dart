@@ -17,20 +17,16 @@ import 'interaction_store.dart';
 ///  * `title`, `note` (string, empty allowed)
 ///  * `date` (timestamp)
 ///  * `attachments` (list of strings, optional)
+///  * `attachmentUrls` (list of strings, optional; aligned with attachments)
 ///  * `source` (string, enum from [InteractionSource], optional)
 ///  * `schemaVersion` (int, literal `1`)
 ///  * `updatedAt` (server timestamp)
 ///
-/// **Attachments round-trip is name-only.** [AttachmentRef] declares
-/// `path` as a nullable string that points at a local file on the
-/// origin device. Local paths are non-portable across devices, so
-/// the encoder flattens attachments to `name` only and the decoder
-/// reconstructs `AttachmentRef(name: ..., path: null)`. This
-/// behavior is intentional for Pass 4.5 single-device-prototype
-/// scope; even on the same device, a save → read cycle drops the
-/// path. A future Pass 4.x can add proper file-storage round-tripping
-/// (Cloud Storage upload, signed URL persistence) without changing
-/// this seam.
+/// **Attachments keep durable image URLs.** [AttachmentRef] still
+/// carries a nullable local [path] for in-flight uploads, but the
+/// Firestore payload stores attachment names plus optional
+/// `attachmentUrls` so image attachments can be replayed after
+/// logout/relogin. Older name-only docs still decode cleanly.
 ///
 /// **UID is bound at construction.** Mirrors
 /// [FirebaseConnectionStore] from #065. The auth-aware
@@ -181,6 +177,7 @@ class FirebaseInteractionStore implements InteractionStore {
   /// Public encoder used by [save] and by [ConnectionSeeder] (#069).
   /// Pure — does not read `_firestore` or `_uid`.
   static Map<String, dynamic> encode(CrmInteraction i) {
+    final attachments = i.attachments;
     return <String, dynamic>{
       'id': i.id,
       'contactId': i.contactId,
@@ -188,10 +185,11 @@ class FirebaseInteractionStore implements InteractionStore {
       'title': i.title,
       'note': i.note,
       'date': Timestamp.fromDate(i.date),
-      // attachments: Firestore can't serialize AttachmentRef; flatten
-      // to the simple name list for now. Path is non-portable across
-      // devices anyway and Pass 4.5 is single-device-prototype scope.
-      'attachments': i.attachments.map((a) => a.name).toList(),
+      'attachments': attachments.map((a) => a.name).toList(),
+      'attachmentUrls': attachments
+          .map((a) => a.storageUrl)
+          .map((url) => url?.trim().isEmpty == true ? '' : (url ?? ''))
+          .toList(),
       'source': i.source.name,
       'schemaVersion': schemaVersion,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -214,6 +212,7 @@ class FirebaseInteractionStore implements InteractionStore {
       final note = data['note'];
       final date = data['date'];
       final attachments = data['attachments'];
+      final attachmentUrls = data['attachmentUrls'];
       final sourceName = data['source'];
 
       if (id is! String ||
@@ -253,12 +252,25 @@ class FirebaseInteractionStore implements InteractionStore {
         return null;
       }
 
-      final List<AttachmentRef> attachmentRefs = attachments is List
-          ? attachments
-                .whereType<String>()
-                .map((name) => AttachmentRef(name: name, path: null))
-                .toList()
-          : const <AttachmentRef>[];
+      final attachmentNames = attachments is List
+          ? attachments.whereType<String>().toList()
+          : const <String>[];
+      final attachmentUrlValues = attachmentUrls is List
+          ? attachmentUrls.whereType<String>().toList()
+          : const <String>[];
+      final attachmentRefs = <AttachmentRef>[];
+      for (var i = 0; i < attachmentNames.length; i++) {
+        final rawUrl = i < attachmentUrlValues.length
+            ? attachmentUrlValues[i].trim()
+            : '';
+        attachmentRefs.add(
+          AttachmentRef(
+            name: attachmentNames[i],
+            path: null,
+            storageUrl: rawUrl.isEmpty ? null : rawUrl,
+          ),
+        );
+      }
 
       return CrmInteraction(
         id: id,
