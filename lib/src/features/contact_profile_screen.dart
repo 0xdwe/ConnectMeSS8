@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -115,13 +116,52 @@ class ContactProfileScreen extends ConsumerWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: tokens.surfaceRaised,
-                      child: Text(
-                        _initials(person.name),
-                        style: AppTypography.bodyLg(color: tokens.primary),
-                      ),
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundColor: tokens.surfaceRaised,
+                          backgroundImage: _contactAvatarImage(person.avatar),
+                          child: _contactAvatarImage(person.avatar) == null
+                              ? Text(
+                                  _contactAvatarGlyph(person.avatar, person.name),
+                                  style: AppTypography.bodyLg(
+                                    color: tokens.primary,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        Positioned(
+                          right: -2,
+                          bottom: -2,
+                          child: Material(
+                            color: tokens.surface,
+                            shape: const CircleBorder(),
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: () => showEditConnectionModal(context, person),
+                              child: Container(
+                                width: 26,
+                                height: 26,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: tokens.primary,
+                                  border: Border.all(
+                                    color: tokens.surface,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.edit_outlined,
+                                  size: 14,
+                                  color: tokens.surface,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     SizedBox(width: AppSpacing.space4),
                     Expanded(
@@ -504,6 +544,26 @@ String _initials(String fullName) {
     return words.first.substring(0, min(2, words.first.length)).toUpperCase();
   }
   return '';
+}
+
+ImageProvider<Object>? _contactAvatarImage(String avatar) {
+  final trimmed = avatar.trim();
+  if (!trimmed.startsWith('data:image/')) return null;
+  final parts = trimmed.split(',');
+  if (parts.length != 2) return null;
+  try {
+    return MemoryImage(base64Decode(parts[1]));
+  } catch (_) {
+    return null;
+  }
+}
+
+String _contactAvatarGlyph(String avatar, String fullName) {
+  final trimmed = avatar.trim();
+  if (trimmed.isNotEmpty && !trimmed.startsWith('data:image/')) {
+    return trimmed;
+  }
+  return _initials(fullName);
 }
 
 String _connectionStatusLabel(int score) {
