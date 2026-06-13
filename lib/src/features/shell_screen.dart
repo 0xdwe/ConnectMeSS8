@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
+import '../state/user_profile/user_profile_service.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
+import '../widgets/account_avatar.dart';
 import '../widgets/chain_logo.dart';
 import '../widgets/crm_widgets.dart';
-import '../widgets/user_avatar.dart';
 import 'modals/plus_sheet.dart';
 import 'tabs/home_tab.dart';
 import 'tabs/people_tab.dart';
@@ -31,7 +32,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     final selectedTab = ref.watch(
       appControllerProvider.select((state) => state.selectedTab),
     );
-    final user = ref.watch(appControllerProvider.select((state) => state.user));
+    final profile = ref.watch(accountProfileProvider);
     return Scaffold(
       backgroundColor: tokens.surface,
       appBar: selectedTab == 3
@@ -50,14 +51,13 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
                   ),
                 ),
               ),
-              title: const LinkedChainLogo(
-                size: 45, 
-                color: Colors.white,
-              ),
+              title: const LinkedChainLogo(size: 45, color: Colors.white),
               actions: [
                 IconButton(
-                  icon: UserAvatar(
-                    user: user,
+                  key: const Key('profile-button'),
+                  tooltip: 'Open settings',
+                  icon: AccountAvatar(
+                    profile: profile,
                     radius: 18,
                     glyphSize: 14,
                     backgroundColor: Colors.white,
