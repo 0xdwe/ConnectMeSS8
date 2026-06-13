@@ -1327,33 +1327,25 @@ class _InlineTopicDetails extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.lightbulb_outline, color: tokens.secondary, size: 18),
+              Icon(Icons.lightbulb_outline, color: tokens.secondary, size: 24),
               SizedBox(width: AppSpacing.space3),
               Expanded(
                 child: Text(
                   topic,
-                  style: AppTypography.h2().copyWith(
-                    fontWeight: FontWeight.w700,
+                  style: AppTypography.h1().copyWith(
                     color: _recommendationTitleColor,
                   ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: AppSpacing.space3),
-          Text(
-            'Conversation Starter:',
-            style: AppTypography.h2(
-              color: _recommendationTitleColor,
-            ).copyWith(fontSize: 14),
-          ),
-          SizedBox(height: AppSpacing.space2),
+          SizedBox(height: AppSpacing.space4),
           for (final suggestion in displaySuggestions)
             Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.space2),
+              padding: EdgeInsets.only(bottom: AppSpacing.space3),
               child: Container(
                 width: double.infinity,
-                padding: EdgeInsets.all(AppSpacing.space3),
+                padding: EdgeInsets.all(AppSpacing.space4),
                 decoration: BoxDecoration(
                   color: tokens.surfaceRaised,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -1367,37 +1359,25 @@ class _InlineTopicDetails extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (suggestion.context != null && suggestion.context!.isNotEmpty) ...[
-                      RichText(
-                        text: TextSpan(
-                          style: AppTypography.body(color: _recommendationBodyColor),
-                          children: [
-                            const TextSpan(
-                              text: 'conversation starter : ',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            TextSpan(text: suggestion.text),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: AppSpacing.space1),
-                      RichText(
-                        text: TextSpan(
-                          style: AppTypography.body(color: _recommendationBodyColor),
-                          children: [
-                            const TextSpan(
-                              text: 'Context : ',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            TextSpan(text: suggestion.context),
-                          ],
-                        ),
-                      ),
-                    ] else
-                      Text(
-                        suggestion.text,
-                        style: AppTypography.body(color: _recommendationBodyColor),
-                      ),
+                    Text(
+                      'Conversation Starter :',
+                      style: AppTypography.h2(color: _recommendationTitleColor),
+                    ),
+                    SizedBox(height: AppSpacing.space1),
+                    Text(
+                      suggestion.text,
+                      style: AppTypography.body(color: _recommendationBodyColor),
+                    ),
+                    SizedBox(height: AppSpacing.space3),
+                    Text(
+                      'Context :',
+                      style: AppTypography.h2(color: _recommendationTitleColor),
+                    ),
+                    SizedBox(height: AppSpacing.space1),
+                    Text(
+                      suggestion.context ?? '',
+                      style: AppTypography.body(color: _recommendationBodyColor),
+                    ),
                   ],
                 ),
               ),
