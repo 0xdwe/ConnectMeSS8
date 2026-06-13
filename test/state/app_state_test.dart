@@ -21,6 +21,7 @@ import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_document.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
+import 'package:connect_me/src/state/notifications/notification_preferences.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -350,6 +351,11 @@ class _SignedOutTestUserDocStore implements UserDocStore {
 
   @override
   Future<void> saveEventTypes(List<String> eventTypes) => Future.error(_error);
+
+  @override
+  Future<void> saveNotificationPreferences(
+    NotificationPreferences preferences,
+  ) => Future.error(_error);
 
   @override
   Stream<UserDocSnapshot> snapshot() => Stream.value(UserDocSnapshot.empty);

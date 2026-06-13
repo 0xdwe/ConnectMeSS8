@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../notifications/notification_preferences.dart';
 import 'user_doc_store.dart';
 
 /// In-process [UserDocStore] backed by plain fields. Used in tests
@@ -16,6 +17,8 @@ class InMemoryUserDocStore implements UserDocStore {
   InMemoryUserDocStore({
     List<String>? categories,
     List<String>? eventTypes,
+    NotificationPreferences notificationPreferences =
+        const NotificationPreferences.defaults(),
   }) {
     _categories = List<String>.unmodifiable(
       categories ?? UserDocDefaults.categories(),
@@ -23,11 +26,13 @@ class InMemoryUserDocStore implements UserDocStore {
     _eventTypes = List<String>.unmodifiable(
       eventTypes ?? UserDocDefaults.eventTypes(),
     );
+    _notificationPreferences = notificationPreferences;
     _publish();
   }
 
   late List<String> _categories;
   late List<String> _eventTypes;
+  late NotificationPreferences _notificationPreferences;
   final StreamController<UserDocSnapshot> _controller =
       StreamController<UserDocSnapshot>.broadcast();
   UserDocSnapshot? _mirror;
@@ -41,6 +46,14 @@ class InMemoryUserDocStore implements UserDocStore {
   @override
   Future<void> saveEventTypes(List<String> eventTypes) async {
     _eventTypes = List<String>.unmodifiable(eventTypes);
+    _publish();
+  }
+
+  @override
+  Future<void> saveNotificationPreferences(
+    NotificationPreferences preferences,
+  ) async {
+    _notificationPreferences = preferences;
     _publish();
   }
 
@@ -73,6 +86,7 @@ class InMemoryUserDocStore implements UserDocStore {
     final snap = UserDocSnapshot(
       categories: _categories,
       eventTypes: _eventTypes,
+      notificationPreferences: _notificationPreferences,
     );
     _mirror = snap;
     if (!_controller.isClosed) _controller.add(snap);

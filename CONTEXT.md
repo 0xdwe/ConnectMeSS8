@@ -63,6 +63,9 @@ The shared shape of (Connections, CrmInteractions, PlannerEvents) — the user's
 ### User Profile
 The signed-in user's own account identity shown on the Profile screen. Email is read-only from Firebase Auth. Display name is Firebase Auth `displayName`. Profile photo is uploaded to Firebase Storage under the user's own namespace and exposed through Firebase Auth `photoURL`. User Profile is distinct from a Connection and should not revive the legacy `AppUser` model as a durable source of truth.
 
+### Notification Preferences
+The signed-in user's delivery choices for suggested check-ins, PlannerEvent reminders, birthday reminders, planner and birthday lead times, and quiet hours. Planner and birthday lead times support presets plus custom minutes/hours/days/weeks; quiet hours use a custom Start/End schedule. The closed, versioned map lives at `users/{uid}.notificationPreferences`; `UserDocStore` is the persistence seam. Notifications are off by default and enabling them requests operating-system permission. Local planner and birthday reminders are rebuilt from the current PlannerEvents. Suggested check-ins are selected by the server-side relationship-maintenance policy and delivered through FCM with gentle, non-numeric copy.
+
 ---
 
 ## Architectural terms
@@ -91,7 +94,13 @@ Pass 4.5 store seams for the relationship graph. Adapters per family: `InMemory*
 The snapshot pair is the new pattern Pass 4.5 introduced; Pass 4.2 deliberately did not pay for it (PRD §Q6).
 
 ### `UserDocStore`
-Pass 4.5 seam for user-document fields (`categories`, `eventTypes`, seeder sentinels). Single document at `users/{uid}`, not a collection. Always uses `set + merge: true` so seeder sentinels are never clobbered.
+Pass 4.5 seam for user-document fields (`categories`, `eventTypes`, seeder sentinels), extended by Pass 4.4 for `notificationPreferences`. Single document at `users/{uid}`, not a collection. Always uses `set + merge: true` so seeder sentinels are never clobbered.
+
+### `NotificationGateway`
+Device-notification boundary. Adapters: `FlutterNotificationGateway` (production, backed by Firebase Messaging plus Flutter Local Notifications) and `InMemoryNotificationGateway` (tests). Owns operating-system permission, timezone initialization, local schedule replacement, foreground display, FCM token access, and the system-settings escape hatch.
+
+### `NotificationTokenStore`
+Per-device FCM registration boundary. Adapters: `FirebaseNotificationTokenStore` and `InMemoryNotificationTokenStore`. Production tokens live at `users/{uid}/notificationTokens/{sha256(token)}` with platform, timezone, and update metadata. The raw token is never used as a Firestore document path.
 
 ### `BatchedWrites`
 Pass 4.5 seam for multi-store atomic writes. Three named operations: `commitDeleteConnection`, `commitAiUpdate`, `commitRemoveSampleConnections`. Adapters: `InMemoryBatchedWrites` (test, with `failOnCommit` knob), `FirebaseBatchedWrites` (production, real `WriteBatch.commit()`), `_SignedOutBatchedWrites` (sentinel that throws).
@@ -116,6 +125,7 @@ After Pass 4.5 (commit `2889b59`):
 - **First-launch initialization is via `ConnectionSeeder`**, not a migration. Sentinels (`*SeededAt`, `migratedFromDiskAt`) gate idempotency.
 - **Multi-store writes are atomic** via `BatchedWrites`. `deleteConnection`, `applyAiUpdateResult`, `removeSampleConnections` all use Firestore `WriteBatch`. On commit failure, AppController state is not advanced.
 - **Relationship maintenance has a strict split.** `RelationshipMaintenancePolicy` derives Maintenance Need and candidate Bond Drift; `RecommendationEngine` uses Maintenance Need for ranking only; `AppController` applies eligible Bond Drift; `ConnectionStore` / Firestore persist the resulting `bondScore` and optional `lastBondDriftAppliedAt` timestamp.
+- **Notification settings are durable user-document state.** Local planner and birthday reminders are derived from PlannerEvents and replaced as one schedule set. Suggested check-ins are selected server-side from Firestore state and delivered only to registered device tokens.
 - **Sign-out is trivial** post-#070. The auth-aware provider rebuild + listener teardown clears state on sign-out; the next sign-in's snapshot listeners refill from Firestore.
 
 ---
@@ -124,7 +134,6 @@ After Pass 4.5 (commit `2889b59`):
 
 - **`fake_cloud_firestore`** is forbidden (Pass 4.2 PRD §Q9 + Pass 4.5 PRD §Q9). Headless tests use `InMemory*Store` adapters; emulator tests use the real Firebase emulator.
 - **Numeric overdue/shame copy in proactive nudges** (Pass 3 anti-shame guardrail, refined by #090): recommendation cards must not say "you haven't talked to Mike in 47 days" or frame silence as neglect/decay. The copy is gentler ("Mike could use a check-in"). Neutral elapsed-time facts are allowed on user-pulled detail surfaces such as contact profile (for example, "Last connected: 3 weeks ago") when not framed as guilt.
-- **Background scheduling** is out of scope; Pass 4.4's FCM push will fill that gap. Today, the recommendation cache invalidates on app open or memory change.
 - **`AppUser` is dead code** (PRD Q13 of Pass 4.5). It duplicates `currentUserProvider`. Cleanup is filed but deferred.
 
 ---

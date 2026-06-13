@@ -290,7 +290,8 @@ service cloud.firestore {
           'categoriesSeededAt',
           'eventTypesSeededAt',
           'categories',
-          'eventTypes'
+          'eventTypes',
+          'notificationPreferences'
         ])
         && (!('migratedFromDiskAt' in data.keys())
             || data.migratedFromDiskAt is timestamp)
@@ -305,7 +306,81 @@ service cloud.firestore {
         && (!('eventTypesSeededAt' in data.keys())
             || data.eventTypesSeededAt is timestamp)
         && (!('categories' in data.keys()) || data.categories is list)
-        && (!('eventTypes' in data.keys()) || data.eventTypes is list);
+        && (!('eventTypes' in data.keys()) || data.eventTypes is list)
+        && (!('notificationPreferences' in data.keys())
+            || isWellFormedNotificationPreferences(
+              data.notificationPreferences
+            ));
+    }
+
+    function isWellFormedNotificationPreferences(data) {
+      return data is map
+        && data.keys().hasOnly([
+          'enabled',
+          'suggestedCheckIns',
+          'plannerReminders',
+          'birthdayReminders',
+          'defaultReminderMinutes',
+          'birthdayReminderMinutes',
+          'quietHoursEnabled',
+          'quietStartMinutes',
+          'quietEndMinutes',
+          'timeZone',
+          'schemaVersion'
+        ])
+        && data.keys().hasAll([
+          'enabled',
+          'suggestedCheckIns',
+          'plannerReminders',
+          'birthdayReminders',
+          'defaultReminderMinutes',
+          'quietHoursEnabled',
+          'quietStartMinutes',
+          'quietEndMinutes',
+          'timeZone',
+          'schemaVersion'
+        ])
+        && data.enabled is bool
+        && data.suggestedCheckIns is bool
+        && data.plannerReminders is bool
+        && data.birthdayReminders is bool
+        && data.defaultReminderMinutes is int
+        && data.defaultReminderMinutes >= 1
+        && data.defaultReminderMinutes <= 525600
+        && (!('birthdayReminderMinutes' in data.keys())
+            || (data.birthdayReminderMinutes is int
+                && data.birthdayReminderMinutes >= 0
+                && data.birthdayReminderMinutes <= 525600))
+        && data.quietHoursEnabled is bool
+        && data.quietStartMinutes is int
+        && data.quietStartMinutes >= 0
+        && data.quietStartMinutes < 1440
+        && data.quietEndMinutes is int
+        && data.quietEndMinutes >= 0
+        && data.quietEndMinutes < 1440
+        && data.timeZone is string
+        && data.timeZone.size() > 0
+        && data.timeZone.size() <= 64
+        && data.schemaVersion == 1;
+    }
+
+    function isWellFormedNotificationToken(data) {
+      return data.keys().hasOnly([
+          'token', 'platform', 'timeZone', 'updatedAt', 'schemaVersion'
+        ])
+        && data.keys().hasAll([
+          'token', 'platform', 'timeZone', 'updatedAt', 'schemaVersion'
+        ])
+        && data.token is string
+        && data.token.size() > 0
+        && data.token.size() <= 4096
+        && data.platform is string
+        && data.platform in ['android', 'ios', 'macos']
+        && data.timeZone is string
+        && data.timeZone.size() > 0
+        && data.timeZone.size() <= 64
+        && data.updatedAt is timestamp
+        && data.schemaVersion == 1;
     }
 
     match /users/{uid} {
@@ -313,6 +388,13 @@ service cloud.firestore {
       allow create, update: if isOwner(uid)
         && isWellFormedUserDoc(request.resource.data);
       allow delete: if false;
+    }
+
+    match /users/{uid}/notificationTokens/{tokenHash} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && isWellFormedNotificationToken(request.resource.data);
+      allow delete: if isOwner(uid);
     }
 
     // Default deny — anything outside the explicit memory path is

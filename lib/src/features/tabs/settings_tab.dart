@@ -11,6 +11,7 @@ import '../../widgets/crm_widgets.dart';
 import '../edit_profile_screen.dart';
 import '../modals/manage_categories_modal.dart';
 import '../modals/manage_event_types_modal.dart';
+import '../modals/notifications_modal.dart';
 import '../modals/theme_modal.dart';
 
 class SettingsTab extends ConsumerWidget {
@@ -64,7 +65,7 @@ class SettingsTab extends ConsumerWidget {
                 icon: Icons.notifications_none,
                 iconColor: const Color(0xFFF5A623),
                 label: 'Notifications',
-                onTap: () => _info(context, 'Notifications mock settings'),
+                onTap: () => showNotificationsModal(context),
               ),
               Divider(color: tokens.border, height: 1, indent: 68),
               _SettingsRow(
