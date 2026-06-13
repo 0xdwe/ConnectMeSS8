@@ -37,78 +37,78 @@ class AboutModal extends StatelessWidget {
                 AppSpacing.space4,
                 AppSpacing.space6,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: tokens.border,
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: tokens.border,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: AppSpacing.space4),
-                  Center(
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: tokens.aiGradient,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        boxShadow: [
-                          BoxShadow(
-                            color: tokens.primary.withValues(alpha: .24),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                    SizedBox(height: AppSpacing.space4),
+                    Center(
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: tokens.aiGradient,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          boxShadow: [
+                            BoxShadow(
+                              color: tokens.primary.withValues(alpha: .24),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.diversity_3,
+                          color: tokens.primaryOn,
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: AppSpacing.space3),
+                    Center(
+                      child: Text(
+                        'Connect Me',
+                        style: AppTypography.glyph(
+                          24,
+                          color: tokens.ink,
+                          weight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: AppSpacing.space1),
+                    Center(
+                      child: Text(
+                        'Version 3.0.0 (Build 42)',
+                        style: AppTypography.caption(color: tokens.inkSubtle),
+                      ),
+                    ),
+                    SizedBox(height: AppSpacing.space5),
+                    Text(
+                      "WHAT'S NEW IN V3",
+                      style: AppTypography.caption(color: tokens.inkSubtle)
+                          .copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
                           ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.diversity_3,
-                        color: tokens.primaryOn,
-                        size: 28,
-                      ),
                     ),
-                  ),
-                  SizedBox(height: AppSpacing.space3),
-                  Center(
-                    child: Text(
-                      'Connect Me',
-                      style: AppTypography.glyph(
-                        24,
-                        color: tokens.ink,
-                        weight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: AppSpacing.space1),
-                  Center(
-                    child: Text(
-                      'Version 3.0.0 (Build 42)',
-                      style: AppTypography.caption(color: tokens.inkSubtle),
-                    ),
-                  ),
-                  SizedBox(height: AppSpacing.space5),
-                  Text(
-                    "WHAT'S NEW IN V3",
-                    style: AppTypography.caption(
-                      color: tokens.inkSubtle,
-                    ).copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  SizedBox(height: AppSpacing.space3),
-                  Flexible(
-                    child: ListView.separated(
+                    SizedBox(height: AppSpacing.space3),
+                    ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: kAboutFeatures.length,
-                      separatorBuilder: (_, __) => SizedBox(height: AppSpacing.space3),
+                      separatorBuilder: (_, _) =>
+                          SizedBox(height: AppSpacing.space3),
                       itemBuilder: (context, index) {
                         final feature = kAboutFeatures[index];
                         return Row(
@@ -148,56 +148,67 @@ class AboutModal extends StatelessWidget {
                         );
                       },
                     ),
-                  ),
-                  SizedBox(height: AppSpacing.space6),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Feedback features coming soon!'),
-                                backgroundColor: tokens.primary,
+                    SizedBox(height: AppSpacing.space6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Feedback features coming soon!',
+                                    style: TextStyle(color: tokens.primaryOn),
+                                  ),
+                                  backgroundColor: tokens.primary,
+                                ),
+                              );
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: tokens.ink,
+                              side: BorderSide(color: tokens.border),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.md,
+                                ),
                               ),
-                            );
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: tokens.ink,
-                            side: BorderSide(color: tokens.border),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: Text(
-                            'Send Feedback',
-                            style: AppTypography.body().copyWith(fontWeight: FontWeight.w600),
+                            child: Text(
+                              'Send Feedback',
+                              style: AppTypography.body().copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      SizedBox(width: AppSpacing.space3),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: tokens.primary,
-                            foregroundColor: tokens.primaryOn,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.md),
+                        SizedBox(width: AppSpacing.space3),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: tokens.primary,
+                              foregroundColor: tokens.primaryOn,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.md,
+                                ),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          child: Text(
-                            'Done',
-                            style: AppTypography.body().copyWith(fontWeight: FontWeight.w600),
+                            child: Text(
+                              'Done',
+                              style: AppTypography.body().copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
