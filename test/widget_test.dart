@@ -630,4 +630,59 @@ void main() {
     expect(find.text('Repeat'), findsOneWidget);
     expect(find.text('Save Event'), findsOneWidget);
   });
+
+  testWidgets('AddEventModal toggles All Day and updates time dropdowns', (WidgetTester tester) async {
+    final eventsStore = InMemoryEventStore();
+    final connectionsStore = InMemoryConnectionStore();
+    final interactionStore = InMemoryInteractionStore();
+    final userDocStore = InMemoryUserDocStore();
+    final batchedWrites = InMemoryBatchedWrites(
+      connectionStore: connectionsStore,
+      interactionStore: interactionStore,
+      eventStore: eventsStore,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          firebaseAuthProvider.overrideWithValue(
+            MockFirebaseAuth(
+              signedIn: true,
+              mockUser: MockUser(
+                uid: 'demo-uid',
+                isAnonymous: false,
+                email: 'demo@example.com',
+                displayName: 'Demo',
+              ),
+            ),
+          ),
+          eventStoreProvider.overrideWithValue(eventsStore),
+          connectionStoreProvider.overrideWithValue(connectionsStore),
+          interactionStoreProvider.overrideWithValue(interactionStore),
+          userDocStoreProvider.overrideWithValue(userDocStore),
+          batchedWritesProvider.overrideWithValue(batchedWrites),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.data(false),
+          home: Scaffold(
+            body: AddEventModal(initialDate: DateTime(2026, 4, 27)),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Toggle All Day switch off to display time rows
+    await tester.tap(find.byType(Switch).first);
+    await tester.pumpAndSettle();
+
+    // Verify Start and End time dropdown widgets are present
+    expect(find.byKey(const Key('event-start-hour')), findsOneWidget);
+    expect(find.byKey(const Key('event-start-minute')), findsOneWidget);
+    expect(find.byKey(const Key('event-start-period')), findsOneWidget);
+    expect(find.byKey(const Key('event-end-hour')), findsOneWidget);
+    expect(find.byKey(const Key('event-end-minute')), findsOneWidget);
+    expect(find.byKey(const Key('event-end-period')), findsOneWidget);
+  });
 }
+

@@ -217,104 +217,16 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                   ),
                   if (!isAllDay) ...[
                     Divider(color: tokens.border, height: 24, thickness: 1),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'START TIME',
-                                style:
-                                    AppTypography.caption(
-                                      color: tokens.inkSubtle,
-                                    ).copyWith(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.5,
-                                    ),
-                              ),
-                              const SizedBox(height: 6),
-                              OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: tokens.border),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AppRadius.md,
-                                    ),
-                                  ),
-                                ),
-                                onPressed: () async {
-                                  final picked = await showTimePicker(
-                                    context: context,
-                                    initialTime: startTime,
-                                  );
-                                  if (picked != null) {
-                                    setState(() => startTime = picked);
-                                  }
-                                },
-                                icon: Icon(
-                                  Icons.schedule,
-                                  color: tokens.primary,
-                                  size: 16,
-                                ),
-                                label: Text(
-                                  startTime.format(context),
-                                  style: AppTypography.body(color: tokens.ink),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'END TIME',
-                                style:
-                                    AppTypography.caption(
-                                      color: tokens.inkSubtle,
-                                    ).copyWith(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.5,
-                                    ),
-                              ),
-                              const SizedBox(height: 6),
-                              OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: tokens.border),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AppRadius.md,
-                                    ),
-                                  ),
-                                ),
-                                onPressed: () async {
-                                  final picked = await showTimePicker(
-                                    context: context,
-                                    initialTime: endTime,
-                                  );
-                                  if (picked != null) {
-                                    setState(() => endTime = picked);
-                                  }
-                                },
-                                icon: Icon(
-                                  Icons.schedule,
-                                  color: tokens.primary,
-                                  size: 16,
-                                ),
-                                label: Text(
-                                  endTime.format(context),
-                                  style: AppTypography.body(color: tokens.ink),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    _EventTimeRow(
+                      label: 'Start',
+                      time: startTime,
+                      onChanged: (value) => setState(() => startTime = value),
+                    ),
+                    const SizedBox(height: 12),
+                    _EventTimeRow(
+                      label: 'End',
+                      time: endTime,
+                      onChanged: (value) => setState(() => endTime = value),
                     ),
                   ],
                   Divider(color: tokens.border, height: 24, thickness: 1),
@@ -855,3 +767,145 @@ class _CustomDatePickerDialogState
     );
   }
 }
+
+class _EventTimeRow extends StatelessWidget {
+  const _EventTimeRow({
+    required this.label,
+    required this.time,
+    required this.onChanged,
+  });
+
+  final String label;
+  final TimeOfDay time;
+  final ValueChanged<TimeOfDay> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final hour24 = time.hour;
+    final minute = time.minute;
+    final hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
+    final period = hour24 >= 12 ? 'PM' : 'AM';
+    final minuteOptions = List<int>.generate(60, (index) => index);
+    final keyPrefix = label.toLowerCase();
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 44, // Align label width with QuietHoursDialog (44)
+          child: Text(
+            label,
+            style: AppTypography.body(
+              color: tokens.ink,
+            ).copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Container(
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: tokens.surfaceSunken,
+              border: Border.all(color: tokens.border),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    key: Key('event-$keyPrefix-hour'),
+                    value: hour12,
+                    isDense: true,
+                    style: AppTypography.body(color: tokens.ink),
+                    dropdownColor: tokens.surfaceRaised,
+                    items: [
+                      for (var hour = 1; hour <= 12; hour++)
+                        DropdownMenuItem<int>(
+                          value: hour,
+                          child: Text('$hour'),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      onChanged(
+                        _timeFor(
+                          hour12: value,
+                          minute: minute,
+                          period: period,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Text(':', style: AppTypography.body(color: tokens.ink)),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    key: Key('event-$keyPrefix-minute'),
+                    value: minute,
+                    isDense: true,
+                    style: AppTypography.body(color: tokens.ink),
+                    dropdownColor: tokens.surfaceRaised,
+                    items: [
+                      for (final value in minuteOptions)
+                        DropdownMenuItem<int>(
+                          value: value,
+                          child: Text(value.toString().padLeft(2, '0')),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      onChanged(
+                        _timeFor(
+                          hour12: hour12,
+                          minute: value,
+                          period: period,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    key: Key('event-$keyPrefix-period'),
+                    value: period,
+                    isDense: true,
+                    style: AppTypography.body(color: tokens.ink),
+                    dropdownColor: tokens.surfaceRaised,
+                    items: const [
+                      DropdownMenuItem(value: 'AM', child: Text('AM')),
+                      DropdownMenuItem(value: 'PM', child: Text('PM')),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      onChanged(
+                        _timeFor(
+                          hour12: hour12,
+                          minute: minute,
+                          period: value,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  TimeOfDay _timeFor({
+    required int hour12,
+    required int minute,
+    required String period,
+  }) {
+    final isPm = period == 'PM';
+    var hour24 = hour12 % 12;
+    if (isPm) hour24 += 12;
+    return TimeOfDay(hour: hour24, minute: minute);
+  }
+}
+
