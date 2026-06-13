@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../notifications/notification_preferences.dart';
 import 'user_doc_store.dart';
 
 /// Firestore-backed [UserDocStore] (Pass 4.5 #070).
@@ -38,8 +39,8 @@ class FirebaseUserDocStore implements UserDocStore {
   FirebaseUserDocStore({
     required FirebaseFirestore firestore,
     required String uid,
-  })  : _firestore = firestore,
-        _uid = uid {
+  }) : _firestore = firestore,
+       _uid = uid {
     _subscribe();
   }
 
@@ -73,18 +74,25 @@ class FirebaseUserDocStore implements UserDocStore {
     // set+merge: preserve sibling fields (`migratedFromDiskAt`,
     // `*SeededAt`, the other list field) that this store does not
     // own.
-    await _docRef.set(
-      <String, dynamic>{'categories': List<String>.from(categories)},
-      SetOptions(merge: true),
-    );
+    await _docRef.set(<String, dynamic>{
+      'categories': List<String>.from(categories),
+    }, SetOptions(merge: true));
   }
 
   @override
   Future<void> saveEventTypes(List<String> eventTypes) async {
-    await _docRef.set(
-      <String, dynamic>{'eventTypes': List<String>.from(eventTypes)},
-      SetOptions(merge: true),
-    );
+    await _docRef.set(<String, dynamic>{
+      'eventTypes': List<String>.from(eventTypes),
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> saveNotificationPreferences(
+    NotificationPreferences preferences,
+  ) async {
+    await _docRef.set(<String, dynamic>{
+      'notificationPreferences': preferences.toMap(),
+    }, SetOptions(merge: true));
   }
 
   @override
@@ -136,6 +144,7 @@ class FirebaseUserDocStore implements UserDocStore {
     if (data == null) return UserDocSnapshot.empty;
     final categoriesRaw = data['categories'];
     final eventTypesRaw = data['eventTypes'];
+    final notificationPreferencesRaw = data['notificationPreferences'];
     final categories = categoriesRaw is List
         ? List<String>.unmodifiable(categoriesRaw.whereType<String>())
         : const <String>[];
@@ -145,6 +154,9 @@ class FirebaseUserDocStore implements UserDocStore {
     return UserDocSnapshot(
       categories: categories,
       eventTypes: eventTypes,
+      notificationPreferences: NotificationPreferences.fromMap(
+        notificationPreferencesRaw,
+      ),
     );
   }
 }

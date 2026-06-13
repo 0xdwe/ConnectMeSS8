@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../firebase_providers.dart';
+import '../notifications/notification_preferences.dart';
 import 'firebase_user_doc_store.dart';
 import 'user_doc_store.dart';
 
@@ -24,10 +25,7 @@ final userDocStoreProvider = Provider<UserDocStore>((ref) {
     return const _SignedOutUserDocStore();
   }
   final firestore = ref.watch(firestoreProvider);
-  final store = FirebaseUserDocStore(
-    firestore: firestore,
-    uid: user.uid,
-  );
+  final store = FirebaseUserDocStore(firestore: firestore, uid: user.uid);
   ref.onDispose(store.dispose);
   return store;
 });
@@ -52,6 +50,11 @@ class _SignedOutUserDocStore implements UserDocStore {
   @override
   Future<void> saveEventTypes(List<String> eventTypes) =>
       Future.error(StateError(_msg));
+
+  @override
+  Future<void> saveNotificationPreferences(
+    NotificationPreferences preferences,
+  ) => Future.error(StateError(_msg));
 
   @override
   Stream<UserDocSnapshot> snapshot() =>

@@ -1,4 +1,5 @@
 import '../app_state.dart';
+import '../notifications/notification_preferences.dart';
 
 /// Snapshot of the user-doc fields AppController cares about.
 ///
@@ -11,10 +12,12 @@ class UserDocSnapshot {
   const UserDocSnapshot({
     required this.categories,
     required this.eventTypes,
+    required this.notificationPreferences,
   });
 
   final List<String> categories;
   final List<String> eventTypes;
+  final NotificationPreferences notificationPreferences;
 
   /// Empty snapshot used as the initial value for an unseeded user
   /// or for the signed-out sentinel. AppController falls back to the
@@ -24,6 +27,7 @@ class UserDocSnapshot {
   static const UserDocSnapshot empty = UserDocSnapshot(
     categories: <String>[],
     eventTypes: <String>[],
+    notificationPreferences: NotificationPreferences.defaults(),
   );
 
   bool get isEmpty => categories.isEmpty && eventTypes.isEmpty;
@@ -49,6 +53,9 @@ abstract interface class UserDocStore {
 
   /// Persist a new event-types list. Replaces the current value.
   Future<void> saveEventTypes(List<String> eventTypes);
+
+  /// Persist notification controls as a closed map on `users/{uid}`.
+  Future<void> saveNotificationPreferences(NotificationPreferences preferences);
 
   /// Broadcast stream of the latest [UserDocSnapshot]. Adapters emit
   /// on save and on cross-instance updates (e.g. another device).

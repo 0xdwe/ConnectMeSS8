@@ -10,6 +10,9 @@ import 'package:connect_me/src/state/connections/interaction_providers.dart';
 import 'package:connect_me/src/state/connections/connection_seeder.dart';
 import 'package:connect_me/src/state/connections/user_doc_store_providers.dart';
 import 'package:connect_me/src/state/firebase_providers.dart';
+import 'package:connect_me/src/state/notifications/notification_gateway.dart';
+import 'package:connect_me/src/state/notifications/notification_providers.dart';
+import 'package:connect_me/src/state/notifications/notification_token_store.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 
 /// Standard signed-in [firebaseAuthProvider] override plus Pass 4.5
@@ -38,7 +41,10 @@ import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 /// `flutter_riverpod` public surface; spreading the list into
 /// `ProviderContainer(overrides: [...])` works either way and
 /// avoids an extra import path.
-List<dynamic> headlessStoreOverrides() {
+List<dynamic> headlessStoreOverrides({
+  NotificationGateway? notificationGateway,
+  NotificationTokenStore? notificationTokenStore,
+}) {
   final connections = InMemoryConnectionStore();
   connections.seedSync(SeederSampleSource.connections());
 
@@ -63,6 +69,12 @@ List<dynamic> headlessStoreOverrides() {
     // exercise an AI run override `aiUpdateProvider` directly with
     // a Mock and never reach this slot.
     firebaseAiProvider.overrideWithValue(null),
+    notificationGatewayProvider.overrideWithValue(
+      notificationGateway ?? InMemoryNotificationGateway(),
+    ),
+    notificationTokenStoreProvider.overrideWithValue(
+      notificationTokenStore ?? InMemoryNotificationTokenStore(),
+    ),
     connectionStoreProvider.overrideWithValue(connections),
     interactionStoreProvider.overrideWithValue(interactions),
     eventStoreProvider.overrideWithValue(events),
@@ -71,7 +83,11 @@ List<dynamic> headlessStoreOverrides() {
   ];
 }
 
-List<dynamic> signedOutDemoOverrides({String uid = 'demo-uid'}) {
+List<dynamic> signedOutDemoOverrides({
+  String uid = 'demo-uid',
+  NotificationGateway? notificationGateway,
+  NotificationTokenStore? notificationTokenStore,
+}) {
   return <dynamic>[
     firebaseAuthProvider.overrideWithValue(
       MockFirebaseAuth(
@@ -83,11 +99,18 @@ List<dynamic> signedOutDemoOverrides({String uid = 'demo-uid'}) {
         ),
       ),
     ),
-    ...headlessStoreOverrides(),
+    ...headlessStoreOverrides(
+      notificationGateway: notificationGateway,
+      notificationTokenStore: notificationTokenStore,
+    ),
   ];
 }
 
-List<dynamic> signedInDemoOverrides({String uid = 'demo-uid'}) {
+List<dynamic> signedInDemoOverrides({
+  String uid = 'demo-uid',
+  NotificationGateway? notificationGateway,
+  NotificationTokenStore? notificationTokenStore,
+}) {
   return <dynamic>[
     firebaseAuthProvider.overrideWithValue(
       MockFirebaseAuth(
@@ -100,6 +123,9 @@ List<dynamic> signedInDemoOverrides({String uid = 'demo-uid'}) {
         ),
       ),
     ),
-    ...headlessStoreOverrides(),
+    ...headlessStoreOverrides(
+      notificationGateway: notificationGateway,
+      notificationTokenStore: notificationTokenStore,
+    ),
   ];
 }
