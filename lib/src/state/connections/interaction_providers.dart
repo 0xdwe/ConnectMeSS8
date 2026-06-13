@@ -30,10 +30,7 @@ final interactionStoreProvider = Provider<InteractionStore>((ref) {
     return const _SignedOutInteractionStore();
   }
   final firestore = ref.watch(firestoreProvider);
-  final store = FirebaseInteractionStore(
-    firestore: firestore,
-    uid: user.uid,
-  );
+  final store = FirebaseInteractionStore(firestore: firestore, uid: user.uid);
   ref.onDispose(store.dispose);
   return store;
 });
@@ -49,8 +46,7 @@ final interactionStoreProvider = Provider<InteractionStore>((ref) {
 class _SignedOutInteractionStore implements InteractionStore {
   const _SignedOutInteractionStore();
 
-  static const String _msg =
-      'Interactions are not available while signed out.';
+  static const String _msg = 'Interactions are not available while signed out.';
 
   @override
   Future<CrmInteraction?> load(String interactionId) =>
@@ -61,8 +57,7 @@ class _SignedOutInteractionStore implements InteractionStore {
       Future.error(StateError(_msg));
 
   @override
-  Future<void> delete(String interactionId) =>
-      Future.error(StateError(_msg));
+  Future<void> delete(String interactionId) => Future.error(StateError(_msg));
 
   @override
   Future<Map<String, CrmInteraction>> listAll() =>

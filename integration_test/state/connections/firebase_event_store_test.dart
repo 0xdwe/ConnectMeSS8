@@ -80,16 +80,14 @@ void main() {
   }
 
   test('load on missing event returns null', () async {
-    final store =
-        FirebaseEventStore(firestore: firestore, uid: currentUid());
+    final store = FirebaseEventStore(firestore: firestore, uid: currentUid());
     addTearDown(store.dispose);
 
     expect(await store.load('does-not-exist'), isNull);
   });
 
   test('round-trip: save then load returns the same event', () async {
-    final store =
-        FirebaseEventStore(firestore: firestore, uid: currentUid());
+    final store = FirebaseEventStore(firestore: firestore, uid: currentUid());
     addTearDown(store.dispose);
 
     final input = _event(
@@ -125,10 +123,8 @@ void main() {
     expect(loaded.recurrencePattern, input.recurrencePattern);
   });
 
-  test('round-trip: save then load preserves null optional fields',
-      () async {
-    final store =
-        FirebaseEventStore(firestore: firestore, uid: currentUid());
+  test('round-trip: save then load preserves null optional fields', () async {
+    final store = FirebaseEventStore(firestore: firestore, uid: currentUid());
     addTearDown(store.dispose);
 
     final input = _event(
@@ -149,26 +145,25 @@ void main() {
   });
 
   test(
-      'listAll returns every saved event keyed by id; empty when none',
-      () async {
-    final store =
-        FirebaseEventStore(firestore: firestore, uid: currentUid());
-    addTearDown(store.dispose);
+    'listAll returns every saved event keyed by id; empty when none',
+    () async {
+      final store = FirebaseEventStore(firestore: firestore, uid: currentUid());
+      addTearDown(store.dispose);
 
-    expect(await store.listAll(), isEmpty);
+      expect(await store.listAll(), isEmpty);
 
-    await store.save(_event(id: 'e-1', title: 'One'));
-    await store.save(_event(id: 'e-2', title: 'Two'));
+      await store.save(_event(id: 'e-1', title: 'One'));
+      await store.save(_event(id: 'e-2', title: 'Two'));
 
-    final all = await store.listAll();
-    expect(all.keys, unorderedEquals({'e-1', 'e-2'}));
-    expect(all['e-1']!.title, 'One');
-    expect(all['e-2']!.title, 'Two');
-  });
+      final all = await store.listAll();
+      expect(all.keys, unorderedEquals({'e-1', 'e-2'}));
+      expect(all['e-1']!.title, 'One');
+      expect(all['e-2']!.title, 'Two');
+    },
+  );
 
   test('delete removes the doc; subsequent load returns null', () async {
-    final store =
-        FirebaseEventStore(firestore: firestore, uid: currentUid());
+    final store = FirebaseEventStore(firestore: firestore, uid: currentUid());
     addTearDown(store.dispose);
 
     await store.save(_event(id: 'e-1'));
@@ -180,26 +175,20 @@ void main() {
   });
 
   test('delete on missing doc is a no-op (no exception)', () async {
-    final store =
-        FirebaseEventStore(firestore: firestore, uid: currentUid());
+    final store = FirebaseEventStore(firestore: firestore, uid: currentUid());
     addTearDown(store.dispose);
 
     await store.delete('never-existed');
     expect(await store.listAll(), isEmpty);
   });
 
-  test(
-      'save writes required fields plus schemaVersion: 1 and an '
-      'updatedAt server timestamp; omits null optional fields',
-      () async {
+  test('save writes required fields plus schemaVersion: 1 and an '
+      'updatedAt server timestamp; omits null optional fields', () async {
     final uid = currentUid();
     final store = FirebaseEventStore(firestore: firestore, uid: uid);
     addTearDown(store.dispose);
 
-    await store.save(_event(
-      id: 'e-1',
-      contactId: null,
-    ));
+    await store.save(_event(id: 'e-1', contactId: null));
 
     final raw = await firestore
         .collection('users')
@@ -213,14 +202,25 @@ void main() {
     expect(
       data.keys,
       containsAll([
-        'id', 'title', 'category', 'date', 'note', 'eventType',
-        'isAllDay', 'isRecurring', 'schemaVersion', 'updatedAt',
+        'id',
+        'title',
+        'category',
+        'date',
+        'note',
+        'eventType',
+        'isAllDay',
+        'isRecurring',
+        'schemaVersion',
+        'updatedAt',
       ]),
     );
     // Omitted optional fields must not be present at all so the
     // present-and-typed-or-absent rule guards apply uniformly.
-    expect(data.keys.contains('contactId'), isFalse,
-        reason: 'null optional contactId must not be written.');
+    expect(
+      data.keys.contains('contactId'),
+      isFalse,
+      reason: 'null optional contactId must not be written.',
+    );
     expect(data.keys.contains('startTimeMinutes'), isFalse);
     expect(data.keys.contains('endTimeMinutes'), isFalse);
     expect(data.keys.contains('recurrencePattern'), isFalse);
@@ -231,16 +231,12 @@ void main() {
     expect(data['updatedAt'], isA<Timestamp>());
   });
 
-  test(
-      'snapshot listener emits initial empty map and then updates on '
-      'cross-instance writes (same UID)',
-      () async {
+  test('snapshot listener emits initial empty map and then updates on '
+      'cross-instance writes (same UID)', () async {
     final uid = currentUid();
-    final storeReader =
-        FirebaseEventStore(firestore: firestore, uid: uid);
+    final storeReader = FirebaseEventStore(firestore: firestore, uid: uid);
     addTearDown(storeReader.dispose);
-    final storeWriter =
-        FirebaseEventStore(firestore: firestore, uid: uid);
+    final storeWriter = FirebaseEventStore(firestore: firestore, uid: uid);
     addTearDown(storeWriter.dispose);
 
     final events = <Map<String, PlannerEvent>>[];
@@ -258,12 +254,9 @@ void main() {
     expect(events.last['e-1']!.title, 'Coffee');
   });
 
-  test(
-      'snapshotSync starts null, settles to a map after the first '
-      'snapshot resolves',
-      () async {
-    final store =
-        FirebaseEventStore(firestore: firestore, uid: currentUid());
+  test('snapshotSync starts null, settles to a map after the first '
+      'snapshot resolves', () async {
+    final store = FirebaseEventStore(firestore: firestore, uid: currentUid());
     addTearDown(store.dispose);
 
     expect(store.snapshotSync(), isNull);
@@ -277,10 +270,8 @@ void main() {
     expect(store.snapshotSync()!.containsKey('e-1'), isTrue);
   });
 
-  test(
-      'dispose cancels the listener; subsequent cross-instance writes '
-      'do not emit on the disposed stream',
-      () async {
+  test('dispose cancels the listener; subsequent cross-instance writes '
+      'do not emit on the disposed stream', () async {
     final uid = currentUid();
     final reader = FirebaseEventStore(firestore: firestore, uid: uid);
     final writer = FirebaseEventStore(firestore: firestore, uid: uid);
@@ -323,105 +314,112 @@ void main() {
   });
 
   test(
-      "user B cannot read user A's events (rules-enforced isolation)",
-      () async {
-    final uidA = currentUid();
-    final storeA = FirebaseEventStore(firestore: firestore, uid: uidA);
-    addTearDown(storeA.dispose);
-    await storeA.save(_event(id: 'private', title: 'A private'));
+    "user B cannot read user A's events (rules-enforced isolation)",
+    () async {
+      final uidA = currentUid();
+      final storeA = FirebaseEventStore(firestore: firestore, uid: uidA);
+      addTearDown(storeA.dispose);
+      await storeA.save(_event(id: 'private', title: 'A private'));
 
-    await FirebaseAuth.instance.signOut();
-    await FirebaseAuth.instance.signInAnonymously();
+      await FirebaseAuth.instance.signOut();
+      await FirebaseAuth.instance.signInAnonymously();
 
-    final spoofStore =
-        FirebaseEventStore(firestore: firestore, uid: uidA);
-    addTearDown(spoofStore.dispose);
-    await expectLater(
-      spoofStore.load('private'),
-      throwsA(isA<FirebaseException>().having(
-        (e) => e.code,
-        'code',
-        'permission-denied',
-      )),
-    );
-  });
-
-  test(
-      'snapshot listener forwards permission-denied errors to the stream '
-      "error channel without corrupting the mirror (PRD §Q6 contract)",
-      () async {
-    final uidA = currentUid();
-    await FirebaseAuth.instance.signOut();
-    await FirebaseAuth.instance.signInAnonymously();
-
-    final spoof =
-        FirebaseEventStore(firestore: firestore, uid: uidA);
-    addTearDown(spoof.dispose);
-
-    final events = <Map<String, PlannerEvent>>[];
-    final errors = <Object>[];
-    final sub = spoof.snapshot().listen(events.add, onError: errors.add);
-    addTearDown(sub.cancel);
-
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-
-    expect(errors, isNotEmpty);
-    expect(
-      errors.first,
-      isA<FirebaseException>().having(
-        (e) => e.code,
-        'code',
-        'permission-denied',
-      ),
-    );
-    expect(events, isEmpty);
-    expect(spoof.snapshotSync(), isNull);
-  });
+      final spoofStore = FirebaseEventStore(firestore: firestore, uid: uidA);
+      addTearDown(spoofStore.dispose);
+      await expectLater(
+        spoofStore.load('private'),
+        throwsA(
+          isA<FirebaseException>().having(
+            (e) => e.code,
+            'code',
+            'permission-denied',
+          ),
+        ),
+      );
+    },
+  );
 
   test(
-      'malformed write (invalid recurrencePattern) is rejected by rules',
-      () async {
-    final uid = currentUid();
-    final docRef = firestore
-        .collection('users')
-        .doc(uid)
-        .collection('events')
-        .doc('bad');
+    'snapshot listener forwards permission-denied errors to the stream '
+    "error channel without corrupting the mirror (PRD §Q6 contract)",
+    () async {
+      final uidA = currentUid();
+      await FirebaseAuth.instance.signOut();
+      await FirebaseAuth.instance.signInAnonymously();
 
-    await expectLater(
-      docRef.set(<String, dynamic>{
-        'id': 'bad',
-        'title': 'Bad',
-        'category': 'general',
-        'date': Timestamp.fromDate(DateTime.utc(2026, 1, 1)),
-        'note': '',
-        'eventType': 'Plan',
-        'isAllDay': true,
-        'isRecurring': true,
-        'recurrencePattern': 'biweekly', // not in the enum set
-        'schemaVersion': 1,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }),
-      throwsA(isA<FirebaseException>().having(
-        (e) => e.code,
-        'code',
-        'permission-denied',
-      )),
-    );
-  });
+      final spoof = FirebaseEventStore(firestore: firestore, uid: uidA);
+      addTearDown(spoof.dispose);
+
+      final events = <Map<String, PlannerEvent>>[];
+      final errors = <Object>[];
+      final sub = spoof.snapshot().listen(events.add, onError: errors.add);
+      addTearDown(sub.cancel);
+
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+
+      expect(errors, isNotEmpty);
+      expect(
+        errors.first,
+        isA<FirebaseException>().having(
+          (e) => e.code,
+          'code',
+          'permission-denied',
+        ),
+      );
+      expect(events, isEmpty);
+      expect(spoof.snapshotSync(), isNull);
+    },
+  );
 
   test(
-      'eventStoreProvider rebuilds for a new user and the new '
-      'store sees an empty collection',
-      () async {
+    'malformed write (invalid recurrencePattern) is rejected by rules',
+    () async {
+      final uid = currentUid();
+      final docRef = firestore
+          .collection('users')
+          .doc(uid)
+          .collection('events')
+          .doc('bad');
+
+      await expectLater(
+        docRef.set(<String, dynamic>{
+          'id': 'bad',
+          'title': 'Bad',
+          'category': 'general',
+          'date': Timestamp.fromDate(DateTime.utc(2026, 1, 1)),
+          'note': '',
+          'eventType': 'Plan',
+          'isAllDay': true,
+          'isRecurring': true,
+          'recurrencePattern': 'biweekly', // not in the enum set
+          'schemaVersion': 1,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }),
+        throwsA(
+          isA<FirebaseException>().having(
+            (e) => e.code,
+            'code',
+            'permission-denied',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('eventStoreProvider rebuilds for a new user and the new '
+      'store sees an empty collection', () async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
     final userAUid = currentUid();
     final storeA = container.read(eventStoreProvider);
-    expect(storeA, isA<FirebaseEventStore>(),
-        reason: 'signed-in eventStoreProvider must return the '
-            'Firestore-backed adapter (Pass 4.5 #068 type guard).');
+    expect(
+      storeA,
+      isA<FirebaseEventStore>(),
+      reason:
+          'signed-in eventStoreProvider must return the '
+          'Firestore-backed adapter (Pass 4.5 #068 type guard).',
+    );
 
     await storeA.save(_event(id: 'a-only', title: 'A only'));
     expect((await storeA.listAll()).keys, contains('a-only'));

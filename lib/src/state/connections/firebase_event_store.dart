@@ -55,8 +55,8 @@ class FirebaseEventStore implements EventStore {
   FirebaseEventStore({
     required FirebaseFirestore firestore,
     required String uid,
-  })  : _firestore = firestore,
-        _uid = uid {
+  }) : _firestore = firestore,
+       _uid = uid {
     _subscribe();
   }
 

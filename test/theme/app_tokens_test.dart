@@ -53,8 +53,14 @@ void main() {
       final dark = AppTokens.dark();
       // Different at minimum on the two endpoints we care about visually.
       expect(dark.aiGradient.colors, isNot(equals(light.aiGradient.colors)));
-      expect(dark.recommendationSurface, isNot(equals(light.recommendationSurface)));
-      expect(dark.recommendationBorder, isNot(equals(light.recommendationBorder)));
+      expect(
+        dark.recommendationSurface,
+        isNot(equals(light.recommendationSurface)),
+      );
+      expect(
+        dark.recommendationBorder,
+        isNot(equals(light.recommendationBorder)),
+      );
       expect(dark.topicAccent, isNot(equals(light.topicAccent)));
       expect(dark.aiGradient.colors.length, 2);
     });

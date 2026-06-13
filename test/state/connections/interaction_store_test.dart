@@ -107,11 +107,12 @@ void main() {
       await store.save(makeInteraction('i1'));
       final snapshot = await store.listAll();
       expect(
-          () => snapshot['rogue'] = makeInteraction('rogue'),
-          throwsUnsupportedError,
-          reason:
-              'listAll must return an unmodifiable view to keep callers '
-              'from mutating the underlying store by accident.');
+        () => snapshot['rogue'] = makeInteraction('rogue'),
+        throwsUnsupportedError,
+        reason:
+            'listAll must return an unmodifiable view to keep callers '
+            'from mutating the underlying store by accident.',
+      );
     });
 
     test('attachments and source round-trip through save/load', () async {
@@ -130,11 +131,13 @@ void main() {
   });
 
   group('InMemoryInteractionStore — snapshot stream', () {
-    test('snapshotSync starts null until the first event has emitted',
-        () async {
-      final store = InMemoryInteractionStore();
-      expect(store.snapshotSync(), isNull);
-    });
+    test(
+      'snapshotSync starts null until the first event has emitted',
+      () async {
+        final store = InMemoryInteractionStore();
+        expect(store.snapshotSync(), isNull);
+      },
+    );
 
     test('snapshot emits the current state on first subscribe', () async {
       final store = InMemoryInteractionStore();
@@ -179,25 +182,27 @@ void main() {
       await sub.cancel();
     });
 
-    test('snapshot is a broadcast stream — multiple listeners both receive',
-        () async {
-      final store = InMemoryInteractionStore();
+    test(
+      'snapshot is a broadcast stream — multiple listeners both receive',
+      () async {
+        final store = InMemoryInteractionStore();
 
-      final aEvents = <Map<String, CrmInteraction>>[];
-      final bEvents = <Map<String, CrmInteraction>>[];
-      final subA = store.snapshot().listen(aEvents.add);
-      final subB = store.snapshot().listen(bEvents.add);
-      await Future<void>.delayed(Duration.zero);
+        final aEvents = <Map<String, CrmInteraction>>[];
+        final bEvents = <Map<String, CrmInteraction>>[];
+        final subA = store.snapshot().listen(aEvents.add);
+        final subB = store.snapshot().listen(bEvents.add);
+        await Future<void>.delayed(Duration.zero);
 
-      await store.save(makeInteraction('i1'));
-      await Future<void>.delayed(Duration.zero);
+        await store.save(makeInteraction('i1'));
+        await Future<void>.delayed(Duration.zero);
 
-      expect(aEvents.last.keys, contains('i1'));
-      expect(bEvents.last.keys, contains('i1'));
+        expect(aEvents.last.keys, contains('i1'));
+        expect(bEvents.last.keys, contains('i1'));
 
-      await subA.cancel();
-      await subB.cancel();
-    });
+        await subA.cancel();
+        await subB.cancel();
+      },
+    );
 
     test('clear empties the store and emits an empty map', () async {
       final store = InMemoryInteractionStore();

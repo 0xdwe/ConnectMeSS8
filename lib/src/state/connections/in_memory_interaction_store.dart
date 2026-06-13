@@ -53,8 +53,11 @@ class InMemoryInteractionStore implements InteractionStore {
       onListen: () {
         final current = _mirror;
         if (current != null) controller.add(current);
-        sub = _controller.stream.listen(controller.add,
-            onError: controller.addError, onDone: controller.close);
+        sub = _controller.stream.listen(
+          controller.add,
+          onError: controller.addError,
+          onDone: controller.close,
+        );
       },
       onCancel: () async {
         await sub?.cancel();

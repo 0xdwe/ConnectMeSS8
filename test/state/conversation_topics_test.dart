@@ -7,6 +7,7 @@ Connection _connection({
   String id = 'mike',
   String name = 'Mike Chen',
   String category = 'Work',
+  String notes = '',
 }) {
   return Connection(
     id: id,
@@ -17,7 +18,7 @@ Connection _connection({
     bondScore: 70,
     nextStep: 'Send a casual hello',
     lastContact: DateTime(2026, 5, 1),
-    notes: '',
+    notes: notes,
     knownSince: DateTime(2020, 1, 1),
     preferredChannels: const ['Text'],
   );
@@ -98,9 +99,8 @@ void main() {
   group('preferredSuggestionsForTopic', () {
     test('prefers prepared non-expired Topic Suggestions from memory', () {
       final suggestions = preferredSuggestionsForTopic(
-        category: 'Friends',
+        connection: _connection(category: 'Friends', name: 'Sarah Chen'),
         topic: 'Paris trip',
-        contactName: 'Sarah Chen',
         memory: _memory(
           topics: const ['Paris trip'],
           topicSuggestions: [
@@ -125,32 +125,50 @@ void main() {
       );
 
       expect(suggestions, [
-        'Ask how the Paris plans are coming together.',
-        'Send a café rec if you spot one.',
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.ask,
+          text: 'Ask how the Paris plans are coming together.',
+          context: null,
+        ),
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.share,
+          text: 'Send a café rec if you spot one.',
+          context: null,
+        ),
       ]);
     });
 
     test('falls back to deterministic suggestions when prepared missing', () {
       final suggestions = preferredSuggestionsForTopic(
-        category: 'Friends',
+        connection: _connection(category: 'Friends', name: 'Sarah Chen'),
         topic: 'kindergarten',
-        contactName: 'Sarah Chen',
         memory: _memory(topics: const ['kindergarten']),
         now: DateTime.utc(2026, 6, 5),
       );
 
       expect(suggestions, [
-        "How's the kindergarten going?",
-        'Last time you mentioned kindergarten \u2014 anything new?',
-        "Curious how Sarah's kindergarten is going.",
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.ask,
+          text: "How's the kindergarten going?",
+          context: null,
+        ),
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.ask,
+          text: 'Last time you mentioned kindergarten \u2014 anything new?',
+          context: null,
+        ),
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.ask,
+          text: "Curious how Sarah's kindergarten is going.",
+          context: null,
+        ),
       ]);
     });
 
     test('drops blank prepared suggestions and caps at three', () {
       final suggestions = preferredSuggestionsForTopic(
-        category: 'Friends',
+        connection: _connection(category: 'Friends', name: 'Sarah Chen'),
         topic: 'Paris trip',
-        contactName: 'Sarah Chen',
         memory: _memory(
           topics: const ['Paris trip'],
           topicSuggestions: [
@@ -175,14 +193,29 @@ void main() {
         now: DateTime.utc(2026, 6, 5),
       );
 
-      expect(suggestions, ['First.', 'Second.', 'Third.']);
+      expect(suggestions, [
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.ask,
+          text: 'First.',
+          context: null,
+        ),
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.share,
+          text: 'Second.',
+          context: null,
+        ),
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.plan,
+          text: 'Third.',
+          context: null,
+        ),
+      ]);
     });
 
     test('falls back when prepared suggestions are blank after trimming', () {
       final suggestions = preferredSuggestionsForTopic(
-        category: 'Friends',
+        connection: _connection(category: 'Friends', name: 'Sarah Chen'),
         topic: 'Paris trip',
-        contactName: 'Sarah Chen',
         memory: _memory(
           topics: const ['Paris trip'],
           topicSuggestions: [
@@ -198,17 +231,28 @@ void main() {
       );
 
       expect(suggestions, [
-        "How's the Paris trip going?",
-        'Last time you mentioned Paris trip \u2014 anything new?',
-        "Curious how Sarah's Paris trip is going.",
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.ask,
+          text: "How's the Paris trip going?",
+          context: null,
+        ),
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.ask,
+          text: 'Last time you mentioned Paris trip \u2014 anything new?',
+          context: null,
+        ),
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.ask,
+          text: "Curious how Sarah's Paris trip is going.",
+          context: null,
+        ),
       ]);
     });
 
     test('falls back to deterministic suggestions when prepared expired', () {
       final suggestions = preferredSuggestionsForTopic(
-        category: 'Friends',
+        connection: _connection(category: 'Friends', name: 'Sarah Chen'),
         topic: 'Paris trip',
-        contactName: 'Sarah Chen',
         memory: _memory(
           topics: const ['Paris trip'],
           topicSuggestions: [
@@ -228,10 +272,74 @@ void main() {
       );
 
       expect(suggestions, [
-        "How's the Paris trip going?",
-        'Last time you mentioned Paris trip \u2014 anything new?',
-        "Curious how Sarah's Paris trip is going.",
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.ask,
+          text: "How's the Paris trip going?",
+          context: null,
+        ),
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.ask,
+          text: 'Last time you mentioned Paris trip \u2014 anything new?',
+          context: null,
+        ),
+        const TopicSuggestion(
+          kind: TopicSuggestionKind.ask,
+          text: "Curious how Sarah's Paris trip is going.",
+          context: null,
+        ),
       ]);
+    });
+
+    test('scanner extracts and formats history check-in when matching topic keyword', () {
+      final suggestions = preferredSuggestionsForTopic(
+        connection: _connection(category: 'Friends', name: 'Sarah Chen'),
+        topic: 'Paris trip',
+        memory: _memory(
+          topics: const ['Paris trip'],
+          topicSuggestions: const [],
+        ).copyWith(
+          history: '- 2026-06-04 — Sarah said the Paris trip was amazing.\n- 2026-05-19 — Prepared for Paris.',
+        ),
+      );
+
+      expect(suggestions.first.context, 'Sarah said the Paris trip was amazing (from check-in on Jun 4, 2026)');
+    });
+
+    test('scanner extracts summary sentences when matching topic keyword', () {
+      final suggestions = preferredSuggestionsForTopic(
+        connection: _connection(category: 'Friends', name: 'Sarah Chen'),
+        topic: 'Paris',
+        memory: _memory(
+          topics: const ['Paris'],
+        ).copyWith(
+          summary: 'She lives in Seattle. She loves traveling. Sarah has a plan to go to Paris soon.',
+        ),
+      );
+
+      expect(suggestions.first.context, 'Sarah has a plan to go to Paris soon.');
+    });
+
+    test('scanner extracts connection notes when matching topic keyword', () {
+      final suggestions = preferredSuggestionsForTopic(
+        connection: _connection(category: 'Friends', name: 'Sarah Chen', notes: 'Met Sarah in Paris during college.\nShe plays the violin.'),
+        topic: 'Paris',
+        memory: null,
+      );
+
+      expect(suggestions.first.context, 'Met Sarah in Paris during college.');
+    });
+
+    test('scanner tie-break prefers history over summary, and summary over notes on same keyword score', () {
+      final suggestions = preferredSuggestionsForTopic(
+        connection: _connection(category: 'Friends', name: 'Sarah Chen', notes: 'Paris notes here.'),
+        topic: 'Paris',
+        memory: _memory(topics: const ['Paris']).copyWith(
+          history: '- 2026-06-04 — Paris history bullet.',
+          summary: 'Paris summary sentence.',
+        ),
+      );
+
+      expect(suggestions.first.context, 'Paris history bullet (from check-in on Jun 4, 2026)');
     });
   });
 

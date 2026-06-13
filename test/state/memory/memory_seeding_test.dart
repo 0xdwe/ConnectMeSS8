@@ -9,18 +9,20 @@ import '../../test_overrides.dart';
 
 void main() {
   group('memorySeedingProvider', () {
-    test('writes one doc per seeded connection on an empty store',
-        () async {
+    test('writes one doc per seeded connection on an empty store', () async {
       final store = InMemoryMemoryStore();
-      final container = ProviderContainer(overrides: [
-        ...signedInDemoOverrides(),
-        memoryStoreProvider.overrideWithValue(store),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(store),
+        ],
+      );
       addTearDown(container.dispose);
 
       // AppState.seeded() carries 5 connections.
-      final seededConnections =
-          container.read(appControllerProvider).connections;
+      final seededConnections = container
+          .read(appControllerProvider)
+          .connections;
       expect(seededConnections, hasLength(5));
 
       await container.read(memorySeedingProvider.future);
@@ -29,21 +31,25 @@ void main() {
       expect(all, hasLength(seededConnections.length));
       for (final connection in seededConnections) {
         final doc = all[connection.id];
-        expect(doc, isNotNull,
-            reason: 'expected a memory doc for ${connection.id}');
+        expect(
+          doc,
+          isNotNull,
+          reason: 'expected a memory doc for ${connection.id}',
+        );
         expect(doc!.displayName, connection.name);
         // The seed pass populates summary from the connection's notes.
         expect(doc.summary, connection.notes);
       }
     });
 
-    test('starter topics are derived from the connection category',
-        () async {
+    test('starter topics are derived from the connection category', () async {
       final store = InMemoryMemoryStore();
-      final container = ProviderContainer(overrides: [
-        ...signedInDemoOverrides(),
-        memoryStoreProvider.overrideWithValue(store),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(store),
+        ],
+      );
       addTearDown(container.dispose);
 
       await container.read(memorySeedingProvider.future);
@@ -72,10 +78,12 @@ void main() {
       );
       await store.save(preExisting);
 
-      final container = ProviderContainer(overrides: [
-        ...signedInDemoOverrides(),
-        memoryStoreProvider.overrideWithValue(store),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(store),
+        ],
+      );
       addTearDown(container.dispose);
 
       await container.read(memorySeedingProvider.future);

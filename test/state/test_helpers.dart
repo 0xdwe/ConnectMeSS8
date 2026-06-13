@@ -9,8 +9,7 @@ import '../test_overrides.dart';
 ProviderContainer passFourFiveTestContainer({
   List<dynamic> extraOverrides = const <dynamic>[],
 }) {
-  return ProviderContainer(overrides: [
-    ...signedInDemoOverrides(),
-    ...extraOverrides,
-  ]);
+  return ProviderContainer(
+    overrides: [...signedInDemoOverrides(), ...extraOverrides],
+  );
 }

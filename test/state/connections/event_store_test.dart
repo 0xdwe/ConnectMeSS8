@@ -115,11 +115,12 @@ void main() {
       await store.save(makeEvent('e1'));
       final snapshot = await store.listAll();
       expect(
-          () => snapshot['rogue'] = makeEvent('rogue'),
-          throwsUnsupportedError,
-          reason:
-              'listAll must return an unmodifiable view to keep callers '
-              'from mutating the underlying store by accident.');
+        () => snapshot['rogue'] = makeEvent('rogue'),
+        throwsUnsupportedError,
+        reason:
+            'listAll must return an unmodifiable view to keep callers '
+            'from mutating the underlying store by accident.',
+      );
     });
 
     test('all-optional fields round-trip through save/load', () async {
@@ -138,15 +139,17 @@ void main() {
       expect(bare.recurrencePattern, isNull);
 
       // Event with every optional field present.
-      await store.save(makeEvent(
-        'e-full',
-        title: 'Full',
-        contactId: 'sarah',
-        startTimeMinutes: 540,
-        endTimeMinutes: 600,
-        isRecurring: true,
-        recurrencePattern: RecurrencePattern.weekly,
-      ));
+      await store.save(
+        makeEvent(
+          'e-full',
+          title: 'Full',
+          contactId: 'sarah',
+          startTimeMinutes: 540,
+          endTimeMinutes: 600,
+          isRecurring: true,
+          recurrencePattern: RecurrencePattern.weekly,
+        ),
+      );
       final full = await store.load('e-full');
       expect(full!.contactId, 'sarah');
       expect(full.startTimeMinutes, 540);
@@ -157,11 +160,13 @@ void main() {
   });
 
   group('InMemoryEventStore — snapshot stream', () {
-    test('snapshotSync starts null until the first event has emitted',
-        () async {
-      final store = InMemoryEventStore();
-      expect(store.snapshotSync(), isNull);
-    });
+    test(
+      'snapshotSync starts null until the first event has emitted',
+      () async {
+        final store = InMemoryEventStore();
+        expect(store.snapshotSync(), isNull);
+      },
+    );
 
     test('snapshot emits the current state on first subscribe', () async {
       final store = InMemoryEventStore();
@@ -206,25 +211,27 @@ void main() {
       await sub.cancel();
     });
 
-    test('snapshot is a broadcast stream — multiple listeners both receive',
-        () async {
-      final store = InMemoryEventStore();
+    test(
+      'snapshot is a broadcast stream — multiple listeners both receive',
+      () async {
+        final store = InMemoryEventStore();
 
-      final aEvents = <Map<String, PlannerEvent>>[];
-      final bEvents = <Map<String, PlannerEvent>>[];
-      final subA = store.snapshot().listen(aEvents.add);
-      final subB = store.snapshot().listen(bEvents.add);
-      await Future<void>.delayed(Duration.zero);
+        final aEvents = <Map<String, PlannerEvent>>[];
+        final bEvents = <Map<String, PlannerEvent>>[];
+        final subA = store.snapshot().listen(aEvents.add);
+        final subB = store.snapshot().listen(bEvents.add);
+        await Future<void>.delayed(Duration.zero);
 
-      await store.save(makeEvent('e1'));
-      await Future<void>.delayed(Duration.zero);
+        await store.save(makeEvent('e1'));
+        await Future<void>.delayed(Duration.zero);
 
-      expect(aEvents.last.keys, contains('e1'));
-      expect(bEvents.last.keys, contains('e1'));
+        expect(aEvents.last.keys, contains('e1'));
+        expect(bEvents.last.keys, contains('e1'));
 
-      await subA.cancel();
-      await subB.cancel();
-    });
+        await subA.cancel();
+        await subB.cancel();
+      },
+    );
 
     test('clear empties the store and emits an empty map', () async {
       final store = InMemoryEventStore();

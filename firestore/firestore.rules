@@ -149,7 +149,7 @@ service cloud.firestore {
       return data.keys().hasOnly([
           'id', 'contactId', 'type', 'title', 'note', 'date',
           'schemaVersion', 'updatedAt',
-          'attachments', 'source'
+          'attachments', 'attachmentUrls', 'source'
         ])
         && data.keys().hasAll([
           'id', 'contactId', 'type', 'title', 'note', 'date',
@@ -168,6 +168,7 @@ service cloud.firestore {
         && data.schemaVersion is int
         && data.updatedAt is timestamp
         && (!('attachments' in data.keys()) || data.attachments is list)
+        && (!('attachmentUrls' in data.keys()) || data.attachmentUrls is list)
         && (!('source' in data.keys())
             || (data.source is string
                 && data.source in ['manual', 'aiSuggested']));
@@ -291,10 +292,13 @@ service cloud.firestore {
           'eventTypesSeededAt',
           'categories',
           'eventTypes',
-          'notificationPreferences'
+          'notificationPreferences',
+          'topicSuggestionsBackfillV1CompletedAt'
         ])
         && (!('migratedFromDiskAt' in data.keys())
             || data.migratedFromDiskAt is timestamp)
+        && (!('topicSuggestionsBackfillV1CompletedAt' in data.keys())
+            || data.topicSuggestionsBackfillV1CompletedAt is timestamp)
         && (!('connectionsSeededAt' in data.keys())
             || data.connectionsSeededAt is timestamp)
         && (!('interactionsSeededAt' in data.keys())

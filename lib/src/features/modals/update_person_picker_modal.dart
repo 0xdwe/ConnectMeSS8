@@ -25,7 +25,12 @@ String _pickerAvatarGlyph(String avatar) {
   return (trimmed.isNotEmpty && !trimmed.startsWith('data:image/')) ? trimmed : '?';
 }
 
-Future<void> showUpdatePersonPickerModal(BuildContext context) => showModalBottomSheet<void>(context: context, isScrollControlled: true, builder: (_) => const UpdatePersonPickerModal());
+Future<void> showUpdatePersonPickerModal(BuildContext context) =>
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const UpdatePersonPickerModal(),
+    );
 
 class UpdatePersonPickerModal extends ConsumerWidget {
   const UpdatePersonPickerModal({super.key});

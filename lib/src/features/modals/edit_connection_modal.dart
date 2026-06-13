@@ -34,14 +34,17 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
   late final email = TextEditingController(text: widget.connection.email);
   late final phone = TextEditingController(text: widget.connection.phone);
   late final address = TextEditingController(text: widget.connection.address);
-  late final instagram = TextEditingController(text: widget.connection.instagram);
+  late final instagram = TextEditingController(
+    text: widget.connection.instagram,
+  );
   late final linkedin = TextEditingController(text: widget.connection.linkedin);
   late final whatsapp = TextEditingController(text: widget.connection.whatsapp);
   late final line = TextEditingController(text: widget.connection.line);
   late final notes = TextEditingController(text: widget.connection.notes);
   late final avatar = TextEditingController(text: widget.connection.avatar);
   late String category = widget.connection.category;
-  late _AvatarMode avatarMode = widget.connection.avatar.trim().startsWith('data:image/')
+  late _AvatarMode avatarMode =
+      widget.connection.avatar.trim().startsWith('data:image/')
       ? _AvatarMode.image
       : _AvatarMode.emoji;
 
@@ -77,9 +80,9 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not pick image: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not pick image: $error')));
     }
   }
 
@@ -129,10 +132,7 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
                     backgroundColor: colors.primaryContainer,
                     backgroundImage: _avatarImage,
                     child: _avatarImage == null
-                        ? Text(
-                            _avatarText,
-                            style: AppTypography.glyph(26),
-                          )
+                        ? Text(_avatarText, style: AppTypography.glyph(26))
                         : null,
                   ),
                   Positioned(
@@ -150,10 +150,7 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: colors.primary,
-                            border: Border.all(
-                              color: colors.surface,
-                              width: 2,
-                            ),
+                            border: Border.all(color: colors.surface, width: 2),
                           ),
                           child: Icon(
                             Icons.edit_outlined,
@@ -206,7 +203,10 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
               onChanged: (v) => setState(() => category = v ?? category),
             ),
             SizedBox(height: AppSpacing.space2),
-            Text('Contact Information (Optional)', style: AppTypography.caption()),
+            Text(
+              'Contact Information (Optional)',
+              style: AppTypography.caption(),
+            ),
             SizedBox(height: AppSpacing.space2),
             TextField(
               controller: email,

@@ -186,6 +186,7 @@ function wellFormedInteraction(overrides = {}) {
     updatedAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
     // Optional fields included by default; specific tests omit them.
     attachments: ['notes.md'],
+    attachmentUrls: [''],
     source: 'manual',
     ...overrides,
   };
@@ -2150,6 +2151,60 @@ describe('users/{uid} — Pass 4.5 #069 seeder sentinels', () => {
         eventsSeededAt: t,
         categoriesSeededAt: t,
         eventTypesSeededAt: t,
+        categories: ['Family'],
+        eventTypes: ['Plan'],
+      }),
+    );
+  });
+
+  // ---- Pass 4.3 backfill sentinel rules ---------------------------
+
+  test('owner can write topicSuggestionsBackfillV1CompletedAt as a timestamp', async () => {
+    const t = Timestamp.fromDate(new Date('2026-06-13T00:00:00Z'));
+    await assertSucceeds(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        topicSuggestionsBackfillV1CompletedAt: t,
+      }),
+    );
+  });
+
+  test('owner cannot write topicSuggestionsBackfillV1CompletedAt as the wrong type', async () => {
+    await assertFails(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        topicSuggestionsBackfillV1CompletedAt: 'not-a-timestamp',
+      }),
+    );
+  });
+
+  test('other authenticated user cannot write topicSuggestionsBackfillV1CompletedAt', async () => {
+    const t = Timestamp.fromDate(new Date('2026-06-13T00:00:00Z'));
+    await assertFails(
+      setDoc(userDocRef(authedDb(BOB), ALICE), {
+        topicSuggestionsBackfillV1CompletedAt: t,
+      }),
+    );
+  });
+
+  test('anonymous user cannot write topicSuggestionsBackfillV1CompletedAt', async () => {
+    const t = Timestamp.fromDate(new Date('2026-06-13T00:00:00Z'));
+    await assertFails(
+      setDoc(userDocRef(anonDb(), ALICE), {
+        topicSuggestionsBackfillV1CompletedAt: t,
+      }),
+    );
+  });
+
+  test('backfill sentinel coexists with other sentinels', async () => {
+    const t = Timestamp.fromDate(new Date('2026-06-13T00:00:00Z'));
+    await assertSucceeds(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        migratedFromDiskAt: t,
+        connectionsSeededAt: t,
+        interactionsSeededAt: t,
+        eventsSeededAt: t,
+        categoriesSeededAt: t,
+        eventTypesSeededAt: t,
+        topicSuggestionsBackfillV1CompletedAt: t,
         categories: ['Family'],
         eventTypes: ['Plan'],
       }),

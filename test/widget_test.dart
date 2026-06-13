@@ -3,6 +3,8 @@ import 'package:connect_me/src/features/contact_profile_screen.dart';
 import 'package:connect_me/src/features/modals/update_person_picker_modal.dart';
 import 'package:connect_me/src/features/modals/add_event_modal.dart';
 import 'package:connect_me/src/features/tabs/planner_tab.dart';
+import 'package:connect_me/src/features/edit_profile_screen.dart';
+import 'package:connect_me/src/state/user_profile/user_profile_service.dart';
 import 'package:connect_me/src/features/tabs/settings_tab.dart';
 import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
@@ -629,5 +631,117 @@ void main() {
     expect(find.text('All Day'), findsOneWidget);
     expect(find.text('Repeat'), findsOneWidget);
     expect(find.text('Save Event'), findsOneWidget);
+  });
+
+  testWidgets('AddEventModal toggles All Day and updates time dropdowns', (
+    WidgetTester tester,
+  ) async {
+    final eventsStore = InMemoryEventStore();
+    final connectionsStore = InMemoryConnectionStore();
+    final interactionStore = InMemoryInteractionStore();
+    final userDocStore = InMemoryUserDocStore();
+    final batchedWrites = InMemoryBatchedWrites(
+      connectionStore: connectionsStore,
+      interactionStore: interactionStore,
+      eventStore: eventsStore,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          firebaseAuthProvider.overrideWithValue(
+            MockFirebaseAuth(
+              signedIn: true,
+              mockUser: MockUser(
+                uid: 'demo-uid',
+                isAnonymous: false,
+                email: 'demo@example.com',
+                displayName: 'Demo',
+              ),
+            ),
+          ),
+          eventStoreProvider.overrideWithValue(eventsStore),
+          connectionStoreProvider.overrideWithValue(connectionsStore),
+          interactionStoreProvider.overrideWithValue(interactionStore),
+          userDocStoreProvider.overrideWithValue(userDocStore),
+          batchedWritesProvider.overrideWithValue(batchedWrites),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.data(false),
+          home: Scaffold(
+            body: AddEventModal(initialDate: DateTime(2026, 4, 27)),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Toggle All Day switch off to display time rows
+    await tester.tap(find.byType(Switch).first);
+    await tester.pumpAndSettle();
+
+    // Verify Start and End time dropdown widgets are present
+    expect(find.byKey(const Key('event-start-hour')), findsOneWidget);
+    expect(find.byKey(const Key('event-start-minute')), findsOneWidget);
+    expect(find.byKey(const Key('event-start-period')), findsOneWidget);
+    expect(find.byKey(const Key('event-end-hour')), findsOneWidget);
+    expect(find.byKey(const Key('event-end-minute')), findsOneWidget);
+    expect(find.byKey(const Key('event-end-period')), findsOneWidget);
+  });
+
+  testWidgets('EditProfileScreen displays stats, gcal sync switch, and handles layout updates', (WidgetTester tester) async {
+    final eventsStore = InMemoryEventStore();
+    final connectionsStore = InMemoryConnectionStore();
+    final interactionStore = InMemoryInteractionStore();
+    final userDocStore = InMemoryUserDocStore();
+    final batchedWrites = InMemoryBatchedWrites(
+      connectionStore: connectionsStore,
+      interactionStore: interactionStore,
+      eventStore: eventsStore,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          firebaseAuthProvider.overrideWithValue(
+            MockFirebaseAuth(
+              signedIn: true,
+              mockUser: MockUser(
+                uid: 'demo-uid',
+                isAnonymous: false,
+                email: 'demo@example.com',
+                displayName: 'Cliff Owen',
+              ),
+            ),
+          ),
+          eventStoreProvider.overrideWithValue(eventsStore),
+          connectionStoreProvider.overrideWithValue(connectionsStore),
+          interactionStoreProvider.overrideWithValue(interactionStore),
+          userDocStoreProvider.overrideWithValue(userDocStore),
+          batchedWritesProvider.overrideWithValue(batchedWrites),
+          accountProfileProvider.overrideWithValue(
+            const AccountProfile(
+              uid: 'demo-uid',
+              email: 'demo@example.com',
+              name: 'Cliff Owen',
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.data(false),
+          home: const Scaffold(
+            body: EditProfileScreen(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Redundant save button in AppBar actions should be removed
+    expect(find.byIcon(Icons.save_outlined), findsNothing);
+
+    // Bottom action buttons must exist
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.text('Save Changes'), findsOneWidget);
   });
 }

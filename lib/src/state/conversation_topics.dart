@@ -35,11 +35,10 @@ List<String> topicsForContact(Connection connection, MemoryDocument? memory) {
 /// blank prepared strings dropped and the result capped to three. When
 /// prepared suggestions are missing, expired, or blank after trimming,
 /// this falls back to [suggestionsForTopic].
-List<String> preferredSuggestionsForTopic({
-  required String category,
-  required String topic,
-  required String contactName,
+List<TopicSuggestion> preferredSuggestionsForTopic({
+  required Connection connection,
   required MemoryDocument? memory,
+  required String topic,
   DateTime? now,
 }) {
   final prepared = _preparedSuggestionsForTopic(
@@ -47,8 +46,30 @@ List<String> preferredSuggestionsForTopic({
     topic,
     now ?? DateTime.now(),
   );
-  if (prepared.isNotEmpty) return prepared;
-  return suggestionsForTopic(category, topic, contactName);
+  final fallback = _fallbackContext(
+    connection: connection,
+    memory: memory,
+    topic: topic,
+  );
+  if (prepared.isNotEmpty) {
+    return prepared.map((s) {
+      if (s.context == null || s.context!.trim().isEmpty) {
+        return TopicSuggestion(
+          kind: s.kind,
+          text: s.text,
+          context: fallback,
+        );
+      }
+      return s;
+    }).toList(growable: false);
+  }
+  return suggestionsForTopic(connection.category, topic, connection.name)
+      .map((str) => TopicSuggestion(
+            kind: TopicSuggestionKind.ask,
+            text: str,
+            context: fallback,
+          ))
+      .toList(growable: false);
 }
 
 /// Returns 3-5 deterministic conversation-starter suggestions for a
@@ -90,7 +111,7 @@ List<String> suggestionsForTopic(
   ];
 }
 
-List<String> _preparedSuggestionsForTopic(
+List<TopicSuggestion> _preparedSuggestionsForTopic(
   MemoryDocument? memory,
   String topic,
   DateTime now,
@@ -106,8 +127,7 @@ List<String> _preparedSuggestionsForTopic(
       return const [];
     }
     return group.suggestions
-        .map((suggestion) => suggestion.text.trim())
-        .where((text) => text.isNotEmpty)
+        .where((suggestion) => suggestion.text.trim().isNotEmpty)
         .take(3)
         .toList(growable: false);
   }
@@ -272,3 +292,149 @@ const List<String> _genericSuggestions = [
   'Share a recent update from your own life',
   'Suggest meeting up',
 ];
+
+const _stopWords = {
+  'a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'and', 'or', 'with', 
+  'about', 'is', 'was', 'were', 'trip', 'plans', 'updates', 'recent', 'shared', 
+  'life', 'future', 'old', 'times', 'news', 'team', 'some', 'any', 'how', 
+  'what', 'who', 'where', 'why', 'my', 'your', 'his', 'her', 'their', 'our', 
+  'its', 'he', 'she', 'they', 'we', 'it', 'me', 'you', 'him', 'them', 'us',
+  'like', 'associated', 'person'
+};
+
+class _MatchCandidate {
+  final String text;
+  final int score;
+  final DateTime? date;
+  final int sourcePriority;
+
+  _MatchCandidate({
+    required this.text,
+    required this.score,
+    this.date,
+    required this.sourcePriority,
+  });
+}
+
+String? _fallbackContext({
+  required Connection connection,
+  required MemoryDocument? memory,
+  required String topic,
+}) {
+  final cleanTopic = topic.trim();
+  if (cleanTopic.isEmpty) return null;
+
+  final keywords = cleanTopic
+      .toLowerCase()
+      .split(RegExp(r'\W+'))
+      .where((k) => k.isNotEmpty && !_stopWords.contains(k))
+      .toSet();
+
+  if (keywords.isEmpty) return null;
+
+  final candidates = <_MatchCandidate>[];
+
+  if (memory != null && memory.history.trim().isNotEmpty) {
+    final historyLineRegex = RegExp(r'^\s*[-*]\s*(\d{4}-\d{2}-\d{2})\s*(?:—|–|-|:)\s*(.*)$');
+    final lines = memory.history.split('\n');
+    for (final line in lines) {
+      final match = historyLineRegex.firstMatch(line);
+      if (match != null) {
+        final dateStr = match.group(1)!;
+        final bodyText = match.group(2)!.trim();
+        if (bodyText.isEmpty) continue;
+
+        final parsedDate = DateTime.tryParse('${dateStr}T00:00:00Z');
+        final score = _calculateScore(bodyText, keywords);
+        if (score > 0) {
+          candidates.add(_MatchCandidate(
+            text: bodyText,
+            score: score,
+            date: parsedDate,
+            sourcePriority: 0,
+          ));
+        }
+      }
+    }
+  }
+
+  if (memory != null && memory.summary.trim().isNotEmpty) {
+    final sentences = memory.summary.split(RegExp(r'(?<=[.!?])\s+'));
+    for (final sentence in sentences) {
+      final cleanSentence = sentence.trim();
+      if (cleanSentence.isEmpty) continue;
+      final score = _calculateScore(cleanSentence, keywords);
+      if (score > 0) {
+        candidates.add(_MatchCandidate(
+          text: cleanSentence,
+          score: score,
+          sourcePriority: 1,
+        ));
+      }
+    }
+  }
+
+  if (connection.notes.trim().isNotEmpty) {
+    final lines = connection.notes.split('\n');
+    for (final line in lines) {
+      final cleanLine = line.trim();
+      if (cleanLine.isEmpty) continue;
+      final score = _calculateScore(cleanLine, keywords);
+      if (score > 0) {
+        candidates.add(_MatchCandidate(
+          text: cleanLine,
+          score: score,
+          sourcePriority: 2,
+        ));
+      }
+    }
+  }
+
+  if (candidates.isEmpty) return null;
+
+  candidates.sort((a, b) {
+    if (a.score != b.score) {
+      return b.score.compareTo(a.score);
+    }
+    if (a.sourcePriority != b.sourcePriority) {
+      return a.sourcePriority.compareTo(b.sourcePriority);
+    }
+    if (a.date != null && b.date != null) {
+      return b.date!.compareTo(a.date!);
+    }
+    return 0;
+  });
+
+  final best = candidates.first;
+
+  if (best.sourcePriority == 0 && best.date != null) {
+    final formattedDate = _formatDateFriendly(best.date!);
+    var text = best.text;
+    if (text.endsWith('.')) {
+      text = text.substring(0, text.length - 1).trim();
+    }
+    return '$text (from check-in on $formattedDate)';
+  }
+
+  return best.text;
+}
+
+int _calculateScore(String text, Set<String> keywords) {
+  final textLower = text.toLowerCase();
+  int score = 0;
+  for (final kw in keywords) {
+    if (textLower.contains(kw)) {
+      score++;
+    }
+  }
+  return score;
+}
+
+String _formatDateFriendly(DateTime date) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+  final monthStr = months[date.month - 1];
+  return '$monthStr ${date.day}, ${date.year}';
+}

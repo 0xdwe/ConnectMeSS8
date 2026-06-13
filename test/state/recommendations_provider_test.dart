@@ -289,7 +289,7 @@ void main() {
     test(
       'memory load failure falls back to recency-only recommendations',
       () async {
-        final clock = _FakeClock(DateTime(2026, 6, 1, 12));
+        final clock = _FakeClock(DateTime.now());
         final container = ProviderContainer(
           overrides: [
             firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
@@ -420,70 +420,67 @@ void main() {
       },
     );
 
-    test(
-      'AI update commit bumps memoryEpoch which invalidates '
-      'recommendations cache',
-      () async {
-        final store = InMemoryMemoryStore();
-        final clock = _FakeClock(DateTime(2026, 6, 1, 12));
-        final container = ProviderContainer(
-          overrides: [
-            firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
-            memoryStoreProvider.overrideWithValue(store),
-            ..._seededPassFourFiveOverrides().overrides,
-            clockProvider.overrideWithValue(clock.call),
-            // Pass 4.3 #081: pin Mock as the active adapter; this test
-            // asserts memoryEpoch bump from a successful commit, which
-            // requires the onMemoryWritten hook to land.
-            aiUpdateProvider.overrideWith(
-              (ref) => MockAiUpdate(
-                memoryStore: store,
-                appController: ref.read(appControllerProvider.notifier),
-                onMemoryWritten: () {
-                  final c = ref.read(clockProvider);
-                  ref.read(memoryEpochProvider.notifier).bump(c());
-                },
-              ),
+    test('AI update commit bumps memoryEpoch which invalidates '
+        'recommendations cache', () async {
+      final store = InMemoryMemoryStore();
+      final clock = _FakeClock(DateTime(2026, 6, 1, 12));
+      final container = ProviderContainer(
+        overrides: [
+          firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
+          memoryStoreProvider.overrideWithValue(store),
+          ..._seededPassFourFiveOverrides().overrides,
+          clockProvider.overrideWithValue(clock.call),
+          // Pass 4.3 #081: pin Mock as the active adapter; this test
+          // asserts memoryEpoch bump from a successful commit, which
+          // requires the onMemoryWritten hook to land.
+          aiUpdateProvider.overrideWith(
+            (ref) => MockAiUpdate(
+              memoryStore: store,
+              appController: ref.read(appControllerProvider.notifier),
+              onMemoryWritten: () {
+                final c = ref.read(clockProvider);
+                ref.read(memoryEpochProvider.notifier).bump(c());
+              },
             ),
-          ],
-        );
-        addTearDown(container.dispose);
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
 
-        final subscription = container.listen<AsyncValue<List<Recommendation>>>(
-          recommendationsProvider,
-          (_, _) {},
-        );
+      final subscription = container.listen<AsyncValue<List<Recommendation>>>(
+        recommendationsProvider,
+        (_, _) {},
+      );
 
-        // Prime the cache.
-        final before = await container.read(recommendationsProvider.future);
+      // Prime the cache.
+      final before = await container.read(recommendationsProvider.future);
 
-        // Run + commit a full AI update on a seeded contact.
-        final mike = container
-            .read(appControllerProvider)
-            .connections
-            .firstWhere((c) => c.id == 'mike');
-        final memory = await container.read(memoryProvider('mike').future);
-        final adapter = container.read(aiUpdateProvider);
-        final result = await adapter.run(
-          contact: mike,
-          userInput: 'Caught up over coffee.',
-          currentMemory: memory,
-          attachments: const [],
-        );
-        // Advance the clock by one tick so the bumped epoch is strictly
-        // after computedAt regardless of the freshness window.
-        clock.now = clock.now.add(const Duration(seconds: 1));
-        await adapter.commit(result);
-        await _settle();
+      // Run + commit a full AI update on a seeded contact.
+      final mike = container
+          .read(appControllerProvider)
+          .connections
+          .firstWhere((c) => c.id == 'mike');
+      final memory = await container.read(memoryProvider('mike').future);
+      final adapter = container.read(aiUpdateProvider);
+      final result = await adapter.run(
+        contact: mike,
+        userInput: 'Caught up over coffee.',
+        currentMemory: memory,
+        attachments: const [],
+      );
+      // Advance the clock by one tick so the bumped epoch is strictly
+      // after computedAt regardless of the freshness window.
+      clock.now = clock.now.add(const Duration(seconds: 1));
+      await adapter.commit(result);
+      await _settle();
 
-        // Reading the provider again must observe the epoch bump and
-        // recompute. The state delta from `commit` also bumps
-        // `lastContact`, so the recompute reflects the updated input.
-        final after = await container.read(recommendationsProvider.future);
-        subscription.close();
-        expect(identical(before, after), isFalse);
-      },
-    );
+      // Reading the provider again must observe the epoch bump and
+      // recompute. The state delta from `commit` also bumps
+      // `lastContact`, so the recompute reflects the updated input.
+      final after = await container.read(recommendationsProvider.future);
+      subscription.close();
+      expect(identical(before, after), isFalse);
+    });
 
     test('cache does not survive a memoryStoreProvider swap '
         '(sign-out then sign-in-as-different-user) — #062', () async {
@@ -539,67 +536,64 @@ void main() {
       );
     });
 
-    test(
-      'failed commit (failOnApply) still bumps the epoch — a transient '
-      'extra recompute is acceptable per the rollback contract',
-      () async {
-        final store = InMemoryMemoryStore();
-        final clock = _FakeClock(DateTime(2026, 6, 1, 12));
-        final container = ProviderContainer(
-          overrides: [
-            firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
-            memoryStoreProvider.overrideWithValue(store),
-            ..._seededPassFourFiveOverrides().overrides,
-            clockProvider.overrideWithValue(clock.call),
-            aiUpdateProvider.overrideWith(
-              (ref) => MockAiUpdate(
-                memoryStore: ref.watch(memoryStoreProvider),
-                appController: ref.read(appControllerProvider.notifier),
-                onMemoryWritten: () {
-                  final c = ref.read(clockProvider);
-                  ref.read(memoryEpochProvider.notifier).bump(c());
-                },
-                failOnApply: true,
-              ),
+    test('failed commit (failOnApply) still bumps the epoch — a transient '
+        'extra recompute is acceptable per the rollback contract', () async {
+      final store = InMemoryMemoryStore();
+      final clock = _FakeClock(DateTime(2026, 6, 1, 12));
+      final container = ProviderContainer(
+        overrides: [
+          firebaseAuthProvider.overrideWithValue(_mockSignedInAuth()),
+          memoryStoreProvider.overrideWithValue(store),
+          ..._seededPassFourFiveOverrides().overrides,
+          clockProvider.overrideWithValue(clock.call),
+          aiUpdateProvider.overrideWith(
+            (ref) => MockAiUpdate(
+              memoryStore: ref.watch(memoryStoreProvider),
+              appController: ref.read(appControllerProvider.notifier),
+              onMemoryWritten: () {
+                final c = ref.read(clockProvider);
+                ref.read(memoryEpochProvider.notifier).bump(c());
+              },
+              failOnApply: true,
             ),
-          ],
-        );
-        addTearDown(container.dispose);
-        container.read(appControllerProvider);
-        await _settle();
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
 
-        final before = await container.read(recommendationsProvider.future);
+      final before = await container.read(recommendationsProvider.future);
 
-        final mike = container
-            .read(appControllerProvider)
-            .connections
-            .firstWhere((c) => c.id == 'mike');
-        final memory = await container.read(memoryProvider('mike').future);
-        final adapter = container.read(aiUpdateProvider);
-        final result = await adapter.run(
-          contact: mike,
-          userInput: 'Will roll back.',
-          currentMemory: memory,
-          attachments: const [],
-        );
-        clock.now = clock.now.add(const Duration(seconds: 1));
-        await expectLater(
-          adapter.commit(result),
-          throwsA(isA<AiUpdateFailure>()),
-        );
+      final mike = container
+          .read(appControllerProvider)
+          .connections
+          .firstWhere((c) => c.id == 'mike');
+      final memory = await container.read(memoryProvider('mike').future);
+      final adapter = container.read(aiUpdateProvider);
+      final result = await adapter.run(
+        contact: mike,
+        userInput: 'Will roll back.',
+        currentMemory: memory,
+        attachments: const [],
+      );
+      clock.now = clock.now.add(const Duration(seconds: 1));
+      await expectLater(
+        adapter.commit(result),
+        throwsA(isA<AiUpdateFailure>()),
+      );
 
-        // The save succeeded then the apply threw; the epoch was
-        // bumped after the save and is not unbumped on rollback. The
-        // documented behavior is one extra recompute that produces the
-        // same output (engine input is unchanged because the state
-        // delta was rolled back).
-        final after = await container.read(recommendationsProvider.future);
-        expect(identical(before, after), isFalse);
-        expect(
-          after.map((r) => r.contactId).toList(),
-          before.map((r) => r.contactId).toList(),
-        );
-      },
-    );
+      // The save succeeded then the apply threw; the epoch was
+      // bumped after the save and is not unbumped on rollback. The
+      // documented behavior is one extra recompute that produces the
+      // same output (engine input is unchanged because the state
+      // delta was rolled back).
+      final after = await container.read(recommendationsProvider.future);
+      expect(identical(before, after), isFalse);
+      expect(
+        after.map((r) => r.contactId).toList(),
+        before.map((r) => r.contactId).toList(),
+      );
+    });
   });
 }

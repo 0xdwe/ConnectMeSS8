@@ -45,13 +45,7 @@ void main() {
       expect(connections, hasLength(5));
       expect(
         connections.map((c) => c.id).toList(),
-        unorderedEquals(<String>[
-          'david',
-          'emily',
-          'jessica',
-          'mike',
-          'sarah',
-        ]),
+        unorderedEquals(<String>['david', 'emily', 'jessica', 'mike', 'sarah']),
       );
       expect(
         connections.every((c) => c.isSample),
@@ -68,12 +62,17 @@ void main() {
       // Each seeded interaction must reference one of the seeded
       // contacts; otherwise the cascade in #070 deleteConnection
       // would leave orphans.
-      final contactIds =
-          SeederSampleSource.connections().map((c) => c.id).toSet();
+      final contactIds = SeederSampleSource.connections()
+          .map((c) => c.id)
+          .toSet();
       for (final i in interactions) {
-        expect(contactIds.contains(i.contactId), isTrue,
-            reason: 'seeded interaction ${i.id} references unknown '
-                'contactId ${i.contactId}.');
+        expect(
+          contactIds.contains(i.contactId),
+          isTrue,
+          reason:
+              'seeded interaction ${i.id} references unknown '
+              'contactId ${i.contactId}.',
+        );
       }
     });
 
@@ -83,13 +82,18 @@ void main() {
       // Seeded events with a contactId must reference a seeded
       // contact. Free-floating events (contactId == null) are
       // allowed.
-      final contactIds =
-          SeederSampleSource.connections().map((c) => c.id).toSet();
+      final contactIds = SeederSampleSource.connections()
+          .map((c) => c.id)
+          .toSet();
       for (final e in events) {
         if (e.contactId != null) {
-          expect(contactIds.contains(e.contactId), isTrue,
-              reason: 'seeded event ${e.id} references unknown '
-                  'contactId ${e.contactId}.');
+          expect(
+            contactIds.contains(e.contactId),
+            isTrue,
+            reason:
+                'seeded event ${e.id} references unknown '
+                'contactId ${e.contactId}.',
+          );
         }
       }
     });
@@ -140,16 +144,18 @@ void main() {
       // categories branch.
       final plan = computePlan(
         choice: SeederChoice.samples,
-        existingSentinels: const <String>{
-          'categoriesSeededAt',
-        },
+        existingSentinels: const <String>{'categoriesSeededAt'},
       );
       expect(plan.connections, isTrue);
       expect(plan.interactions, isTrue);
       expect(plan.events, isTrue);
-      expect(plan.categories, isFalse,
-          reason: 'categoriesSeededAt is set, so categories must be '
-              'a no-op even though the rest of the run proceeds.');
+      expect(
+        plan.categories,
+        isFalse,
+        reason:
+            'categoriesSeededAt is set, so categories must be '
+            'a no-op even though the rest of the run proceeds.',
+      );
       expect(plan.eventTypes, isTrue);
       expect(plan.connectionsSentinel, isTrue);
       expect(plan.eventsSentinel, isTrue);
@@ -159,15 +165,17 @@ void main() {
     test('connections-only-set: that branch is a no-op, others run', () {
       final plan = computePlan(
         choice: SeederChoice.samples,
-        existingSentinels: const <String>{
-          'connectionsSeededAt',
-        },
+        existingSentinels: const <String>{'connectionsSeededAt'},
       );
       expect(plan.connections, isFalse);
-      expect(plan.connectionsSentinel, isFalse,
-          reason: 'never re-write a sentinel that is already set; '
-              'the previously valid timestamp survives partial-state '
-              'recovery.');
+      expect(
+        plan.connectionsSentinel,
+        isFalse,
+        reason:
+            'never re-write a sentinel that is already set; '
+            'the previously valid timestamp survives partial-state '
+            'recovery.',
+      );
       expect(plan.interactions, isTrue);
       expect(plan.events, isTrue);
       expect(plan.categories, isTrue);
@@ -177,27 +185,36 @@ void main() {
   });
 
   group('computePlan — fresh branch', () {
-    test('fresh user with fresh choice writes sentinels + categories/eventTypes',
-        () {
-      final plan = computePlan(
-        choice: SeederChoice.fresh,
-        existingSentinels: const <String>{},
-      );
-      expect(plan.connections, isFalse,
-          reason: 'fresh choice must NOT write sample connections.');
-      expect(plan.interactions, isFalse);
-      expect(plan.events, isFalse);
-      expect(plan.categories, isTrue,
-          reason: 'PRD §Q12 — categories defaults are seeded for '
-              'fresh-start users too.');
-      expect(plan.eventTypes, isTrue);
-      // Sentinels DO get written even though samples are not, so
-      // the next launch short-circuits.
-      expect(plan.connectionsSentinel, isTrue);
-      expect(plan.interactionsSentinel, isTrue);
-      expect(plan.eventsSentinel, isTrue);
-      expect(plan.isNoOp, isFalse);
-    });
+    test(
+      'fresh user with fresh choice writes sentinels + categories/eventTypes',
+      () {
+        final plan = computePlan(
+          choice: SeederChoice.fresh,
+          existingSentinels: const <String>{},
+        );
+        expect(
+          plan.connections,
+          isFalse,
+          reason: 'fresh choice must NOT write sample connections.',
+        );
+        expect(plan.interactions, isFalse);
+        expect(plan.events, isFalse);
+        expect(
+          plan.categories,
+          isTrue,
+          reason:
+              'PRD §Q12 — categories defaults are seeded for '
+              'fresh-start users too.',
+        );
+        expect(plan.eventTypes, isTrue);
+        // Sentinels DO get written even though samples are not, so
+        // the next launch short-circuits.
+        expect(plan.connectionsSentinel, isTrue);
+        expect(plan.interactionsSentinel, isTrue);
+        expect(plan.eventsSentinel, isTrue);
+        expect(plan.isNoOp, isFalse);
+      },
+    );
 
     test('fresh choice with categories already set writes nothing else', () {
       final plan = computePlan(
@@ -215,10 +232,8 @@ void main() {
       expect(plan.isNoOp, isTrue);
     });
 
-    test(
-        'fresh choice does NOT trigger sample-branch booleans even '
-        'when those sentinels are unset',
-        () {
+    test('fresh choice does NOT trigger sample-branch booleans even '
+        'when those sentinels are unset', () {
       // Belt-and-braces test against the bug "fresh choice mistakenly
       // seeds samples because the sentinel is unset."
       final plan = computePlan(
@@ -238,14 +253,15 @@ void main() {
       expect(plan.connectionsSentinel, isTrue);
       expect(plan.interactionsSentinel, isTrue);
       expect(plan.eventsSentinel, isTrue);
-      expect(plan.isNoOp, isFalse,
-          reason: 'sentinel writes still need to run.');
+      expect(
+        plan.isNoOp,
+        isFalse,
+        reason: 'sentinel writes still need to run.',
+      );
     });
 
-    test(
-        'fresh choice in partial-state recovery does NOT re-write '
-        'an already-set sentinel',
-        () {
+    test('fresh choice in partial-state recovery does NOT re-write '
+        'an already-set sentinel', () {
       // Bug class fix: an earlier draft used
       //   `plan.connections || plan.choice == SeederChoice.fresh`
       // to decide the connectionsSeededAt write, which would
@@ -254,12 +270,13 @@ void main() {
       // "sentinel is unset" check.
       final plan = computePlan(
         choice: SeederChoice.fresh,
-        existingSentinels: const <String>{
-          'connectionsSeededAt',
-        },
+        existingSentinels: const <String>{'connectionsSeededAt'},
       );
-      expect(plan.connectionsSentinel, isFalse,
-          reason: 'never re-write a sentinel that is already set.');
+      expect(
+        plan.connectionsSentinel,
+        isFalse,
+        reason: 'never re-write a sentinel that is already set.',
+      );
       expect(plan.interactionsSentinel, isTrue);
       expect(plan.eventsSentinel, isTrue);
       expect(plan.connections, isFalse);

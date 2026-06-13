@@ -50,9 +50,7 @@ void main() {
     await tearDownEmulators();
     final cred = await FirebaseAuth.instance.signInAnonymously();
     expect(cred.user, isNotNull, reason: 'anonymous sign-in must succeed');
-    tempRoot = Directory.systemTemp.createTempSync(
-      'connectme_migration_int_',
-    );
+    tempRoot = Directory.systemTemp.createTempSync('connectme_migration_int_');
   });
 
   tearDown(() {
@@ -75,15 +73,11 @@ void main() {
     return DiskToFirestoreMigration(
       source: FileMemoryStore(directoryOverride: tempRoot),
       target: FirebaseMemoryStore(firestore: firestore, uid: uid),
-      sentinel: FirestoreMigrationSentinel(
-        firestore: firestore,
-        uid: uid,
-      ),
+      sentinel: FirestoreMigrationSentinel(firestore: firestore, uid: uid),
     );
   }
 
-  test(
-      'happy path: seeds two docs on disk, migrates, sentinel set, '
+  test('happy path: seeds two docs on disk, migrates, sentinel set, '
       'sources preserved', () async {
     // Seed two markdown files on disk.
     final source = FileMemoryStore(directoryOverride: tempRoot);
@@ -112,9 +106,11 @@ void main() {
     // Sentinel set on the user doc.
     final userSnap = await userDocRef(uid).get();
     expect(userSnap.exists, isTrue);
-    expect(userSnap.data()?[DiskToFirestoreMigration.sentinelField],
-        isA<Timestamp>(),
-        reason: 'sentinel field must be a Firestore Timestamp.');
+    expect(
+      userSnap.data()?[DiskToFirestoreMigration.sentinelField],
+      isA<Timestamp>(),
+      reason: 'sentinel field must be a Firestore Timestamp.',
+    );
 
     // Source files untouched on disk.
     final afterNames = memoriesDir
@@ -122,33 +118,39 @@ void main() {
         .whereType<File>()
         .map((f) => f.uri.pathSegments.last)
         .toSet();
-    expect(afterNames, {'sarah.md', 'mike.md'},
-        reason: 'PRD Q6: source files MUST remain on disk as backup.');
-  });
-
-  test('source-empty: returns 0, sentinel still written, target empty',
-      () async {
-    final uid = currentUid();
-    final count = await buildMigration().ensureMigrated();
-
-    expect(count, 0);
-    final target = FirebaseMemoryStore(firestore: firestore, uid: uid);
-    expect(await target.listAll(), isEmpty);
-
-    final userSnap = await userDocRef(uid).get();
-    expect(userSnap.data()?[DiskToFirestoreMigration.sentinelField],
-        isNotNull);
+    expect(afterNames, {
+      'sarah.md',
+      'mike.md',
+    }, reason: 'PRD Q6: source files MUST remain on disk as backup.');
   });
 
   test(
-      'already migrated (sentinel + non-empty target): returns 0, '
-      'target unchanged',
-      () async {
+    'source-empty: returns 0, sentinel still written, target empty',
+    () async {
+      final uid = currentUid();
+      final count = await buildMigration().ensureMigrated();
+
+      expect(count, 0);
+      final target = FirebaseMemoryStore(firestore: firestore, uid: uid);
+      expect(await target.listAll(), isEmpty);
+
+      final userSnap = await userDocRef(uid).get();
+      expect(
+        userSnap.data()?[DiskToFirestoreMigration.sentinelField],
+        isNotNull,
+      );
+    },
+  );
+
+  test('already migrated (sentinel + non-empty target): returns 0, '
+      'target unchanged', () async {
     final uid = currentUid();
     final target = FirebaseMemoryStore(firestore: firestore, uid: uid);
     await target.save(_doc('seed', summary: 'already there'));
-    await FirestoreMigrationSentinel(firestore: firestore, uid: uid)
-        .set(DateTime.utc(2026, 5, 1));
+    await FirestoreMigrationSentinel(
+      firestore: firestore,
+      uid: uid,
+    ).set(DateTime.utc(2026, 5, 1));
 
     final source = FileMemoryStore(directoryOverride: tempRoot);
     await source.save(_doc('sarah', summary: 'should NOT migrate'));
@@ -157,13 +159,16 @@ void main() {
 
     expect(count, 0);
     final remote = await target.listAll();
-    expect(remote.keys, ['seed'],
-        reason: 'fully-migrated state must be left alone; the local '
-            'sarah.md must not be re-uploaded.');
+    expect(
+      remote.keys,
+      ['seed'],
+      reason:
+          'fully-migrated state must be left alone; the local '
+          'sarah.md must not be re-uploaded.',
+    );
   });
 
-  test('re-running migration twice: second invocation is a no-op',
-      () async {
+  test('re-running migration twice: second invocation is a no-op', () async {
     final uid = currentUid();
     final source = FileMemoryStore(directoryOverride: tempRoot);
     await source.save(_doc('sarah', summary: 'first'));
@@ -172,20 +177,24 @@ void main() {
     expect(firstCount, 1);
 
     final secondCount = await buildMigration().ensureMigrated();
-    expect(secondCount, 0,
-        reason: 'sentinel + non-empty remote = full no-op fast path.');
+    expect(
+      secondCount,
+      0,
+      reason: 'sentinel + non-empty remote = full no-op fast path.',
+    );
 
     final target = FirebaseMemoryStore(firestore: firestore, uid: uid);
     final remote = await target.listAll();
     expect(remote.keys, ['sarah']);
-    expect(remote['sarah']!.summary, 'first',
-        reason: 'second run must not overwrite the first run\'s data.');
+    expect(
+      remote['sarah']!.summary,
+      'first',
+      reason: 'second run must not overwrite the first run\'s data.',
+    );
   });
 
-  test(
-      'non-empty target without sentinel: skips migration, writes '
-      'sentinel for the future',
-      () async {
+  test('non-empty target without sentinel: skips migration, writes '
+      'sentinel for the future', () async {
     final uid = currentUid();
     final target = FirebaseMemoryStore(firestore: firestore, uid: uid);
     await target.save(_doc('seed', summary: 'arrived through some other path'));
@@ -201,8 +210,10 @@ void main() {
     expect(remote.keys, ['seed']);
 
     final userSnap = await userDocRef(uid).get();
-    expect(userSnap.data()?[DiskToFirestoreMigration.sentinelField],
-        isNotNull,
-        reason: 'sentinel is now set so the next launch fast-paths.');
+    expect(
+      userSnap.data()?[DiskToFirestoreMigration.sentinelField],
+      isNotNull,
+      reason: 'sentinel is now set so the next launch fast-paths.',
+    );
   });
 }

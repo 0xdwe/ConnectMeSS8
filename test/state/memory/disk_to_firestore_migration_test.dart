@@ -55,75 +55,92 @@ void main() {
       );
     }
 
-    test('source-empty: returns 0, writes the sentinel, no saves',
-        () async {
+    test('source-empty: returns 0, writes the sentinel, no saves', () async {
       final count = await buildMigration().ensureMigrated();
 
       expect(count, 0);
       expect(target.saveCalls, isEmpty);
-      expect(sentinel.setCalls, hasLength(1),
-          reason: 'sentinel must be written so the next launch can '
-              'skip the listAll round-trip.');
-    });
-
-    test('happy path: copies every source doc and writes the sentinel',
-        () async {
-      await source.save(_doc('sarah', 'Sarah Chen', summary: 'A'));
-      await source.save(_doc('mike', 'Mike Lee', summary: 'B'));
-
-      final count = await buildMigration().ensureMigrated();
-
-      expect(count, 2);
-      expect(target.saveCalls.map((d) => d.contactId),
-          unorderedEquals({'sarah', 'mike'}));
-      expect(sentinel.setCalls, hasLength(1));
-    });
-
-    test('source files remain on disk after migration (backup invariant)',
-        () async {
-      await source.save(_doc('sarah', 'Sarah Chen'));
-      await source.save(_doc('mike', 'Mike Lee'));
-
-      final memoriesDir = Directory('${tempRoot.path}/memories');
-      final beforeNames = memoriesDir
-          .listSync()
-          .whereType<File>()
-          .map((f) => f.uri.pathSegments.last)
-          .toSet();
-      expect(beforeNames, {'sarah.md', 'mike.md'});
-
-      await buildMigration().ensureMigrated();
-
-      final afterNames = memoriesDir
-          .listSync()
-          .whereType<File>()
-          .map((f) => f.uri.pathSegments.last)
-          .toSet();
-      expect(afterNames, {'sarah.md', 'mike.md'},
-          reason: 'PRD Q6: source files must NEVER be deleted.');
+      expect(
+        sentinel.setCalls,
+        hasLength(1),
+        reason:
+            'sentinel must be written so the next launch can '
+            'skip the listAll round-trip.',
+      );
     });
 
     test(
-        'non-empty target without sentinel: skips, sets sentinel, no saves',
-        () async {
-      // Simulate "another device migrated already" or "user has
-      // their own writes through a different path."
-      await target.save(_doc('sarah', 'Sarah from elsewhere'));
-      await source.save(_doc('sarah', 'Sarah local copy'));
-      await source.save(_doc('mike', 'Mike local copy'));
+      'happy path: copies every source doc and writes the sentinel',
+      () async {
+        await source.save(_doc('sarah', 'Sarah Chen', summary: 'A'));
+        await source.save(_doc('mike', 'Mike Lee', summary: 'B'));
 
-      target.saveCalls.clear();
-      final count = await buildMigration().ensureMigrated();
+        final count = await buildMigration().ensureMigrated();
 
-      expect(count, 0);
-      expect(target.saveCalls, isEmpty,
-          reason: 'a non-empty remote must skip migration entirely.');
-      expect(sentinel.setCalls, hasLength(1),
-          reason: 'sentinel still gets set for future launches.');
-    });
+        expect(count, 2);
+        expect(
+          target.saveCalls.map((d) => d.contactId),
+          unorderedEquals({'sarah', 'mike'}),
+        );
+        expect(sentinel.setCalls, hasLength(1));
+      },
+    );
 
-    test('non-empty target WITH sentinel: returns 0 immediately',
-        () async {
+    test(
+      'source files remain on disk after migration (backup invariant)',
+      () async {
+        await source.save(_doc('sarah', 'Sarah Chen'));
+        await source.save(_doc('mike', 'Mike Lee'));
+
+        final memoriesDir = Directory('${tempRoot.path}/memories');
+        final beforeNames = memoriesDir
+            .listSync()
+            .whereType<File>()
+            .map((f) => f.uri.pathSegments.last)
+            .toSet();
+        expect(beforeNames, {'sarah.md', 'mike.md'});
+
+        await buildMigration().ensureMigrated();
+
+        final afterNames = memoriesDir
+            .listSync()
+            .whereType<File>()
+            .map((f) => f.uri.pathSegments.last)
+            .toSet();
+        expect(afterNames, {
+          'sarah.md',
+          'mike.md',
+        }, reason: 'PRD Q6: source files must NEVER be deleted.');
+      },
+    );
+
+    test(
+      'non-empty target without sentinel: skips, sets sentinel, no saves',
+      () async {
+        // Simulate "another device migrated already" or "user has
+        // their own writes through a different path."
+        await target.save(_doc('sarah', 'Sarah from elsewhere'));
+        await source.save(_doc('sarah', 'Sarah local copy'));
+        await source.save(_doc('mike', 'Mike local copy'));
+
+        target.saveCalls.clear();
+        final count = await buildMigration().ensureMigrated();
+
+        expect(count, 0);
+        expect(
+          target.saveCalls,
+          isEmpty,
+          reason: 'a non-empty remote must skip migration entirely.',
+        );
+        expect(
+          sentinel.setCalls,
+          hasLength(1),
+          reason: 'sentinel still gets set for future launches.',
+        );
+      },
+    );
+
+    test('non-empty target WITH sentinel: returns 0 immediately', () async {
       await target.save(_doc('sarah', 'Sarah from elsewhere'));
       sentinel.preset();
       target.saveCalls.clear();
@@ -133,15 +150,17 @@ void main() {
 
       expect(count, 0);
       expect(target.saveCalls, isEmpty);
-      expect(sentinel.setCalls, isEmpty,
-          reason: 'fully-migrated state stays no-op; sentinel is '
-              'not re-written on every launch.');
+      expect(
+        sentinel.setCalls,
+        isEmpty,
+        reason:
+            'fully-migrated state stays no-op; sentinel is '
+            'not re-written on every launch.',
+      );
     });
 
-    test(
-        'sentinel set but remote empty: defensive re-migrate (partial '
-        'previous run)',
-        () async {
+    test('sentinel set but remote empty: defensive re-migrate (partial '
+        'previous run)', () async {
       // Sentinel exists but there\'s nothing on the remote — looks
       // like a previous run got the sentinel down without any
       // contacts surviving. Local copy still has data; restore it.
@@ -151,17 +170,19 @@ void main() {
 
       final count = await buildMigration().ensureMigrated();
 
-      expect(count, 1,
-          reason: 'PRD Q6: a partially-migrated account whose '
-              'remote went empty should still recover from the '
-              'local backup.');
+      expect(
+        count,
+        1,
+        reason:
+            'PRD Q6: a partially-migrated account whose '
+            'remote went empty should still recover from the '
+            'local backup.',
+      );
       expect(target.saveCalls.map((d) => d.contactId), ['sarah']);
       expect(sentinel.setCalls, hasLength(1));
     });
 
-    test(
-        're-running migration after a successful run is idempotent',
-        () async {
+    test('re-running migration after a successful run is idempotent', () async {
       await source.save(_doc('sarah', 'Sarah Chen'));
 
       final first = await buildMigration().ensureMigrated();
@@ -175,41 +196,51 @@ void main() {
       final second = await buildMigration().ensureMigrated();
       expect(second, 0);
       expect(target.saveCalls, isEmpty);
-      expect(sentinel.setCalls, isEmpty,
-          reason: 'sentinel-set + non-empty target is the full no-op '
-              'fast path.');
-    });
-
-    test('per-contact save failure is best-effort: the rest still copy',
-        () async {
-      await source.save(_doc('sarah', 'Sarah Chen'));
-      await source.save(_doc('mike', 'Mike Lee'));
-      await source.save(_doc('jessica', 'Jessica Park'));
-
-      target.failOnContactId = 'mike';
-
-      final count = await buildMigration().ensureMigrated();
-
-      expect(count, 2,
-          reason: 'sarah + jessica succeeded; mike threw and was '
-              'skipped per the best-effort migration contract.');
       expect(
-        target.saveCalls.map((d) => d.contactId).toSet(),
-        containsAll({'sarah', 'jessica'}),
+        sentinel.setCalls,
+        isEmpty,
+        reason:
+            'sentinel-set + non-empty target is the full no-op '
+            'fast path.',
       );
-      expect(sentinel.setCalls, hasLength(1),
-          reason: 'sentinel still gets set even on a partial run; '
-              'the next launch will see a non-empty remote and '
-              'skip, so partial state stops here.');
     });
+
+    test(
+      'per-contact save failure is best-effort: the rest still copy',
+      () async {
+        await source.save(_doc('sarah', 'Sarah Chen'));
+        await source.save(_doc('mike', 'Mike Lee'));
+        await source.save(_doc('jessica', 'Jessica Park'));
+
+        target.failOnContactId = 'mike';
+
+        final count = await buildMigration().ensureMigrated();
+
+        expect(
+          count,
+          2,
+          reason:
+              'sarah + jessica succeeded; mike threw and was '
+              'skipped per the best-effort migration contract.',
+        );
+        expect(
+          target.saveCalls.map((d) => d.contactId).toSet(),
+          containsAll({'sarah', 'jessica'}),
+        );
+        expect(
+          sentinel.setCalls,
+          hasLength(1),
+          reason:
+              'sentinel still gets set even on a partial run; '
+              'the next launch will see a non-empty remote and '
+              'skip, so partial state stops here.',
+        );
+      },
+    );
   });
 }
 
-MemoryDocument _doc(
-  String id,
-  String name, {
-  String summary = '',
-}) {
+MemoryDocument _doc(String id, String name, {String summary = ''}) {
   return MemoryDocument(
     contactId: id,
     displayName: name,

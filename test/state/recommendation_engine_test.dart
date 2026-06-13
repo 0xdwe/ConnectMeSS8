@@ -687,44 +687,39 @@ void main() {
         );
       });
 
-      test(
-        'same-contact upcoming overlay de-dupes topic regular card',
-        () {
-          final memory = memoryWithTopic(
-            contactId: 'same',
-            topic: 'Tokyo trip',
-            lastMentionedAt: now,
-            mentionCount: 2,
-            upcoming: [
-              UpcomingEntry(startDate: now, description: 'Tokyo trip'),
-            ],
-          );
+      test('same-contact upcoming overlay de-dupes topic regular card', () {
+        final memory = memoryWithTopic(
+          contactId: 'same',
+          topic: 'Tokyo trip',
+          lastMentionedAt: now,
+          mentionCount: 2,
+          upcoming: [UpcomingEntry(startDate: now, description: 'Tokyo trip')],
+        );
 
-          final ranked = rankRecommendations(
-            connections: [
-              _connection(
-                id: 'same',
-                name: 'Same Sam',
-                bondScore: 60,
-                lastContact: now.subtract(const Duration(days: 21)),
-              ),
-              _connection(
-                id: 'plain',
-                name: 'Plain Pat',
-                bondScore: 60,
-                lastContact: now.subtract(const Duration(days: 21)),
-              ),
-            ],
-            interactions: const [],
-            memories: {'same': memory},
-            now: now,
-          );
+        final ranked = rankRecommendations(
+          connections: [
+            _connection(
+              id: 'same',
+              name: 'Same Sam',
+              bondScore: 60,
+              lastContact: now.subtract(const Duration(days: 21)),
+            ),
+            _connection(
+              id: 'plain',
+              name: 'Plain Pat',
+              bondScore: 60,
+              lastContact: now.subtract(const Duration(days: 21)),
+            ),
+          ],
+          interactions: const [],
+          memories: {'same': memory},
+          now: now,
+        );
 
-          expect(ranked.where((r) => r.contactId == 'same'), hasLength(1));
-          expect(ranked.first.contactId, 'same');
-          expect(ranked.first.topic, isNull);
-        },
-      );
+        expect(ranked.where((r) => r.contactId == 'same'), hasLength(1));
+        expect(ranked.first.contactId, 'same');
+        expect(ranked.first.topic, isNull);
+      });
 
       test(
         'upcoming-tied topic passes quality gate but overlay still ranks first',

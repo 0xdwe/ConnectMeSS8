@@ -39,7 +39,8 @@ void main() {
                 uid: 'uid-1',
                 email: 'real@example.com',
                 name: 'Real User',
-                photoUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
+                photoUrl:
+                    'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
               ),
             ),
           ),

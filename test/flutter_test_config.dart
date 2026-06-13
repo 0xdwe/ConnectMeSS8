@@ -29,7 +29,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-class _TestPathProvider extends PathProviderPlatform with MockPlatformInterfaceMixin {
+class _TestPathProvider extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
   _TestPathProvider(this._root);
   final Directory _root;
 
@@ -44,10 +45,13 @@ class _TestPathProvider extends PathProviderPlatform with MockPlatformInterfaceM
   @override
   Future<String?> getExternalStoragePath() async => _ensure('external');
   @override
-  Future<List<String>?> getExternalCachePaths() async => [_ensure('external_cache')];
+  Future<List<String>?> getExternalCachePaths() async => [
+    _ensure('external_cache'),
+  ];
   @override
-  Future<List<String>?> getExternalStoragePaths({StorageDirectory? type}) async =>
-      [_ensure('external_storage')];
+  Future<List<String>?> getExternalStoragePaths({
+    StorageDirectory? type,
+  }) async => [_ensure('external_storage')];
   @override
   Future<String?> getDownloadsPath() async => _ensure('downloads');
 

@@ -163,8 +163,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
     if (!mounted) return;
     setState(() => _busy = false);
-    ref.read(appControllerProvider.notifier).signUp(name: name, email: email);
     if (mounted) context.go('/app');
+    ref.read(appControllerProvider.notifier).signUp(name: name, email: email);
   }
 
   String _firebaseAuthMessage(FirebaseAuthException e) {
@@ -472,6 +472,7 @@ class _LoginForm extends StatelessWidget {
 
         // Sign up option
         TextButton(
+          key: const Key('auth-mode-signup'),
           onPressed: busy ? null : onSwitch,
           style: TextButton.styleFrom(foregroundColor: Color(0xFF6B4EFF)),
           child: const Text("Don't have an account? Sign up"),
@@ -698,6 +699,7 @@ class _SignupForm extends StatelessWidget {
 
         // Login option
         TextButton(
+          key: const Key('auth-mode-login'),
           onPressed: busy ? null : onSwitch,
           style: TextButton.styleFrom(foregroundColor: Color(0xFF6B4EFF)),
           child: const Text('Already have an account? Log in'),

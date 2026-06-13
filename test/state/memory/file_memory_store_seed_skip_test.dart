@@ -19,8 +19,9 @@ void main() {
     late Directory tempRoot;
 
     setUp(() {
-      tempRoot = Directory.systemTemp
-          .createTempSync('connectme_seed_skip_test_');
+      tempRoot = Directory.systemTemp.createTempSync(
+        'connectme_seed_skip_test_',
+      );
     });
 
     tearDown(() {
@@ -32,14 +33,15 @@ void main() {
     test('first launch: empty disk → seed pass writes one file per '
         'connection', () async {
       final store = FileMemoryStore(directoryOverride: tempRoot);
-      final container = ProviderContainer(overrides: [
-        ...signedInDemoOverrides(),
-        memoryStoreProvider.overrideWithValue(store),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(store),
+        ],
+      );
       addTearDown(container.dispose);
 
-      final connections =
-          container.read(appControllerProvider).connections;
+      final connections = container.read(appControllerProvider).connections;
       expect(connections, isNotEmpty);
 
       await container.read(memorySeedingProvider.future);
@@ -47,13 +49,15 @@ void main() {
       final all = await store.listAll();
       expect(all, hasLength(connections.length));
       for (final connection in connections) {
-        expect(all[connection.id], isNotNull,
-            reason: 'expected memory file for ${connection.id}');
+        expect(
+          all[connection.id],
+          isNotNull,
+          reason: 'expected memory file for ${connection.id}',
+        );
       }
     });
 
-    test(
-        'second launch: pre-populated disk → seed pass is a no-op '
+    test('second launch: pre-populated disk → seed pass is a no-op '
         '(filesystem-inferred state)', () async {
       // Hand-write a memory file as if a previous launch had seeded.
       final memoriesDir = Directory('${tempRoot.path}/memories');
@@ -65,14 +69,15 @@ void main() {
         summary: 'persisted across launches',
         topics: const ['custom-topic'],
       );
-      await File('${memoriesDir.path}/sarah.md')
-          .writeAsString(preDoc.render());
+      await File('${memoriesDir.path}/sarah.md').writeAsString(preDoc.render());
 
       final store = FileMemoryStore(directoryOverride: tempRoot);
-      final container = ProviderContainer(overrides: [
-        ...signedInDemoOverrides(),
-        memoryStoreProvider.overrideWithValue(store),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(store),
+        ],
+      );
       addTearDown(container.dispose);
 
       // Snapshot before the seed pass observes the store.
