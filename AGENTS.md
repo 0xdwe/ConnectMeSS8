@@ -77,7 +77,7 @@ Polish / debt:
 - **Don't run `flutter test` (the full sweep)** without explicit user permission. It's CPU-heavy and the user has flagged HITL preference for those runs.
 - Targeted runs are fine: `flutter test test/state/`, `flutter test test/state/connections/`, `flutter test test/state/<file>.dart`.
 - **Don't run `flutter test integration_test/`** until ADR-0003's revisit triggers fire — emulator runs are deferred.
-- JS rules tests are CPU-light and fine to run: `cd firestore && firebase emulators:exec --only firestore --project demo-test "npm test"`. Requires JDK 21+ on PATH (`brew install openjdk@21`).
+- JS rules tests are CPU-light and fine to run: `cd firestore && firebase emulators:exec --only firestore,storage --project demo-test "npm test"`. Requires JDK 21+ on PATH (`brew install openjdk@21`).
 
 ### Code style
 
