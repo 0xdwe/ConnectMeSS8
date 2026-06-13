@@ -28,14 +28,16 @@ import '../models/social_models.dart' show InteractionType;
 enum LlmTopicSuggestionKind { ask, share, plan, remember }
 
 class LlmTopicSuggestion {
-  const LlmTopicSuggestion({required this.kind, required this.text});
+  const LlmTopicSuggestion({required this.kind, required this.text, this.context});
 
   final LlmTopicSuggestionKind kind;
   final String text;
+  final String? context;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'kind': kind.name,
     'text': text,
+    if (context != null) 'context': context,
   };
 
   factory LlmTopicSuggestion.fromJson(Map<String, dynamic> json) {
@@ -52,7 +54,13 @@ class LlmTopicSuggestion {
         'topicSuggestions[].suggestions[].text violates anti-shame guardrail',
       );
     }
-    return LlmTopicSuggestion(kind: kind, text: text);
+    final context = json['context'] as String?;
+    if (context != null && _containsNumericDayCountShame(context)) {
+      throw LlmResponseParseException(
+        'topicSuggestions[].suggestions[].context violates anti-shame guardrail',
+      );
+    }
+    return LlmTopicSuggestion(kind: kind, text: text, context: context);
   }
 }
 

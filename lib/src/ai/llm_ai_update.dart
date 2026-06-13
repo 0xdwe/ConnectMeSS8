@@ -607,6 +607,7 @@ class LlmAiUpdate implements AiUpdate {
             (suggestion) => TopicSuggestion(
               kind: _toMemoryTopicSuggestionKind(suggestion.kind),
               text: suggestion.text,
+              context: suggestion.context,
             ),
           )
           .take(3)

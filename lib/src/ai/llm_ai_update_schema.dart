@@ -118,6 +118,10 @@ final Schema kLlmAiUpdateResponseSchema = Schema.object(
                           'One gentle action idea. No guilt phrasing and no '
                           'numeric day counts.',
                     ),
+                    'context': Schema.string(
+                      description:
+                          'The specific reason or context from memory why this suggestion makes sense. No guilt phrasing and no numeric day counts.',
+                    ),
                   },
                 ),
               ),

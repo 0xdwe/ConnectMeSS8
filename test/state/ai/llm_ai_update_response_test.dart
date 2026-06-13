@@ -345,6 +345,47 @@ void main() {
         throwsA(isA<LlmResponseParseException>()),
       );
     });
+
+    test('parses topic suggestion context and checks anti-shame rules on it', () {
+      final json = _validBase();
+      (json['memoryUpdate'] as Map<String, dynamic>)['topicSuggestions'] = [
+        {
+          'topic': 'paris trip',
+          'suggestions': [
+            {
+              'kind': 'ask',
+              'text': 'Ask about Paris.',
+              'context': 'He was very excited about Paris trip.',
+            },
+          ],
+        },
+      ];
+
+      final r = LlmAiUpdateResponse.fromJson(json);
+      expect(
+        r.memoryUpdate.topicSuggestions.single.suggestions.first.context,
+        'He was very excited about Paris trip.',
+      );
+
+      // Now verify anti-shame rule triggers on context too
+      final badJson = _validBase();
+      (badJson['memoryUpdate'] as Map<String, dynamic>)['topicSuggestions'] = [
+        {
+          'topic': 'paris trip',
+          'suggestions': [
+            {
+              'kind': 'ask',
+              'text': 'Ask about Paris.',
+              'context': 'You haven\'t asked in 47 days.',
+            },
+          ],
+        },
+      ];
+      expect(
+        () => LlmAiUpdateResponse.fromJson(badJson),
+        throwsA(isA<LlmResponseParseException>()),
+      );
+    });
   });
 
   group('upcomingToAdd validation', () {

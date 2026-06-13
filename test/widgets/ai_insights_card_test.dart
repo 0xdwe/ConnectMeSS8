@@ -383,6 +383,55 @@ void main() {
     });
 
     testWidgets(
+      'tapping a topic pill renders conversation starter and context when context is present',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            AiInsightsCard(
+              connection: _connection(category: 'Friends'),
+              insight: _insight(),
+              memory: MemoryDocument(
+                contactId: 'test',
+                displayName: 'Test Person',
+                lastUpdated: DateTime.utc(2026, 6, 4),
+                topics: const ['Paris trip'],
+                topicSuggestions: [
+                  TopicSuggestionGroup(
+                    topic: 'Paris trip',
+                    suggestions: const [
+                      TopicSuggestion(
+                        kind: TopicSuggestionKind.ask,
+                        text: 'Ask how the Paris plans are coming together.',
+                        context: 'he talked about his plan to Paris last time and he was very excited about it',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text('Paris trip'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Conversation Starter:'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate((widget) =>
+              widget is RichText &&
+              widget.text.toPlainText().contains('conversation starter : Ask how the Paris plans are coming together.')),
+          findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate((widget) =>
+              widget is RichText &&
+              widget.text.toPlainText().contains('Context : he talked about his plan to Paris last time and he was very excited about it')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
       'tapping a topic pill falls back when prepared suggestions are missing',
       (tester) async {
         await tester.pumpWidget(

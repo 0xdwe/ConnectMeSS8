@@ -709,6 +709,7 @@ void main() {
                   LlmTopicSuggestion(
                     kind: LlmTopicSuggestionKind.ask,
                     text: 'Ask how the Paris plans are coming together.',
+                    context: 'Since they talked about it last time.',
                   ),
                 ],
               ),
@@ -743,6 +744,10 @@ void main() {
         expect(
           paris.suggestions.single.text,
           'Ask how the Paris plans are coming together.',
+        );
+        expect(
+          paris.suggestions.single.context,
+          'Since they talked about it last time.',
         );
 
         final currency = groups.firstWhere((g) => g.topic == 'currency');

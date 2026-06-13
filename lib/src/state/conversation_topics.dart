@@ -35,7 +35,7 @@ List<String> topicsForContact(Connection connection, MemoryDocument? memory) {
 /// blank prepared strings dropped and the result capped to three. When
 /// prepared suggestions are missing, expired, or blank after trimming,
 /// this falls back to [suggestionsForTopic].
-List<String> preferredSuggestionsForTopic({
+List<TopicSuggestion> preferredSuggestionsForTopic({
   required String category,
   required String topic,
   required String contactName,
@@ -48,7 +48,9 @@ List<String> preferredSuggestionsForTopic({
     now ?? DateTime.now(),
   );
   if (prepared.isNotEmpty) return prepared;
-  return suggestionsForTopic(category, topic, contactName);
+  return suggestionsForTopic(category, topic, contactName)
+      .map((str) => TopicSuggestion(kind: TopicSuggestionKind.ask, text: str))
+      .toList(growable: false);
 }
 
 /// Returns 3-5 deterministic conversation-starter suggestions for a
@@ -90,7 +92,7 @@ List<String> suggestionsForTopic(
   ];
 }
 
-List<String> _preparedSuggestionsForTopic(
+List<TopicSuggestion> _preparedSuggestionsForTopic(
   MemoryDocument? memory,
   String topic,
   DateTime now,
@@ -106,8 +108,7 @@ List<String> _preparedSuggestionsForTopic(
       return const [];
     }
     return group.suggestions
-        .map((suggestion) => suggestion.text.trim())
-        .where((text) => text.isNotEmpty)
+        .where((suggestion) => suggestion.text.trim().isNotEmpty)
         .take(3)
         .toList(growable: false);
   }
