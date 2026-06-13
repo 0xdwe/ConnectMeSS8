@@ -91,4 +91,48 @@ void main() {
     );
     expect(find.text('Open settings'), findsOneWidget);
   });
+
+  testWidgets('quiet hours edits start and end in one dialog', (tester) async {
+    final container = await pump(tester);
+
+    await tester.tap(find.byType(Switch).first);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Quiet hours'),
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('quiet-hours-switch')),
+        matching: find.byType(Switch),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -180));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('quiet-hours-editor-row')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('quiet-hours-dialog')), findsOneWidget);
+    expect(find.text('Start'), findsOneWidget);
+    expect(find.text('End'), findsOneWidget);
+    expect(find.byType(TimePickerDialog), findsNothing);
+
+    await tester.tap(find.byKey(const Key('quiet-hours-start-hour')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('9').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('quiet-hours-start-minute')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('30').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    final preferences = container.read(notificationPreferencesProvider);
+    expect(preferences.quietStartMinutes, 21 * 60 + 30);
+    expect(preferences.quietEndMinutes, 8 * 60);
+    expect(tester.takeException(), isNull);
+  });
 }

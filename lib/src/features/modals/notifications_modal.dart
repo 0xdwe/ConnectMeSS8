@@ -179,6 +179,7 @@ class _NotificationsModalState extends ConsumerState<NotificationsModal> {
                       _SectionSurface(
                         children: [
                           _SwitchRow(
+                            key: const Key('quiet-hours-switch'),
                             icon: Icons.bedtime_outlined,
                             title: 'Quiet hours',
                             subtitle: preferences.quietHoursEnabled
@@ -227,24 +228,20 @@ class _NotificationsModalState extends ConsumerState<NotificationsModal> {
   }
 
   Future<void> _pickQuietHours(NotificationPreferences preferences) async {
-    final start = await showTimePicker(
+    final selection = await showDialog<_QuietHoursSelection>(
       context: context,
-      initialTime: _timeOfDay(preferences.quietStartMinutes),
-      helpText: 'Quiet hours start',
+      builder: (context) => _QuietHoursDialog(
+        initialStartMinutes: preferences.quietStartMinutes,
+        initialEndMinutes: preferences.quietEndMinutes,
+      ),
     );
-    if (start == null || !mounted) return;
-    final end = await showTimePicker(
-      context: context,
-      initialTime: _timeOfDay(preferences.quietEndMinutes),
-      helpText: 'Quiet hours end',
-    );
-    if (end == null) return;
+    if (selection == null || !mounted) return;
     await _save(
       () => ref
           .read(notificationPreferencesProvider.notifier)
           .setQuietHours(
-            startMinutes: start.hour * 60 + start.minute,
-            endMinutes: end.hour * 60 + end.minute,
+            startMinutes: selection.startMinutes,
+            endMinutes: selection.endMinutes,
           ),
     );
   }
@@ -468,6 +465,7 @@ class _QuietHoursRow extends StatelessWidget {
       minute: preferences.quietEndMinutes % 60,
     ).format(context);
     return ListTile(
+      key: const Key('quiet-hours-editor-row'),
       enabled: enabled,
       leading: const Icon(Icons.access_time),
       title: const Text('Set quiet hours'),
@@ -477,6 +475,229 @@ class _QuietHoursRow extends StatelessWidget {
       textColor: tokens.ink,
       iconColor: tokens.primary,
     );
+  }
+}
+
+class _QuietHoursSelection {
+  const _QuietHoursSelection({
+    required this.startMinutes,
+    required this.endMinutes,
+  });
+
+  final int startMinutes;
+  final int endMinutes;
+}
+
+class _QuietHoursDialog extends StatefulWidget {
+  const _QuietHoursDialog({
+    required this.initialStartMinutes,
+    required this.initialEndMinutes,
+  });
+
+  final int initialStartMinutes;
+  final int initialEndMinutes;
+
+  @override
+  State<_QuietHoursDialog> createState() => _QuietHoursDialogState();
+}
+
+class _QuietHoursDialogState extends State<_QuietHoursDialog> {
+  late int _startMinutes;
+  late int _endMinutes;
+
+  @override
+  void initState() {
+    super.initState();
+    _startMinutes = widget.initialStartMinutes;
+    _endMinutes = widget.initialEndMinutes;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return AlertDialog(
+      key: const Key('quiet-hours-dialog'),
+      backgroundColor: tokens.surfaceRaised,
+      insetPadding: EdgeInsets.symmetric(horizontal: AppSpacing.space4),
+      title: Text(
+        'Quiet hours',
+        style: AppTypography.glyph(
+          22,
+          color: tokens.ink,
+          weight: FontWeight.w700,
+        ),
+      ),
+      content: SizedBox(
+        width: 320,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _QuietTimeRow(
+              keyPrefix: 'quiet-hours-start',
+              label: 'Start',
+              minutes: _startMinutes,
+              onChanged: (value) => setState(() => _startMinutes = value),
+            ),
+            SizedBox(height: AppSpacing.space4),
+            _QuietTimeRow(
+              keyPrefix: 'quiet-hours-end',
+              label: 'End',
+              minutes: _endMinutes,
+              onChanged: (value) => setState(() => _endMinutes = value),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: Navigator.of(context).pop,
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(
+            _QuietHoursSelection(
+              startMinutes: _startMinutes,
+              endMinutes: _endMinutes,
+            ),
+          ),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuietTimeRow extends StatelessWidget {
+  const _QuietTimeRow({
+    required this.keyPrefix,
+    required this.label,
+    required this.minutes,
+    required this.onChanged,
+  });
+
+  final String keyPrefix;
+  final String label;
+  final int minutes;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final hour24 = minutes ~/ 60;
+    final minute = minutes % 60;
+    final hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
+    final period = hour24 >= 12 ? 'PM' : 'AM';
+    final minuteOptions = <int>{0, 15, 30, 45, minute}.toList()..sort();
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 44,
+          child: Text(
+            label,
+            style: AppTypography.body(
+              color: tokens.ink,
+            ).copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
+        SizedBox(width: AppSpacing.space3),
+        Expanded(
+          child: Container(
+            height: 52,
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.space3),
+            decoration: BoxDecoration(
+              color: tokens.surfaceSunken,
+              border: Border.all(color: tokens.border),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    key: Key('$keyPrefix-hour'),
+                    value: hour12,
+                    isDense: true,
+                    items: [
+                      for (var hour = 1; hour <= 12; hour++)
+                        DropdownMenuItem<int>(
+                          value: hour,
+                          child: Text('$hour'),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      onChanged(
+                        _minutesFor(
+                          hour12: value,
+                          minute: minute,
+                          period: period,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Text(':', style: AppTypography.body(color: tokens.ink)),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    key: Key('$keyPrefix-minute'),
+                    value: minute,
+                    isDense: true,
+                    items: [
+                      for (final value in minuteOptions)
+                        DropdownMenuItem<int>(
+                          value: value,
+                          child: Text(value.toString().padLeft(2, '0')),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      onChanged(
+                        _minutesFor(
+                          hour12: hour12,
+                          minute: value,
+                          period: period,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    key: Key('$keyPrefix-period'),
+                    value: period,
+                    isDense: true,
+                    items: const [
+                      DropdownMenuItem(value: 'AM', child: Text('AM')),
+                      DropdownMenuItem(value: 'PM', child: Text('PM')),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      onChanged(
+                        _minutesFor(
+                          hour12: hour12,
+                          minute: minute,
+                          period: value,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  int _minutesFor({
+    required int hour12,
+    required int minute,
+    required String period,
+  }) {
+    final hour24 = hour12 % 12 + (period == 'PM' ? 12 : 0);
+    return hour24 * 60 + minute;
   }
 }
 
