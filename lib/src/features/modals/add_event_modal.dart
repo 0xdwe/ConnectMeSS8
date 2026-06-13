@@ -117,6 +117,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
               decoration: BoxDecoration(
                 color: tokens.surfaceRaised,
                 borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: tokens.border),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -160,6 +161,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
               decoration: BoxDecoration(
                 color: tokens.surfaceRaised,
                 borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: tokens.border),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -343,6 +345,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
               decoration: BoxDecoration(
                 color: tokens.surfaceRaised,
                 borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: tokens.border),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -415,46 +418,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                       if (contact != null) category = contact.category;
                     }),
                   ),
-                  Divider(color: tokens.border, height: 24, thickness: 1),
-                  DropdownButtonFormField<String>(
-                    initialValue: category,
-                    style: AppTypography.body(color: tokens.ink),
-                    decoration: InputDecoration(
-                      labelText: 'CATEGORY',
-                      labelStyle: AppTypography.caption(color: tokens.inkSubtle)
-                          .copyWith(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                      isDense: true,
-                    ),
-                    items: state.categories
-                        .map(
-                          (item) => DropdownMenuItem(
-                            value: item,
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: _getCategoryColor(tokens, item),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(item),
-                              ],
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) =>
-                        setState(() => category = value ?? category),
-                  ),
+
                 ],
               ),
             ),
@@ -466,6 +430,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
               decoration: BoxDecoration(
                 color: tokens.surfaceRaised,
                 borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: tokens.border),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -613,7 +578,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
             if (widget.event != null) ...[
               const SizedBox(height: 8),
               TextButton.icon(
-                style: TextButton.styleFrom(foregroundColor: tokens.inkMuted),
+                style: TextButton.styleFrom(foregroundColor: tokens.danger),
                 onPressed: () async {
                   try {
                     final deleted = await ref
@@ -640,10 +605,6 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
     );
   }
 
-  Color _getCategoryColor(AppTokens tokens, String category) {
-    // Swapped to a single elegant premium unified purple color scheme
-    return tokens.primary;
-  }
 
   String _formatDate(DateTime value) {
     return '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
