@@ -115,12 +115,16 @@ class AboutModal extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              width: 32,
-                              height: 32,
+                              width: 16,
+                              height: 24,
                               alignment: Alignment.center,
-                              child: Text(
-                                feature.emoji,
-                                style: const TextStyle(fontSize: 20),
+                              child: Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: tokens.primary,
+                                  shape: BoxShape.circle,
+                                ),
                               ),
                             ),
                             SizedBox(width: AppSpacing.space3),
