@@ -202,6 +202,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     });
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() => _busy = true);
+    try {
+      final service = ref.read(googleSignInServiceProvider);
+      final credential = await service.signIn();
+      if (credential != null) {
+        ref.read(appControllerProvider.notifier).signIn();
+        if (mounted) context.go('/app');
+      }
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loginEmailError = _firebaseAuthMessage(e);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loginEmailError = 'Google sign-in went sideways — try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -284,6 +310,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       onSubmit: _submitLogin,
                                       onSwitch: () =>
                                           _switchMode(_AuthMode.signup),
+                                      onGoogleSignIn: _signInWithGoogle,
                                     )
                                   else
                                     _SignupForm(
@@ -299,6 +326,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       onSubmit: _submitSignup,
                                       onSwitch: () =>
                                           _switchMode(_AuthMode.login),
+                                      onGoogleSignIn: _signInWithGoogle,
                                     ),
                                 ],
                               ),
@@ -340,6 +368,7 @@ class _LoginForm extends StatelessWidget {
     required this.busy,
     required this.onSubmit,
     required this.onSwitch,
+    required this.onGoogleSignIn,
   });
   final TextEditingController emailController;
   final TextEditingController passwordController;
@@ -348,6 +377,7 @@ class _LoginForm extends StatelessWidget {
   final bool busy;
   final VoidCallback onSubmit;
   final VoidCallback onSwitch;
+  final VoidCallback onGoogleSignIn;
 
   @override
   Widget build(BuildContext context) {
@@ -470,6 +500,48 @@ class _LoginForm extends StatelessWidget {
 
         SizedBox(height: AppSpacing.space3),
 
+        Row(
+          children: [
+            Expanded(child: Divider(color: Colors.grey.shade300)),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.space3),
+              child: Text(
+                'or',
+                style: AppTypography.caption(color: Colors.grey.shade500),
+              ),
+            ),
+            Expanded(child: Divider(color: Colors.grey.shade300)),
+          ],
+        ),
+
+        SizedBox(height: AppSpacing.space3),
+
+        OutlinedButton.icon(
+          key: const Key('google-sign-in-button'),
+          onPressed: busy ? null : onGoogleSignIn,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.grey.shade800,
+            side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+          ),
+          icon: busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.grey,
+                  ),
+                )
+              : const _GoogleIcon(),
+          label: const Text('Continue with Google'),
+        ),
+
+        SizedBox(height: AppSpacing.space3),
+
         // Sign up option
         TextButton(
           key: const Key('auth-mode-signup'),
@@ -495,6 +567,7 @@ class _SignupForm extends StatelessWidget {
     required this.busy,
     required this.onSubmit,
     required this.onSwitch,
+    required this.onGoogleSignIn,
   });
   final TextEditingController nameController;
   final TextEditingController emailController;
@@ -507,6 +580,7 @@ class _SignupForm extends StatelessWidget {
   final bool busy;
   final VoidCallback onSubmit;
   final VoidCallback onSwitch;
+  final VoidCallback onGoogleSignIn;
 
   @override
   Widget build(BuildContext context) {
@@ -697,6 +771,48 @@ class _SignupForm extends StatelessWidget {
 
         SizedBox(height: AppSpacing.space3),
 
+        Row(
+          children: [
+            Expanded(child: Divider(color: Colors.grey.shade300)),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.space3),
+              child: Text(
+                'or',
+                style: AppTypography.caption(color: Colors.grey.shade500),
+              ),
+            ),
+            Expanded(child: Divider(color: Colors.grey.shade300)),
+          ],
+        ),
+
+        SizedBox(height: AppSpacing.space3),
+
+        OutlinedButton.icon(
+          key: const Key('google-sign-in-button'),
+          onPressed: busy ? null : onGoogleSignIn,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.grey.shade800,
+            side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+          ),
+          icon: busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.grey,
+                  ),
+                )
+              : const _GoogleIcon(),
+          label: const Text('Continue with Google'),
+        ),
+
+        SizedBox(height: AppSpacing.space3),
+
         // Login option
         TextButton(
           key: const Key('auth-mode-login'),
@@ -707,4 +823,58 @@ class _SignupForm extends StatelessWidget {
       ],
     );
   }
+}
+
+class _GoogleIcon extends StatelessWidget {
+  const _GoogleIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 20.0,
+      height: 20.0,
+      child: CustomPaint(
+        painter: _GoogleLogoPainter(),
+      ),
+    );
+  }
+}
+
+class _GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final radius = size.width / 2;
+    final center = Offset(radius, radius);
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * 0.22;
+
+    paint.color = const Color(0xFFEA4335);
+    canvas.drawArc(rect, -2.356, 1.57, false, paint);
+
+    paint.color = const Color(0xFFFBBC05);
+    canvas.drawArc(rect, 2.356, 1.57, false, paint);
+
+    paint.color = const Color(0xFF34A853);
+    canvas.drawArc(rect, 0.785, 1.571, false, paint);
+
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawArc(rect, -0.785, 1.57, false, paint);
+
+    final barPaint = Paint()
+      ..color = const Color(0xFF4285F4)
+      ..style = PaintingStyle.fill;
+
+    final barWidth = radius;
+    final barHeight = size.width * 0.22;
+    canvas.drawRect(
+      Rect.fromLTWH(radius, radius - barHeight / 2, barWidth, barHeight),
+      barPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

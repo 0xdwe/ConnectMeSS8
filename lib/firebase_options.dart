@@ -57,6 +57,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '588203814855',
     projectId: 'connect-me-e20b1',
     storageBucket: 'connect-me-e20b1.firebasestorage.app',
+    iosClientId: '588203814855-0qjggoccl0casa7gtkfmvgo0uhb7lnib.apps.googleusercontent.com',
     iosBundleId: 'com.connectme.connectMe',
   );
 
@@ -66,6 +67,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '588203814855',
     projectId: 'connect-me-e20b1',
     storageBucket: 'connect-me-e20b1.firebasestorage.app',
+    iosClientId: '588203814855-0qjggoccl0casa7gtkfmvgo0uhb7lnib.apps.googleusercontent.com',
     iosBundleId: 'com.connectme.connectMe',
   );
 

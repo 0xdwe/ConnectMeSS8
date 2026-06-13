@@ -50,6 +50,7 @@ Future<void> pumpConnectMe(WidgetTester tester) async {
     ProviderScope(
       overrides: [
         memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+        googleSignInServiceProvider.overrideWithValue(NoOpGoogleSignInService()),
         firebaseAuthProvider.overrideWithValue(
           MockFirebaseAuth(
             mockUser: MockUser(
