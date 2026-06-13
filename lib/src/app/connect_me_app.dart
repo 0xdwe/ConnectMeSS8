@@ -21,8 +21,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
       GoRoute(path: '/app', builder: (context, state) => const ShellScreen()),
       GoRoute(path: '/me', builder: (context, state) => const ProfileScreen()),
-      GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
-      GoRoute(path: '/edit-profile', builder: (context, state) => const EditProfileScreen()),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/edit-profile',
+        builder: (context, state) => const EditProfileScreen(),
+      ),
       GoRoute(
         path: '/contact/:id',
         builder: (context, state) => ContactProfileScreen(
@@ -30,24 +36,42 @@ final routerProvider = Provider<GoRouter>((ref) {
           initialSelectedTopic: state.uri.queryParameters['topic'],
         ),
       ),
-      GoRoute(path: '/ai-update/:id', builder: (context, state) => AiUpdateScreen(contactId: state.pathParameters['id']!)),
-      GoRoute(path: '/recommendations', builder: (context, state) => const RecommendationsScreen()),
+      GoRoute(
+        path: '/ai-update/:id',
+        builder: (context, state) => AiUpdateScreen(
+          contactId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/recommendations',
+        builder: (context, state) => const RecommendationsScreen(),
+      ),
     ],
   );
 });
 
-class ConnectMeApp extends ConsumerWidget {
+class ConnectMeApp extends ConsumerStatefulWidget {
   const ConnectMeApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ConnectMeApp> createState() => _ConnectMeAppState();
+}
+
+class _ConnectMeAppState extends ConsumerState<ConnectMeApp> {
+  bool _seededOnce = false;
+
+  @override
+  Widget build(BuildContext context) {
     final appState = ref.watch(appControllerProvider);
-    // Drive the seed migration on first observe. The provider is a
-    // FutureProvider<void>; we watch it so the initial frame waits on
-    // the seed pass before any screen reads memoryProvider. Tests
-    // override memoryStoreProvider with a pre-populated store, which
-    // makes the seeding a no-op.
     final seeding = ref.watch(memorySeedingProvider);
+
+    ref.listen<AsyncValue<void>>(memorySeedingProvider, (previous, next) {
+      if (!mounted) return;
+      if ((next.hasValue || next.hasError) && !_seededOnce) {
+        setState(() => _seededOnce = true);
+      }
+    });
+
     return MaterialApp.router(
       title: 'Connect Me',
       debugShowCheckedModeBanner: false,
@@ -58,13 +82,14 @@ class ConnectMeApp extends ConsumerWidget {
         AppThemeMode.light => ThemeMode.light,
         AppThemeMode.dark => ThemeMode.dark,
       },
-      routerConfig: ref.watch(routerProvider),
+      routerConfig: ref.read(routerProvider),
       builder: (context, child) {
+        if (_seededOnce) {
+          return child ?? const SizedBox.shrink();
+        }
         return seeding.when(
           data: (_) => child ?? const SizedBox.shrink(),
           loading: () => const _MemorySeedingSplash(),
-          // On error we proceed to the app; the lazy-creation path in
-          // memoryProvider covers any still-unbacked connection.
           error: (_, _) => child ?? const SizedBox.shrink(),
         );
       },
@@ -77,11 +102,6 @@ class _MemorySeedingSplash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Static placeholder rather than a spinner. The seed pass resolves
-    // in microseconds (in-memory) or tens of milliseconds (file), so
-    // the user never visibly sees this frame. A `CircularProgressIndicator`
-    // here would also break `pumpAndSettle` in widget tests, since its
-    // animation never stops.
     return const Scaffold(body: SizedBox.shrink());
   }
 }
