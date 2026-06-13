@@ -237,7 +237,7 @@ void main() {
       expect(find.text("How's the Paris trip going?"), findsNothing);
     });
 
-    testWidgets('tapping a topic pill shows all prepared suggestions', (
+    testWidgets('tapping a topic pill shows up to 2 prepared suggestions', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -284,7 +284,7 @@ void main() {
       expect(find.text('Share a café rec if you spot one.'), findsOneWidget);
       expect(
         find.text('Suggest a quick call before the trip.'),
-        findsOneWidget,
+        findsNothing,
       );
     });
 

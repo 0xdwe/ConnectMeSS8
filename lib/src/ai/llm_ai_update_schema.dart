@@ -82,7 +82,7 @@ final Schema kLlmAiUpdateResponseSchema = Schema.object(
           description:
               'Prepared Topic Suggestions for newly-added topics and '
               'existing topics clearly touched by this update. At most '
-              'three suggestions per topic. Warm, specific, brief, and '
+              'two suggestions per topic. Warm, specific, brief, and '
               'non-shaming; no numeric day-count language.',
           items: Schema.object(
             properties: {

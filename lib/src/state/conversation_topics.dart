@@ -32,7 +32,7 @@ List<String> topicsForContact(Connection connection, MemoryDocument? memory) {
 /// Returns conversation-starter suggestions for a topic tap.
 ///
 /// Prepared non-expired Topic Suggestions from [memory] win first, with
-/// blank prepared strings dropped and the result capped to three. When
+/// blank prepared strings dropped and the result capped to two. When
 /// prepared suggestions are missing, expired, or blank after trimming,
 /// this falls back to [suggestionsForTopic].
 List<TopicSuggestion> preferredSuggestionsForTopic({
@@ -64,6 +64,7 @@ List<TopicSuggestion> preferredSuggestionsForTopic({
     }).toList(growable: false);
   }
   return suggestionsForTopic(connection.category, topic, connection.name)
+      .take(2)
       .map((str) => TopicSuggestion(
             kind: TopicSuggestionKind.ask,
             text: str,
@@ -72,7 +73,7 @@ List<TopicSuggestion> preferredSuggestionsForTopic({
       .toList(growable: false);
 }
 
-/// Returns 3-5 deterministic conversation-starter suggestions for a
+/// Returns 2-3 deterministic conversation-starter suggestions for a
 /// `(category, topic, contactName)` tuple.
 ///
 /// Pass 3 (#044): the static `_topicSuggestions` map is consulted
@@ -128,7 +129,7 @@ List<TopicSuggestion> _preparedSuggestionsForTopic(
     }
     return group.suggestions
         .where((suggestion) => suggestion.text.trim().isNotEmpty)
-        .take(3)
+        .take(2)
         .toList(growable: false);
   }
   return const [];
