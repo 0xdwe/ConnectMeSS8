@@ -34,21 +34,18 @@ class _SignedOutBatchedWrites implements BatchedWrites {
     required String contactId,
     required Iterable<CrmInteraction> interactions,
     required Iterable<PlannerEvent> events,
-  }) =>
-      Future.error(StateError(_msg));
+  }) => Future.error(StateError(_msg));
 
   @override
   Future<void> commitAiUpdate({
     required CrmInteraction interaction,
     required Connection updatedConnection,
-  }) =>
-      Future.error(StateError(_msg));
+  }) => Future.error(StateError(_msg));
 
   @override
   Future<void> commitRemoveSampleConnections({
     required Iterable<Connection> connections,
     required Iterable<CrmInteraction> interactions,
     required Iterable<PlannerEvent> events,
-  }) =>
-      Future.error(StateError(_msg));
+  }) => Future.error(StateError(_msg));
 }

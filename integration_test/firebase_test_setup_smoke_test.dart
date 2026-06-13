@@ -27,8 +27,9 @@ void main() {
   // tests should follow.
   tearDown(tearDownEmulators);
 
-  testWidgets('anonymous sign-in against the auth emulator succeeds',
-      (tester) async {
+  testWidgets('anonymous sign-in against the auth emulator succeeds', (
+    tester,
+  ) async {
     final cred = await FirebaseAuth.instance.signInAnonymously();
     expect(cred.user, isNotNull);
     expect(FirebaseAuth.instance.currentUser, isNotNull);

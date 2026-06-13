@@ -103,7 +103,7 @@ class LlmAiUpdate implements AiUpdate {
   /// inject a fixture; production wires through
   /// `appController.state.interactions.where(...)`.
   final List<CrmInteraction> Function(String contactId)
-      recentInteractionsLookup;
+  recentInteractionsLookup;
 
   final String model;
   final Duration timeout;
@@ -116,9 +116,8 @@ class LlmAiUpdate implements AiUpdate {
   /// not exposed at the seam — the adapter always uses defaults
   /// in production; tests substitute a whole different
   /// implementation when they want to control either.
-  final Future<PreparedAttachments> Function(
-    List<AttachmentRef> attachments,
-  ) attachmentPreparer;
+  final Future<PreparedAttachments> Function(List<AttachmentRef> attachments)
+  attachmentPreparer;
 
   final DateTime Function() clock;
 
@@ -185,9 +184,7 @@ class LlmAiUpdate implements AiUpdate {
       throw const AiUpdateCancelled();
     }
     if (failOnNetwork) {
-      throw const AiUpdateFailure(
-        "AI didn't respond in time. Try again?",
-      );
+      throw const AiUpdateFailure("AI didn't respond in time. Try again?");
     }
     if (failOnQuota) {
       throw const AiUpdateFailure(
@@ -219,7 +216,8 @@ class LlmAiUpdate implements AiUpdate {
     // [AiUpdateCancelled]; subsequent observations are no-ops because
     // the function has already returned.
     final cancelOnFire = cancelToken == null
-        ? Completer<Never>().future // never-completing
+        ? Completer<Never>()
+              .future // never-completing
         : cancelToken.then<Never>((_) => throw const AiUpdateCancelled());
     Future<T> raceWithCancel<T>(Future<T> work) {
       if (cancelToken == null) return work;
@@ -235,10 +233,7 @@ class LlmAiUpdate implements AiUpdate {
       // noise).
       // ignore: unawaited_futures
       work.then<void>((_) {}, onError: (Object _) {});
-      return Future.any<T>([
-        work,
-        cancelOnFire,
-      ]);
+      return Future.any<T>([work, cancelOnFire]);
     }
 
     final prepared = await raceWithCancel(attachmentPreparer(attachments));
@@ -313,8 +308,9 @@ class LlmAiUpdate implements AiUpdate {
   Future<void> commit(AiUpdateResult result) async {
     final memory = result.memoryDocument;
 
-    final priorMemory =
-        memory == null ? null : await memoryStore.load(memory.contactId);
+    final priorMemory = memory == null
+        ? null
+        : await memoryStore.load(memory.contactId);
 
     if (memory != null) {
       if (failOnSave) {
@@ -454,9 +450,7 @@ class LlmAiUpdate implements AiUpdate {
       'latencyMs=${stopwatch.elapsedMilliseconds} '
       'lastError=$lastError',
     );
-    throw const AiUpdateFailure(
-      "AI didn't respond in time. Try again?",
-    );
+    throw const AiUpdateFailure("AI didn't respond in time. Try again?");
   }
 
   /// Reads the model's text from [response] (which can throw
@@ -473,9 +467,7 @@ class LlmAiUpdate implements AiUpdate {
     final stripped = _stripMarkdownFences(text).trim();
     final dynamic decoded = json.decode(stripped);
     if (decoded is! Map<String, dynamic>) {
-      throw FormatException(
-        'expected JSON object, got ${decoded.runtimeType}',
-      );
+      throw FormatException('expected JSON object, got ${decoded.runtimeType}');
     }
     return LlmAiUpdateResponse.fromJson(decoded);
   }
@@ -601,7 +593,9 @@ class LlmAiUpdate implements AiUpdate {
     final byTopic = <String, TopicSuggestionGroup>{
       for (final group in existing) group.topic.toLowerCase(): group,
     };
-    final order = <String>[for (final group in existing) group.topic.toLowerCase()];
+    final order = <String>[
+      for (final group in existing) group.topic.toLowerCase(),
+    ];
     for (final group in incoming) {
       final topic = group.topic.trim();
       if (topic.isEmpty) continue;
@@ -669,8 +663,8 @@ class LlmAiUpdate implements AiUpdate {
       // localizing to the runtime's timezone (which would shift
       // the engine's "trip starts tomorrow" comparisons by a day
       // depending on where the user is sitting).
-      final hasTimezone = iso.endsWith('Z') ||
-          RegExp(r'[+-]\d{2}:?\d{2}$').hasMatch(iso);
+      final hasTimezone =
+          iso.endsWith('Z') || RegExp(r'[+-]\d{2}:?\d{2}$').hasMatch(iso);
       // If the LLM ever emits a T-suffixed iso without TZ
       // (e.g. "2026-09-01T10:00:00"), append just "Z". Otherwise
       // append a full midnight-UTC suffix (e.g. "2026-09-01" →
@@ -689,10 +683,7 @@ class LlmAiUpdate implements AiUpdate {
           ? entry.label
           : '${entry.label} (${entry.relativeWhen})';
     }
-    return UpcomingEntry(
-      startDate: startDate,
-      description: description,
-    );
+    return UpcomingEntry(startDate: startDate, description: description);
   }
 
   static List<String> _mergeStrings(
@@ -792,5 +783,4 @@ AiUpdateFailure? debugClassifyFirebaseException(FirebaseException e) {
 /// own implementation directly.
 Future<PreparedAttachments> _defaultPrepareAttachments(
   List<AttachmentRef> attachments,
-) =>
-    prepareAttachments(attachments);
+) => prepareAttachments(attachments);

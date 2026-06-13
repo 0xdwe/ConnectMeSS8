@@ -244,8 +244,7 @@ class MockAiUpdate implements AiUpdate {
           'Mock AI sorted this into ${type.label} and updated connection history.',
       contactId: contact.id,
       interactions: [interaction],
-      nextStep:
-          type == InteractionType.reminder ? 'Follow up this week' : null,
+      nextStep: type == InteractionType.reminder ? 'Follow up this week' : null,
       memoryDocument: newMemory,
       // Pass 4.3 PRD §Q6 addendum / #085: parity with LlmAiUpdate.
       // Mock pretends the LLM judged interactionDepth=50 (a
@@ -268,8 +267,9 @@ class MockAiUpdate implements AiUpdate {
     // restore the file. Loaded by contactId rather than passed in so
     // the [AiUpdate] interface stays narrow — callers do not have to
     // hand commit() the prior memory document.
-    final priorMemory =
-        memory == null ? null : await memoryStore.load(memory.contactId);
+    final priorMemory = memory == null
+        ? null
+        : await memoryStore.load(memory.contactId);
 
     // 1. Persist the memory. If save throws, the in-memory state
     //    delta is never applied — nothing has changed for the user.
@@ -341,13 +341,13 @@ class MockAiUpdate implements AiUpdate {
   }
 
   static String _titleFor(InteractionType type) => switch (type) {
-        InteractionType.personalDetail => 'Personal context captured',
-        InteractionType.sharedActivity => 'Shared activity logged',
-        InteractionType.reminder => 'Follow-up reminder created',
-        InteractionType.preference => 'Preference added',
-        InteractionType.relationshipNote => 'Relationship note added',
-        InteractionType.interaction => 'Interaction summarized',
-      };
+    InteractionType.personalDetail => 'Personal context captured',
+    InteractionType.sharedActivity => 'Shared activity logged',
+    InteractionType.reminder => 'Follow-up reminder created',
+    InteractionType.preference => 'Preference added',
+    InteractionType.relationshipNote => 'Relationship note added',
+    InteractionType.interaction => 'Interaction summarized',
+  };
 
   static String _isoDate(DateTime d) {
     final y = d.year.toString().padLeft(4, '0');

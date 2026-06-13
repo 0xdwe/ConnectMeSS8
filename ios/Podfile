@@ -1,3 +1,5 @@
+$FirebaseSDKVersion = '12.13.0'
+
 # iOS 15.0 is the floor required by cloud_firestore (Pass 4.2 #057).
 platform :ios, '15.0'
 

@@ -631,7 +631,9 @@ void main() {
     expect(find.text('Save Event'), findsOneWidget);
   });
 
-  testWidgets('AddEventModal toggles All Day and updates time dropdowns', (WidgetTester tester) async {
+  testWidgets('AddEventModal toggles All Day and updates time dropdowns', (
+    WidgetTester tester,
+  ) async {
     final eventsStore = InMemoryEventStore();
     final connectionsStore = InMemoryConnectionStore();
     final interactionStore = InMemoryInteractionStore();
@@ -685,4 +687,3 @@ void main() {
     expect(find.byKey(const Key('event-end-period')), findsOneWidget);
   });
 }
-

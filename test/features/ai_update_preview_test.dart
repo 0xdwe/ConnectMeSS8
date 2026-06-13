@@ -269,10 +269,8 @@ void main() {
       expect(stored?.history ?? '', preHistory);
     });
 
-    testWidgets(
-        'preview-and-save preserves bondScoreDelta end-to-end '
-        '(Pass 4.3 #085 stall regression, 2026-06-01)',
-        (tester) async {
+    testWidgets('preview-and-save preserves bondScoreDelta end-to-end '
+        '(Pass 4.3 #085 stall regression, 2026-06-01)', (tester) async {
       // The 2026-06-01 stall report had LlmAiUpdate emit
       // bondScoreDelta=23 but applyAiUpdateResult log delta=0.
       // Root cause: AiUpdateScreen.save() rebuilds AiUpdateResult

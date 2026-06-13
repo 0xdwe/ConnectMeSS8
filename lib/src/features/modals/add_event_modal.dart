@@ -330,7 +330,6 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                       if (contact != null) category = contact.category;
                     }),
                   ),
-
                 ],
               ),
             ),
@@ -516,7 +515,6 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
       ),
     );
   }
-
 
   String _formatDate(DateTime value) {
     return '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
@@ -830,11 +828,7 @@ class _EventTimeRow extends StatelessWidget {
                     onChanged: (value) {
                       if (value == null) return;
                       onChanged(
-                        _timeFor(
-                          hour12: value,
-                          minute: minute,
-                          period: period,
-                        ),
+                        _timeFor(hour12: value, minute: minute, period: period),
                       );
                     },
                   ),
@@ -857,11 +851,7 @@ class _EventTimeRow extends StatelessWidget {
                     onChanged: (value) {
                       if (value == null) return;
                       onChanged(
-                        _timeFor(
-                          hour12: hour12,
-                          minute: value,
-                          period: period,
-                        ),
+                        _timeFor(hour12: hour12, minute: value, period: period),
                       );
                     },
                   ),
@@ -880,11 +870,7 @@ class _EventTimeRow extends StatelessWidget {
                     onChanged: (value) {
                       if (value == null) return;
                       onChanged(
-                        _timeFor(
-                          hour12: hour12,
-                          minute: minute,
-                          period: value,
-                        ),
+                        _timeFor(hour12: hour12, minute: minute, period: value),
                       );
                     },
                   ),
@@ -908,4 +894,3 @@ class _EventTimeRow extends StatelessWidget {
     return TimeOfDay(hour: hour24, minute: minute);
   }
 }
-

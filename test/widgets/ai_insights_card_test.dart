@@ -237,6 +237,151 @@ void main() {
       expect(find.text("How's the Paris trip going?"), findsNothing);
     });
 
+    testWidgets('tapping a topic pill shows all prepared suggestions', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          AiInsightsCard(
+            connection: _connection(category: 'Friends'),
+            insight: _insight(),
+            memory: MemoryDocument(
+              contactId: 'test',
+              displayName: 'Test Person',
+              lastUpdated: DateTime.utc(2026, 6, 4),
+              topics: const ['Paris trip'],
+              topicSuggestions: [
+                TopicSuggestionGroup(
+                  topic: 'Paris trip',
+                  suggestions: const [
+                    TopicSuggestion(
+                      kind: TopicSuggestionKind.ask,
+                      text: 'Ask how the Paris plans are coming together.',
+                    ),
+                    TopicSuggestion(
+                      kind: TopicSuggestionKind.share,
+                      text: 'Share a café rec if you spot one.',
+                    ),
+                    TopicSuggestion(
+                      kind: TopicSuggestionKind.plan,
+                      text: 'Suggest a quick call before the trip.',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Paris trip'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ask how the Paris plans are coming together.'),
+        findsOneWidget,
+      );
+      expect(find.text('Share a café rec if you spot one.'), findsOneWidget);
+      expect(
+        find.text('Suggest a quick call before the trip.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('selected topic does not show another topic suggestion', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          AiInsightsCard(
+            connection: _connection(category: 'Friends'),
+            insight: _insight(),
+            memory: MemoryDocument(
+              contactId: 'test',
+              displayName: 'Test Person',
+              lastUpdated: DateTime.utc(2026, 6, 4),
+              topics: const ['Paris trip', 'pottery'],
+              topicSuggestions: [
+                TopicSuggestionGroup(
+                  topic: 'Paris trip',
+                  suggestions: const [
+                    TopicSuggestion(
+                      kind: TopicSuggestionKind.ask,
+                      text: 'Ask how the Paris plans are coming together.',
+                    ),
+                  ],
+                ),
+                TopicSuggestionGroup(
+                  topic: 'pottery',
+                  suggestions: const [
+                    TopicSuggestion(
+                      kind: TopicSuggestionKind.ask,
+                      text: 'Ask about the latest pottery class.',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Paris trip'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ask how the Paris plans are coming together.'),
+        findsOneWidget,
+      );
+      expect(find.text('Ask about the latest pottery class.'), findsNothing);
+    });
+
+    testWidgets('selected topic panel omits global and placeholder context', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          AiInsightsCard(
+            connection: _connection(category: 'Friends'),
+            insight: _insight(),
+            memory: MemoryDocument(
+              contactId: 'test',
+              displayName: 'Test Person',
+              lastUpdated: DateTime.utc(2026, 6, 4),
+              summary: 'They are focused on pottery right now.',
+              history: '- 2026-06-04 — Talked about pottery kiln plans.',
+              topics: const ['Paris trip'],
+              topicSuggestions: [
+                TopicSuggestionGroup(
+                  topic: 'Paris trip',
+                  suggestions: const [
+                    TopicSuggestion(
+                      kind: TopicSuggestionKind.ask,
+                      text: 'Ask how the Paris plans are coming together.',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Paris trip'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Conversation Starter:'), findsOneWidget);
+      expect(find.text('Past Conversations:'), findsNothing);
+      expect(find.text('Current Context:'), findsNothing);
+      expect(find.text('Related News:'), findsNothing);
+      expect(find.text('Mother\'s Day coming up May 11th'), findsNothing);
+      expect(find.text('They are focused on pottery right now.'), findsNothing);
+      expect(
+        find.text('- 2026-06-04 — Talked about pottery kiln plans.'),
+        findsNothing,
+      );
+    });
+
     testWidgets(
       'tapping a topic pill falls back when prepared suggestions are missing',
       (tester) async {
@@ -303,7 +448,7 @@ void main() {
       },
     );
 
-    testWidgets('tapping a topic pill opens the suggestions bottom sheet', (
+    testWidgets('tapping a topic pill shows suggestions inline', (
       tester,
     ) async {
       await tester.pumpWidget(

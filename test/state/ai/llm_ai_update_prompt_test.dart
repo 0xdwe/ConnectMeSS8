@@ -17,14 +17,12 @@ void main() {
       expect(lowered, contains('shame'));
     });
 
-    test('forbids inventing details when input does not support them',
-        () {
+    test('forbids inventing details when input does not support them', () {
       final lowered = kLlmAiUpdatePromptV1.toLowerCase();
       expect(lowered, contains('never invent'));
     });
 
-    test('encodes the interactionDepth 0..100 rubric (PRD §Q6 addendum)',
-        () {
+    test('encodes the interactionDepth 0..100 rubric (PRD §Q6 addendum)', () {
       // PRD §Q6 addendum (2026-06-01) / #085: the LLM judges depth on
       // a 0..100 scale with five anchors. Code applies the
       // diminishing-returns curve client-side; the model does NOT

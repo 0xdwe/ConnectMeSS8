@@ -18,10 +18,12 @@ void main() {
       );
       await store.save(stored);
 
-      final container = ProviderContainer(overrides: [
-        ...signedInDemoOverrides(),
-        memoryStoreProvider.overrideWithValue(store),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(store),
+        ],
+      );
       addTearDown(container.dispose);
 
       final doc = await container.read(memoryProvider('sarah').future);
@@ -29,42 +31,52 @@ void main() {
       expect(doc.displayName, 'Sarah Johnson');
     });
 
-    test('lazy-creates an empty doc with displayName from connections',
-        () async {
-      final store = InMemoryMemoryStore();
-      final container = ProviderContainer(overrides: [
-        ...signedInDemoOverrides(),
-        memoryStoreProvider.overrideWithValue(store),
-      ]);
-      addTearDown(container.dispose);
+    test(
+      'lazy-creates an empty doc with displayName from connections',
+      () async {
+        final store = InMemoryMemoryStore();
+        final container = ProviderContainer(
+          overrides: [
+            ...signedInDemoOverrides(),
+            memoryStoreProvider.overrideWithValue(store),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      // Seeded AppState carries 'sarah' → 'Sarah Johnson'.
-      final doc = await container.read(memoryProvider('sarah').future);
-      expect(doc.contactId, 'sarah');
-      expect(doc.displayName, 'Sarah Johnson');
-      expect(doc.summary, '');
-    });
+        // Seeded AppState carries 'sarah' → 'Sarah Johnson'.
+        final doc = await container.read(memoryProvider('sarah').future);
+        expect(doc.contactId, 'sarah');
+        expect(doc.displayName, 'Sarah Johnson');
+        expect(doc.summary, '');
+      },
+    );
 
-    test('falls back to contactId when no matching connection exists',
-        () async {
-      final store = InMemoryMemoryStore();
-      final container = ProviderContainer(overrides: [
-        ...signedInDemoOverrides(),
-        memoryStoreProvider.overrideWithValue(store),
-      ]);
-      addTearDown(container.dispose);
+    test(
+      'falls back to contactId when no matching connection exists',
+      () async {
+        final store = InMemoryMemoryStore();
+        final container = ProviderContainer(
+          overrides: [
+            ...signedInDemoOverrides(),
+            memoryStoreProvider.overrideWithValue(store),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      final doc = await container.read(memoryProvider('ghost').future);
-      expect(doc.contactId, 'ghost');
-      expect(doc.displayName, 'ghost');
-    });
+        final doc = await container.read(memoryProvider('ghost').future);
+        expect(doc.contactId, 'ghost');
+        expect(doc.displayName, 'ghost');
+      },
+    );
 
     test('lazy creation persists via store.save', () async {
       final store = InMemoryMemoryStore();
-      final container = ProviderContainer(overrides: [
-        ...signedInDemoOverrides(),
-        memoryStoreProvider.overrideWithValue(store),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(store),
+        ],
+      );
       addTearDown(container.dispose);
 
       await container.read(memoryProvider('mike').future);
@@ -80,10 +92,12 @@ void main() {
   group('memoryStoreProvider override', () {
     test('returns the override instance', () {
       final store = InMemoryMemoryStore();
-      final container = ProviderContainer(overrides: [
-        ...signedInDemoOverrides(),
-        memoryStoreProvider.overrideWithValue(store),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(store),
+        ],
+      );
       addTearDown(container.dispose);
 
       final MemoryStore got = container.read(memoryStoreProvider);

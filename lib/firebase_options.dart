@@ -77,5 +77,4 @@ class DefaultFirebaseOptions {
     authDomain: 'connect-me-e20b1.firebaseapp.com',
     storageBucket: 'connect-me-e20b1.firebasestorage.app',
   );
-
 }

@@ -164,10 +164,10 @@ SeederPlan computePlan({
   bool needs(String key) => !existingSentinels.contains(key);
   return SeederPlan(
     choice: choice,
-    connections: choice == SeederChoice.samples &&
-        needs(SeederSentinels.connections),
-    interactions: choice == SeederChoice.samples &&
-        needs(SeederSentinels.interactions),
+    connections:
+        choice == SeederChoice.samples && needs(SeederSentinels.connections),
+    interactions:
+        choice == SeederChoice.samples && needs(SeederSentinels.interactions),
     events: choice == SeederChoice.samples && needs(SeederSentinels.events),
     categories: needs(SeederSentinels.categories),
     eventTypes: needs(SeederSentinels.eventTypes),
@@ -213,11 +213,9 @@ class SeederSampleSource {
 /// with the onboarding modal, so the choice can be persisted before
 /// the seeder runs.
 class ConnectionSeeder {
-  ConnectionSeeder({
-    required FirebaseFirestore firestore,
-    required String uid,
-  })  : _firestore = firestore,
-        _uid = uid;
+  ConnectionSeeder({required FirebaseFirestore firestore, required String uid})
+    : _firestore = firestore,
+      _uid = uid;
 
   final FirebaseFirestore _firestore;
   final String _uid;
@@ -298,25 +296,21 @@ class ConnectionSeeder {
     // never re-write it. The previously valid timestamp survives.
     final userDocPatch = <String, dynamic>{};
     if (plan.connectionsSentinel) {
-      userDocPatch[SeederSentinels.connections] =
-          FieldValue.serverTimestamp();
+      userDocPatch[SeederSentinels.connections] = FieldValue.serverTimestamp();
     }
     if (plan.interactionsSentinel) {
-      userDocPatch[SeederSentinels.interactions] =
-          FieldValue.serverTimestamp();
+      userDocPatch[SeederSentinels.interactions] = FieldValue.serverTimestamp();
     }
     if (plan.eventsSentinel) {
       userDocPatch[SeederSentinels.events] = FieldValue.serverTimestamp();
     }
     if (plan.categories) {
       userDocPatch['categories'] = SeederSampleSource.categories();
-      userDocPatch[SeederSentinels.categories] =
-          FieldValue.serverTimestamp();
+      userDocPatch[SeederSentinels.categories] = FieldValue.serverTimestamp();
     }
     if (plan.eventTypes) {
       userDocPatch['eventTypes'] = SeederSampleSource.eventTypes();
-      userDocPatch[SeederSentinels.eventTypes] =
-          FieldValue.serverTimestamp();
+      userDocPatch[SeederSentinels.eventTypes] = FieldValue.serverTimestamp();
     }
 
     if (userDocPatch.isNotEmpty) {
@@ -329,10 +323,7 @@ class ConnectionSeeder {
     await batch.commit();
 
     return SeederResult(
-      didSeed: connectionsWritten +
-              interactionsWritten +
-              eventsWritten >
-          0,
+      didSeed: connectionsWritten + interactionsWritten + eventsWritten > 0,
       didNoOp: false,
       connectionsWritten: connectionsWritten,
       interactionsWritten: interactionsWritten,

@@ -38,7 +38,7 @@ class FileMemoryStore implements MemoryStore {
   /// `getApplicationDocumentsDirectory()` as the parent of the
   /// `memories/` folder. Tests pass a `Directory.systemTemp` child.
   FileMemoryStore({Directory? directoryOverride})
-      : _override = directoryOverride;
+    : _override = directoryOverride;
 
   final Directory? _override;
   Directory? _resolved;

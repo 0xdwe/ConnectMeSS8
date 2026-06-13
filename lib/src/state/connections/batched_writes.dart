@@ -111,8 +111,8 @@ class FirebaseBatchedWrites implements BatchedWrites {
   FirebaseBatchedWrites({
     required FirebaseFirestore firestore,
     required String uid,
-  })  : _firestore = firestore,
-        _uid = uid;
+  }) : _firestore = firestore,
+       _uid = uid;
 
   final FirebaseFirestore _firestore;
   final String _uid;

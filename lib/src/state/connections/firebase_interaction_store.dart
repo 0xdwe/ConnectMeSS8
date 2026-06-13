@@ -61,8 +61,8 @@ class FirebaseInteractionStore implements InteractionStore {
   FirebaseInteractionStore({
     required FirebaseFirestore firestore,
     required String uid,
-  })  : _firestore = firestore,
-        _uid = uid {
+  }) : _firestore = firestore,
+       _uid = uid {
     _subscribe();
   }
 
@@ -255,9 +255,9 @@ class FirebaseInteractionStore implements InteractionStore {
 
       final List<AttachmentRef> attachmentRefs = attachments is List
           ? attachments
-              .whereType<String>()
-              .map((name) => AttachmentRef(name: name, path: null))
-              .toList()
+                .whereType<String>()
+                .map((name) => AttachmentRef(name: name, path: null))
+                .toList()
           : const <AttachmentRef>[];
 
       return CrmInteraction(
