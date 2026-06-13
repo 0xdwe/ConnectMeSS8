@@ -48,17 +48,18 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
       appControllerProvider.select((state) => state.events),
     );
 
-    final filteredEvents = allEvents.where((event) {
-      final eventDay = DateTime(
-        event.date.year,
-        event.date.month,
-        event.date.day,
-      );
-      if (_hasExplicitDateSelection) {
-        return DateUtils.isSameDay(eventDay, selected);
-      }
-      return !eventDay.isBefore(today);
-    }).toList()..sort((a, b) => a.date.compareTo(b.date));
+    // Expand recurring events into individual occurrences for the display window.
+    // "Today & upcoming" shows occurrences in [today, today+365d].
+    // "Selected date" shows occurrences on exactly that day.
+    final windowEnd = today.add(const Duration(days: 365));
+    final filteredEvents = [
+      for (final e in allEvents)
+        ..._occurrencesInRange(
+          e,
+          _hasExplicitDateSelection ? selected : today,
+          _hasExplicitDateSelection ? selected : windowEnd,
+        ),
+    ]..sort((a, b) => a.date.compareTo(b.date));
 
     // Group events by day
     final groupedEvents = <DateTime, List<PlannerEvent>>{};
@@ -523,6 +524,13 @@ class _CalendarGrid extends StatelessWidget {
       (index) => firstGridDate.add(Duration(days: index)),
     );
 
+     // Pre-expand recurring events for the whole grid range so dots appear
+     // on every occurrence, not just the base date.
+     final lastGridDate = firstGridDate.add(const Duration(days: 41));
+     final expandedForGrid = [
+       for (final e in events) ..._occurrencesInRange(e, firstGridDate, lastGridDate),
+     ];
+
     return Column(
       children: [
         // SUN - SAT Weekdays Header
@@ -563,9 +571,9 @@ class _CalendarGrid extends StatelessWidget {
             final isSelected = DateUtils.isSameDay(day, selected);
             final isToday = DateUtils.isSameDay(day, DateTime.now());
 
-            final eventsOnDay = events
-                .where((event) => DateUtils.isSameDay(event.date, day))
-                .toList();
+            final eventsOnDay = expandedForGrid
+              .where((event) => DateUtils.isSameDay(event.date, day))
+              .toList();
             final hasEvent = eventsOnDay.isNotEmpty;
 
             // Highlight & text color selection
@@ -951,4 +959,68 @@ class _RedesignedEventCard extends ConsumerWidget {
     final minStr = min.toString().padLeft(2, '0');
     return '$hour12:$minStr $amPm';
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recurring-event expansion helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Returns all occurrences of [event] in the date range [from, to] inclusive.
+///
+/// For non-recurring events, returns the event itself if its date falls in the
+/// range. For recurring events, walks forward from the base date generating
+/// occurrence copies (same id, same data, different [date]) until [to] is
+/// exceeded, capped at 500 iterations to prevent runaway loops.
+List<PlannerEvent> _occurrencesInRange(
+  PlannerEvent event,
+  DateTime from,
+  DateTime to, {
+  int maxOccurrences = 500,
+}) {
+  final base = DateTime(event.date.year, event.date.month, event.date.day);
+  final dayFrom = DateTime(from.year, from.month, from.day);
+  final dayTo = DateTime(to.year, to.month, to.day);
+
+  if (!event.isRecurring || event.recurrencePattern == null) {
+    if (!base.isBefore(dayFrom) && !base.isAfter(dayTo)) return [event];
+    return [];
+  }
+
+  final result = <PlannerEvent>[];
+  var current = base;
+  int count = 0;
+
+  while (!current.isAfter(dayTo) && count < maxOccurrences) {
+    if (!current.isBefore(dayFrom)) {
+      result.add(event.copyWith(date: current));
+    }
+    current = _nextRecurringDate(current, event.recurrencePattern!, event.date);
+    count++;
+  }
+  return result;
+}
+
+DateTime _nextRecurringDate(
+  DateTime current,
+  RecurrencePattern pattern,
+  DateTime anchor,
+) {
+  return switch (pattern) {
+    RecurrencePattern.daily => current.add(const Duration(days: 1)),
+    RecurrencePattern.weekly => current.add(const Duration(days: 7)),
+    RecurrencePattern.monthly =>
+      _clampedDate(current.year, current.month + 1, anchor.day),
+    RecurrencePattern.yearly =>
+      _clampedDate(current.year + 1, anchor.month, anchor.day),
+  };
+}
+
+DateTime _clampedDate(int year, int month, int day) {
+  final normalized = DateTime(year, month);
+  final lastDay = DateTime(normalized.year, normalized.month + 1, 0).day;
+  return DateTime(
+    normalized.year,
+    normalized.month,
+    day > lastDay ? lastDay : day,
+  );
 }
