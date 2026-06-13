@@ -62,7 +62,7 @@ class NotificationSchedulePlanner {
               occurrenceDate.month,
               occurrenceDate.day,
               9,
-            )
+            ).subtract(Duration(minutes: preferences.birthdayReminderMinutes))
           : eventStart.subtract(
               Duration(minutes: preferences.defaultReminderMinutes),
             );
@@ -86,7 +86,11 @@ class NotificationSchedulePlanner {
           eventId: event.id,
           kind: kind,
           title: isBirthday ? 'Birthday reminder' : 'Coming up',
-          body: isBirthday ? '${event.title} is today.' : event.title,
+          body: isBirthday
+              ? preferences.birthdayReminderMinutes == 0
+                    ? '${event.title} is today.'
+                    : '${event.title} is coming up.'
+              : event.title,
           scheduledAt: scheduledAt,
         );
       }

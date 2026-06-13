@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/notifications/notification_gateway.dart';
@@ -126,7 +127,7 @@ class _NotificationsModalState extends ConsumerState<NotificationsModal> {
                           _SwitchRow(
                             icon: Icons.cake_outlined,
                             title: 'Birthday reminders',
-                            subtitle: 'At 9:00 AM on the birthday',
+                            subtitle: 'Delivered at 9:00 AM',
                             value: preferences.birthdayReminders,
                             enabled: controlsEnabled,
                             onChanged: (value) => _save(
@@ -135,6 +136,40 @@ class _NotificationsModalState extends ConsumerState<NotificationsModal> {
                                     notificationPreferencesProvider.notifier,
                                   )
                                   .setBirthdayReminders(value),
+                            ),
+                          ),
+                          _Divider(),
+                          _ReminderTimingRow(
+                            menuKey: const Key('birthday-reminder-menu'),
+                            icon: Icons.notifications_none,
+                            title: 'Remind me',
+                            value: preferences.birthdayReminderMinutes,
+                            presets: const <int, String>{
+                              0: 'On the birthday',
+                              1440: '1 day before',
+                              10080: '1 week before',
+                            },
+                            enabled:
+                                controlsEnabled &&
+                                preferences.birthdayReminders,
+                            onChanged: (value) => _save(
+                              () => ref
+                                  .read(
+                                    notificationPreferencesProvider.notifier,
+                                  )
+                                  .setBirthdayReminderMinutes(value),
+                            ),
+                            onCustom: () => _pickCustomReminder(
+                              title: 'Custom birthday reminder',
+                              initialMinutes:
+                                  preferences.birthdayReminderMinutes == 0
+                                  ? 1440
+                                  : preferences.birthdayReminderMinutes,
+                              onSave: (value) => ref
+                                  .read(
+                                    notificationPreferencesProvider.notifier,
+                                  )
+                                  .setBirthdayReminderMinutes(value),
                             ),
                           ),
                         ],
@@ -159,12 +194,31 @@ class _NotificationsModalState extends ConsumerState<NotificationsModal> {
                             ),
                           ),
                           _Divider(),
-                          _ReminderLeadRow(
+                          _ReminderTimingRow(
+                            menuKey: const Key('default-reminder-menu'),
+                            icon: Icons.schedule_outlined,
+                            title: 'Default reminder',
                             value: preferences.defaultReminderMinutes,
+                            presets: const <int, String>{
+                              15: '15 minutes before',
+                              60: '1 hour before',
+                              1440: '1 day before',
+                              2880: '2 days before',
+                            },
                             enabled:
                                 controlsEnabled && preferences.plannerReminders,
                             onChanged: (value) => _save(
                               () => ref
+                                  .read(
+                                    notificationPreferencesProvider.notifier,
+                                  )
+                                  .setDefaultReminderMinutes(value),
+                            ),
+                            onCustom: () => _pickCustomReminder(
+                              title: 'Custom planner reminder',
+                              initialMinutes:
+                                  preferences.defaultReminderMinutes,
+                              onSave: (value) => ref
                                   .read(
                                     notificationPreferencesProvider.notifier,
                                   )
@@ -244,6 +298,20 @@ class _NotificationsModalState extends ConsumerState<NotificationsModal> {
             endMinutes: selection.endMinutes,
           ),
     );
+  }
+
+  Future<void> _pickCustomReminder({
+    required String title,
+    required int initialMinutes,
+    required Future<void> Function(int value) onSave,
+  }) async {
+    final minutes = await showDialog<int>(
+      context: context,
+      builder: (context) =>
+          _CustomReminderDialog(title: title, initialMinutes: initialMinutes),
+    );
+    if (minutes == null || !mounted) return;
+    await _save(() => onSave(minutes));
   }
 
   Future<void> _save(Future<void> Function() operation) async {
@@ -378,65 +446,64 @@ class _SwitchRow extends StatelessWidget {
   }
 }
 
-class _ReminderLeadRow extends StatelessWidget {
-  const _ReminderLeadRow({
+class _ReminderTimingRow extends StatelessWidget {
+  const _ReminderTimingRow({
+    required this.menuKey,
+    required this.icon,
+    required this.title,
     required this.value,
+    required this.presets,
     required this.enabled,
     required this.onChanged,
+    required this.onCustom,
   });
 
+  final Key menuKey;
+  final IconData icon;
+  final String title;
   final int value;
+  final Map<int, String> presets;
   final bool enabled;
   final ValueChanged<int> onChanged;
-
-  static const labels = <int, String>{
-    15: '15 minutes',
-    60: '1 hour',
-    1440: '1 day',
-    2880: '2 days',
-  };
+  final VoidCallback onCustom;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.space4,
-        vertical: AppSpacing.space3,
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.schedule_outlined,
-            color: enabled ? tokens.primary : tokens.inkSubtle,
-          ),
-          SizedBox(width: AppSpacing.space3),
-          Expanded(
-            child: Text(
-              'Default reminder',
-              style: AppTypography.body(
-                color: enabled ? tokens.ink : tokens.inkSubtle,
-              ).copyWith(fontWeight: FontWeight.w700),
-            ),
-          ),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<int>(
-              value: value,
-              onChanged: enabled
-                  ? (next) {
-                      if (next != null) onChanged(next);
-                    }
-                  : null,
-              items: [
-                for (final entry in labels.entries)
-                  DropdownMenuItem<int>(
-                    value: entry.key,
-                    child: Text(entry.value),
-                  ),
-              ],
-            ),
-          ),
+    final label = presets[value] ?? _formatReminderLead(value);
+    return _ActionRow(
+      icon: icon,
+      title: title,
+      subtitle: label,
+      enabled: enabled,
+      trailing: PopupMenuButton<int>(
+        key: menuKey,
+        enabled: enabled,
+        tooltip: 'Choose reminder time',
+        initialValue: presets.containsKey(value) ? value : null,
+        onSelected: (selection) {
+          if (selection == -1) {
+            onCustom();
+          } else {
+            onChanged(selection);
+          }
+        },
+        itemBuilder: (context) => [
+          for (final entry in presets.entries)
+            PopupMenuItem<int>(value: entry.key, child: Text(entry.value)),
+          const PopupMenuDivider(),
+          const PopupMenuItem<int>(value: -1, child: Text('Custom')),
         ],
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.space2,
+            vertical: AppSpacing.space2,
+          ),
+          child: Icon(
+            Icons.expand_more,
+            color: enabled ? tokens.inkMuted : tokens.inkSubtle,
+          ),
+        ),
       ),
     );
   }
@@ -464,17 +531,211 @@ class _QuietHoursRow extends StatelessWidget {
       hour: preferences.quietEndMinutes ~/ 60,
       minute: preferences.quietEndMinutes % 60,
     ).format(context);
-    return ListTile(
+    return InkWell(
       key: const Key('quiet-hours-editor-row'),
-      enabled: enabled,
-      leading: const Icon(Icons.access_time),
-      title: const Text('Set quiet hours'),
-      subtitle: Text('$start to $end'),
-      trailing: const Icon(Icons.chevron_right),
       onTap: enabled ? onTap : null,
-      textColor: tokens.ink,
-      iconColor: tokens.primary,
+      child: _ActionRow(
+        icon: Icons.access_time,
+        title: 'Custom schedule',
+        subtitle: '$start to $end',
+        enabled: enabled,
+        trailing: Icon(
+          Icons.chevron_right,
+          color: enabled ? tokens.primary : tokens.inkSubtle,
+        ),
+      ),
     );
+  }
+}
+
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.enabled,
+    required this.trailing,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool enabled;
+  final Widget trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.space4,
+        vertical: AppSpacing.space3,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: tokens.primaryTint,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: enabled ? tokens.primary : tokens.inkSubtle,
+              size: 21,
+            ),
+          ),
+          SizedBox(width: AppSpacing.space3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.body(
+                    color: enabled ? tokens.ink : tokens.inkSubtle,
+                  ).copyWith(fontWeight: FontWeight.w700),
+                ),
+                SizedBox(height: AppSpacing.space1),
+                Text(
+                  subtitle,
+                  style: AppTypography.caption(
+                    color: enabled ? tokens.inkMuted : tokens.inkSubtle,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: AppSpacing.space2),
+          trailing,
+        ],
+      ),
+    );
+  }
+}
+
+enum _ReminderUnit {
+  minutes('Minutes', 1),
+  hours('Hours', 60),
+  days('Days', 24 * 60),
+  weeks('Weeks', 7 * 24 * 60);
+
+  const _ReminderUnit(this.label, this.multiplier);
+
+  final String label;
+  final int multiplier;
+}
+
+class _CustomReminderDialog extends StatefulWidget {
+  const _CustomReminderDialog({
+    required this.title,
+    required this.initialMinutes,
+  });
+
+  final String title;
+  final int initialMinutes;
+
+  @override
+  State<_CustomReminderDialog> createState() => _CustomReminderDialogState();
+}
+
+class _CustomReminderDialogState extends State<_CustomReminderDialog> {
+  late final TextEditingController _amountController;
+  late _ReminderUnit _unit;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _unit = _bestUnit(widget.initialMinutes);
+    _amountController = TextEditingController(
+      text: (widget.initialMinutes ~/ _unit.multiplier).toString(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return AlertDialog(
+      key: const Key('custom-reminder-dialog'),
+      backgroundColor: tokens.surfaceRaised,
+      title: Text(
+        widget.title,
+        style: AppTypography.glyph(
+          22,
+          color: tokens.ink,
+          weight: FontWeight.w700,
+        ),
+      ),
+      content: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: TextField(
+              key: const Key('custom-reminder-amount'),
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                labelText: 'Amount',
+                errorText: _errorText,
+              ),
+            ),
+          ),
+          SizedBox(width: AppSpacing.space3),
+          DropdownButton<_ReminderUnit>(
+            key: const Key('custom-reminder-unit'),
+            value: _unit,
+            items: [
+              for (final unit in _ReminderUnit.values)
+                DropdownMenuItem<_ReminderUnit>(
+                  value: unit,
+                  child: Text(unit.label),
+                ),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _unit = value);
+            },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: Navigator.of(context).pop,
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _save, child: const Text('Save')),
+      ],
+    );
+  }
+
+  void _save() {
+    final amount = int.tryParse(_amountController.text);
+    final minutes = amount == null ? null : amount * _unit.multiplier;
+    if (minutes == null ||
+        !NotificationPreferences.isValidReminderMinutes(minutes)) {
+      setState(() {
+        _errorText = 'Choose a time from 1 minute to 1 year';
+      });
+      return;
+    }
+    Navigator.of(context).pop(minutes);
+  }
+
+  _ReminderUnit _bestUnit(int minutes) {
+    for (final unit in _ReminderUnit.values.reversed) {
+      if (minutes >= unit.multiplier && minutes % unit.multiplier == 0) {
+        return unit;
+      }
+    }
+    return _ReminderUnit.minutes;
   }
 }
 
@@ -587,7 +848,7 @@ class _QuietTimeRow extends StatelessWidget {
     final minute = minutes % 60;
     final hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
     final period = hour24 >= 12 ? 'PM' : 'AM';
-    final minuteOptions = <int>{0, 15, 30, 45, minute}.toList()..sort();
+    final minuteOptions = List<int>.generate(60, (index) => index);
 
     return Row(
       children: [
@@ -699,6 +960,23 @@ class _QuietTimeRow extends StatelessWidget {
     final hour24 = hour12 % 12 + (period == 'PM' ? 12 : 0);
     return hour24 * 60 + minute;
   }
+}
+
+String _formatReminderLead(int minutes) {
+  if (minutes == 0) return 'On the birthday';
+  if (minutes % (7 * 24 * 60) == 0) {
+    final weeks = minutes ~/ (7 * 24 * 60);
+    return '$weeks ${weeks == 1 ? 'week' : 'weeks'} before';
+  }
+  if (minutes % (24 * 60) == 0) {
+    final days = minutes ~/ (24 * 60);
+    return '$days ${days == 1 ? 'day' : 'days'} before';
+  }
+  if (minutes % 60 == 0) {
+    final hours = minutes ~/ 60;
+    return '$hours ${hours == 1 ? 'hour' : 'hours'} before';
+  }
+  return '$minutes minutes before';
 }
 
 class _PermissionWarning extends StatelessWidget {

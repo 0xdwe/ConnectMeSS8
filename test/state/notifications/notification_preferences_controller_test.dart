@@ -59,6 +59,23 @@ void main() {
     );
   });
 
+  test('persists custom planner and birthday lead times', () async {
+    final store = InMemoryUserDocStore();
+    final container = ProviderContainer(
+      overrides: [userDocStoreProvider.overrideWithValue(store)],
+    );
+    addTearDown(container.dispose);
+    addTearDown(store.dispose);
+    final controller = container.read(notificationPreferencesProvider.notifier);
+
+    await controller.setDefaultReminderMinutes(95);
+    await controller.setBirthdayReminderMinutes(7 * 24 * 60);
+
+    final preferences = container.read(notificationPreferencesProvider);
+    expect(preferences.defaultReminderMinutes, 95);
+    expect(preferences.birthdayReminderMinutes, 7 * 24 * 60);
+  });
+
   test('keeps the previous state when persistence fails', () async {
     final store = _FailingUserDocStore();
     final container = ProviderContainer(

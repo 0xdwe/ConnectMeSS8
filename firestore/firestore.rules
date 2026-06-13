@@ -321,6 +321,7 @@ service cloud.firestore {
           'plannerReminders',
           'birthdayReminders',
           'defaultReminderMinutes',
+          'birthdayReminderMinutes',
           'quietHoursEnabled',
           'quietStartMinutes',
           'quietEndMinutes',
@@ -344,7 +345,12 @@ service cloud.firestore {
         && data.plannerReminders is bool
         && data.birthdayReminders is bool
         && data.defaultReminderMinutes is int
-        && data.defaultReminderMinutes in [15, 60, 1440, 2880]
+        && data.defaultReminderMinutes >= 1
+        && data.defaultReminderMinutes <= 525600
+        && (!('birthdayReminderMinutes' in data.keys())
+            || (data.birthdayReminderMinutes is int
+                && data.birthdayReminderMinutes >= 0
+                && data.birthdayReminderMinutes <= 525600))
         && data.quietHoursEnabled is bool
         && data.quietStartMinutes is int
         && data.quietStartMinutes >= 0

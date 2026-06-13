@@ -51,12 +51,58 @@ void main() {
     expect(find.text('Suggested check-ins'), findsOneWidget);
     expect(find.text('Planner reminders'), findsOneWidget);
     expect(find.text('Birthday reminders'), findsOneWidget);
+    expect(find.text('Remind me'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Quiet hours'),
       250,
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.text('Quiet hours'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('birthday and planner timing menus include custom', (
+    tester,
+  ) async {
+    final container = await pump(tester);
+    await tester.tap(find.byType(Switch).first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('birthday-reminder-menu')));
+    await tester.pumpAndSettle();
+    expect(find.text('On the birthday'), findsWidgets);
+    expect(find.text('1 day before'), findsOneWidget);
+    expect(find.text('1 week before'), findsOneWidget);
+    expect(find.text('Custom'), findsOneWidget);
+    await tester.tap(find.text('1 week before'));
+    await tester.pumpAndSettle();
+    expect(
+      container.read(notificationPreferencesProvider).birthdayReminderMinutes,
+      7 * 24 * 60,
+    );
+
+    await tester.drag(find.byType(ListView).last, const Offset(0, -220));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('default-reminder-menu')));
+    await tester.pumpAndSettle();
+    expect(find.text('Custom'), findsOneWidget);
+    await tester.tap(find.text('Custom'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('custom-reminder-dialog')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('custom-reminder-amount')),
+      '95',
+    );
+    await tester.tap(find.byKey(const Key('custom-reminder-unit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Minutes').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(
+      container.read(notificationPreferencesProvider).defaultReminderMinutes,
+      95,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -123,15 +169,16 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('9').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('quiet-hours-start-minute')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('30').last);
+    final minuteDropdown = tester.widget<DropdownButton<int>>(
+      find.byKey(const Key('quiet-hours-start-minute')),
+    );
+    minuteDropdown.onChanged?.call(5);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
     final preferences = container.read(notificationPreferencesProvider);
-    expect(preferences.quietStartMinutes, 21 * 60 + 30);
+    expect(preferences.quietStartMinutes, 21 * 60 + 5);
     expect(preferences.quietEndMinutes, 8 * 60);
     expect(tester.takeException(), isNull);
   });

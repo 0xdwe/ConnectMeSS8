@@ -5,6 +5,7 @@ class NotificationPreferences {
     required this.plannerReminders,
     required this.birthdayReminders,
     required this.defaultReminderMinutes,
+    this.birthdayReminderMinutes = 0,
     required this.quietHoursEnabled,
     required this.quietStartMinutes,
     required this.quietEndMinutes,
@@ -17,6 +18,7 @@ class NotificationPreferences {
     this.plannerReminders = true,
     this.birthdayReminders = true,
     this.defaultReminderMinutes = 60,
+    this.birthdayReminderMinutes = 0,
     this.quietHoursEnabled = false,
     this.quietStartMinutes = 22 * 60,
     this.quietEndMinutes = 8 * 60,
@@ -25,12 +27,14 @@ class NotificationPreferences {
 
   static const int schemaVersion = 1;
   static const Set<int> supportedReminderMinutes = <int>{15, 60, 1440, 2880};
+  static const int maximumReminderMinutes = 365 * 24 * 60;
 
   final bool enabled;
   final bool suggestedCheckIns;
   final bool plannerReminders;
   final bool birthdayReminders;
   final int defaultReminderMinutes;
+  final int birthdayReminderMinutes;
   final bool quietHoursEnabled;
   final int quietStartMinutes;
   final int quietEndMinutes;
@@ -42,6 +46,7 @@ class NotificationPreferences {
     bool? plannerReminders,
     bool? birthdayReminders,
     int? defaultReminderMinutes,
+    int? birthdayReminderMinutes,
     bool? quietHoursEnabled,
     int? quietStartMinutes,
     int? quietEndMinutes,
@@ -54,6 +59,8 @@ class NotificationPreferences {
       birthdayReminders: birthdayReminders ?? this.birthdayReminders,
       defaultReminderMinutes:
           defaultReminderMinutes ?? this.defaultReminderMinutes,
+      birthdayReminderMinutes:
+          birthdayReminderMinutes ?? this.birthdayReminderMinutes,
       quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
       quietStartMinutes: quietStartMinutes ?? this.quietStartMinutes,
       quietEndMinutes: quietEndMinutes ?? this.quietEndMinutes,
@@ -67,6 +74,7 @@ class NotificationPreferences {
     'plannerReminders': plannerReminders,
     'birthdayReminders': birthdayReminders,
     'defaultReminderMinutes': defaultReminderMinutes,
+    'birthdayReminderMinutes': birthdayReminderMinutes,
     'quietHoursEnabled': quietHoursEnabled,
     'quietStartMinutes': quietStartMinutes,
     'quietEndMinutes': quietEndMinutes,
@@ -82,6 +90,7 @@ class NotificationPreferences {
     final plannerReminders = raw['plannerReminders'];
     final birthdayReminders = raw['birthdayReminders'];
     final defaultReminderMinutes = raw['defaultReminderMinutes'];
+    final birthdayReminderMinutes = raw['birthdayReminderMinutes'] ?? 0;
     final quietHoursEnabled = raw['quietHoursEnabled'];
     final quietStartMinutes = raw['quietStartMinutes'];
     final quietEndMinutes = raw['quietEndMinutes'];
@@ -94,7 +103,9 @@ class NotificationPreferences {
         plannerReminders is bool &&
         birthdayReminders is bool &&
         defaultReminderMinutes is int &&
-        supportedReminderMinutes.contains(defaultReminderMinutes) &&
+        isValidReminderMinutes(defaultReminderMinutes) &&
+        birthdayReminderMinutes is int &&
+        isValidBirthdayReminderMinutes(birthdayReminderMinutes) &&
         quietHoursEnabled is bool &&
         quietStartMinutes is int &&
         quietStartMinutes >= 0 &&
@@ -113,6 +124,7 @@ class NotificationPreferences {
       plannerReminders: plannerReminders,
       birthdayReminders: birthdayReminders,
       defaultReminderMinutes: defaultReminderMinutes,
+      birthdayReminderMinutes: birthdayReminderMinutes,
       quietHoursEnabled: quietHoursEnabled,
       quietStartMinutes: quietStartMinutes,
       quietEndMinutes: quietEndMinutes,
@@ -128,6 +140,7 @@ class NotificationPreferences {
         other.plannerReminders == plannerReminders &&
         other.birthdayReminders == birthdayReminders &&
         other.defaultReminderMinutes == defaultReminderMinutes &&
+        other.birthdayReminderMinutes == birthdayReminderMinutes &&
         other.quietHoursEnabled == quietHoursEnabled &&
         other.quietStartMinutes == quietStartMinutes &&
         other.quietEndMinutes == quietEndMinutes &&
@@ -141,9 +154,16 @@ class NotificationPreferences {
     plannerReminders,
     birthdayReminders,
     defaultReminderMinutes,
+    birthdayReminderMinutes,
     quietHoursEnabled,
     quietStartMinutes,
     quietEndMinutes,
     timeZone,
   );
+
+  static bool isValidReminderMinutes(int value) =>
+      value >= 1 && value <= maximumReminderMinutes;
+
+  static bool isValidBirthdayReminderMinutes(int value) =>
+      value >= 0 && value <= maximumReminderMinutes;
 }

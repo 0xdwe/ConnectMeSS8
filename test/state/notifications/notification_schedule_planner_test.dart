@@ -35,6 +35,7 @@ void main() {
     plannerReminders: true,
     birthdayReminders: true,
     defaultReminderMinutes: 60,
+    birthdayReminderMinutes: 0,
     quietHoursEnabled: false,
     quietStartMinutes: 22 * 60,
     quietEndMinutes: 8 * 60,
@@ -79,6 +80,35 @@ void main() {
 
     expect(schedules.single.kind, NotificationScheduleKind.birthday);
     expect(schedules.single.scheduledAt, DateTime(2026, 6, 14, 9));
+  });
+
+  test('birthday uses the configured lead time', () {
+    final schedules = planner.build(
+      events: [
+        event(
+          id: 'birthday',
+          date: DateTime(2026, 6, 21),
+          eventType: 'Birthday',
+          isAllDay: true,
+        ),
+      ],
+      preferences: enabled.copyWith(birthdayReminderMinutes: 7 * 24 * 60),
+      now: now,
+    );
+
+    expect(schedules.single.kind, NotificationScheduleKind.birthday);
+    expect(schedules.single.scheduledAt, DateTime(2026, 6, 14, 9));
+    expect(schedules.single.body, contains('coming up'));
+  });
+
+  test('planner accepts a custom reminder lead time', () {
+    final schedules = planner.build(
+      events: [event(id: 'meeting', date: DateTime(2026, 6, 13))],
+      preferences: enabled.copyWith(defaultReminderMinutes: 95),
+      now: now,
+    );
+
+    expect(schedules.single.scheduledAt, DateTime(2026, 6, 13, 8, 25));
   });
 
   test('channel switches independently suppress planner and birthdays', () {

@@ -19,9 +19,10 @@ check-ins use Firebase Cloud Messaging.
   current FCM token.
 - `Suggested check-ins` sends at most one gentle recommendation per local day.
 - `Planner reminders` schedules non-birthday PlannerEvents using one global
-  lead time. The initial choices are 15 minutes, 1 hour, 1 day, and 2 days.
+  lead time. Presets are 15 minutes, 1 hour, 1 day, and 2 days, with a custom
+  minutes/hours/days/weeks option.
 - `Birthday reminders` schedules Birthday PlannerEvents for 9:00 AM on the
-  event date.
+  event date, 1 day before, 1 week before, or a custom lead time.
 - `Quiet hours` defer a notification to the quiet-hours end. A planner
   reminder is dropped if deferral would move it past the event start.
 - Permission-denied UI explains that ConnectMe cannot notify and offers an
@@ -42,6 +43,7 @@ The map contains:
 - `plannerReminders`
 - `birthdayReminders`
 - `defaultReminderMinutes`
+- `birthdayReminderMinutes`
 - `quietHoursEnabled`
 - `quietStartMinutes`
 - `quietEndMinutes`

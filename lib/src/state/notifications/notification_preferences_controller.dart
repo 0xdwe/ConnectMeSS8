@@ -40,12 +40,21 @@ class NotificationPreferencesController
       _save(state.copyWith(birthdayReminders: value));
 
   Future<void> setDefaultReminderMinutes(int value) {
-    if (!NotificationPreferences.supportedReminderMinutes.contains(value)) {
+    if (!NotificationPreferences.isValidReminderMinutes(value)) {
       return Future<void>.error(
-        ArgumentError.value(value, 'value', 'Unsupported reminder lead time'),
+        ArgumentError.value(value, 'value', 'Invalid reminder lead time'),
       );
     }
     return _save(state.copyWith(defaultReminderMinutes: value));
+  }
+
+  Future<void> setBirthdayReminderMinutes(int value) {
+    if (!NotificationPreferences.isValidBirthdayReminderMinutes(value)) {
+      return Future<void>.error(
+        ArgumentError.value(value, 'value', 'Invalid birthday lead time'),
+      );
+    }
+    return _save(state.copyWith(birthdayReminderMinutes: value));
   }
 
   Future<void> setQuietHoursEnabled(bool value) =>

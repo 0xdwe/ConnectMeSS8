@@ -96,6 +96,7 @@ function wellFormedNotificationPreferences(overrides = {}) {
     plannerReminders: true,
     birthdayReminders: true,
     defaultReminderMinutes: 60,
+    birthdayReminderMinutes: 0,
     quietHoursEnabled: true,
     quietStartMinutes: 1320,
     quietEndMinutes: 480,
@@ -396,7 +397,18 @@ describe('users/{uid} — sentinel ownership', () => {
     await assertFails(
       setDoc(userDocRef(authedDb(ALICE), ALICE), {
         notificationPreferences: wellFormedNotificationPreferences({
-          defaultReminderMinutes: 99,
+          birthdayReminderMinutes: -1,
+        }),
+      }),
+    );
+  });
+
+  test('owner can persist custom planner and birthday lead times', async () => {
+    await assertSucceeds(
+      setDoc(userDocRef(authedDb(ALICE), ALICE), {
+        notificationPreferences: wellFormedNotificationPreferences({
+          defaultReminderMinutes: 95,
+          birthdayReminderMinutes: 10080,
         }),
       }),
     );
