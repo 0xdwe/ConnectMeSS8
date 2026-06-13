@@ -643,31 +643,53 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
             // Contact match row
             Row(
               children: [
-                Text(person.avatar, style: const TextStyle(fontSize: 32)),
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: tokens.primaryTint,
+                  backgroundImage: connectionAvatarImage(person.avatar),
+                  child: connectionAvatarImage(person.avatar) == null
+                      ? Text(
+                          person.avatar,
+                          style: const TextStyle(fontSize: 20),
+                        )
+                      : null,
+                ),
                 SizedBox(width: AppSpacing.space3),
                 Expanded(
-                  child: Text(person.name, style: AppTypography.bodyLg()),
+                  child: Text(
+                    person.name,
+                    style: AppTypography.bodyLg(),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                 ),
+                SizedBox(width: AppSpacing.space2),
                 // AI suggested tag
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.space2,
-                    vertical: AppSpacing.space1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tokens.primaryTint,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.auto_awesome, size: 14, color: tokens.primary),
-                      SizedBox(width: AppSpacing.space1),
-                      Text(
-                        'AI suggested',
-                        style: AppTypography.caption(color: tokens.primary),
-                      ),
-                    ],
+                Flexible(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.space2,
+                      vertical: AppSpacing.space1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: tokens.primaryTint,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.auto_awesome, size: 14, color: tokens.primary),
+                        SizedBox(width: AppSpacing.space1),
+                        Flexible(
+                          child: Text(
+                            'AI suggested',
+                            style: AppTypography.caption(color: tokens.primary),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

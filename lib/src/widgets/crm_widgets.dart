@@ -36,7 +36,7 @@ List<String> _parseMemoryHistoryLines(MemoryDocument memory) {
   return lines;
 }
 
-ImageProvider<Object>? _connectionAvatarImage(String avatar) {
+ImageProvider<Object>? connectionAvatarImage(String avatar) {
   final trimmed = avatar.trim();
   if (!trimmed.startsWith('data:image/')) return null;
 
@@ -263,10 +263,10 @@ class _ContactListCardState extends State<ContactListCard> {
               CircleAvatar(
                 radius: 30,
                 backgroundColor: tokens.primaryTint,
-                backgroundImage: _connectionAvatarImage(
+                backgroundImage: connectionAvatarImage(
                   widget.connection.avatar,
                 ),
-                child: _connectionAvatarImage(widget.connection.avatar) == null
+                child: connectionAvatarImage(widget.connection.avatar) == null
                     ? Text(
                         widget.connection.avatar,
                         style: AppTypography.glyph(26),
@@ -403,8 +403,8 @@ class RecommendationCard extends StatelessWidget {
           CircleAvatar(
             radius: 22,
             backgroundColor: tokens.primaryTint,
-            backgroundImage: _connectionAvatarImage(connection.avatar),
-            child: _connectionAvatarImage(connection.avatar) == null
+            backgroundImage: connectionAvatarImage(connection.avatar),
+            child: connectionAvatarImage(connection.avatar) == null
                 ? Text(
                     connection.avatar,
                     style: AppTypography.glyph(20, color: tokens.primary),
