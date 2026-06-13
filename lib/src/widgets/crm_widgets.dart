@@ -478,6 +478,16 @@ String _recommendationPriority(int score) => score < 55 ? 'High' : 'Medium';
 Color _recommendationPriorityColor(int score, AppTokens tokens) =>
     score < 55 ? tokens.danger : tokens.secondary;
 
+/// Returns a strength label based on the total number of interactions
+/// logged for a category over the last 12 months.
+String _categoryStrengthLabel(int totalInteractions) {
+  if (totalInteractions == 0) return 'Inactive';
+  if (totalInteractions <= 3) return 'Light';
+  if (totalInteractions <= 8) return 'Moderate';
+  if (totalInteractions <= 15) return 'Strong';
+  return 'Very Strong';
+}
+
 /// Returns the category-color mapping per DESIGN.md.
 Color categoryColor(String category, AppTokens tokens) {
   return switch (category) {
@@ -503,32 +513,27 @@ class HeatmapCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     const categories = [
-      _HeatmapCategory(
-        label: 'Family',
-        icon: Icons.home_outlined,
-        strength: 'Very Strong',
-      ),
-      _HeatmapCategory(
-        label: 'Friends',
-        icon: Icons.groups_2_outlined,
-        strength: 'Strong',
-      ),
-      _HeatmapCategory(
-        label: 'High School',
-        icon: Icons.school_outlined,
-        strength: 'Moderate',
-      ),
-      _HeatmapCategory(
-        label: 'College',
-        icon: Icons.work_outline,
-        strength: 'Light',
-      ),
-      _HeatmapCategory(
-        label: 'Work',
-        icon: Icons.business_center_outlined,
-        strength: 'Building',
-      ),
+      _HeatmapCategory(label: 'Family', icon: Icons.home_outlined),
+      _HeatmapCategory(label: 'Friends', icon: Icons.groups_2_outlined),
+      _HeatmapCategory(label: 'High School', icon: Icons.school_outlined),
+      _HeatmapCategory(label: 'College', icon: Icons.work_outline),
+      _HeatmapCategory(label: 'Work', icon: Icons.business_center_outlined),
     ];
+
+    // Compute total interaction count per category over all time.
+    final interactionCountByCategory = <String, int>{
+      for (final cat in categories) cat.label: 0,
+    };
+    final contactCategoryById = {
+      for (final c in connections) c.id: c.category,
+    };
+    for (final interaction in interactions) {
+      final cat = contactCategoryById[interaction.contactId];
+      if (cat != null && interactionCountByCategory.containsKey(cat)) {
+        interactionCountByCategory[cat] = interactionCountByCategory[cat]! + 1;
+      }
+    }
+
     return CardBox(
       padding: EdgeInsets.all(AppSpacing.space5),
       child: Column(
@@ -576,6 +581,9 @@ class HeatmapCard extends StatelessWidget {
               connections: connections,
               interactions: interactions,
               categoryLabel: categories[i].label,
+              strength: _categoryStrengthLabel(
+                interactionCountByCategory[categories[i].label] ?? 0,
+              ),
             ),
             if (i != categories.length - 1)
               Divider(height: AppSpacing.space5, color: tokens.border),
@@ -587,15 +595,10 @@ class HeatmapCard extends StatelessWidget {
 }
 
 class _HeatmapCategory {
-  const _HeatmapCategory({
-    required this.label,
-    required this.icon,
-    required this.strength,
-  });
+  const _HeatmapCategory({required this.label, required this.icon});
 
   final String label;
   final IconData icon;
-  final String strength;
 }
 
 class _HeatmapRow extends StatelessWidget {
@@ -606,6 +609,7 @@ class _HeatmapRow extends StatelessWidget {
     required this.connections,
     required this.interactions,
     required this.categoryLabel,
+    required this.strength,
   });
   final _HeatmapCategory category;
   final int count;
@@ -613,6 +617,7 @@ class _HeatmapRow extends StatelessWidget {
   final List<Connection> connections;
   final List<CrmInteraction> interactions;
   final String categoryLabel;
+  final String strength;
 
   @override
   Widget build(BuildContext context) {
@@ -659,7 +664,7 @@ class _HeatmapRow extends StatelessWidget {
                       borderRadius: BorderRadius.circular(AppRadius.pill),
                     ),
                     child: Text(
-                      category.strength,
+                      strength,
                       style: AppTypography.caption(
                         color: color,
                       ).copyWith(fontWeight: FontWeight.w700),
@@ -687,13 +692,14 @@ class _HeatmapRow extends StatelessWidget {
     });
 
     // Only count interactions for connections in this category.
-    final categoryContactIds = this.connections
+    final categoryContactIds = connections
         .where((c) => c.category == categoryLabel)
         .map((c) => c.id)
         .toSet();
 
-    final counts = Map<String, Set<String>>.fromEntries(
-      months.map((m) => MapEntry(_monthKey(m), <String>{})),
+    // Count total interactions per month for this category.
+    final counts = Map<String, int>.fromEntries(
+      months.map((m) => MapEntry(_monthKey(m), 0)),
     );
 
     for (final interaction in interactions) {
@@ -702,16 +708,25 @@ class _HeatmapRow extends StatelessWidget {
         DateTime(interaction.date.year, interaction.date.month, 1),
       );
       if (counts.containsKey(key)) {
-        counts[key]!.add(interaction.contactId);
+        counts[key] = counts[key]! + 1;
       }
     }
+
+    // Normalize against the month with the most interactions so intensity is relative.
+    final maxCount = counts.values.fold(0, (a, b) => a > b ? a : b);
 
     return months.asMap().entries.map((entry) {
       final i = entry.key;
       final m = entry.value;
-      final count = counts[_monthKey(m)]?.length ?? 0;
-      final activity = (i * 19 + category.label.length * 7) % 100;
-      final muted = i > 8 && activity.isEven;
+      final count = counts[_monthKey(m)] ?? 0;
+
+      final double alpha;
+      if (count == 0 || maxCount == 0) {
+        alpha = 0;
+      } else {
+        // Scale from 0.20 (1 interaction) to 0.90 (max interactions).
+        alpha = 0.20 + (count / maxCount) * 0.70;
+      }
 
       return Expanded(
         child: Padding(
@@ -732,15 +747,15 @@ class _HeatmapRow extends StatelessWidget {
               ],
             ),
             textStyle: TextStyle(color: tokens.ink),
-            message: '${DateFormat.MMM().format(m)}\n$count connections',
+            message: '${DateFormat.MMM().format(m)}\n$count interaction${count == 1 ? '' : 's'}',
             child: Container(
               width: 18,
               height: 18,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: muted
+                color: count == 0
                     ? tokens.surfaceSunken
-                    : color.withValues(alpha: .35 + (activity % 55) / 100),
+                    : color.withValues(alpha: alpha),
               ),
             ),
           ),
