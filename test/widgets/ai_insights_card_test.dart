@@ -1,18 +1,34 @@
+import 'dart:async';
+
 import 'package:connect_me/src/models/social_models.dart';
 import 'package:connect_me/src/state/memory/memory_document.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
 import 'package:connect_me/src/widgets/crm_widgets.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:connect_me/src/state/memory/memory_providers.dart';
+import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
+import 'package:connect_me/src/state/memory/memory_topic_backfill_runner.dart';
+import 'package:connect_me/src/state/query_providers.dart';
+import 'package:connect_me/src/ai/memory_topic_enricher.dart';
 
 // Builds a minimal MaterialApp wrapper with the project's theme so that
 // `context.tokens` resolves and Material-required ancestors are present.
-Widget _wrap(Widget child, {bool disableAnimations = false}) {
-  return MaterialApp(
-    theme: AppTheme.data(false),
-    home: MediaQuery(
-      data: MediaQueryData(disableAnimations: disableAnimations),
-      child: Scaffold(body: SingleChildScrollView(child: child)),
+Widget _wrap(
+  Widget child, {
+  bool disableAnimations = false,
+  List<dynamic> overrides = const [],
+}) {
+  return ProviderScope(
+    overrides: [...overrides],
+    child: MaterialApp(
+      theme: AppTheme.data(false),
+      home: MediaQuery(
+        data: MediaQueryData(disableAnimations: disableAnimations),
+        child: Scaffold(body: SingleChildScrollView(child: child)),
+      ),
     ),
   );
 }
@@ -282,10 +298,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Share a café rec if you spot one.'), findsOneWidget);
-      expect(
-        find.text('Suggest a quick call before the trip.'),
-        findsNothing,
-      );
+      expect(find.text('Suggest a quick call before the trip.'), findsNothing);
     });
 
     testWidgets('selected topic does not show another topic suggestion', (
@@ -402,7 +415,8 @@ void main() {
                       TopicSuggestion(
                         kind: TopicSuggestionKind.ask,
                         text: 'Ask how the Paris plans are coming together.',
-                        context: 'he talked about his plan to Paris last time and he was very excited about it',
+                        context:
+                            'he talked about his plan to Paris last time and he was very excited about it',
                       ),
                     ],
                   ),
@@ -417,8 +431,16 @@ void main() {
 
         expect(find.text('Conversation Starter :'), findsWidgets);
         expect(find.text('Context :'), findsWidgets);
-        expect(find.text('Ask how the Paris plans are coming together.'), findsOneWidget);
-        expect(find.text('he talked about his plan to Paris last time and he was very excited about it'), findsOneWidget);
+        expect(
+          find.text('Ask how the Paris plans are coming together.'),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            'he talked about his plan to Paris last time and he was very excited about it',
+          ),
+          findsOneWidget,
+        );
       },
     );
 
@@ -571,5 +593,175 @@ void main() {
       await tester.pumpAndSettle(const Duration(milliseconds: 50));
       expect(find.text('Recommendation'), findsNothing);
     });
+
+    testWidgets('refresh button is present in card header', (tester) async {
+      await tester.pumpWidget(
+        _wrap(AiInsightsCard(connection: _connection(), insight: _insight())),
+      );
+      await tester.pump();
+      expect(
+        find.byKey(const Key('ai-insights-refresh-button')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'tapping refresh button does not toggle expand/collapse state',
+      (tester) async {
+        final mockEnricher = FakeMemoryTopicEnricher(
+          topicsToReturn: const ['pottery'],
+          suggestionsToReturn: const [],
+        );
+        final mockStore = InMemoryMemoryStore();
+
+        await tester.pumpWidget(
+          _wrap(
+            AiInsightsCard(connection: _connection(), insight: _insight()),
+            overrides: [
+              memoryTopicEnricherProvider.overrideWithValue(mockEnricher),
+              memoryStoreProvider.overrideWithValue(mockStore),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        // Expanded by default
+        expect(find.text('Recommendation'), findsOneWidget);
+
+        // Tap refresh
+        await tester.tap(find.byKey(const Key('ai-insights-refresh-button')));
+        await tester.pumpAndSettle();
+
+        // Still expanded!
+        expect(find.text('Recommendation'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'refresh success path updates memory document and shows SnackBar',
+      (tester) async {
+        final completer = Completer<MemoryDocument>();
+        final mockEnricher = DelayingMemoryTopicEnricher(completer.future);
+        final mockStore = InMemoryMemoryStore();
+        final clockTime = DateTime.utc(2026, 6, 13, 21, 0, 0);
+
+        await tester.pumpWidget(
+          _wrap(
+            AiInsightsCard(connection: _connection(), insight: _insight()),
+            overrides: [
+              memoryTopicEnricherProvider.overrideWithValue(mockEnricher),
+              memoryStoreProvider.overrideWithValue(mockStore),
+              clockProvider.overrideWithValue(() => clockTime),
+              interactionsByContactProvider('test').overrideWithValue(const []),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        // Tap refresh
+        await tester.tap(find.byKey(const Key('ai-insights-refresh-button')));
+
+        // Pump to trigger async start (shows loading spinner)
+        await tester.pump();
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(
+          find.byKey(const Key('ai-insights-refresh-button')),
+          findsNothing,
+        );
+
+        // Complete the future
+        completer.complete(
+          MemoryDocument(
+            contactId: 'test',
+            displayName: 'Test Person',
+            lastUpdated: clockTime,
+            topics: const ['hiking'],
+            topicSuggestions: const [
+              TopicSuggestionGroup(
+                topic: 'hiking',
+                suggestions: [
+                  TopicSuggestion(
+                    kind: TopicSuggestionKind.ask,
+                    text: 'Ask about their hiking trip.',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+
+        // Finish async work
+        await tester.pumpAndSettle();
+
+        // SnackBar shows success
+        expect(find.text('AI Insights refreshed.'), findsOneWidget);
+        expect(
+          find.byKey(const Key('ai-insights-refresh-button')),
+          findsOneWidget,
+        );
+
+        // Check saved document in mock store
+        final savedDoc = await mockStore.load('test');
+        expect(savedDoc, isNotNull);
+        expect(savedDoc!.topics, contains('hiking'));
+        expect(savedDoc.lastUpdated, clockTime);
+      },
+    );
+
+    testWidgets(
+      'refresh failure path shows SnackBar with error and restores button',
+      (tester) async {
+        final mockEnricher = FakeMemoryTopicEnricher(
+          topicsToReturn: const [],
+          suggestionsToReturn: const [],
+          failOnNetwork: true,
+        );
+        final mockStore = InMemoryMemoryStore();
+
+        await tester.pumpWidget(
+          _wrap(
+            AiInsightsCard(connection: _connection(), insight: _insight()),
+            overrides: [
+              memoryTopicEnricherProvider.overrideWithValue(mockEnricher),
+              memoryStoreProvider.overrideWithValue(mockStore),
+              interactionsByContactProvider('test').overrideWithValue(const []),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        // Tap refresh
+        await tester.tap(find.byKey(const Key('ai-insights-refresh-button')));
+        await tester.pump(); // Start async work
+        await tester.pumpAndSettle(); // Finish async work
+
+        // SnackBar shows failure
+        expect(
+          find.text(
+            'Failed to refresh AI Insights: MemoryTopicEnricherFailure: Injected network failure',
+          ),
+          findsOneWidget,
+        );
+        // Button is restored
+        expect(
+          find.byKey(const Key('ai-insights-refresh-button')),
+          findsOneWidget,
+        );
+      },
+    );
   });
+}
+
+class DelayingMemoryTopicEnricher implements MemoryTopicEnricher {
+  DelayingMemoryTopicEnricher(this.future);
+  final Future<MemoryDocument> future;
+
+  @override
+  Future<MemoryDocument> enrich({
+    required Connection contact,
+    required MemoryDocument currentMemory,
+    required List<CrmInteraction> recentInteractions,
+  }) {
+    return future;
+  }
 }
