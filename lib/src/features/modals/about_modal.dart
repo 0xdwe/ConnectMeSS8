@@ -153,63 +153,23 @@ class AboutModal extends StatelessWidget {
                       },
                     ),
                     SizedBox(height: AppSpacing.space6),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Feedback features coming soon!',
-                                    style: TextStyle(color: tokens.primaryOn),
-                                  ),
-                                  backgroundColor: tokens.primary,
-                                ),
-                              );
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: tokens.ink,
-                              side: BorderSide(color: tokens.border),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.md,
-                                ),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: Text(
-                              'Send Feedback',
-                              style: AppTypography.body().copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: tokens.primary,
+                        foregroundColor: tokens.primaryOn,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
-                        SizedBox(width: AppSpacing.space3),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: tokens.primary,
-                              foregroundColor: tokens.primaryOn,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.md,
-                                ),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: Text(
-                              'Done',
-                              style: AppTypography.body().copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        'Done',
+                        style: AppTypography.body().copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),

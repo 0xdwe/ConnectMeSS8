@@ -59,9 +59,9 @@ void main() {
       findsOneWidget,
     );
 
-    // Verify buttons are present
+    // The About sheet has one clear dismissal action.
     expect(find.text('Done'), findsOneWidget);
-    expect(find.text('Send Feedback'), findsOneWidget);
+    expect(find.text('Send Feedback'), findsNothing);
   });
 
   testWidgets('Done button dismisses the AboutModal', (
@@ -77,15 +77,4 @@ void main() {
     expect(find.byType(AboutModal), findsNothing);
   });
 
-  testWidgets('Send Feedback shows a SnackBar', (
-    WidgetTester tester,
-  ) async {
-    await _pumpSettings(tester);
-    await _openAboutSheet(tester);
-
-    await tester.tap(find.text('Send Feedback'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Feedback features coming soon!'), findsOneWidget);
-  });
 }
