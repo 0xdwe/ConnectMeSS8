@@ -47,18 +47,22 @@ class UpcomingEntry {
 enum TopicSuggestionKind { ask, share, plan, remember }
 
 class TopicSuggestion {
-  const TopicSuggestion({required this.kind, required this.text});
+  const TopicSuggestion({required this.kind, required this.text, this.context});
 
   final TopicSuggestionKind kind;
   final String text;
+  final String? context;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is TopicSuggestion && kind == other.kind && text == other.text;
+      other is TopicSuggestion &&
+          kind == other.kind &&
+          text == other.text &&
+          context == other.context;
 
   @override
-  int get hashCode => Object.hash(kind, text);
+  int get hashCode => Object.hash(kind, text, context);
 }
 
 class TopicSuggestionGroup {
@@ -317,9 +321,15 @@ class MemoryDocument {
       buf.writeln('mentionCount: ${group.mentionCount}');
       buf.writeln('expiresAt: ${_formatNullableDate(group.expiresAt)}');
       for (final suggestion in group.suggestions.take(3)) {
-        buf.writeln(
-          '- ${_renderTopicSuggestionKind(suggestion.kind)}: ${suggestion.text}',
-        );
+        if (suggestion.context != null && suggestion.context!.isNotEmpty) {
+          buf.writeln(
+            '- ${_renderTopicSuggestionKind(suggestion.kind)}: ${suggestion.text} | ${suggestion.context}',
+          );
+        } else {
+          buf.writeln(
+            '- ${_renderTopicSuggestionKind(suggestion.kind)}: ${suggestion.text}',
+          );
+        }
       }
     }
 
@@ -475,9 +485,20 @@ class MemoryDocument {
     final separator = raw.indexOf(':');
     if (separator <= 0) return null;
     final kind = _parseTopicSuggestionKind(raw.substring(0, separator).trim());
-    final text = raw.substring(separator + 1).trim();
-    if (kind == null || text.isEmpty) return null;
-    return TopicSuggestion(kind: kind, text: text);
+    final rest = raw.substring(separator + 1).trim();
+    if (kind == null || rest.isEmpty) return null;
+
+    final pipeIndex = rest.indexOf(' | ');
+    String text;
+    String? context;
+    if (pipeIndex >= 0) {
+      text = rest.substring(0, pipeIndex).trim();
+      context = rest.substring(pipeIndex + 3).trim();
+      if (context.isEmpty) context = null;
+    } else {
+      text = rest;
+    }
+    return TopicSuggestion(kind: kind, text: text, context: context);
   }
 
   static TopicSuggestionKind? _parseTopicSuggestionKind(String raw) {

@@ -41,7 +41,7 @@ Strict Guardrails:
 1. Topics: Extracted topics must be lowercase, <= 3 words, and ranked by current relevance/importance. Do NOT include generic topics (like 'family', 'friends', 'work', 'college', 'high school') if there are more specific and useful topics available in the contact's context.
 2. Phrasing and Anti-shame Guardrail: Suggestions must be personal, context-rich, gentle, and supportive. Connect the suggestions to past discussions, notes, or upcoming events from the contact's context when possible (e.g., "You talked about X last time, consider asking Y", "Since X is going to Y, maybe ask Z", "Since X mentioned Y, follow up on Z"). NEVER use numeric day counts (e.g., "you haven't talked in 47 days", "it has been 3 weeks") or guilt-tripping language (e.g., "neglecting", "have not", "forgot").
 3. Scoping: Each suggestion must be strictly scoped to its associated topic. Do not mix context or mention other topics in the suggestion.
-4. Suggestions: Group suggestions by topic. Each suggestion must have a kind ("ask", "share", "plan", or "remember") and a text containing one gentle action idea.
+4. Suggestions: Group suggestions by topic. Each suggestion must have a kind ("ask", "share", "plan", or "remember"), a text containing one gentle action idea (the conversation starter), and a context containing the specific reason/context from memory why this suggestion makes sense.
 ''';
 
 /// Production [MemoryTopicEnricher] adapter backed by Firebase AI Logic.
@@ -264,6 +264,7 @@ class LlmMemoryTopicEnricher implements MemoryTopicEnricher {
               (s) => TopicSuggestion(
                 kind: _toMemoryTopicSuggestionKind(s.kind),
                 text: s.text,
+                context: s.context,
               ),
             )
             .take(3)
@@ -347,6 +348,9 @@ final Schema kMemoryTopicEnricherResponseSchema = Schema.object(
                 ),
                 'text': Schema.string(
                   description: 'Actionable suggestion. No day counts.',
+                ),
+                'context': Schema.string(
+                  description: 'The specific reason or context from memory why this suggestion makes sense. No guilt phrasing and no numeric day counts.',
                 ),
               },
             ),

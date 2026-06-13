@@ -1307,7 +1307,12 @@ class _InlineTopicDetails extends StatelessWidget {
     );
     final displaySuggestions = suggestions.isNotEmpty
         ? suggestions
-        : const <String>['Ask an open question about how they\'ve been'];
+        : const <TopicSuggestion>[
+            TopicSuggestion(
+              kind: TopicSuggestionKind.ask,
+              text: 'Ask an open question about how they\'ve been',
+            ),
+          ];
     return Container(
       width: double.infinity,
       margin: EdgeInsets.only(top: AppSpacing.space3),
@@ -1359,9 +1364,41 @@ class _InlineTopicDetails extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Text(
-                  suggestion,
-                  style: AppTypography.body(color: _recommendationBodyColor),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (suggestion.context != null && suggestion.context!.isNotEmpty) ...[
+                      RichText(
+                        text: TextSpan(
+                          style: AppTypography.body(color: _recommendationBodyColor),
+                          children: [
+                            const TextSpan(
+                              text: 'conversation starter : ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            TextSpan(text: suggestion.text),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: AppSpacing.space1),
+                      RichText(
+                        text: TextSpan(
+                          style: AppTypography.body(color: _recommendationBodyColor),
+                          children: [
+                            const TextSpan(
+                              text: 'Context : ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            TextSpan(text: suggestion.context),
+                          ],
+                        ),
+                      ),
+                    ] else
+                      Text(
+                        suggestion.text,
+                        style: AppTypography.body(color: _recommendationBodyColor),
+                      ),
+                  ],
                 ),
               ),
             ),

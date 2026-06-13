@@ -90,8 +90,8 @@ schema; violating these rules causes the update to be rejected):
   "appointment", "celebration", or "other".
 - memoryUpdate.topicSuggestions: for newly-added topics and
   existing topics clearly touched by this update, prepare at most
-  three gentle action ideas. Each suggestion must use kind "ask",
-  "share", "plan", or "remember" and one brief text. Use today's
+  three gentle action ideas. Each suggestion must contain kind "ask",
+  "share", "plan", or "remember", one brief text (the conversation starter), and a context string explaining the specific reason/context from memory/recent interactions why this suggestion makes sense. Use today's
   ISO date for lastMentionedAt. Only set expiresAt when the idea is
   time-sensitive. Do not generate suggestions for untouched topics.
   Topic Suggestions must be warm, specific, and non-shaming; never
@@ -184,13 +184,11 @@ schema; violating these rules causes the update to be rejected):
   "appointment", "celebration", or "other".
 - memoryUpdate.topicSuggestions: for newly-added topics and
   existing topics clearly touched by this update, prepare at most
-  three gentle action ideas. Each suggestion must use kind "ask",
-  "share", "plan", or "remember" and one brief text. Use today's
+  three gentle action ideas. Each suggestion must contain kind "ask",
+  "share", "plan", or "remember", one brief text (the conversation starter), and a context string explaining the specific reason/context from memory/recent interactions why this suggestion makes sense (e.g., "he talked about his plan to paris last time and he was very excited about it"). Use today's
   ISO date for lastMentionedAt. Only set expiresAt when the idea is
   time-sensitive. Do not generate suggestions for untouched topics.
-  Topic Suggestions must be warm, specific, context-rich (referencing
-  past context or future plans/events when possible, e.g., "You talked about
-  X last time, consider asking Y", "Since X is going to Y, maybe ask Z"), and
+  Topic Suggestions must be warm, specific, context-rich, and
   non-shaming (never mention numeric day counts or guilt).
 - nextStep: one concrete, gentle suggestion ≤80 chars for the
   user's next interaction. Phrased as something the user could
