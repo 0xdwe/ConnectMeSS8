@@ -196,28 +196,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
           ),
         ),
-        actions: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 40,
-              margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: tokens.border),
-              ),
-              child: IconButton(
-                icon: Icon(
-                  Icons.save_outlined,
-                  color: tokens.primary,
-                  size: 18,
-                ),
-                onPressed: _saving ? null : _saveChanges,
-                padding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -386,62 +364,70 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // ─── Save & Cancel Outlined/Shadowed Pill Buttons ───
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        foregroundColor: tokens.inkSubtle,
-                        side: BorderSide(color: tokens.border),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(
-                        'Cancel',
-                        style: AppTypography.body().copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.space5,
+            0,
+            AppSpacing.space5,
+            AppSpacing.space4,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    foregroundColor: tokens.inkSubtle,
+                    side: BorderSide(color: tokens.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    'Cancel',
+                    style: AppTypography.body().copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: tokens.primary.withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: tokens.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: tokens.primary.withValues(alpha: 0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: tokens.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        key: const Key('profile-save-button'),
-                        onPressed: _saving ? null : _saveChanges,
-                        child: Text(
-                          _saving ? 'Saving…' : 'Save Changes',
-                          style: AppTypography.body(
-                            color: Colors.white,
-                          ).copyWith(fontWeight: FontWeight.w600),
-                        ),
                       ),
                     ),
+                    key: const Key('profile-save-button'),
+                    onPressed: _saving ? null : _saveChanges,
+                    child: Text(
+                      _saving ? 'Saving…' : 'Save Changes',
+                      style: AppTypography.body(
+                        color: Colors.white,
+                      ).copyWith(fontWeight: FontWeight.w600),
+                    ),
                   ),
-                ],
+                ),
               ),
             ],
           ),
