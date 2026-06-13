@@ -34,9 +34,9 @@ class LlmTopicSuggestion {
   final String text;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'kind': kind.name,
-        'text': text,
-      };
+    'kind': kind.name,
+    'text': text,
+  };
 
   factory LlmTopicSuggestion.fromJson(Map<String, dynamic> json) {
     final kindRaw = _requireString(json, 'kind');
@@ -72,12 +72,12 @@ class LlmTopicSuggestionGroup {
   final List<LlmTopicSuggestion> suggestions;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'topic': topic,
-        if (lastMentionedAt != null) 'lastMentionedAt': lastMentionedAt,
-        if (mentionCount != null) 'mentionCount': mentionCount,
-        if (expiresAt != null) 'expiresAt': expiresAt,
-        'suggestions': suggestions.map((s) => s.toJson()).toList(),
-      };
+    'topic': topic,
+    if (lastMentionedAt != null) 'lastMentionedAt': lastMentionedAt,
+    if (mentionCount != null) 'mentionCount': mentionCount,
+    if (expiresAt != null) 'expiresAt': expiresAt,
+    'suggestions': suggestions.map((s) => s.toJson()).toList(),
+  };
 
   factory LlmTopicSuggestionGroup.fromJson(Map<String, dynamic> json) {
     final suggestionsRaw = json['suggestions'];
@@ -93,8 +93,8 @@ class LlmTopicSuggestionGroup {
       mentionCount: json['mentionCount'] is int
           ? json['mentionCount'] as int
           : (json['mentionCount'] is num
-              ? (json['mentionCount'] as num).toInt()
-              : null),
+                ? (json['mentionCount'] as num).toInt()
+                : null),
       expiresAt: _readOptionalString(json, 'expiresAt'),
       suggestions: (suggestionsRaw ?? const <dynamic>[])
           .whereType<Map<String, dynamic>>()
@@ -142,11 +142,11 @@ class LlmUpcomingEntry {
   final String? relativeWhen;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'label': label,
-        'kind': kind.name,
-        if (dateIso != null) 'dateIso': dateIso,
-        if (relativeWhen != null) 'relativeWhen': relativeWhen,
-      };
+    'label': label,
+    'kind': kind.name,
+    if (dateIso != null) 'dateIso': dateIso,
+    if (relativeWhen != null) 'relativeWhen': relativeWhen,
+  };
 
   factory LlmUpcomingEntry.fromJson(Map<String, dynamic> json) {
     final label = _requireString(json, 'label');
@@ -176,13 +176,7 @@ class LlmUpcomingEntry {
 
 /// Coarse classification for [LlmUpcomingEntry]. Mirrors the prompt
 /// rule "milestone | trip | appointment | celebration | other."
-enum LlmUpcomingKind {
-  milestone,
-  trip,
-  appointment,
-  celebration,
-  other,
-}
+enum LlmUpcomingKind { milestone, trip, appointment, celebration, other }
 
 /// Memory-document delta produced by one AI Update run. Applied
 /// client-side (merge + cap rules from Pass 3 §Q7) on top of the
@@ -211,13 +205,13 @@ class LlmMemoryUpdate {
   final List<LlmTopicSuggestionGroup> topicSuggestions;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'summary': summary,
-        'newHistoryBullet': newHistoryBullet,
-        'topicsToAdd': topicsToAdd,
-        'preferencesToAdd': preferencesToAdd,
-        'upcomingToAdd': upcomingToAdd.map((e) => e.toJson()).toList(),
-        'topicSuggestions': topicSuggestions.map((e) => e.toJson()).toList(),
-      };
+    'summary': summary,
+    'newHistoryBullet': newHistoryBullet,
+    'topicsToAdd': topicsToAdd,
+    'preferencesToAdd': preferencesToAdd,
+    'upcomingToAdd': upcomingToAdd.map((e) => e.toJson()).toList(),
+    'topicSuggestions': topicSuggestions.map((e) => e.toJson()).toList(),
+  };
 
   factory LlmMemoryUpdate.fromJson(Map<String, dynamic> json) {
     final summary = json['summary'] as String?;
@@ -279,15 +273,15 @@ class LlmAiUpdateResponse {
   final String? modelName;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'interactionType': interactionType.name,
-        'interactionTitle': interactionTitle,
-        'interactionNote': interactionNote,
-        'memoryUpdate': memoryUpdate.toJson(),
-        'interactionDepth': interactionDepth,
-        if (nextStep != null) 'nextStep': nextStep,
-        if (promptVersion != null) 'promptVersion': promptVersion,
-        if (modelName != null) 'modelName': modelName,
-      };
+    'interactionType': interactionType.name,
+    'interactionTitle': interactionTitle,
+    'interactionNote': interactionNote,
+    'memoryUpdate': memoryUpdate.toJson(),
+    'interactionDepth': interactionDepth,
+    if (nextStep != null) 'nextStep': nextStep,
+    if (promptVersion != null) 'promptVersion': promptVersion,
+    if (modelName != null) 'modelName': modelName,
+  };
 
   factory LlmAiUpdateResponse.fromJson(Map<String, dynamic> json) {
     final typeRaw = _requireString(json, 'interactionType');
@@ -335,9 +329,7 @@ class LlmAiUpdateResponse {
 // History bullet must look like "- YYYY-MM-DD — <body>" exactly.
 // Em dash U+2014 is required (the prompt asks for it explicitly to
 // keep the format unambiguous). Body must be non-empty.
-final RegExp _historyBulletPattern = RegExp(
-  r'^- \d{4}-\d{2}-\d{2} \u2014 .+$',
-);
+final RegExp _historyBulletPattern = RegExp(r'^- \d{4}-\d{2}-\d{2} \u2014 .+$');
 
 String _requireString(Map<String, dynamic> json, String key) {
   final value = json[key];
@@ -376,7 +368,8 @@ int _requireInt(Map<String, dynamic> json, String key) {
 bool _containsNumericDayCountShame(String text) {
   final lower = text.toLowerCase();
   final hasNumericDayCount = RegExp(r'\b\d+\s+days?\b').hasMatch(lower);
-  final hasGuiltPhrase = lower.contains("haven't") ||
+  final hasGuiltPhrase =
+      lower.contains("haven't") ||
       lower.contains('have not') ||
       lower.contains('neglect') ||
       lower.contains('forgot') ||

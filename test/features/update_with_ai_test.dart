@@ -22,7 +22,10 @@ import '../test_overrides.dart';
 /// Pass 4.3 #081: production aiUpdateProvider now constructs
 /// LlmAiUpdate; pin MockAiUpdate as the active adapter so the
 /// existing state-machine tests keep their deterministic shape.
-Widget _wrapScreen({required String contactId, List<AttachmentRef>? initialAttachments}) {
+Widget _wrapScreen({
+  required String contactId,
+  List<AttachmentRef>? initialAttachments,
+}) {
   final memoryStore = InMemoryMemoryStore();
   return ProviderScope(
     overrides: [
@@ -93,7 +96,9 @@ void main() {
       expect(find.text('Update Connection'), findsOneWidget);
     });
 
-    testWidgets('transitions to previewing state after AI generates result', (tester) async {
+    testWidgets('transitions to previewing state after AI generates result', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrapScreen(contactId: 'mike'));
       await tester.pumpAndSettle();
 
@@ -103,7 +108,9 @@ void main() {
       );
       await tester.tap(find.byKey(const Key('run-ai-button')));
       await tester.pump(); // Start async operation
-      await tester.pump(const Duration(milliseconds: 100)); // Allow AI service to complete
+      await tester.pump(
+        const Duration(milliseconds: 100),
+      ); // Allow AI service to complete
       await tester.pumpAndSettle();
 
       // Should show preview UI
@@ -127,7 +134,7 @@ void main() {
       // Should have editable fields
       expect(find.byKey(const Key('preview-title-0')), findsOneWidget);
       expect(find.byKey(const Key('preview-note-0')), findsOneWidget);
-      
+
       // Should show AI tag
       expect(find.text('AI suggested'), findsOneWidget);
     });
@@ -173,7 +180,9 @@ void main() {
       expect(find.text('Here\'s what I found'), findsNothing);
     });
 
-    testWidgets('save button commits changes and shows snackbar', (tester) async {
+    testWidgets('save button commits changes and shows snackbar', (
+      tester,
+    ) async {
       await _pumpAndSignIn(tester);
 
       await tester.tap(find.text('People').last);
@@ -255,7 +264,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('attachment-preview-photo.jpg')), findsOneWidget);
+      expect(
+        find.byKey(const Key('attachment-preview-photo.jpg')),
+        findsOneWidget,
+      );
       expect(find.widgetWithText(Chip, 'photo.jpg'), findsNothing);
     },
   );

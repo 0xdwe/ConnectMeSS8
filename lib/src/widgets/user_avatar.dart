@@ -24,7 +24,8 @@ class UserAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     if (user.avatarKind == AvatarKind.image && user.avatar.trim().isNotEmpty) {
       final avatarPath = user.avatar.trim();
-      if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
+      if (avatarPath.startsWith('http://') ||
+          avatarPath.startsWith('https://')) {
         return CircleAvatar(
           radius: radius,
           backgroundColor: backgroundColor,
@@ -49,7 +50,8 @@ class UserAvatar extends StatelessWidget {
     // Emoji or fallback rendering
     return CircleAvatar(
       radius: radius,
-      backgroundColor: backgroundColor ?? Theme.of(context).colorScheme.primaryContainer,
+      backgroundColor:
+          backgroundColor ?? Theme.of(context).colorScheme.primaryContainer,
       child: Text(
         user.avatar.isEmpty ? '👤' : user.avatar,
         style: AppTypography.glyph(glyphSize),

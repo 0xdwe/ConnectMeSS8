@@ -32,45 +32,51 @@ void main() {
   }
 
   group('buildAiUpdateCommitPlan', () {
-    test('projects the accepted AI Update onto one interaction and an updated connection', () {
-      final now = DateTime(2026, 6, 2, 12);
-      final acceptedInteraction = interaction();
-      final result = AiUpdateResult(
-        summary: 'AI summary',
-        contactId: 'contact-1',
-        interactions: [acceptedInteraction],
-        nextStep: 'Send photos',
-        bondScoreDelta: 15,
-      );
-
-      final plan = buildAiUpdateCommitPlan(
-        result: result,
-        connection: connection(),
-        now: now,
-      );
-
-      expect(plan.interaction, same(acceptedInteraction));
-      expect(plan.summary, 'AI summary');
-      expect(plan.updatedConnection.id, 'contact-1');
-      expect(plan.updatedConnection.bondScore, 75);
-      expect(plan.updatedConnection.nextStep, 'Send photos');
-      expect(plan.updatedConnection.lastContact, now);
-    });
-
-    test('keeps the existing next step when the AI Update has no replacement', () {
-      final plan = buildAiUpdateCommitPlan(
-        result: AiUpdateResult(
+    test(
+      'projects the accepted AI Update onto one interaction and an updated connection',
+      () {
+        final now = DateTime(2026, 6, 2, 12);
+        final acceptedInteraction = interaction();
+        final result = AiUpdateResult(
           summary: 'AI summary',
           contactId: 'contact-1',
-          interactions: [interaction()],
-          bondScoreDelta: 5,
-        ),
-        connection: connection(nextStep: 'Existing step'),
-        now: DateTime(2026, 6, 2),
-      );
+          interactions: [acceptedInteraction],
+          nextStep: 'Send photos',
+          bondScoreDelta: 15,
+        );
 
-      expect(plan.updatedConnection.nextStep, 'Existing step');
-    });
+        final plan = buildAiUpdateCommitPlan(
+          result: result,
+          connection: connection(),
+          now: now,
+        );
+
+        expect(plan.interaction, same(acceptedInteraction));
+        expect(plan.summary, 'AI summary');
+        expect(plan.updatedConnection.id, 'contact-1');
+        expect(plan.updatedConnection.bondScore, 75);
+        expect(plan.updatedConnection.nextStep, 'Send photos');
+        expect(plan.updatedConnection.lastContact, now);
+      },
+    );
+
+    test(
+      'keeps the existing next step when the AI Update has no replacement',
+      () {
+        final plan = buildAiUpdateCommitPlan(
+          result: AiUpdateResult(
+            summary: 'AI summary',
+            contactId: 'contact-1',
+            interactions: [interaction()],
+            bondScoreDelta: 5,
+          ),
+          connection: connection(nextStep: 'Existing step'),
+          now: DateTime(2026, 6, 2),
+        );
+
+        expect(plan.updatedConnection.nextStep, 'Existing step');
+      },
+    );
 
     test('clamps Bond Score movement to the stored 0..100 range', () {
       final highPlan = buildAiUpdateCommitPlan(
@@ -98,46 +104,52 @@ void main() {
       expect(lowPlan.updatedConnection.bondScore, 0);
     });
 
-    test('rejects accepted AI Updates that do not contain exactly one interaction', () {
-      final zeroInteractionResult = AiUpdateResult(
-        summary: 'AI summary',
-        contactId: 'contact-1',
-        interactions: const [],
-      );
-      final multiInteractionResult = AiUpdateResult(
-        summary: 'AI summary',
-        contactId: 'contact-1',
-        interactions: [interaction(id: '1'), interaction(id: '2')],
-      );
+    test(
+      'rejects accepted AI Updates that do not contain exactly one interaction',
+      () {
+        final zeroInteractionResult = AiUpdateResult(
+          summary: 'AI summary',
+          contactId: 'contact-1',
+          interactions: const [],
+        );
+        final multiInteractionResult = AiUpdateResult(
+          summary: 'AI summary',
+          contactId: 'contact-1',
+          interactions: [
+            interaction(id: '1'),
+            interaction(id: '2'),
+          ],
+        );
 
-      expect(
-        () => buildAiUpdateCommitPlan(
-          result: zeroInteractionResult,
-          connection: connection(),
-          now: DateTime(2026, 6, 2),
-        ),
-        throwsA(
-          isA<StateError>().having(
-            (error) => error.message,
-            'message',
-            'applyAiUpdateResult expects exactly one interaction, got 0',
+        expect(
+          () => buildAiUpdateCommitPlan(
+            result: zeroInteractionResult,
+            connection: connection(),
+            now: DateTime(2026, 6, 2),
           ),
-        ),
-      );
-      expect(
-        () => buildAiUpdateCommitPlan(
-          result: multiInteractionResult,
-          connection: connection(),
-          now: DateTime(2026, 6, 2),
-        ),
-        throwsA(
-          isA<StateError>().having(
-            (error) => error.message,
-            'message',
-            'applyAiUpdateResult expects exactly one interaction, got 2',
+          throwsA(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              'applyAiUpdateResult expects exactly one interaction, got 0',
+            ),
           ),
-        ),
-      );
-    });
+        );
+        expect(
+          () => buildAiUpdateCommitPlan(
+            result: multiInteractionResult,
+            connection: connection(),
+            now: DateTime(2026, 6, 2),
+          ),
+          throwsA(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              'applyAiUpdateResult expects exactly one interaction, got 2',
+            ),
+          ),
+        );
+      },
+    );
   });
 }

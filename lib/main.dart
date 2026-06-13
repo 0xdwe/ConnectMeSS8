@@ -11,9 +11,7 @@ void main() async {
   // Firebase init before the first frame so any provider that touches
   // FirebaseAuth on read does not race the SDK. See Pass 4.1 (#052).
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   // Activate App Check before the first Firebase AI Logic call ships
   // so Gemini inference cannot be abused by anyone with a leaked
   // firebase_options.dart. Debug provider in dev (token logs to

@@ -56,7 +56,9 @@ void main() {
       addTearDown(container.dispose);
 
       // Seeded state has interactions for 'sarah', 'mike', 'emily'
-      final interactions = container.read(interactionsByContactProvider('sarah'));
+      final interactions = container.read(
+        interactionsByContactProvider('sarah'),
+      );
 
       expect(interactions, isNotEmpty);
       expect(interactions.every((i) => i.contactId == 'sarah'), isTrue);
@@ -67,7 +69,9 @@ void main() {
       final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
-      final interactions = container.read(interactionsByContactProvider('david'));
+      final interactions = container.read(
+        interactionsByContactProvider('david'),
+      );
 
       expect(interactions, isEmpty);
     });
@@ -76,7 +80,9 @@ void main() {
       final container = passFourFiveTestContainer();
       addTearDown(container.dispose);
 
-      final interactions = container.read(interactionsByContactProvider('nonexistent'));
+      final interactions = container.read(
+        interactionsByContactProvider('nonexistent'),
+      );
 
       expect(interactions, isEmpty);
     });

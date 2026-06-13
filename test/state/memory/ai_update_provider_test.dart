@@ -26,9 +26,9 @@ import '../../test_overrides.dart';
 void main() {
   group('aiUpdateProvider — signed out', () {
     test('returns a sentinel that throws StateError on run()', () async {
-      final container = ProviderContainer(overrides: [
-        firebaseAuthProvider.overrideWithValue(MockFirebaseAuth()),
-      ]);
+      final container = ProviderContainer(
+        overrides: [firebaseAuthProvider.overrideWithValue(MockFirebaseAuth())],
+      );
       addTearDown(container.dispose);
 
       final ai = container.read(aiUpdateProvider);
@@ -62,19 +62,21 @@ void main() {
     });
 
     test('returns a sentinel that throws StateError on commit()', () async {
-      final container = ProviderContainer(overrides: [
-        firebaseAuthProvider.overrideWithValue(MockFirebaseAuth()),
-      ]);
+      final container = ProviderContainer(
+        overrides: [firebaseAuthProvider.overrideWithValue(MockFirebaseAuth())],
+      );
       addTearDown(container.dispose);
 
       final ai = container.read(aiUpdateProvider);
 
       await expectLater(
-        ai.commit(const AiUpdateResult(
-          summary: 's',
-          contactId: 'sarah',
-          interactions: [],
-        )),
+        ai.commit(
+          const AiUpdateResult(
+            summary: 's',
+            contactId: 'sarah',
+            interactions: [],
+          ),
+        ),
         throwsA(isA<StateError>()),
       );
     });
@@ -87,10 +89,12 @@ void main() {
       // (post-#081) the firebaseAiProvider null override. We do NOT
       // override `aiUpdateProvider` itself — the production factory
       // must select LlmAiUpdate based on the signed-in user.
-      final container = ProviderContainer(overrides: [
-        ...signedInDemoOverrides(),
-        memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+        ],
+      );
       addTearDown(container.dispose);
 
       final ai = container.read(aiUpdateProvider);
@@ -100,10 +104,12 @@ void main() {
 
     test('LlmAiUpdate instance carries the active memoryStoreProvider', () {
       final memoryStore = InMemoryMemoryStore();
-      final container = ProviderContainer(overrides: [
-        ...signedInDemoOverrides(),
-        memoryStoreProvider.overrideWithValue(memoryStore),
-      ]);
+      final container = ProviderContainer(
+        overrides: [
+          ...signedInDemoOverrides(),
+          memoryStoreProvider.overrideWithValue(memoryStore),
+        ],
+      );
       addTearDown(container.dispose);
 
       final ai = container.read(aiUpdateProvider) as LlmAiUpdate;

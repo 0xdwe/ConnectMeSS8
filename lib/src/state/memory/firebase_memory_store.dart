@@ -56,8 +56,8 @@ class FirebaseMemoryStore implements MemoryStore {
   FirebaseMemoryStore({
     required FirebaseFirestore firestore,
     required String uid,
-  })  : _firestore = firestore,
-        _uid = uid;
+  }) : _firestore = firestore,
+       _uid = uid;
 
   /// Schema version written into every memory document. Bumped only
   /// when the canonical Firestore shape changes.

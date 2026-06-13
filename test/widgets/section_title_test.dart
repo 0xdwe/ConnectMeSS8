@@ -47,24 +47,25 @@ void main() {
   }
 
   group('SectionTitle responsive layout', () {
-    testWidgets('wraps cleanly on iPhone 16 width (390pt) without overflow',
-        (tester) async {
+    testWidgets('wraps cleanly on iPhone 16 width (390pt) without overflow', (
+      tester,
+    ) async {
       await setSurface(tester, 390);
 
       await tester.pumpWidget(
         wrap(
           SectionTitle(
             "Today's Recommendation",
-            action: TextButton(
-              onPressed: () {},
-              child: const Text('View All'),
-            ),
+            action: TextButton(onPressed: () {}, child: const Text('View All')),
           ),
         ),
       );
 
-      expect(tester.takeException(), isNull,
-          reason: 'no overflow / layout exceptions on 390pt');
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'no overflow / layout exceptions on 390pt',
+      );
       expect(find.text("Today's Recommendation"), findsOneWidget);
 
       // Title height should be at most 2 lines of h1. If it's larger, the
@@ -74,29 +75,30 @@ void main() {
       final renderedText = tester.renderObject<RenderBox>(
         find.text("Today's Recommendation"),
       );
-      expect(renderedText.size.height,
-          lessThanOrEqualTo(_maxTitleHeightTwoLines()),
-          reason: 'title fits in two lines or fewer');
+      expect(
+        renderedText.size.height,
+        lessThanOrEqualTo(_maxTitleHeightTwoLines()),
+        reason: 'title fits in two lines or fewer',
+      );
     });
 
-    testWidgets('does not overflow on iPhone SE width (320pt)',
-        (tester) async {
+    testWidgets('does not overflow on iPhone SE width (320pt)', (tester) async {
       await setSurface(tester, 320);
 
       await tester.pumpWidget(
         wrap(
           SectionTitle(
             "Today's Recommendation",
-            action: TextButton(
-              onPressed: () {},
-              child: const Text('View All'),
-            ),
+            action: TextButton(onPressed: () {}, child: const Text('View All')),
           ),
         ),
       );
 
-      expect(tester.takeException(), isNull,
-          reason: 'no overflow / layout exceptions on 320pt');
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'no overflow / layout exceptions on 320pt',
+      );
       expect(find.text("Today's Recommendation"), findsOneWidget);
       expect(find.text('View All'), findsOneWidget);
 
@@ -107,23 +109,23 @@ void main() {
       final renderedText = tester.renderObject<RenderBox>(
         find.text("Today's Recommendation"),
       );
-      expect(renderedText.size.height,
-          lessThanOrEqualTo(_maxTitleHeightTwoLines()),
-          reason: 'title fits in two lines or fewer at 320pt');
+      expect(
+        renderedText.size.height,
+        lessThanOrEqualTo(_maxTitleHeightTwoLines()),
+        reason: 'title fits in two lines or fewer at 320pt',
+      );
     });
 
-    testWidgets('uses Row layout on tablet width (768pt iPad Mini)',
-        (tester) async {
+    testWidgets('uses Row layout on tablet width (768pt iPad Mini)', (
+      tester,
+    ) async {
       await setSurface(tester, 768);
 
       await tester.pumpWidget(
         wrap(
           SectionTitle(
             "Today's Recommendation",
-            action: TextButton(
-              onPressed: () {},
-              child: const Text('View All'),
-            ),
+            action: TextButton(onPressed: () {}, child: const Text('View All')),
           ),
         ),
       );
@@ -143,22 +145,23 @@ void main() {
           titleBox.localToGlobal(Offset.zero).dy + titleBox.size.height / 2;
       final actionCenterY =
           actionBox.localToGlobal(Offset.zero).dy + actionBox.size.height / 2;
-      expect((titleCenterY - actionCenterY).abs(), lessThan(20),
-          reason: 'on tablet width title and action are on the same row');
+      expect(
+        (titleCenterY - actionCenterY).abs(),
+        lessThan(20),
+        reason: 'on tablet width title and action are on the same row',
+      );
     });
 
-    testWidgets('short titles use Row layout even on narrow widths',
-        (tester) async {
+    testWidgets('short titles use Row layout even on narrow widths', (
+      tester,
+    ) async {
       await setSurface(tester, 390);
 
       await tester.pumpWidget(
         wrap(
           SectionTitle(
             'History',
-            action: TextButton(
-              onPressed: () {},
-              child: const Text('Edit'),
-            ),
+            action: TextButton(onPressed: () {}, child: const Text('Edit')),
           ),
         ),
       );
@@ -173,8 +176,11 @@ void main() {
           titleBox.localToGlobal(Offset.zero).dy + titleBox.size.height / 2;
       final actionCenterY =
           actionBox.localToGlobal(Offset.zero).dy + actionBox.size.height / 2;
-      expect((titleCenterY - actionCenterY).abs(), lessThan(20),
-          reason: 'short titles stay in Row layout');
+      expect(
+        (titleCenterY - actionCenterY).abs(),
+        lessThan(20),
+        reason: 'short titles stay in Row layout',
+      );
     });
 
     testWidgets('renders without action across all widths', (tester) async {
@@ -183,8 +189,11 @@ void main() {
         await tester.pumpWidget(
           wrap(const SectionTitle("Today's Recommendation")),
         );
-        expect(tester.takeException(), isNull,
-            reason: 'no overflow at $width with no action');
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'no overflow at $width with no action',
+        );
         expect(find.text("Today's Recommendation"), findsOneWidget);
       }
     });

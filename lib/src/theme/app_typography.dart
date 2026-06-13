@@ -27,61 +27,61 @@ class AppTypography {
 
   /// Page hero on Home, profile screens. 32 / 1.15 / 700.
   static TextStyle display({Color? color}) => GoogleFonts.inter(
-        fontSize: 32,
-        height: 1.15,
-        fontWeight: FontWeight.w700,
-        color: color,
-      );
+    fontSize: 32,
+    height: 1.15,
+    fontWeight: FontWeight.w700,
+    color: color,
+  );
 
   /// Section titles, modal titles. 26 / 1.20 / 700.
   static TextStyle h1({Color? color}) => GoogleFonts.inter(
-        fontSize: 26,
-        height: 1.20,
-        fontWeight: FontWeight.w700,
-        color: color,
-      );
+    fontSize: 26,
+    height: 1.20,
+    fontWeight: FontWeight.w700,
+    color: color,
+  );
 
   /// Card titles, sub-section labels. 21 / 1.25 / 600.
   static TextStyle h2({Color? color}) => GoogleFonts.inter(
-        fontSize: 21,
-        height: 1.25,
-        fontWeight: FontWeight.w600,
-        color: color,
-      );
+    fontSize: 21,
+    height: 1.25,
+    fontWeight: FontWeight.w600,
+    color: color,
+  );
 
   /// Primary body, recommendation copy, list rows. 17 / 1.45 / 500.
   static TextStyle bodyLg({Color? color}) => GoogleFonts.inter(
-        fontSize: 17,
-        height: 1.45,
-        fontWeight: FontWeight.w500,
-        color: color,
-      );
+    fontSize: 17,
+    height: 1.45,
+    fontWeight: FontWeight.w500,
+    color: color,
+  );
 
   /// Default reading size. 15 / 1.50 / 400.
   static TextStyle body({Color? color}) => GoogleFonts.inter(
-        fontSize: 15,
-        height: 1.50,
-        fontWeight: FontWeight.w400,
-        color: color,
-      );
+    fontSize: 15,
+    height: 1.50,
+    fontWeight: FontWeight.w400,
+    color: color,
+  );
 
   /// Metadata, dates, "5 days ago." 13 / 1.40 / 500.
   static TextStyle caption({Color? color}) => GoogleFonts.inter(
-        fontSize: 13,
-        height: 1.40,
-        fontWeight: FontWeight.w500,
-        color: color,
-      );
+    fontSize: 13,
+    height: 1.40,
+    fontWeight: FontWeight.w500,
+    color: color,
+  );
 
   /// Tabular figures for numeric alignment (bond score reveal, etc.).
   /// 15 / 1.40 / 500 with `FontFeature.tabularFigures()`.
   static TextStyle monoTabular({Color? color}) => GoogleFonts.inter(
-        fontSize: 15,
-        height: 1.40,
-        fontWeight: FontWeight.w500,
-        color: color,
-        fontFeatures: const [FontFeature.tabularFigures()],
-      );
+    fontSize: 15,
+    height: 1.40,
+    fontWeight: FontWeight.w500,
+    color: color,
+    fontFeatures: const [FontFeature.tabularFigures()],
+  );
 
   /// Escape hatch for non-typographic glyphs that don't fit the 7-step
   /// scale: emoji rendered as icons (avatars, brand marks) and
@@ -93,12 +93,7 @@ class AppTypography {
     double size, {
     Color? color,
     FontWeight weight = FontWeight.w600,
-  }) =>
-      GoogleFonts.inter(
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-      );
+  }) => GoogleFonts.inter(fontSize: size, fontWeight: weight, color: color);
 
   /// Material `TextTheme` derived from Inter, for consumers that read
   /// `Theme.of(context).textTheme` (e.g. `AppBar`, `Dialog`, defaults).

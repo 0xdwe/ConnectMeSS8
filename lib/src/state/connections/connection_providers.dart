@@ -33,10 +33,7 @@ final connectionStoreProvider = Provider<ConnectionStore>((ref) {
     return const _SignedOutConnectionStore();
   }
   final firestore = ref.watch(firestoreProvider);
-  final store = FirebaseConnectionStore(
-    firestore: firestore,
-    uid: user.uid,
-  );
+  final store = FirebaseConnectionStore(firestore: firestore, uid: user.uid);
   ref.onDispose(store.dispose);
   return store;
 });
@@ -51,24 +48,19 @@ final connectionStoreProvider = Provider<ConnectionStore>((ref) {
 class _SignedOutConnectionStore implements ConnectionStore {
   const _SignedOutConnectionStore();
 
-  static const String _msg =
-      'Connections are not available while signed out.';
+  static const String _msg = 'Connections are not available while signed out.';
 
   @override
-  Future<Connection?> load(String contactId) =>
-      Future.error(StateError(_msg));
+  Future<Connection?> load(String contactId) => Future.error(StateError(_msg));
 
   @override
-  Future<void> save(Connection connection) =>
-      Future.error(StateError(_msg));
+  Future<void> save(Connection connection) => Future.error(StateError(_msg));
 
   @override
-  Future<void> delete(String contactId) =>
-      Future.error(StateError(_msg));
+  Future<void> delete(String contactId) => Future.error(StateError(_msg));
 
   @override
-  Future<Map<String, Connection>> listAll() =>
-      Future.error(StateError(_msg));
+  Future<Map<String, Connection>> listAll() => Future.error(StateError(_msg));
 
   @override
   Stream<Map<String, Connection>> snapshot() =>

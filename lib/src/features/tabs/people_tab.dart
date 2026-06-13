@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
 import '../../state/query_providers.dart';
-import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/crm_widgets.dart';
@@ -29,11 +28,7 @@ class _PeopleTabState extends ConsumerState<PeopleTab> {
       appControllerProvider.select((state) => ['All', ...state.categories]),
     );
 
-    final filter = ContactFilter(
-      query: query,
-      category: category,
-      sort: sort,
-    );
+    final filter = ContactFilter(query: query, category: category, sort: sort);
 
     final people = ref.watch(filteredContactsProvider(filter));
     final hasAnyConnections = ref.watch(
@@ -72,7 +67,11 @@ class _PeopleTabState extends ConsumerState<PeopleTab> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                Icon(Icons.filter_alt_outlined, color: tokens.primary, size: 18),
+                Icon(
+                  Icons.filter_alt_outlined,
+                  color: tokens.primary,
+                  size: 18,
+                ),
                 const SizedBox(width: 8),
                 ...categories.map(
                   (item) => _SmallChip(

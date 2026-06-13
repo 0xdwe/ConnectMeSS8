@@ -3,23 +3,22 @@ import 'package:connect_me/src/models/social_models.dart' show InteractionType;
 import 'package:flutter_test/flutter_test.dart';
 
 Map<String, dynamic> _validBase() => <String, dynamic>{
-      'interactionType': 'sharedActivity',
-      'interactionTitle': 'Coffee at Brew & Co',
-      'interactionNote': 'Caught up over an oat-milk latte.',
-      'memoryUpdate': <String, dynamic>{
-        'summary': null,
-        'newHistoryBullet':
-            '- 2026-05-27 \u2014 Caught up at Brew & Co.',
-        'topicsToAdd': <String>['oat milk'],
-        'preferencesToAdd': <String>[],
-        'upcomingToAdd': <Map<String, dynamic>>[],
-        'topicSuggestions': <Map<String, dynamic>>[],
-      },
-      'interactionDepth': 50,
-      'nextStep': 'Send the article she mentioned',
-      'promptVersion': 1,
-      'modelName': 'gemini-2.5-flash-lite',
-    };
+  'interactionType': 'sharedActivity',
+  'interactionTitle': 'Coffee at Brew & Co',
+  'interactionNote': 'Caught up over an oat-milk latte.',
+  'memoryUpdate': <String, dynamic>{
+    'summary': null,
+    'newHistoryBullet': '- 2026-05-27 \u2014 Caught up at Brew & Co.',
+    'topicsToAdd': <String>['oat milk'],
+    'preferencesToAdd': <String>[],
+    'upcomingToAdd': <Map<String, dynamic>>[],
+    'topicSuggestions': <Map<String, dynamic>>[],
+  },
+  'interactionDepth': 50,
+  'nextStep': 'Send the article she mentioned',
+  'promptVersion': 1,
+  'modelName': 'gemini-2.5-flash-lite',
+};
 
 void main() {
   group('LlmAiUpdateResponse.fromJson — happy path', () {
@@ -56,8 +55,10 @@ void main() {
       expect(round.interactionNote, original.interactionNote);
       expect(round.interactionDepth, original.interactionDepth);
       expect(round.nextStep, original.nextStep);
-      expect(round.memoryUpdate.newHistoryBullet,
-          original.memoryUpdate.newHistoryBullet);
+      expect(
+        round.memoryUpdate.newHistoryBullet,
+        original.memoryUpdate.newHistoryBullet,
+      );
     });
   });
 
@@ -120,8 +121,7 @@ void main() {
     });
 
     test('rejects interactionTitle longer than 60 chars', () {
-      final json = _validBase()
-        ..['interactionTitle'] = 'a' * 61;
+      final json = _validBase()..['interactionTitle'] = 'a' * 61;
       expect(
         () => LlmAiUpdateResponse.fromJson(json),
         throwsA(isA<LlmResponseParseException>()),
@@ -129,8 +129,7 @@ void main() {
     });
 
     test('accepts interactionTitle of exactly 60 chars', () {
-      final json = _validBase()
-        ..['interactionTitle'] = 'a' * 60;
+      final json = _validBase()..['interactionTitle'] = 'a' * 60;
       expect(LlmAiUpdateResponse.fromJson(json).interactionTitle.length, 60);
     });
   });
@@ -168,8 +167,7 @@ void main() {
 
     test('rejects bullet without em-dash separator', () {
       final json = _validBase();
-      (json['memoryUpdate']
-              as Map<String, dynamic>)['newHistoryBullet'] =
+      (json['memoryUpdate'] as Map<String, dynamic>)['newHistoryBullet'] =
           '- 2026-05-27 - missing em dash';
       expect(
         () => LlmAiUpdateResponse.fromJson(json),
@@ -179,8 +177,7 @@ void main() {
 
     test('rejects bullet with empty body', () {
       final json = _validBase();
-      (json['memoryUpdate']
-              as Map<String, dynamic>)['newHistoryBullet'] =
+      (json['memoryUpdate'] as Map<String, dynamic>)['newHistoryBullet'] =
           '- 2026-05-27 \u2014 ';
       expect(
         () => LlmAiUpdateResponse.fromJson(json),
@@ -190,8 +187,7 @@ void main() {
 
     test('accepts a well-formed bullet', () {
       final json = _validBase();
-      (json['memoryUpdate']
-              as Map<String, dynamic>)['newHistoryBullet'] =
+      (json['memoryUpdate'] as Map<String, dynamic>)['newHistoryBullet'] =
           '- 2026-05-27 \u2014 Sarah\'s daughter starts kindergarten in '
           'September.';
       expect(
@@ -217,8 +213,7 @@ void main() {
 
     test('rejects topicsToAdd that is not a list', () {
       final json = _validBase();
-      (json['memoryUpdate']
-              as Map<String, dynamic>)['topicsToAdd'] =
+      (json['memoryUpdate'] as Map<String, dynamic>)['topicsToAdd'] =
           'kindergarten';
       expect(
         () => LlmAiUpdateResponse.fromJson(json),
@@ -252,7 +247,10 @@ void main() {
           'mentionCount': 2,
           'expiresAt': '2026-07-01',
           'suggestions': [
-            {'kind': 'ask', 'text': 'Ask how the Paris plans are coming together.'},
+            {
+              'kind': 'ask',
+              'text': 'Ask how the Paris plans are coming together.',
+            },
             {'kind': 'share', 'text': 'Send a café rec if you spot one.'},
           ],
         },
@@ -266,8 +264,10 @@ void main() {
       expect(group.expiresAt, '2026-07-01');
       expect(group.suggestions, hasLength(2));
       expect(group.suggestions.first.kind, LlmTopicSuggestionKind.ask);
-      expect(group.suggestions.first.text,
-          'Ask how the Paris plans are coming together.');
+      expect(
+        group.suggestions.first.text,
+        'Ask how the Paris plans are coming together.',
+      );
     });
 
     test('rejects unknown topic suggestion kind', () {
@@ -295,7 +295,10 @@ void main() {
           'lastMentionedAt': 20260604,
           'expiresAt': {'date': '2026-07-01'},
           'suggestions': [
-            {'kind': 'ask', 'text': 'Ask how the Paris plans are coming together.'},
+            {
+              'kind': 'ask',
+              'text': 'Ask how the Paris plans are coming together.',
+            },
           ],
         },
       ];
@@ -312,7 +315,10 @@ void main() {
         {
           'topic': 'paris trip',
           'suggestions': [
-            {'kind': 'ask', 'text': "You haven't asked about Paris in 47 days."},
+            {
+              'kind': 'ask',
+              'text': "You haven't asked about Paris in 47 days.",
+            },
           ],
         },
       ];
@@ -344,8 +350,7 @@ void main() {
   group('upcomingToAdd validation', () {
     Map<String, dynamic> baseWithUpcoming(List<Map<String, dynamic>> entries) {
       final json = _validBase();
-      (json['memoryUpdate']
-              as Map<String, dynamic>)['upcomingToAdd'] = entries;
+      (json['memoryUpdate'] as Map<String, dynamic>)['upcomingToAdd'] = entries;
       return json;
     }
 
@@ -374,8 +379,9 @@ void main() {
           'relativeWhen': 'next month',
         },
       ]);
-      final entry =
-          LlmAiUpdateResponse.fromJson(json).memoryUpdate.upcomingToAdd.single;
+      final entry = LlmAiUpdateResponse.fromJson(
+        json,
+      ).memoryUpdate.upcomingToAdd.single;
       expect(entry.dateIso, isNull);
       expect(entry.relativeWhen, 'next month');
     });
@@ -392,11 +398,7 @@ void main() {
 
     test('rejects unknown kind', () {
       final json = baseWithUpcoming([
-        {
-          'label': 'Bash',
-          'kind': 'party',
-          'dateIso': '2026-12-31',
-        },
+        {'label': 'Bash', 'kind': 'party', 'dateIso': '2026-12-31'},
       ]);
       expect(
         () => LlmAiUpdateResponse.fromJson(json),
@@ -410,11 +412,9 @@ void main() {
           {'label': 'X', 'kind': k.name, 'dateIso': '2026-01-01'},
         ]);
         expect(
-          LlmAiUpdateResponse.fromJson(json)
-              .memoryUpdate
-              .upcomingToAdd
-              .single
-              .kind,
+          LlmAiUpdateResponse.fromJson(
+            json,
+          ).memoryUpdate.upcomingToAdd.single.kind,
           k,
         );
       }
@@ -424,8 +424,7 @@ void main() {
       // The list itself is iterated with whereType so non-Map
       // entries are silently dropped before fromJson runs.
       final json = _validBase();
-      (json['memoryUpdate']
-              as Map<String, dynamic>)['upcomingToAdd'] = [
+      (json['memoryUpdate'] as Map<String, dynamic>)['upcomingToAdd'] = [
         'not a map',
         {'label': 'OK', 'kind': 'milestone', 'dateIso': '2026-01-01'},
       ];
@@ -461,8 +460,7 @@ void main() {
 
     test('rejects en-dash bullet (must be em-dash)', () {
       final json = _validBase();
-      (json['memoryUpdate']
-              as Map<String, dynamic>)['newHistoryBullet'] =
+      (json['memoryUpdate'] as Map<String, dynamic>)['newHistoryBullet'] =
           '- 2026-05-27 – en dash, not em';
       expect(
         () => LlmAiUpdateResponse.fromJson(json),

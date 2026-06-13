@@ -678,7 +678,11 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.auto_awesome, size: 14, color: tokens.primary),
+                        Icon(
+                          Icons.auto_awesome,
+                          size: 14,
+                          color: tokens.primary,
+                        ),
                         SizedBox(width: AppSpacing.space1),
                         Flexible(
                           child: Text(

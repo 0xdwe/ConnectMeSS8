@@ -111,12 +111,7 @@ final Schema kLlmAiUpdateResponseSchema = Schema.object(
                 items: Schema.object(
                   properties: {
                     'kind': Schema.enumString(
-                      enumValues: const [
-                        'ask',
-                        'share',
-                        'plan',
-                        'remember',
-                      ],
+                      enumValues: const ['ask', 'share', 'plan', 'remember'],
                     ),
                     'text': Schema.string(
                       description:
@@ -139,8 +134,7 @@ final Schema kLlmAiUpdateResponseSchema = Schema.object(
             properties: {
               'label': Schema.string(),
               'kind': Schema.enumString(
-                enumValues:
-                    LlmUpcomingKind.values.map((k) => k.name).toList(),
+                enumValues: LlmUpcomingKind.values.map((k) => k.name).toList(),
               ),
               'dateIso': Schema.string(
                 description:

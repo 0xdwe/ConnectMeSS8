@@ -30,10 +30,12 @@ import '../../test_overrides.dart';
 
 ProviderContainer _container({InMemoryMemoryStore? store}) {
   final memoryStore = store ?? InMemoryMemoryStore();
-  return ProviderContainer(overrides: [
-    ...signedInDemoOverrides(),
-    memoryStoreProvider.overrideWithValue(memoryStore),
-  ]);
+  return ProviderContainer(
+    overrides: [
+      ...signedInDemoOverrides(),
+      memoryStoreProvider.overrideWithValue(memoryStore),
+    ],
+  );
 }
 
 LlmAiUpdate _adapter(
@@ -70,14 +72,12 @@ Connection _connection(AppState state, String id) =>
 
 void main() {
   group('LlmAiUpdate.run — failure-path injection', () {
-    test('cancelMidRun throws AiUpdateCancelled before any SDK call',
-        () async {
+    test('cancelMidRun throws AiUpdateCancelled before any SDK call', () async {
       final container = _container();
       addTearDown(container.dispose);
       final adapter = _adapter(container, cancelMidRun: true);
 
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       final memory = await container.read(memoryProvider('sarah').future);
 
       await expectLater(
@@ -91,39 +91,41 @@ void main() {
       );
     });
 
-    test('failOnNetwork throws AiUpdateFailure with retry-friendly copy',
-        () async {
-      final container = _container();
-      addTearDown(container.dispose);
-      final adapter = _adapter(container, failOnNetwork: true);
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
-      final memory = await container.read(memoryProvider('sarah').future);
+    test(
+      'failOnNetwork throws AiUpdateFailure with retry-friendly copy',
+      () async {
+        final container = _container();
+        addTearDown(container.dispose);
+        final adapter = _adapter(container, failOnNetwork: true);
+        final sarah = _connection(
+          container.read(appControllerProvider),
+          'sarah',
+        );
+        final memory = await container.read(memoryProvider('sarah').future);
 
-      await expectLater(
-        () => adapter.run(
-          contact: sarah,
-          userInput: 'anything',
-          currentMemory: memory,
-          attachments: const [],
-        ),
-        throwsA(
-          isA<AiUpdateFailure>().having(
-            (e) => e.message.toLowerCase(),
-            'message',
-            contains('try again'),
+        await expectLater(
+          () => adapter.run(
+            contact: sarah,
+            userInput: 'anything',
+            currentMemory: memory,
+            attachments: const [],
           ),
-        ),
-      );
-    });
+          throwsA(
+            isA<AiUpdateFailure>().having(
+              (e) => e.message.toLowerCase(),
+              'message',
+              contains('try again'),
+            ),
+          ),
+        );
+      },
+    );
 
-    test('failOnQuota throws AiUpdateFailure with capacity copy',
-        () async {
+    test('failOnQuota throws AiUpdateFailure with capacity copy', () async {
       final container = _container();
       addTearDown(container.dispose);
       final adapter = _adapter(container, failOnQuota: true);
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       final memory = await container.read(memoryProvider('sarah').future);
 
       await expectLater(
@@ -143,14 +145,12 @@ void main() {
       );
     });
 
-    test(
-        'failOnContentPolicy throws AiUpdateFailure with rephrase '
+    test('failOnContentPolicy throws AiUpdateFailure with rephrase '
         'copy', () async {
       final container = _container();
       addTearDown(container.dispose);
       final adapter = _adapter(container, failOnContentPolicy: true);
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       final memory = await container.read(memoryProvider('sarah').future);
 
       await expectLater(
@@ -170,8 +170,7 @@ void main() {
       );
     });
 
-    test(
-        'classifyFirebaseException maps firebase_app_check exceptions to '
+    test('classifyFirebaseException maps firebase_app_check exceptions to '
         'the PRD §Q8 "sign out and back in" copy', () {
       // The end-to-end test above uses the failOnAppCheck top-level
       // shortcut. This unit test pins the production catch arm's
@@ -192,8 +191,7 @@ void main() {
       );
     });
 
-    test(
-        'classifyFirebaseException returns null for unknown plugins '
+    test('classifyFirebaseException returns null for unknown plugins '
         'so the retry loop treats them as transient', () {
       // Unknown FirebaseException plugins (e.g. firebase_core) fall
       // through to the transient retry path. The classifier returns
@@ -209,8 +207,7 @@ void main() {
       expect(mapped, isNull);
     });
 
-    test(
-        'failOnAppCheck routes through PRD §Q8 "sign out and back in" '
+    test('failOnAppCheck routes through PRD §Q8 "sign out and back in" '
         'copy (Pass 4.3 hotfix — debug-token 403)', () async {
       // Real-world hit: on iOS, the firebase_app_check debug provider
       // exchanges a per-device debug token for a real attestation.
@@ -225,8 +222,7 @@ void main() {
       final container = _container();
       addTearDown(container.dispose);
       final adapter = _adapter(container, failOnAppCheck: true);
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       final memory = await container.read(memoryProvider('sarah').future);
 
       await expectLater(
@@ -240,10 +236,7 @@ void main() {
           isA<AiUpdateFailure>().having(
             (e) => e.message.toLowerCase(),
             'message',
-            allOf(
-              contains('unavailable'),
-              contains('sign out'),
-            ),
+            allOf(contains('unavailable'), contains('sign out')),
           ),
         ),
       );
@@ -260,8 +253,7 @@ void main() {
       addTearDown(container.dispose);
       final adapter = _adapter(container, failOnNetwork: true);
 
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       // Construct memoryBefore directly so we do NOT trigger the
       // lazy-create path on `memoryProvider`. That path silently
       // saves an empty doc to the store, which would make the
@@ -272,8 +264,10 @@ void main() {
         displayName: sarah.name,
         now: DateTime.utc(2026, 5, 27),
       );
-      final interactionsBefore =
-          container.read(appControllerProvider).interactions.length;
+      final interactionsBefore = container
+          .read(appControllerProvider)
+          .interactions
+          .length;
 
       await expectLater(
         () => adapter.run(
@@ -295,8 +289,7 @@ void main() {
     });
   });
 
-  group(
-      'LlmAiUpdate.run — all-images-failed-AND-no-text composite '
+  group('LlmAiUpdate.run — all-images-failed-AND-no-text composite '
       'hard fail (PRD §Q7)', () {
     test('user attached only images that all fail with empty input '
         '→ AiUpdateFailure', () async {
@@ -314,18 +307,18 @@ void main() {
           return PreparedAttachments(
             images: const [],
             nameOnly: refs
-                .map((r) => PreparedAttachment(
-                      name: r.name,
-                      softFailReason:
-                          AttachmentDegradeReason.fileNotFound,
-                    ))
+                .map(
+                  (r) => PreparedAttachment(
+                    name: r.name,
+                    softFailReason: AttachmentDegradeReason.fileNotFound,
+                  ),
+                )
                 .toList(),
           );
         },
       );
 
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       final memory = await container.read(memoryProvider('sarah').future);
 
       await expectLater(
@@ -348,40 +341,42 @@ void main() {
       );
     });
 
-    test('user attached only non-images with empty input → no hard fail',
-        () async {
-      // Non-image attachments do not trigger the all-images-failed
-      // hard fail. The adapter would proceed to the SDK call site;
-      // we set firebaseAi: null so the run stops at the StateError
-      // boundary, proving the hard fail did NOT fire here.
-      final container = _container();
-      addTearDown(container.dispose);
+    test(
+      'user attached only non-images with empty input → no hard fail',
+      () async {
+        // Non-image attachments do not trigger the all-images-failed
+        // hard fail. The adapter would proceed to the SDK call site;
+        // we set firebaseAi: null so the run stops at the StateError
+        // boundary, proving the hard fail did NOT fire here.
+        final container = _container();
+        addTearDown(container.dispose);
 
-      final adapter = LlmAiUpdate(
-        firebaseAi: null,
-        memoryStore: container.read(memoryStoreProvider),
-        appController: container.read(appControllerProvider.notifier),
-        recentInteractionsLookup: (_) => const [],
-      );
+        final adapter = LlmAiUpdate(
+          firebaseAi: null,
+          memoryStore: container.read(memoryStoreProvider),
+          appController: container.read(appControllerProvider.notifier),
+          recentInteractionsLookup: (_) => const [],
+        );
 
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
-      final memory = await container.read(memoryProvider('sarah').future);
+        final sarah = _connection(
+          container.read(appControllerProvider),
+          'sarah',
+        );
+        final memory = await container.read(memoryProvider('sarah').future);
 
-      await expectLater(
-        () => adapter.run(
-          contact: sarah,
-          userInput: '',
-          currentMemory: memory,
-          attachments: const [
-            AttachmentRef(name: 'doc.pdf', path: null),
-          ],
-        ),
-        // The all-images-failed hard fail did not throw because no
-        // image was intended; we land at the SDK guard instead.
-        throwsA(isA<StateError>()),
-      );
-    });
+        await expectLater(
+          () => adapter.run(
+            contact: sarah,
+            userInput: '',
+            currentMemory: memory,
+            attachments: const [AttachmentRef(name: 'doc.pdf', path: null)],
+          ),
+          // The all-images-failed hard fail did not throw because no
+          // image was intended; we land at the SDK guard instead.
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
   });
 
   group('LlmAiUpdate.commit — Pass 3 §Q4 contract parity', () {
@@ -391,8 +386,7 @@ void main() {
       addTearDown(container.dispose);
       final adapter = _adapter(container, failOnSave: true);
 
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       // Direct construction; do not trigger memoryProvider's lazy
       // save path (see note in the run-failure test).
       final memory = MemoryDocument.empty(
@@ -491,46 +485,48 @@ void main() {
       expect(restored!.summary, 'prior summary');
     });
 
-    test('failOnApply with no prior memory deletes the just-written doc',
-        () async {
-      // When no prior memory existed (lazy creation case), the
-      // rollback should delete the doc the failed commit just wrote.
-      final store = InMemoryMemoryStore();
-      final container = _container(store: store);
-      addTearDown(container.dispose);
-      final adapter = _adapter(container, failOnApply: true);
+    test(
+      'failOnApply with no prior memory deletes the just-written doc',
+      () async {
+        // When no prior memory existed (lazy creation case), the
+        // rollback should delete the doc the failed commit just wrote.
+        final store = InMemoryMemoryStore();
+        final container = _container(store: store);
+        addTearDown(container.dispose);
+        final adapter = _adapter(container, failOnApply: true);
 
-      final newMemory = MemoryDocument(
-        contactId: 'sarah',
-        displayName: 'Sarah Johnson',
-        lastUpdated: DateTime.utc(2026, 5, 27),
-        summary: 'first time saved',
-      );
-      final result = AiUpdateResult(
-        summary: 'mock',
-        contactId: 'sarah',
-        interactions: [
-          CrmInteraction(
-            id: 'fake-i1',
-            contactId: 'sarah',
-            type: InteractionType.interaction,
-            title: 'Test',
-            note: 'Test',
-            date: DateTime.utc(2026, 5, 27),
-            source: InteractionSource.aiSuggested,
-          ),
-        ],
-        memoryDocument: newMemory,
-      );
+        final newMemory = MemoryDocument(
+          contactId: 'sarah',
+          displayName: 'Sarah Johnson',
+          lastUpdated: DateTime.utc(2026, 5, 27),
+          summary: 'first time saved',
+        );
+        final result = AiUpdateResult(
+          summary: 'mock',
+          contactId: 'sarah',
+          interactions: [
+            CrmInteraction(
+              id: 'fake-i1',
+              contactId: 'sarah',
+              type: InteractionType.interaction,
+              title: 'Test',
+              note: 'Test',
+              date: DateTime.utc(2026, 5, 27),
+              source: InteractionSource.aiSuggested,
+            ),
+          ],
+          memoryDocument: newMemory,
+        );
 
-      await expectLater(
-        () => adapter.commit(result),
-        throwsA(isA<AiUpdateFailure>()),
-      );
+        await expectLater(
+          () => adapter.commit(result),
+          throwsA(isA<AiUpdateFailure>()),
+        );
 
-      // Rollback deleted the just-written doc.
-      expect(await store.load('sarah'), isNull);
-    });
+        // Rollback deleted the just-written doc.
+        expect(await store.load('sarah'), isNull);
+      },
+    );
   });
 
   group('LlmAiUpdate constants', () {
@@ -543,8 +539,7 @@ void main() {
     });
   });
 
-  group(
-      'LlmAiUpdate.run — cancelToken runtime contract '
+  group('LlmAiUpdate.run — cancelToken runtime contract '
       '(PRD §Q8 group 3)', () {
     test('cancelToken that completes before run finishes throws '
         'AiUpdateCancelled', () async {
@@ -558,15 +553,13 @@ void main() {
       final adapter = LlmAiUpdate(
         firebaseAi: null,
         memoryStore: container.read(memoryStoreProvider),
-        appController:
-            container.read(appControllerProvider.notifier),
+        appController: container.read(appControllerProvider.notifier),
         recentInteractionsLookup: (_) => const [],
         // Preparer never completes — simulates a slow Gemini call.
         attachmentPreparer: (_) => Completer<PreparedAttachments>().future,
       );
 
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       final memory = MemoryDocument.empty(
         contactId: sarah.id,
         displayName: sarah.name,
@@ -595,8 +588,7 @@ void main() {
       addTearDown(container.dispose);
       final adapter = _adapter(container, failOnNetwork: true);
 
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       final memory = MemoryDocument.empty(
         contactId: sarah.id,
         displayName: sarah.name,
@@ -618,8 +610,7 @@ void main() {
     });
   });
 
-  group(
-      'LlmAiUpdate projection — PRD §Q4 / reviewer BLOCKER 3 '
+  group('LlmAiUpdate projection — PRD §Q4 / reviewer BLOCKER 3 '
       '(preferences + upcoming land in MemoryDocument)', () {
     test('preferencesToAdd merge into memory.preferences with '
         'case-insensitive dedup', () {
@@ -627,8 +618,7 @@ void main() {
       addTearDown(container.dispose);
       final adapter = _adapter(container);
 
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       final memory = MemoryDocument(
         contactId: 'sarah',
         displayName: 'Sarah Johnson',
@@ -640,8 +630,7 @@ void main() {
         interactionTitle: 'Preference added',
         interactionNote: "Sarah doesn't drink alcohol.",
         memoryUpdate: LlmMemoryUpdate(
-          newHistoryBullet:
-              "- 2026-05-27 — Sarah doesn't drink alcohol.",
+          newHistoryBullet: "- 2026-05-27 — Sarah doesn't drink alcohol.",
           preferencesToAdd: const [
             "doesn't drink alcohol",
             // Case-insensitive duplicate of the existing line.
@@ -663,174 +652,183 @@ void main() {
       final newMemory = result.memoryDocument!;
       // Existing line preserved verbatim; new line appended; case-
       // insensitive duplicate dropped.
-      expect(
-        newMemory.preferences,
-        "Prefers oat milk\ndoesn't drink alcohol",
-      );
+      expect(newMemory.preferences, "Prefers oat milk\ndoesn't drink alcohol");
     });
 
-    test('topicSuggestions merge into memory for new and touched topics while preserving untouched groups', () {
-      final container = _container();
-      addTearDown(container.dispose);
-      final adapter = _adapter(container);
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
-      final memory = MemoryDocument(
-        contactId: 'sarah',
-        displayName: 'Sarah Johnson',
-        lastUpdated: DateTime.utc(2026, 5, 19),
-        topics: const ['paris trip', 'pottery'],
-        topicSuggestions: [
-          TopicSuggestionGroup(
-            topic: 'paris trip',
-            lastMentionedAt: DateTime.utc(2026, 5, 1),
-            mentionCount: 1,
-            suggestions: const [
-              TopicSuggestion(
-                kind: TopicSuggestionKind.ask,
-                text: 'Ask what part of Paris she is most excited for.',
-              ),
-            ],
-          ),
-          TopicSuggestionGroup(
-            topic: 'pottery',
-            lastMentionedAt: DateTime.utc(2026, 4, 1),
-            mentionCount: 3,
-            suggestions: const [
-              TopicSuggestion(
-                kind: TopicSuggestionKind.remember,
-                text: 'Remember to ask about her latest pottery class.',
-              ),
-            ],
-          ),
-        ],
-      );
-      final llmResult = LlmAiUpdateResponse(
-        interactionType: InteractionType.sharedActivity,
-        interactionTitle: 'Trip planning',
-        interactionNote: 'Sarah talked about Paris plans.',
-        memoryUpdate: LlmMemoryUpdate(
-          newHistoryBullet: '- 2026-06-04 — Sarah talked about Paris plans.',
-          topicsToAdd: const ['currency'],
-          topicSuggestions: const [
-            LlmTopicSuggestionGroup(
-              topic: 'paris trip',
-              suggestions: [
-                LlmTopicSuggestion(
-                  kind: LlmTopicSuggestionKind.ask,
-                  text: 'Ask how the Paris plans are coming together.',
-                ),
-              ],
-            ),
-            LlmTopicSuggestionGroup(
-              topic: 'currency',
-              expiresAt: '2026-07-01',
-              suggestions: [
-                LlmTopicSuggestion(
-                  kind: LlmTopicSuggestionKind.share,
-                  text: 'Share a gentle travel-money tip if you spot one.',
-                ),
-              ],
-            ),
-          ],
-        ),
-        interactionDepth: 50,
-      );
-
-      final result = debugProjectLlmResponseOntoAiUpdateResult(
-        adapter: adapter,
-        llmResult: llmResult,
-        contact: sarah,
-        currentMemory: memory,
-        attachments: const [],
-        now: DateTime.utc(2026, 6, 4),
-      );
-
-      final groups = result.memoryDocument!.topicSuggestions;
-      final paris = groups.firstWhere((g) => g.topic == 'paris trip');
-      expect(paris.lastMentionedAt, DateTime.utc(2026, 6, 4));
-      expect(paris.mentionCount, 2);
-      expect(paris.suggestions.single.text,
-          'Ask how the Paris plans are coming together.');
-
-      final currency = groups.firstWhere((g) => g.topic == 'currency');
-      expect(currency.lastMentionedAt, DateTime.utc(2026, 6, 4));
-      expect(currency.mentionCount, 1);
-      expect(currency.expiresAt, DateTime.utc(2026, 7, 1));
-      expect(currency.suggestions.single.kind, TopicSuggestionKind.share);
-
-      final pottery = groups.firstWhere((g) => g.topic == 'pottery');
-      expect(pottery.mentionCount, 3);
-      expect(pottery.suggestions.single.text,
-          'Remember to ask about her latest pottery class.');
-    });
-
-    test('empty touched topic suggestion group updates metadata without clearing existing suggestions', () {
-      final container = _container();
-      addTearDown(container.dispose);
-      final adapter = _adapter(container);
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
-      final memory = MemoryDocument(
-        contactId: 'sarah',
-        displayName: 'Sarah Johnson',
-        lastUpdated: DateTime.utc(2026, 5, 19),
-        topics: const ['paris trip'],
-        topicSuggestions: [
-          TopicSuggestionGroup(
-            topic: 'paris trip',
-            lastMentionedAt: DateTime.utc(2026, 5, 1),
-            mentionCount: 1,
-            expiresAt: DateTime.utc(2026, 7, 1),
-            suggestions: const [
-              TopicSuggestion(
-                kind: TopicSuggestionKind.ask,
-                text: 'Ask what part of Paris she is most excited for.',
-              ),
-            ],
-          ),
-        ],
-      );
-      const llmResult = LlmAiUpdateResponse(
-        interactionType: InteractionType.sharedActivity,
-        interactionTitle: 'Trip planning',
-        interactionNote: 'Sarah talked about Paris plans.',
-        memoryUpdate: LlmMemoryUpdate(
-          newHistoryBullet: '- 2026-06-04 — Sarah talked about Paris plans.',
+    test(
+      'topicSuggestions merge into memory for new and touched topics while preserving untouched groups',
+      () {
+        final container = _container();
+        addTearDown(container.dispose);
+        final adapter = _adapter(container);
+        final sarah = _connection(
+          container.read(appControllerProvider),
+          'sarah',
+        );
+        final memory = MemoryDocument(
+          contactId: 'sarah',
+          displayName: 'Sarah Johnson',
+          lastUpdated: DateTime.utc(2026, 5, 19),
+          topics: const ['paris trip', 'pottery'],
           topicSuggestions: [
-            LlmTopicSuggestionGroup(
+            TopicSuggestionGroup(
               topic: 'paris trip',
-              suggestions: [],
+              lastMentionedAt: DateTime.utc(2026, 5, 1),
+              mentionCount: 1,
+              suggestions: const [
+                TopicSuggestion(
+                  kind: TopicSuggestionKind.ask,
+                  text: 'Ask what part of Paris she is most excited for.',
+                ),
+              ],
+            ),
+            TopicSuggestionGroup(
+              topic: 'pottery',
+              lastMentionedAt: DateTime.utc(2026, 4, 1),
+              mentionCount: 3,
+              suggestions: const [
+                TopicSuggestion(
+                  kind: TopicSuggestionKind.remember,
+                  text: 'Remember to ask about her latest pottery class.',
+                ),
+              ],
             ),
           ],
-        ),
-        interactionDepth: 50,
-      );
+        );
+        final llmResult = LlmAiUpdateResponse(
+          interactionType: InteractionType.sharedActivity,
+          interactionTitle: 'Trip planning',
+          interactionNote: 'Sarah talked about Paris plans.',
+          memoryUpdate: LlmMemoryUpdate(
+            newHistoryBullet: '- 2026-06-04 — Sarah talked about Paris plans.',
+            topicsToAdd: const ['currency'],
+            topicSuggestions: const [
+              LlmTopicSuggestionGroup(
+                topic: 'paris trip',
+                suggestions: [
+                  LlmTopicSuggestion(
+                    kind: LlmTopicSuggestionKind.ask,
+                    text: 'Ask how the Paris plans are coming together.',
+                  ),
+                ],
+              ),
+              LlmTopicSuggestionGroup(
+                topic: 'currency',
+                expiresAt: '2026-07-01',
+                suggestions: [
+                  LlmTopicSuggestion(
+                    kind: LlmTopicSuggestionKind.share,
+                    text: 'Share a gentle travel-money tip if you spot one.',
+                  ),
+                ],
+              ),
+            ],
+          ),
+          interactionDepth: 50,
+        );
 
-      final result = debugProjectLlmResponseOntoAiUpdateResult(
-        adapter: adapter,
-        llmResult: llmResult,
-        contact: sarah,
-        currentMemory: memory,
-        attachments: const [],
-        now: DateTime.utc(2026, 6, 4),
-      );
+        final result = debugProjectLlmResponseOntoAiUpdateResult(
+          adapter: adapter,
+          llmResult: llmResult,
+          contact: sarah,
+          currentMemory: memory,
+          attachments: const [],
+          now: DateTime.utc(2026, 6, 4),
+        );
 
-      final paris = result.memoryDocument!.topicSuggestions.single;
-      expect(paris.lastMentionedAt, DateTime.utc(2026, 6, 4));
-      expect(paris.mentionCount, 2);
-      expect(paris.expiresAt, isNull);
-      expect(paris.suggestions.single.text,
-          'Ask what part of Paris she is most excited for.');
-    });
+        final groups = result.memoryDocument!.topicSuggestions;
+        final paris = groups.firstWhere((g) => g.topic == 'paris trip');
+        expect(paris.lastMentionedAt, DateTime.utc(2026, 6, 4));
+        expect(paris.mentionCount, 2);
+        expect(
+          paris.suggestions.single.text,
+          'Ask how the Paris plans are coming together.',
+        );
+
+        final currency = groups.firstWhere((g) => g.topic == 'currency');
+        expect(currency.lastMentionedAt, DateTime.utc(2026, 6, 4));
+        expect(currency.mentionCount, 1);
+        expect(currency.expiresAt, DateTime.utc(2026, 7, 1));
+        expect(currency.suggestions.single.kind, TopicSuggestionKind.share);
+
+        final pottery = groups.firstWhere((g) => g.topic == 'pottery');
+        expect(pottery.mentionCount, 3);
+        expect(
+          pottery.suggestions.single.text,
+          'Remember to ask about her latest pottery class.',
+        );
+      },
+    );
+
+    test(
+      'empty touched topic suggestion group updates metadata without clearing existing suggestions',
+      () {
+        final container = _container();
+        addTearDown(container.dispose);
+        final adapter = _adapter(container);
+        final sarah = _connection(
+          container.read(appControllerProvider),
+          'sarah',
+        );
+        final memory = MemoryDocument(
+          contactId: 'sarah',
+          displayName: 'Sarah Johnson',
+          lastUpdated: DateTime.utc(2026, 5, 19),
+          topics: const ['paris trip'],
+          topicSuggestions: [
+            TopicSuggestionGroup(
+              topic: 'paris trip',
+              lastMentionedAt: DateTime.utc(2026, 5, 1),
+              mentionCount: 1,
+              expiresAt: DateTime.utc(2026, 7, 1),
+              suggestions: const [
+                TopicSuggestion(
+                  kind: TopicSuggestionKind.ask,
+                  text: 'Ask what part of Paris she is most excited for.',
+                ),
+              ],
+            ),
+          ],
+        );
+        const llmResult = LlmAiUpdateResponse(
+          interactionType: InteractionType.sharedActivity,
+          interactionTitle: 'Trip planning',
+          interactionNote: 'Sarah talked about Paris plans.',
+          memoryUpdate: LlmMemoryUpdate(
+            newHistoryBullet: '- 2026-06-04 — Sarah talked about Paris plans.',
+            topicSuggestions: [
+              LlmTopicSuggestionGroup(topic: 'paris trip', suggestions: []),
+            ],
+          ),
+          interactionDepth: 50,
+        );
+
+        final result = debugProjectLlmResponseOntoAiUpdateResult(
+          adapter: adapter,
+          llmResult: llmResult,
+          contact: sarah,
+          currentMemory: memory,
+          attachments: const [],
+          now: DateTime.utc(2026, 6, 4),
+        );
+
+        final paris = result.memoryDocument!.topicSuggestions.single;
+        expect(paris.lastMentionedAt, DateTime.utc(2026, 6, 4));
+        expect(paris.mentionCount, 2);
+        expect(paris.expiresAt, isNull);
+        expect(
+          paris.suggestions.single.text,
+          'Ask what part of Paris she is most excited for.',
+        );
+      },
+    );
 
     test('upcomingToAdd with ISO date lands as UpcomingEntry on '
         'memory.upcoming', () {
       final container = _container();
       addTearDown(container.dispose);
       final adapter = _adapter(container);
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       final memory = MemoryDocument(
         contactId: 'sarah',
         displayName: 'Sarah Johnson',
@@ -875,8 +873,7 @@ void main() {
       final container = _container();
       addTearDown(container.dispose);
       final adapter = _adapter(container);
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       final memory = MemoryDocument(
         contactId: 'sarah',
         displayName: 'Sarah Johnson',
@@ -887,8 +884,7 @@ void main() {
         interactionTitle: 'Trip planning',
         interactionNote: 'Trip is loose.',
         memoryUpdate: LlmMemoryUpdate(
-          newHistoryBullet:
-              '- 2026-05-27 — Trip planning conversation.',
+          newHistoryBullet: '- 2026-05-27 — Trip planning conversation.',
           upcomingToAdd: const [
             LlmUpcomingEntry(
               label: 'Europe trip',
@@ -913,8 +909,7 @@ void main() {
       final upcoming = result.memoryDocument!.upcoming;
       expect(upcoming, hasLength(1));
       expect(upcoming.single.startDate, now);
-      expect(upcoming.single.description,
-          'Europe trip (next month)');
+      expect(upcoming.single.description, 'Europe trip (next month)');
     });
 
     test('summary stays unchanged when llmResult.memoryUpdate.summary '
@@ -922,8 +917,7 @@ void main() {
       final container = _container();
       addTearDown(container.dispose);
       final adapter = _adapter(container);
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       final memory = MemoryDocument(
         contactId: 'sarah',
         displayName: 'Sarah Johnson',
@@ -1056,8 +1050,7 @@ void main() {
       final container = _container();
       addTearDown(container.dispose);
       final adapter = _adapter(container);
-      final sarah =
-          _connection(container.read(appControllerProvider), 'sarah');
+      final sarah = _connection(container.read(appControllerProvider), 'sarah');
       final memory = MemoryDocument(
         contactId: 'sarah',
         displayName: 'Sarah Johnson',
@@ -1094,24 +1087,15 @@ void main() {
     // table lives in docs/issues/085-apply-llm-bondscoredelta.md.
 
     test('bond=20, depth=100 → +50 (low-bond anchor)', () {
-      expect(
-        debugApplyBondScoreCurve(depth: 100, currentBond: 20),
-        50,
-      );
+      expect(debugApplyBondScoreCurve(depth: 100, currentBond: 20), 50);
     });
 
     test('bond=90, depth=100 → +6 (high-bond anchor)', () {
-      expect(
-        debugApplyBondScoreCurve(depth: 100, currentBond: 90),
-        6,
-      );
+      expect(debugApplyBondScoreCurve(depth: 100, currentBond: 90), 6);
     });
 
     test('bond=20, depth=0 → +0 (LLM judged trivial; no movement)', () {
-      expect(
-        debugApplyBondScoreCurve(depth: 0, currentBond: 20),
-        0,
-      );
+      expect(debugApplyBondScoreCurve(depth: 0, currentBond: 20), 0);
     });
 
     test('bond=100, depth=anything → +0 (capped relationship)', () {
@@ -1125,19 +1109,12 @@ void main() {
       // Note: the issue file's reference table shows +16 for this cell
       // because the table uses round() informally; the contract is
       // floor() per the formula in the PRD addendum.
-      expect(
-        debugApplyBondScoreCurve(depth: 50, currentBond: 50),
-        15,
-      );
+      expect(debugApplyBondScoreCurve(depth: 50, currentBond: 50), 15);
     });
 
-    test('bond=80, depth=10 → +1 (small input at high bond barely moves)',
-        () {
+    test('bond=80, depth=10 → +1 (small input at high bond barely moves)', () {
       // 10 × 20 / 160 = 200 / 160 = 1.25 → floor = 1.
-      expect(
-        debugApplyBondScoreCurve(depth: 10, currentBond: 80),
-        1,
-      );
+      expect(debugApplyBondScoreCurve(depth: 10, currentBond: 80), 1);
     });
 
     test('depth above 100 is clamped before applying the curve', () {
@@ -1151,14 +1128,10 @@ void main() {
     });
 
     test('depth below 0 is clamped to 0 (no negative deltas ever)', () {
-      expect(
-        debugApplyBondScoreCurve(depth: -5, currentBond: 20),
-        0,
-      );
+      expect(debugApplyBondScoreCurve(depth: -5, currentBond: 20), 0);
     });
 
-    test('currentBond outside 0..100 is clamped before the curve runs',
-        () {
+    test('currentBond outside 0..100 is clamped before the curve runs', () {
       // Defensive: AppController already clamps post-write, but the
       // helper should not amplify a corrupted input. Below-zero bond
       // produces depth's full effect (treated as 0); above-100 produces
@@ -1167,10 +1140,7 @@ void main() {
         debugApplyBondScoreCurve(depth: 100, currentBond: -10),
         debugApplyBondScoreCurve(depth: 100, currentBond: 0),
       );
-      expect(
-        debugApplyBondScoreCurve(depth: 100, currentBond: 150),
-        0,
-      );
+      expect(debugApplyBondScoreCurve(depth: 100, currentBond: 150), 0);
     });
   });
 }
