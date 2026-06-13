@@ -30,9 +30,17 @@ AiUpdateCommitPlan buildAiUpdateCommitPlan({
     0,
     100,
   );
+
+  // Use the interaction's date as lastContact so a user-chosen date
+  // (edited in the preview screen) is reflected on the connection card,
+  // the heatmap, and the recommendations engine. Fall back to `now` only
+  // when there is no interaction (shouldn't happen given the guard above).
+  final interactionDate = result.interactions.single.date;
+  final lastContact = interactionDate.isBefore(now) ? interactionDate : now;
+
   final updatedConnection = connection.copyWith(
     nextStep: result.nextStep ?? connection.nextStep,
-    lastContact: now,
+    lastContact: lastContact,
     bondScore: nextScore,
   );
 
