@@ -9,36 +9,43 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../test_overrides.dart';
 
+/// Pumps a [SettingsTab] wrapped in the providers needed for headless tests.
+Future<void> _pumpSettings(WidgetTester tester) async {
+  await tester.binding.setSurfaceSize(const Size(390, 844));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        ...signedInDemoOverrides(),
+        memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.data(false),
+        home: const Scaffold(body: SettingsTab()),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// Opens the About bottom sheet and waits for the animation to finish.
+Future<void> _openAboutSheet(WidgetTester tester) async {
+  await tester.tap(find.text('About Connect Me'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
-  testWidgets('AboutModal slides up when row is tapped and displays key info', (
+  testWidgets('AboutModal displays key info when opened', (
     WidgetTester tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _pumpSettings(tester);
+    await _openAboutSheet(tester);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          ...signedInDemoOverrides(),
-          memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
-        ],
-        child: MaterialApp(
-          theme: AppTheme.data(false),
-          home: const Scaffold(body: SettingsTab()),
-        ),
-      ),
-    );
-
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-
-    // Tap on the 'About Connect Me' settings row
-    await tester.tap(find.text('About Connect Me'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    // Verify modal elements are displayed
+    // Verify modal is present
     expect(find.byType(AboutModal), findsOneWidget);
+
+    // 'Connect Me' appears in both the settings row and the modal title
     expect(find.text('Connect Me'), findsWidgets);
     expect(find.text('Version 3.0.0 (Build 42)'), findsOneWidget);
     expect(find.text("WHAT'S NEW IN V3"), findsOneWidget);
@@ -46,19 +53,39 @@ void main() {
     // Verify a sample feature highlight is listed
     expect(find.text('AI Memory Updates'), findsOneWidget);
     expect(
-      find.text('Generates deep Markdown memories summarizing contact histories, preferences, and key topics.'),
+      find.text(
+        'Generates deep Markdown memories summarizing contact histories, preferences, and key topics.',
+      ),
       findsOneWidget,
     );
 
     // Verify buttons are present
     expect(find.text('Done'), findsOneWidget);
     expect(find.text('Send Feedback'), findsOneWidget);
+  });
 
-    // Tap Done to close bottom sheet
+  testWidgets('Done button dismisses the AboutModal', (
+    WidgetTester tester,
+  ) async {
+    await _pumpSettings(tester);
+    await _openAboutSheet(tester);
+    expect(find.byType(AboutModal), findsOneWidget);
+
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
 
-    // Verify modal is closed
     expect(find.byType(AboutModal), findsNothing);
+  });
+
+  testWidgets('Send Feedback shows a SnackBar', (
+    WidgetTester tester,
+  ) async {
+    await _pumpSettings(tester);
+    await _openAboutSheet(tester);
+
+    await tester.tap(find.text('Send Feedback'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Feedback features coming soon!'), findsOneWidget);
   });
 }
