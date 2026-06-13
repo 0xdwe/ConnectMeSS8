@@ -444,6 +444,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text("How's the Paris trip going?"), findsOneWidget);
+        expect(find.text('Context :'), findsNothing);
       },
     );
 
@@ -485,6 +486,7 @@ void main() {
           find.text('Ask how the Paris plans are coming together.'),
           findsNothing,
         );
+        expect(find.text('Context :'), findsNothing);
       },
     );
 

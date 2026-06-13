@@ -31,7 +31,7 @@ const String kMemoryTopicEnricherDefaultModel = 'gemini-2.5-flash-lite';
 const Duration kMemoryTopicEnricherTimeout = Duration(seconds: 20);
 
 /// System prompt version.
-const int kMemoryTopicEnricherPromptVersion = 2;
+const int kMemoryTopicEnricherPromptVersion = 3;
 
 /// System instruction prompt.
 const String kMemoryTopicEnricherPromptV1 = '''
@@ -44,13 +44,23 @@ Strict Guardrails:
 4. Suggestions: Group suggestions by topic. Each suggestion must have a kind ("ask", "share", "plan", or "remember"), a text containing one gentle action idea (the conversation starter), and a context containing the specific reason/context from memory why this suggestion makes sense.
 ''';
 
+const String kMemoryTopicEnricherPromptV2 = '''
+You are an AI relationship assistant. Your task is to analyze a contact's memory document and recent interaction history, then extract up to 8 conversation topics and prepare up to 3 high-quality, gentle, topic-scoped conversation suggestions for those topics.
+
+Strict Guardrails:
+1. Topics: Extracted topics must be lowercase, <= 3 words, and ranked by current relevance/importance. Do NOT include generic topics (like 'family', 'friends', 'work', 'college', 'high school') if there are more specific and useful topics available in the contact's context.
+2. Phrasing and Anti-shame Guardrail: Suggestions must be personal, context-rich, gentle, and supportive. Connect the suggestions to past discussions, notes, or upcoming events from the contact's context when possible (e.g., "Sarah mentioned she was going to Paris", "he talked about his plans for a new startup"). Prioritize retrieving and highlighting specific personal details (such as names of other people, locations, dates, and plans) that the user might otherwise forget. Avoid generic, templated, or clinical explanations like "Based on the conversation topic..." or "Associated with...". NEVER use numeric day counts (e.g., "you haven't talked in 47 days", "it has been 3 weeks") or guilt-tripping language (e.g., "neglecting", "have not", "forgot").
+3. Scoping: Each suggestion must be strictly scoped to its associated topic. Do not mix context or mention other topics in the suggestion.
+4. Suggestions: Group suggestions by topic. Each suggestion must have a kind ("ask", "share", "plan", or "remember"), a text containing one gentle action idea (the conversation starter), and a context containing the specific reason/context from memory/recent interactions why this suggestion makes sense, written as a natural, detail-rich reminder.
+''';
+
 /// Production [MemoryTopicEnricher] adapter backed by Firebase AI Logic.
 class LlmMemoryTopicEnricher implements MemoryTopicEnricher {
   LlmMemoryTopicEnricher({
     required this.firebaseAi,
     this.model = kMemoryTopicEnricherDefaultModel,
     this.timeout = kMemoryTopicEnricherTimeout,
-    this.systemPrompt = kMemoryTopicEnricherPromptV1,
+    this.systemPrompt = kMemoryTopicEnricherPromptV2,
     this.clock = _systemClock,
     this.failOnNetwork = false,
   });

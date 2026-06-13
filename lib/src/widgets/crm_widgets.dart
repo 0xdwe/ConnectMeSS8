@@ -1271,9 +1271,7 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
         if (_selectedTopic != null)
           _InlineTopicDetails(
             topic: _selectedTopic!,
-            category: widget.connection.category,
-            contactName: widget.connection.name,
-            contactId: widget.connection.id,
+            connection: widget.connection,
             memory: widget.memory,
           ),
       ],
@@ -1284,26 +1282,21 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
 class _InlineTopicDetails extends StatelessWidget {
   const _InlineTopicDetails({
     required this.topic,
-    required this.category,
-    required this.contactName,
-    required this.contactId,
+    required this.connection,
     required this.memory,
   });
 
   final String topic;
-  final String category;
-  final String contactName;
-  final String contactId;
+  final Connection connection;
   final MemoryDocument? memory;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final suggestions = preferredSuggestionsForTopic(
-      category: category,
-      topic: topic,
-      contactName: contactName,
+      connection: connection,
       memory: memory,
+      topic: topic,
     );
     final displaySuggestions = suggestions.isNotEmpty
         ? suggestions
@@ -1368,16 +1361,18 @@ class _InlineTopicDetails extends StatelessWidget {
                       suggestion.text,
                       style: AppTypography.body(color: _recommendationBodyColor),
                     ),
-                    SizedBox(height: AppSpacing.space3),
-                    Text(
-                      'Context :',
-                      style: AppTypography.h2(color: _recommendationTitleColor),
-                    ),
-                    SizedBox(height: AppSpacing.space1),
-                    Text(
-                      suggestion.context ?? '',
-                      style: AppTypography.body(color: _recommendationBodyColor),
-                    ),
+                    if (suggestion.context != null && suggestion.context!.trim().isNotEmpty) ...[
+                      SizedBox(height: AppSpacing.space3),
+                      Text(
+                        'Context :',
+                        style: AppTypography.h2(color: _recommendationTitleColor),
+                      ),
+                      SizedBox(height: AppSpacing.space1),
+                      Text(
+                        suggestion.context!,
+                        style: AppTypography.body(color: _recommendationBodyColor),
+                      ),
+                    ],
                   ],
                 ),
               ),
