@@ -54,6 +54,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
   Completer<void>? _cancelCompleter;
   List<TextEditingController> titleControllers = [];
   List<TextEditingController> noteControllers = [];
+  List<DateTime> interactionDates = [];
   // Animation controllers for the staggered preview entrance. There are
   // N controllers for N interaction cards plus one extra controller at
   // index N driving the "About <Name> ✨" memory delta card when one is
@@ -180,6 +181,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       noteControllers = result.interactions
           .map((i) => TextEditingController(text: i.note))
           .toList();
+      interactionDates = result.interactions.map((i) => i.date).toList();
 
       // Compute whether a memory delta card will render so we know
       // whether to allocate the extra animation controller. The view
@@ -312,6 +314,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       titleControllers.clear();
       noteControllers.clear();
       cardAnimationControllers.clear();
+      interactionDates.clear();
     });
   }
 
@@ -333,6 +336,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
         original.copyWith(
           title: titleControllers[i].text.trim(),
           note: noteControllers[i].text.trim(),
+          date: interactionDates[i],
         ),
       );
     }
@@ -791,16 +795,36 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
               maxLines: 6,
             ),
             SizedBox(height: AppSpacing.space3),
-            // Date row
-            Row(
-              children: [
-                Icon(Icons.calendar_today, size: 16, color: tokens.inkMuted),
-                SizedBox(width: AppSpacing.space2),
-                Text(
-                  DateFormat.yMMMd().format(interaction.date),
-                  style: AppTypography.caption(color: tokens.inkMuted),
+            // Editable date row
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: interactionDates[index],
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime.now(),
+                );
+                if (picked != null) {
+                  setState(() => interactionDates[index] = picked);
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 16, color: tokens.primary),
+                    SizedBox(width: AppSpacing.space2),
+                    Text(
+                      DateFormat.yMMMd().format(interactionDates[index]),
+                      style: AppTypography.caption(color: tokens.primary)
+                          .copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    SizedBox(width: AppSpacing.space1),
+                    Icon(Icons.edit_outlined, size: 13, color: tokens.primary),
+                  ],
                 ),
-              ],
+              ),
             ),
           ],
         ),
