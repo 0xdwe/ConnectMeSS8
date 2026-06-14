@@ -1,5 +1,6 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
 import 'package:connect_me/src/features/auth_screen.dart';
+import 'package:connect_me/src/widgets/chain_logo.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,32 +12,35 @@ Future<void> pumpConnectMe(
   WidgetTester tester, {
   Size surfaceSize = const Size(800, 1000),
   double textScaleFactor = 1,
+  Brightness platformBrightness = Brightness.light,
 }) async {
   await tester.binding.setSurfaceSize(surfaceSize);
   addTearDown(() => tester.binding.setSurfaceSize(null));
   tester.platformDispatcher.textScaleFactorTestValue = textScaleFactor;
-  addTearDown(
-    tester.platformDispatcher.clearTextScaleFactorTestValue,
-  );
+  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+  tester.platformDispatcher.platformBrightnessTestValue = platformBrightness;
+  addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         ...signedOutDemoOverrides(),
-        routerProvider.overrideWith((ref) => GoRouter(
-          initialLocation: '/auth',
-          routes: [
-            GoRoute(
-              path: '/auth',
-              builder: (context, state) => const AuthScreen(initialMode: AuthMode.login),
-            ),
-            GoRoute(
-              path: '/app',
-              builder: (context, state) => const Scaffold(
-                body: SizedBox(key: Key('home-tab')),
+        routerProvider.overrideWith(
+          (ref) => GoRouter(
+            initialLocation: '/auth',
+            routes: [
+              GoRoute(
+                path: '/auth',
+                builder: (context, state) =>
+                    const AuthScreen(initialMode: AuthMode.login),
               ),
-            ),
-          ],
-        )),
+              GoRoute(
+                path: '/app',
+                builder: (context, state) =>
+                    const Scaffold(body: SizedBox(key: Key('home-tab'))),
+              ),
+            ],
+          ),
+        ),
       ],
       child: const ConnectMeApp(),
     ),
@@ -45,9 +49,23 @@ Future<void> pumpConnectMe(
 }
 
 void main() {
-  testWidgets('login renders the login page image background', (
+  testWidgets('login shows the Connect Me lockup above the heading', (
     tester,
   ) async {
+    await pumpConnectMe(tester, surfaceSize: const Size(390, 844));
+
+    expect(find.byType(LinkedChainLogo), findsOneWidget);
+    expect(find.text('Connect Me'), findsOneWidget);
+
+    final lockupTop = tester.getTopLeft(find.byType(LinkedChainLogo)).dy;
+    final brandTop = tester.getTopLeft(find.text('Connect Me')).dy;
+    final headingTop = tester.getTopLeft(find.text('Welcome back.')).dy;
+
+    expect(lockupTop, lessThan(brandTop));
+    expect(brandTop, lessThan(headingTop));
+  });
+
+  testWidgets('login renders the login page image background', (tester) async {
     await pumpConnectMe(tester);
 
     expect(
@@ -64,6 +82,7 @@ void main() {
       (background.image as AssetImage).assetName,
       'assets/images/login_page.jpg',
     );
+    expect(find.byKey(const Key('welcome-screen-background')), findsNothing);
   });
 
   testWidgets('back from login shows only the welcome screen background', (
@@ -83,10 +102,57 @@ void main() {
       (background.image as AssetImage).assetName,
       'assets/images/welcome_back.jpg',
     );
+    expect(find.byKey(const Key('login-page-background')), findsNothing);
     expect(
-      find.byKey(const Key('login-page-background')),
-      findsNothing,
+      tester.getSize(find.byKey(const Key('landing-scroll-view'))).height,
+      1000,
     );
+  });
+
+  testWidgets('signup shows neither branded image background', (tester) async {
+    await pumpConnectMe(tester);
+
+    await tester.tap(find.byKey(const Key('auth-mode-signup')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('welcome-screen-background')), findsNothing);
+    expect(find.byKey(const Key('login-page-background')), findsNothing);
+  });
+
+  testWidgets('signup keeps the light auth theme on a dark device', (
+    tester,
+  ) async {
+    await pumpConnectMe(tester, platformBrightness: Brightness.dark);
+
+    await tester.tap(find.byKey(const Key('auth-mode-signup')));
+    await tester.pumpAndSettle();
+
+    final fieldContext = tester.element(
+      find.byKey(const Key('signup-name-field')),
+    );
+    expect(Theme.of(fieldContext).brightness, Brightness.light);
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor,
+      Colors.white,
+    );
+  });
+
+  testWidgets('compact scaled landing remains scrollable without overflow', (
+    tester,
+  ) async {
+    await pumpConnectMe(
+      tester,
+      surfaceSize: const Size(320, 700),
+      textScaleFactor: 2,
+    );
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Log In'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome to\nConnect Me'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('compact scaled login remains scrollable without overflow', (
@@ -103,9 +169,7 @@ void main() {
     expect(find.byKey(const Key('sign-in-button')), findsOneWidget);
     expect(find.byKey(const Key('google-sign-in-button')), findsOneWidget);
 
-    await tester.ensureVisible(
-      find.byKey(const Key('google-sign-in-button')),
-    );
+    await tester.ensureVisible(find.byKey(const Key('google-sign-in-button')));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);

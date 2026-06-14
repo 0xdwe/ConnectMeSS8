@@ -9,6 +9,7 @@ import '../state/app_state.dart';
 import '../state/firebase_providers.dart';
 import '../state/user_profile/user_profile_service.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/chain_logo.dart';
@@ -16,10 +17,7 @@ import '../widgets/chain_logo.dart';
 enum AuthMode { landing, login, signup }
 
 class AuthScreen extends ConsumerStatefulWidget {
-  const AuthScreen({
-    super.key,
-    this.initialMode = AuthMode.landing,
-  });
+  const AuthScreen({super.key, this.initialMode = AuthMode.landing});
 
   final AuthMode initialMode;
 
@@ -249,160 +247,181 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final brandedMode = true;
-    final tokens = brandedMode ? AppTokens.light() : context.tokens;
+    final tokens = AppTokens.light();
 
-    return Scaffold(
-      backgroundColor: brandedMode ? Colors.white : null,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final w = constraints.maxWidth;
-          final h = constraints.maxHeight;
+    return Theme(
+      data: AppTheme.data(false),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final w = constraints.maxWidth;
+            final h = constraints.maxHeight;
 
-          return Stack(
-            children: [
-              // 1. Mode-specific background
-              if (_mode == AuthMode.landing) ...[
-                const Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Color(0xFFE6DBFB),
-                            Color(0xFFFAF7FC),
+            return Stack(
+              children: [
+                // 1. Mode-specific background
+                if (_mode == AuthMode.landing) ...[
+                  const Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFFE6DBFB), Color(0xFFFAF7FC)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.topRight,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Positioned(
+                    top: 24,
+                    right: 0,
+                    bottom: -24,
+                    left: 0,
+                    child: IgnorePointer(
+                      child: Image(
+                        key: Key('welcome-screen-background'),
+                        image: AssetImage('assets/images/welcome_back.jpg'),
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                        excludeFromSemantics: true,
+                      ),
+                    ),
+                  ),
+                ] else if (_mode == AuthMode.login) ...[
+                  const Positioned.fill(
+                    child: IgnorePointer(
+                      child: ColoredBox(color: Colors.white),
+                    ),
+                  ),
+                  const Positioned.fill(
+                    child: IgnorePointer(
+                      child: Image(
+                        key: Key('login-page-background'),
+                        image: AssetImage('assets/images/login_page.jpg'),
+                        fit: BoxFit.fitWidth,
+                        alignment: Alignment.topCenter,
+                        excludeFromSemantics: true,
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: _SignupBackgroundPainter(
+                          surfaceColor: tokens.surface,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+
+                // 2. Main content layer
+                if (_mode == AuthMode.landing)
+                  SafeArea(
+                    child: LayoutBuilder(
+                      builder: (context, landingConstraints) {
+                        return SingleChildScrollView(
+                          key: const Key('landing-scroll-view'),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: landingConstraints.maxHeight,
+                            ),
+                            child: IntrinsicHeight(
+                              child: _buildLanding(context, tokens),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                else ...[
+                  // Curved card inputs (Scrollable to prevent keyboard overflows)
+                  SafeArea(
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
+                          _mode == AuthMode.login
+                              ? math.max(h * 0.255, 176.0)
+                              : h * 0.28,
+                          w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
+                          AppSpacing.space5,
+                        ),
+                        child: Center(
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 460),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Form content
+                                if (_mode == AuthMode.login)
+                                  _LoginForm(
+                                    emailController: _loginEmail,
+                                    passwordController: _loginPassword,
+                                    emailError: _loginEmailError,
+                                    passwordError: _loginPasswordError,
+                                    busy: _busy,
+                                    onSubmit: _submitLogin,
+                                    onSwitch: () =>
+                                        _switchMode(AuthMode.signup),
+                                    onGoogleSignIn: _signInWithGoogle,
+                                    tokens: tokens,
+                                  )
+                                else
+                                  _SignupForm(
+                                    nameController: _signupName,
+                                    emailController: _signupEmail,
+                                    passwordController: _signupPassword,
+                                    confirmController: _signupConfirm,
+                                    nameError: _signupNameError,
+                                    emailError: _signupEmailError,
+                                    passwordError: _signupPasswordError,
+                                    confirmError: _signupConfirmError,
+                                    busy: _busy,
+                                    onSubmit: _submitSignup,
+                                    onSwitch: () => _switchMode(AuthMode.login),
+                                    onGoogleSignIn: _signInWithGoogle,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Back Button to Landing Screen (placed on top for hit-testing)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: SafeArea(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 8,
+                            ),
                           ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.topRight,
+                        ),
+                        child: IconButton(
+                          icon: Icon(Icons.arrow_back, color: tokens.ink),
+                          onPressed: () => _switchMode(AuthMode.landing),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const Positioned.fill(
-                  child: IgnorePointer(
-                    child: Image(
-                      key: Key('welcome-screen-background'),
-                      image: AssetImage('assets/images/welcome_back.jpg'),
-                      fit: BoxFit.fitWidth,
-                      alignment: Alignment.bottomCenter,
-                      excludeFromSemantics: true,
-                    ),
-                  ),
-                ),
-              ] else ...[
-                const Positioned.fill(
-                  child: IgnorePointer(
-                    child: ColoredBox(
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const Positioned.fill(
-                  child: IgnorePointer(
-                    child: Image(
-                      key: Key('login-page-background'),
-                      image: AssetImage('assets/images/login_page.jpg'),
-                      fit: BoxFit.fitWidth,
-                      alignment: Alignment.topCenter,
-                      excludeFromSemantics: true,
-                    ),
-                  ),
-                ),
+                ],
               ],
-
-              // 2. Main content layer
-              if (_mode == AuthMode.landing)
-                SafeArea(
-                  child: _buildLanding(context, tokens),
-                )
-              else ...[
-
-                // Curved card inputs (Scrollable to prevent keyboard overflows)
-                SafeArea(
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        w <= 360
-                            ? AppSpacing.space4
-                            : AppSpacing.space5,
-                        _mode == AuthMode.login
-                            ? math.max(h * 0.27, 188.0)
-                            : h * 0.28,
-                        w <= 360
-                            ? AppSpacing.space4
-                            : AppSpacing.space5,
-                        AppSpacing.space5,
-                      ),
-                      child: Center(
-                        child: Container(
-                          constraints: const BoxConstraints(maxWidth: 460),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // Form content
-                              if (_mode == AuthMode.login)
-                                _LoginForm(
-                                  emailController: _loginEmail,
-                                  passwordController: _loginPassword,
-                                  emailError: _loginEmailError,
-                                  passwordError: _loginPasswordError,
-                                  busy: _busy,
-                                  onSubmit: _submitLogin,
-                                  onSwitch: () => _switchMode(AuthMode.signup),
-                                  onGoogleSignIn: _signInWithGoogle,
-                                  tokens: tokens,
-                                )
-                              else
-                                _SignupForm(
-                                  nameController: _signupName,
-                                  emailController: _signupEmail,
-                                  passwordController: _signupPassword,
-                                  confirmController: _signupConfirm,
-                                  nameError: _signupNameError,
-                                  emailError: _signupEmailError,
-                                  passwordError: _signupPasswordError,
-                                  confirmError: _signupConfirmError,
-                                  busy: _busy,
-                                  onSubmit: _submitSignup,
-                                  onSwitch: () => _switchMode(AuthMode.login),
-                                  onGoogleSignIn: _signInWithGoogle,
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Back Button to Landing Screen (placed on top for hit-testing)
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: SafeArea(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: Icon(Icons.arrow_back, color: tokens.ink),
-                        onPressed: () => _switchMode(AuthMode.landing),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -419,17 +438,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              LinkedChainLogo(
-                size: 60,
-                color: tokens.primary,
-              ),
+              LinkedChainLogo(size: 60, color: tokens.primary),
               const SizedBox(height: 8),
               Text(
                 'Connect Me',
-                style: AppTypography.bodyLg(color: tokens.ink).copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 19,
-                ),
+                style: AppTypography.bodyLg(
+                  color: tokens.ink,
+                ).copyWith(fontWeight: FontWeight.w700, fontSize: 19),
               ),
             ],
           ),
@@ -453,59 +468,49 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               Text(
                 'Nurture the relationships\nthat matter most.',
                 textAlign: TextAlign.center,
-                style: AppTypography.body(color: tokens.inkMuted).copyWith(
-                  height: 1.3,
-                  fontSize: 14.5,
-                ),
+                style: AppTypography.body(
+                  color: tokens.inkMuted,
+                ).copyWith(height: 1.3, fontSize: 14.5),
               ),
             ],
           ),
         ),
-        SizedBox(height: height * 0.05),
+        SizedBox(height: height * 0.065),
         // Actions
         Center(
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 325),
+            constraints: const BoxConstraints(maxWidth: 310),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Sign Up
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: () => _switchMode(AuthMode.signup),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: tokens.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                _GradientButton(
+                  height: 58,
+                  gradient: tokens.aiGradient,
+                  onPressed: () => _switchMode(AuthMode.signup),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Sign Up',
+                          style: AppTypography.bodyLg(
+                            color: Colors.white,
+                          ).copyWith(fontWeight: FontWeight.w600),
+                        ),
                       ),
-                    ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Align(
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Sign Up',
-                            style: AppTypography.bodyLg(color: Colors.white).copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const Align(
-                          alignment: Alignment.centerRight,
-                          child: Icon(Icons.arrow_forward, size: 18),
-                        ),
-                      ],
-                    ),
+                      const Align(
+                        alignment: Alignment.centerRight,
+                        child: Icon(Icons.arrow_forward, size: 18),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 16),
                 // Log In
                 SizedBox(
-                  height: 52,
+                  height: 58,
                   child: OutlinedButton(
                     onPressed: () => _switchMode(AuthMode.login),
                     style: OutlinedButton.styleFrom(
@@ -516,7 +521,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         width: 1.5,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(18),
                       ),
                       elevation: 0,
                     ),
@@ -527,14 +532,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           alignment: Alignment.center,
                           child: Text(
                             'Log In',
-                            style: AppTypography.bodyLg(color: tokens.primary).copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: AppTypography.bodyLg(
+                              color: tokens.primary,
+                            ).copyWith(fontWeight: FontWeight.w600),
                           ),
                         ),
                         Align(
                           alignment: Alignment.centerRight,
-                          child: Icon(Icons.arrow_forward, size: 18, color: tokens.primary),
+                          child: Icon(
+                            Icons.arrow_forward,
+                            size: 18,
+                            color: tokens.primary,
+                          ),
                         ),
                       ],
                     ),
@@ -550,38 +559,144 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 }
 
+class _SignupBackgroundPainter extends CustomPainter {
+  const _SignupBackgroundPainter({required this.surfaceColor});
+
+  final Color surfaceColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bounds = Offset.zero & size;
+    canvas.drawRect(
+      bounds,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFEBE0FF), Color(0xFFFAF7FF), Color(0xFFD9E4FF)],
+        ).createShader(bounds),
+    );
+
+    canvas.drawCircle(
+      Offset(size.width * 0.82, size.height * 0.12),
+      size.width * 0.42,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            const Color(0xFFFDE8F3).withValues(alpha: 0.85),
+            Colors.transparent,
+          ],
+        ).createShader(bounds),
+    );
+
+    final formSurface = Path()
+      ..moveTo(0, size.height)
+      ..lineTo(0, size.height * 0.24)
+      ..cubicTo(
+        size.width * 0.35,
+        size.height * 0.16,
+        size.width * 0.7,
+        size.height * 0.32,
+        size.width,
+        size.height * 0.26,
+      )
+      ..lineTo(size.width, size.height)
+      ..close();
+    canvas.drawPath(formSurface, Paint()..color = surfaceColor);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SignupBackgroundPainter oldDelegate) {
+    return oldDelegate.surfaceColor != surfaceColor;
+  }
+}
+
+class _GradientButton extends StatelessWidget {
+  const _GradientButton({
+    required this.gradient,
+    required this.onPressed,
+    required this.child,
+    this.buttonKey,
+    this.height = 56,
+  });
+
+  final LinearGradient gradient;
+  final VoidCallback? onPressed;
+  final Widget child;
+  final Key? buttonKey;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: FilledButton(
+          key: buttonKey,
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            disabledBackgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            disabledForegroundColor: Colors.white,
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
 InputDecorationTheme _authInputDecoration(
   BuildContext context, {
   AppTokens? tokensOverride,
   Color? fillColor,
+  double borderRadius = 30,
+  double? minHeight,
+  EdgeInsetsGeometry contentPadding = const EdgeInsets.symmetric(
+    horizontal: 24,
+    vertical: 15,
+  ),
 }) {
   final tokens = tokensOverride ?? context.tokens;
+  final radius = BorderRadius.circular(borderRadius);
   return InputDecorationTheme(
     filled: true,
-    fillColor:
-        fillColor ?? const Color(0xFFF3F2FF).withValues(alpha: 0.6),
+    fillColor: fillColor ?? const Color(0xFFF3F2FF).withValues(alpha: 0.6),
     labelStyle: AppTypography.body(color: tokens.inkMuted),
     hintStyle: AppTypography.body(color: tokens.inkSubtle),
     errorStyle: AppTypography.caption(color: tokens.danger),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
+    contentPadding: contentPadding,
+    constraints: minHeight == null
+        ? null
+        : BoxConstraints(minHeight: minHeight),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: radius,
       borderSide: BorderSide.none,
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: radius,
       borderSide: BorderSide.none,
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: radius,
       borderSide: BorderSide(color: tokens.primary, width: 1.4),
     ),
     errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: radius,
       borderSide: BorderSide(color: tokens.danger, width: 1),
     ),
     focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: radius,
       borderSide: BorderSide(color: tokens.danger, width: 1.4),
     ),
   );
@@ -615,12 +730,27 @@ class _LoginForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LinkedChainLogo(size: 47, color: tokens.primary),
+              const SizedBox(height: 6),
+              Text(
+                'Connect Me',
+                style: AppTypography.bodyLg(
+                  color: tokens.ink,
+                ).copyWith(fontSize: 20, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 36),
         Text(
           'Welcome back.',
-          style: AppTypography.display(color: tokens.ink).copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: 28,
-          ),
+          style: AppTypography.display(
+            color: tokens.ink,
+          ).copyWith(fontWeight: FontWeight.w700, fontSize: 32),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 6),
@@ -629,7 +759,7 @@ class _LoginForm extends StatelessWidget {
           style: AppTypography.body(color: tokens.inkMuted),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 34),
 
         // Email field
         TextField(
@@ -638,21 +768,35 @@ class _LoginForm extends StatelessWidget {
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
           style: AppTypography.body(color: tokens.ink),
-          decoration: InputDecoration(
-            prefixIcon: Padding(
-              padding: const EdgeInsets.only(left: 18, right: 10),
-              child: Icon(Icons.email_outlined, color: tokens.inkMuted, size: 18),
-            ),
-            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
-            labelText: 'Email',
-            errorText: emailError,
-          ).applyDefaults(
-            _authInputDecoration(
-              context,
-              tokensOverride: tokens,
-              fillColor: const Color(0xFFF3F2FF),
-            ),
-          ),
+          decoration:
+              InputDecoration(
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 18, right: 10),
+                  child: Icon(
+                    Icons.email_outlined,
+                    color: tokens.inkMuted,
+                    size: 18,
+                  ),
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 0,
+                ),
+                labelText: 'Email',
+                errorText: emailError,
+              ).applyDefaults(
+                _authInputDecoration(
+                  context,
+                  tokensOverride: tokens,
+                  fillColor: const Color(0xFFF3F2FF),
+                  borderRadius: 18,
+                  minHeight: 56,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                ),
+              ),
         ),
         const SizedBox(height: 16),
 
@@ -662,64 +806,76 @@ class _LoginForm extends StatelessWidget {
           controller: passwordController,
           obscureText: true,
           style: AppTypography.body(color: tokens.ink),
-          decoration: InputDecoration(
-            prefixIcon: Padding(
-              padding: const EdgeInsets.only(left: 18, right: 10),
-              child: Icon(Icons.lock_outline, color: tokens.inkMuted, size: 18),
-            ),
-            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
-            suffixIcon: Padding(
-              padding: const EdgeInsets.only(right: 18),
-              child: Icon(Icons.visibility_outlined, color: tokens.inkSubtle, size: 18),
-            ),
-            labelText: 'Password',
-            errorText: passwordError,
-          ).applyDefaults(
-            _authInputDecoration(
-              context,
-              tokensOverride: tokens,
-              fillColor: const Color(0xFFF3F2FF),
-            ),
-          ),
+          decoration:
+              InputDecoration(
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 18, right: 10),
+                  child: Icon(
+                    Icons.lock_outline,
+                    color: tokens.inkMuted,
+                    size: 18,
+                  ),
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 0,
+                ),
+                suffixIcon: Padding(
+                  padding: const EdgeInsets.only(right: 18),
+                  child: Icon(
+                    Icons.visibility_outlined,
+                    color: tokens.inkSubtle,
+                    size: 18,
+                  ),
+                ),
+                labelText: 'Password',
+                errorText: passwordError,
+              ).applyDefaults(
+                _authInputDecoration(
+                  context,
+                  tokensOverride: tokens,
+                  fillColor: const Color(0xFFF3F2FF),
+                  borderRadius: 18,
+                  minHeight: 56,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                ),
+              ),
         ),
         const SizedBox(height: 24),
 
         // Login button
-        SizedBox(
-          height: 52,
-          child: FilledButton(
-            key: const Key('sign-in-button'),
-            onPressed: busy ? null : onSubmit,
-            style: FilledButton.styleFrom(
-              backgroundColor: tokens.primary,
-              shape: const StadiumBorder(),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (busy)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                else ...[
-                  const Icon(Icons.arrow_forward, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Log in',
-                    style: AppTypography.bodyLg().copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontSize: 15,
-                    ),
+        _GradientButton(
+          buttonKey: const Key('sign-in-button'),
+          gradient: tokens.aiGradient,
+          onPressed: busy ? null : onSubmit,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (busy)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
                   ),
-                ],
+                )
+              else ...[
+                const Icon(Icons.arrow_forward, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Log in',
+                  style: AppTypography.bodyLg().copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    fontSize: 15,
+                  ),
+                ),
               ],
-            ),
+            ],
           ),
         ),
         const SizedBox(height: 20),
@@ -741,7 +897,7 @@ class _LoginForm extends StatelessWidget {
 
         // Google button
         SizedBox(
-          height: 52,
+          height: 56,
           child: OutlinedButton(
             key: const Key('google-sign-in-button'),
             onPressed: busy ? null : onGoogleSignIn,
@@ -749,7 +905,9 @@ class _LoginForm extends StatelessWidget {
               backgroundColor: Colors.white,
               foregroundColor: tokens.ink,
               side: BorderSide(color: tokens.border, width: 1.2),
-              shape: const StadiumBorder(),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -796,7 +954,10 @@ class _LoginForm extends StatelessWidget {
               children: [
                 TextSpan(
                   text: "Don't have an account? ",
-                  style: TextStyle(color: tokens.inkMuted, fontWeight: FontWeight.normal),
+                  style: TextStyle(
+                    color: tokens.inkMuted,
+                    fontWeight: FontWeight.normal,
+                  ),
                 ),
                 const TextSpan(
                   text: "Sign up",
@@ -849,10 +1010,9 @@ class _SignupForm extends StatelessWidget {
       children: [
         Text(
           'Join Connect Me.',
-          style: AppTypography.display(color: tokens.ink).copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: 28,
-          ),
+          style: AppTypography.display(
+            color: tokens.ink,
+          ).copyWith(fontWeight: FontWeight.w700, fontSize: 28),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 6),
@@ -871,9 +1031,16 @@ class _SignupForm extends StatelessWidget {
           decoration: InputDecoration(
             prefixIcon: Padding(
               padding: const EdgeInsets.only(left: 18, right: 10),
-              child: Icon(Icons.person_outline, color: tokens.inkMuted, size: 18),
+              child: Icon(
+                Icons.person_outline,
+                color: tokens.inkMuted,
+                size: 18,
+              ),
             ),
-            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 0,
+            ),
             labelText: 'Full name',
             errorText: nameError,
           ).applyDefaults(_authInputDecoration(context)),
@@ -889,9 +1056,16 @@ class _SignupForm extends StatelessWidget {
           decoration: InputDecoration(
             prefixIcon: Padding(
               padding: const EdgeInsets.only(left: 18, right: 10),
-              child: Icon(Icons.email_outlined, color: tokens.inkMuted, size: 18),
+              child: Icon(
+                Icons.email_outlined,
+                color: tokens.inkMuted,
+                size: 18,
+              ),
             ),
-            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 0,
+            ),
             labelText: 'Email',
             errorText: emailError,
           ).applyDefaults(_authInputDecoration(context)),
@@ -908,7 +1082,10 @@ class _SignupForm extends StatelessWidget {
               padding: const EdgeInsets.only(left: 18, right: 10),
               child: Icon(Icons.lock_outline, color: tokens.inkMuted, size: 18),
             ),
-            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 0,
+            ),
             labelText: 'Password',
             errorText: passwordError,
           ).applyDefaults(_authInputDecoration(context)),
@@ -925,7 +1102,10 @@ class _SignupForm extends StatelessWidget {
               padding: const EdgeInsets.only(left: 18, right: 10),
               child: Icon(Icons.lock_outline, color: tokens.inkMuted, size: 18),
             ),
-            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 0,
+            ),
             labelText: 'Confirm password',
             errorText: confirmError,
           ).applyDefaults(_authInputDecoration(context)),
@@ -1039,7 +1219,10 @@ class _SignupForm extends StatelessWidget {
               children: [
                 TextSpan(
                   text: 'Already have an account? ',
-                  style: TextStyle(color: tokens.inkMuted, fontWeight: FontWeight.normal),
+                  style: TextStyle(
+                    color: tokens.inkMuted,
+                    fontWeight: FontWeight.normal,
+                  ),
                 ),
                 const TextSpan(
                   text: 'Log in',
@@ -1064,12 +1247,6 @@ class _GoogleIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SvgPicture.string(
-      _svgString,
-      width: 20.0,
-      height: 20.0,
-    );
+    return SvgPicture.string(_svgString, width: 20.0, height: 20.0);
   }
 }
-
-
