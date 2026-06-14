@@ -27,7 +27,7 @@ class AuthScreen extends ConsumerStatefulWidget {
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends ConsumerState<AuthScreen> {
+class _AuthScreenState extends ConsumerState<AuthScreen> with TickerProviderStateMixin {
   late AuthMode _mode;
   bool _busy = false;
 
@@ -45,14 +45,29 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String? _signupPasswordError;
   String? _signupConfirmError;
 
+  late final AnimationController _peekingController;
+  late final Animation<double> _peekingAnimation;
+
   @override
   void initState() {
     super.initState();
     _mode = widget.initialMode;
+    _peekingController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _peekingAnimation = CurvedAnimation(
+      parent: _peekingController,
+      curve: Curves.elasticOut,
+    );
+    if (_mode == AuthMode.login || _mode == AuthMode.signup) {
+      _peekingController.value = 1.0;
+    }
   }
 
   @override
   void dispose() {
+    _peekingController.dispose();
     _loginEmail.dispose();
     _loginPassword.dispose();
     _signupName.dispose();
@@ -213,6 +228,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       _signupPasswordError = null;
       _signupConfirmError = null;
     });
+    if (next == AuthMode.login || next == AuthMode.signup) {
+      _peekingController.forward(from: 0.0);
+    } else {
+      _peekingController.reverse();
+    }
   }
 
   Future<void> _signInWithGoogle() async {
@@ -273,9 +293,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 )
               else ...[
                 // Peeking character at top-right for Login/Signup
-                Positioned(
-                  top: 0,
-                  right: 0,
+                AnimatedBuilder(
+                  animation: _peekingAnimation,
+                  builder: (context, child) {
+                    final value = _peekingAnimation.value;
+                    // Slide in from top-right: shift by (120 * (1 - value)) horizontally,
+                    // and (-120 * (1 - value)) vertically.
+                    final double slideX = 120 * (1 - value);
+                    final double slideY = -120 * (1 - value);
+                    // Bouncy rotation
+                    final double rotation = -0.4 * (1 - value);
+                    return Positioned(
+                      top: slideY,
+                      right: -slideX,
+                      child: Transform.rotate(
+                        angle: rotation,
+                        child: child,
+                      ),
+                    );
+                  },
                   child: SizedBox(
                     width: 180,
                     height: 160,
@@ -1142,10 +1178,10 @@ class _AuthBackgroundPainter extends CustomPainter {
     if (mode != AuthMode.landing) {
       // Draw the curved white card shape that covers the bottom portion of the screen
       final cardPath = Path()
-        ..moveTo(0, h)
+        ..moveTo(0, h + 200)
         ..lineTo(0, h * 0.24)
         ..cubicTo(w * 0.35, h * 0.16, w * 0.7, h * 0.32, w, h * 0.26)
-        ..lineTo(w, h)
+        ..lineTo(w, h + 200)
         ..close();
 
       final cardPaint = Paint()
