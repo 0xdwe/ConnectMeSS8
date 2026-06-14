@@ -54,6 +54,8 @@ class AppTokens extends ThemeExtension<AppTokens> {
     required this.aiGradient,
     required this.recommendationSurface,
     required this.recommendationBorder,
+    required this.recommendationInk,
+    required this.recommendationInkMuted,
     required this.topicAccent,
   });
 
@@ -94,6 +96,8 @@ class AppTokens extends ThemeExtension<AppTokens> {
     // Recommendation callout: warm cream surface, golden-yellow border.
     recommendationSurface: Color(0xFFFFF8E1),
     recommendationBorder: Color(0xFFF6D372),
+    recommendationInk: Color(0xFF5E3A0A),
+    recommendationInkMuted: Color(0xFF7B4F12),
     // Conversation Topics pill fill: terracotta from the Figma spec.
     topicAccent: Color(0xFFE77E55),
   );
@@ -134,6 +138,8 @@ class AppTokens extends ThemeExtension<AppTokens> {
     // Deep amber + muted gold for dark mode — desaturated equivalents.
     recommendationSurface: Color(0xFF3D2E0F),
     recommendationBorder: Color(0xFF8A6A2C),
+    recommendationInk: Color(0xFFFFD38A),
+    recommendationInkMuted: Color(0xFFFFE8C2),
     // Slightly desaturated terracotta for dark mode.
     topicAccent: Color(0xFFC85F3A),
   );
@@ -162,6 +168,8 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final LinearGradient aiGradient;
   final Color recommendationSurface;
   final Color recommendationBorder;
+  final Color recommendationInk;
+  final Color recommendationInkMuted;
   final Color topicAccent;
 
   @override
@@ -190,6 +198,8 @@ class AppTokens extends ThemeExtension<AppTokens> {
     LinearGradient? aiGradient,
     Color? recommendationSurface,
     Color? recommendationBorder,
+    Color? recommendationInk,
+    Color? recommendationInkMuted,
     Color? topicAccent,
   }) {
     return AppTokens(
@@ -218,6 +228,9 @@ class AppTokens extends ThemeExtension<AppTokens> {
       recommendationSurface:
           recommendationSurface ?? this.recommendationSurface,
       recommendationBorder: recommendationBorder ?? this.recommendationBorder,
+      recommendationInk: recommendationInk ?? this.recommendationInk,
+      recommendationInkMuted:
+          recommendationInkMuted ?? this.recommendationInkMuted,
       topicAccent: topicAccent ?? this.topicAccent,
     );
   }
@@ -260,6 +273,16 @@ class AppTokens extends ThemeExtension<AppTokens> {
       recommendationBorder: Color.lerp(
         recommendationBorder,
         other.recommendationBorder,
+        t,
+      )!,
+      recommendationInk: Color.lerp(
+        recommendationInk,
+        other.recommendationInk,
+        t,
+      )!,
+      recommendationInkMuted: Color.lerp(
+        recommendationInkMuted,
+        other.recommendationInkMuted,
         t,
       )!,
       topicAccent: Color.lerp(topicAccent, other.topicAccent, t)!,

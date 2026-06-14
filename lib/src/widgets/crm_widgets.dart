@@ -217,6 +217,8 @@ class _ContactListCardState extends State<ContactListCard> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final categoryAccent = categoryColor(widget.connection.category, tokens);
 
     return MouseRegion(
       onEnter: (_) => setState(() => hovering = true),
@@ -282,12 +284,24 @@ class _ContactListCardState extends State<ContactListCard> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: tokens.surfaceSunken,
+                        color: categoryAccent.withValues(alpha: .14),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(
-                        widget.connection.category,
-                        style: AppTypography.caption(color: tokens.ink),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircleAvatar(
+                            radius: 4,
+                            backgroundColor: categoryAccent,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            widget.connection.category,
+                            style: AppTypography.caption(
+                              color: dark ? categoryAccent : tokens.ink,
+                            ).copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -310,8 +324,7 @@ class ConnectionScoreRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const purple = Color(0xFF7C3AED);
-    const green = Color(0xFF22C55E);
+    final tokens = context.tokens;
 
     return SizedBox(
       width: size,
@@ -322,23 +335,21 @@ class ConnectionScoreRing extends StatelessWidget {
           CircularProgressIndicator(
             value: 1,
             strokeWidth: 4,
-            color: const Color(0xFFEDE9FE),
+            color: tokens.border.withValues(alpha: .7),
           ),
 
           CircularProgressIndicator(
             value: score / 100,
             strokeWidth: 4,
             strokeCap: StrokeCap.round,
-            color: purple,
+            color: tokens.primary,
           ),
 
           Text(
             '$score',
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF111827),
-            ),
+            style: AppTypography.monoTabular(
+              color: tokens.ink,
+            ).copyWith(fontSize: 15, fontWeight: FontWeight.w700),
           ),
 
           Positioned(
@@ -347,7 +358,7 @@ class ConnectionScoreRing extends StatelessWidget {
             child: Text(
               '↗',
               style: TextStyle(
-                color: green,
+                color: tokens.success,
                 fontSize: size * 0.22,
                 fontWeight: FontWeight.bold,
               ),
@@ -528,9 +539,7 @@ class HeatmapCard extends StatelessWidget {
     final interactionCountByCategory = <String, int>{
       for (final cat in categories) cat.label: 0,
     };
-    final contactCategoryById = {
-      for (final c in connections) c.id: c.category,
-    };
+    final contactCategoryById = {for (final c in connections) c.id: c.category};
     for (final interaction in interactions) {
       final cat = contactCategoryById[interaction.contactId];
       if (cat != null && interactionCountByCategory.containsKey(cat)) {
@@ -626,6 +635,8 @@ class _HeatmapRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final accentLabelColor = dark ? color : tokens.ink;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -670,7 +681,7 @@ class _HeatmapRow extends StatelessWidget {
                     child: Text(
                       strength,
                       style: AppTypography.caption(
-                        color: color,
+                        color: accentLabelColor,
                       ).copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
@@ -687,6 +698,7 @@ class _HeatmapRow extends StatelessWidget {
 
   List<Widget> _buildMonthHeatmap(BuildContext context) {
     final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final now = DateTime.now();
 
     // Build month buckets for the last 12 months (oldest first)
@@ -728,8 +740,8 @@ class _HeatmapRow extends StatelessWidget {
       if (count == 0 || maxCount == 0) {
         alpha = 0;
       } else {
-        // Scale from 0.20 (1 interaction) to 0.90 (max interactions).
-        alpha = 0.20 + (count / maxCount) * 0.70;
+        // Keep active dots visible against both light and dark card surfaces.
+        alpha = 0.36 + (count / maxCount) * 0.54;
       }
 
       return Expanded(
@@ -740,18 +752,16 @@ class _HeatmapRow extends StatelessWidget {
           ),
           child: Tooltip(
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.18),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
+              color: tokens.surfaceRaised,
+              border: Border.all(color: tokens.border),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              boxShadow: AppTokens.elevation2(dark),
             ),
-            textStyle: TextStyle(color: tokens.ink),
-            message: '${DateFormat.MMM().format(m)}\n$count interaction${count == 1 ? '' : 's'}',
+            textStyle: AppTypography.caption(
+              color: tokens.ink,
+            ).copyWith(fontWeight: FontWeight.w700),
+            message:
+                '${DateFormat.MMM().format(m)}\n$count interaction${count == 1 ? '' : 's'}',
             child: Container(
               width: 18,
               height: 18,
@@ -760,6 +770,12 @@ class _HeatmapRow extends StatelessWidget {
                 color: count == 0
                     ? tokens.surfaceSunken
                     : color.withValues(alpha: alpha),
+                border: Border.all(
+                  color: count == 0
+                      ? tokens.border.withValues(alpha: .72)
+                      : color.withValues(alpha: .86),
+                  width: 1,
+                ),
               ),
             ),
           ),
@@ -1012,15 +1028,6 @@ String _bondEncouragement(BondTier tier) => switch (tier) {
   BondTier.steady => 'Steady ground — a quick check-in keeps it warm.',
   BondTier.drifting => 'It\'s been a while. A short hello goes a long way.',
 };
-
-// Recommendation callout interior text colors.
-//
-// These are intentionally hardcoded brown/gold. There is no semantic
-// "on-recommendation" token in the system yet. If we keep this pattern
-// long-term we should add tokens for these colors.
-const Color _recommendationTitleColor = Color(0xFF7B4F12);
-const Color _recommendationBodyColor = Color(0xFF6B4513);
-const Color _recommendationIconColor = Color(0xFFB7791F);
 
 class AiInsightsCard extends ConsumerStatefulWidget {
   const AiInsightsCard({
@@ -1276,11 +1283,7 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.lightbulb_outline,
-                color: _recommendationIconColor,
-                size: 22,
-              ),
+              Icon(Icons.lightbulb_outline, color: tokens.secondary, size: 22),
               SizedBox(width: AppSpacing.space3),
               Expanded(
                 child: Column(
@@ -1288,13 +1291,13 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
                   children: [
                     Text(
                       'Recommendation',
-                      style: AppTypography.h2(color: _recommendationTitleColor),
+                      style: AppTypography.h2(color: tokens.recommendationInk),
                     ),
                     SizedBox(height: AppSpacing.space1),
                     Text(
                       _bondEncouragement(widget.tier),
                       style: AppTypography.body(
-                        color: _recommendationBodyColor,
+                        color: tokens.recommendationInkMuted,
                       ),
                     ),
                   ],
@@ -1424,7 +1427,7 @@ class _InlineTopicDetails extends StatelessWidget {
                 child: Text(
                   topic,
                   style: AppTypography.h1().copyWith(
-                    color: _recommendationTitleColor,
+                    color: tokens.recommendationInk,
                   ),
                 ),
               ),
@@ -1439,10 +1442,13 @@ class _InlineTopicDetails extends StatelessWidget {
                 padding: EdgeInsets.all(AppSpacing.space4),
                 decoration: BoxDecoration(
                   color: tokens.surfaceRaised,
+                  border: Border.all(
+                    color: tokens.recommendationBorder.withValues(alpha: .36),
+                  ),
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                   boxShadow: [
                     BoxShadow(
-                      color: tokens.border.withOpacity(0.04),
+                      color: tokens.border.withValues(alpha: 0.04),
                       blurRadius: 6,
                     ),
                   ],
@@ -1452,13 +1458,13 @@ class _InlineTopicDetails extends StatelessWidget {
                   children: [
                     Text(
                       'Conversation Starter :',
-                      style: AppTypography.h2(color: _recommendationTitleColor),
+                      style: AppTypography.h2(color: tokens.recommendationInk),
                     ),
                     SizedBox(height: AppSpacing.space1),
                     Text(
                       suggestion.text,
                       style: AppTypography.body(
-                        color: _recommendationBodyColor,
+                        color: tokens.recommendationInkMuted,
                       ),
                     ),
                     if (suggestion.context != null &&
@@ -1467,14 +1473,14 @@ class _InlineTopicDetails extends StatelessWidget {
                       Text(
                         'Context :',
                         style: AppTypography.h2(
-                          color: _recommendationTitleColor,
+                          color: tokens.recommendationInk,
                         ),
                       ),
                       SizedBox(height: AppSpacing.space1),
                       Text(
                         suggestion.context!,
                         style: AppTypography.body(
-                          color: _recommendationBodyColor,
+                          color: tokens.recommendationInkMuted,
                         ),
                       ),
                     ],
@@ -1515,12 +1521,12 @@ class _TopicPill extends StatelessWidget {
             vertical: AppSpacing.space2,
           ),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF9D6BFF) : tokens.topicAccent,
+            color: isSelected ? tokens.primary : tokens.topicAccent,
             borderRadius: BorderRadius.circular(AppRadius.pill),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF9D6BFF).withOpacity(0.22),
+                      color: tokens.primary.withValues(alpha: 0.22),
                       blurRadius: 10,
                       offset: Offset(0, 4),
                     ),

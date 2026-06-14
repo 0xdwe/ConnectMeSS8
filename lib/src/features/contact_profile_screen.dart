@@ -458,7 +458,8 @@ class ContactProfileScreen extends ConsumerWidget {
                                     spacing: 8,
                                     runSpacing: 8,
                                     children: [
-                                      for (final attachment in history[i].attachments)
+                                      for (final attachment
+                                          in history[i].attachments)
                                         _AttachmentChip(
                                           attachment: attachment,
                                           onTap: () => _showAttachmentViewer(
@@ -587,9 +588,7 @@ class _AttachmentChip extends StatelessWidget {
     return ActionChip(
       avatar: Icon(isImage ? Icons.image_outlined : Icons.attach_file),
       label: Text(attachment.name),
-      onPressed: isImage && attachment.storageUrl != null
-          ? onTap
-          : null,
+      onPressed: isImage && attachment.storageUrl != null ? onTap : null,
     );
   }
 }
@@ -806,6 +805,11 @@ class _InteractionDetailsCardState extends State<InteractionDetailsCard> {
                     counts[_monthKey(m)] ?? 0,
                     maxCount,
                   ),
+                  border: Border.all(
+                    color: (counts[_monthKey(m)] ?? 0) == 0
+                        ? tokens.border.withValues(alpha: .72)
+                        : tokens.success.withValues(alpha: .86),
+                  ),
                 ),
               ),
             ),
@@ -818,11 +822,11 @@ class _InteractionDetailsCardState extends State<InteractionDetailsCard> {
       '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
 
   Color _heatColor(AppTokens tokens, int count, int maxCount) {
-    if (maxCount <= 0 || count <= 0) return tokens.surfaceRaised;
+    if (maxCount <= 0 || count <= 0) return tokens.surfaceSunken;
     final intensity = count / maxCount; // 0..1
     // Map intensity to an opacity of the success color for visibility.
     final base = tokens.success;
-    return base.withValues(alpha: 0.25 + (0.7 * intensity));
+    return base.withValues(alpha: 0.36 + (0.54 * intensity));
   }
 }
 

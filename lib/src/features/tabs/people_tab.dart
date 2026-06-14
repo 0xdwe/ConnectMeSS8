@@ -36,28 +36,37 @@ class _PeopleTabState extends ConsumerState<PeopleTab> {
     );
 
     return Container(
-      color: const Color(0xFFF5F0FF),
+      color: tokens.surface,
       child: ListView(
         key: const Key('people-tab'),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
         children: [
           TextField(
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search, size: 20),
+              prefixIcon: Icon(Icons.search, size: 20, color: tokens.inkSubtle),
               hintText: 'Search contacts...',
               hintStyle: AppTypography.body(color: tokens.inkSubtle),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: tokens.surfaceRaised,
               contentPadding: const EdgeInsets.symmetric(
                 vertical: 14,
                 horizontal: 16,
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(28),
-                borderSide: BorderSide.none,
+                borderSide: BorderSide(color: tokens.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(28),
+                borderSide: BorderSide(color: tokens.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(28),
+                borderSide: BorderSide(color: tokens.primary, width: 1.4),
               ),
             ),
-            style: AppTypography.body(),
+            cursorColor: tokens.primary,
+            style: AppTypography.body(color: tokens.ink),
             onChanged: (value) => setState(() => query = value),
           ),
 
@@ -157,6 +166,8 @@ class _SmallChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final selectedBackground = tokens.primary;
+    final unselectedBackground = tokens.surfaceRaised;
 
     return Padding(
       padding: const EdgeInsets.only(right: 8),
@@ -164,14 +175,14 @@ class _SmallChip extends StatelessWidget {
         label: Text(
           label,
           style: AppTypography.caption(
-            color: selected ? Colors.white : tokens.inkMuted,
+            color: selected ? tokens.primaryOn : tokens.inkMuted,
           ),
         ),
         selected: selected,
         showCheckmark: false,
-        selectedColor: tokens.primary,
-        backgroundColor: tokens.surfaceSunken,
-        side: BorderSide.none,
+        selectedColor: selectedBackground,
+        backgroundColor: unselectedBackground,
+        side: BorderSide(color: selected ? selectedBackground : tokens.border),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         visualDensity: VisualDensity.compact,
         onSelected: (_) => onTap(),

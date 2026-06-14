@@ -43,13 +43,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
               backgroundColor: Colors.transparent,
               elevation: 0,
               flexibleSpace: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF6D4CFF), Color(0xFF9F7BFF)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
+                decoration: BoxDecoration(gradient: tokens.aiGradient),
               ),
               title: const LinkedChainLogo(size: 45, color: Colors.white),
               actions: [
@@ -61,6 +55,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
                     radius: 18,
                     glyphSize: 14,
                     backgroundColor: Colors.white,
+                    foregroundColor: tokens.primary,
                   ),
                   onPressed: () => context.push('/settings'),
                 ),

@@ -48,6 +48,18 @@ class AppTheme {
           borderSide: BorderSide.none,
         ),
       ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: tokens.surfaceRaised,
+          border: Border.all(color: tokens.border),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        textStyle: TextStyle(
+          color: tokens.ink,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: tokens.primary,

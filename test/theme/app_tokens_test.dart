@@ -32,6 +32,8 @@ void main() {
       // (full opacity at every channel-encoded representation).
       expect(tokens.recommendationSurface.a, 1.0);
       expect(tokens.recommendationBorder.a, 1.0);
+      expect(tokens.recommendationInk.a, 1.0);
+      expect(tokens.recommendationInkMuted.a, 1.0);
       expect(tokens.topicAccent.a, 1.0);
     });
   });
@@ -60,6 +62,11 @@ void main() {
       expect(
         dark.recommendationBorder,
         isNot(equals(light.recommendationBorder)),
+      );
+      expect(dark.recommendationInk, isNot(equals(light.recommendationInk)));
+      expect(
+        dark.recommendationInkMuted,
+        isNot(equals(light.recommendationInkMuted)),
       );
       expect(dark.topicAccent, isNot(equals(light.topicAccent)));
       expect(dark.aiGradient.colors.length, 2);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../state/user_profile/user_profile_service.dart';
+import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 
 class AccountAvatar extends StatelessWidget {
@@ -10,6 +11,7 @@ class AccountAvatar extends StatelessWidget {
     required this.radius,
     required this.glyphSize,
     this.backgroundColor,
+    this.foregroundColor,
     this.localImage,
   });
 
@@ -17,10 +19,12 @@ class AccountAvatar extends StatelessWidget {
   final double radius;
   final double glyphSize;
   final Color? backgroundColor;
+  final Color? foregroundColor;
   final ImageProvider<Object>? localImage;
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final photoUrl = profile?.photoUrl?.trim();
     final image =
         localImage ??
@@ -39,7 +43,10 @@ class AccountAvatar extends StatelessWidget {
           backgroundColor ?? Theme.of(context).colorScheme.primaryContainer,
       child: Text(
         _initials(profile?.name),
-        style: AppTypography.glyph(glyphSize),
+        style: AppTypography.glyph(
+          glyphSize,
+          color: foregroundColor ?? tokens.primary,
+        ),
       ),
     );
   }
