@@ -69,7 +69,7 @@ void main() {
       expect(bondRing.connection?.id, 'test-1');
     });
 
-    testWidgets('renders conversational headline with bodyLg typography', (
+    testWidgets('renders conversational headline with body typography', (
       tester,
     ) async {
       await tester.pumpWidget(buildTestCard());
@@ -77,10 +77,10 @@ void main() {
       final headlineFinder = find.text("Mike's been quiet for a while.");
       expect(headlineFinder, findsOneWidget);
 
-      // Verify it's using bodyLg style (17pt, weight 500)
+      // Verify it's using body style (15pt, weight 400)
       final headlineWidget = tester.widget<Text>(headlineFinder);
-      expect(headlineWidget.style?.fontSize, 17);
-      expect(headlineWidget.style?.fontWeight, FontWeight.w500);
+      expect(headlineWidget.style?.fontSize, 15);
+      expect(headlineWidget.style?.fontWeight, FontWeight.w400);
     });
 
     testWidgets(

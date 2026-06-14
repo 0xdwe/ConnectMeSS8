@@ -475,7 +475,7 @@ class RecommendationCard extends StatelessWidget {
                 SizedBox(height: AppSpacing.space2),
                 Text(
                   recommendation.reason,
-                  style: AppTypography.bodyLg(color: tokens.ink),
+                  style: AppTypography.body(color: tokens.ink),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
