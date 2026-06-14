@@ -262,7 +262,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           return Stack(
             children: [
               // 1. Mode-specific background
-              if (_mode == AuthMode.landing)
+              if (_mode == AuthMode.landing) ...[
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Container(
@@ -276,35 +276,44 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           end: Alignment.topRight,
                         ),
                       ),
-                      child: Image(
-                        key: const Key('welcome-screen-background'),
-                        image: const AssetImage('assets/images/welcome_back.jpg'),
-                        width: w,
-                        height: h,
-                        fit: BoxFit.fitWidth,
-                        alignment: Alignment.bottomCenter,
-                        excludeFromSemantics: true,
-                      ),
                     ),
                   ),
-                )
-              else
+                ),
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: IgnorePointer(
+                    child: Image(
+                      key: const Key('welcome-screen-background'),
+                      image: const AssetImage('assets/images/welcome_back.jpg'),
+                      fit: BoxFit.fitWidth,
+                      excludeFromSemantics: true,
+                    ),
+                  ),
+                ),
+              ] else ...[
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Container(
                       color: Colors.white,
-                      child: Image(
-                        key: const Key('login-page-background'),
-                        image: const AssetImage('assets/images/login_page.jpg'),
-                        width: w,
-                        height: h,
-                        fit: BoxFit.fitWidth,
-                        alignment: Alignment.topCenter,
-                        excludeFromSemantics: true,
-                      ),
                     ),
                   ),
                 ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: IgnorePointer(
+                    child: Image(
+                      key: const Key('login-page-background'),
+                      image: const AssetImage('assets/images/login_page.jpg'),
+                      fit: BoxFit.fitWidth,
+                      excludeFromSemantics: true,
+                    ),
+                  ),
+                ),
+              ],
 
               // 2. Main content layer
               if (_mode == AuthMode.landing)
