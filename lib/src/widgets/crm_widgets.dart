@@ -311,6 +311,17 @@ class _ContactListCardState extends State<ContactListCard> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.schedule, size: 12, color: tokens.inkSubtle),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Last interaction: ${relativeLastInteraction(widget.connection.lastContact)}',
+                          style: AppTypography.caption(color: tokens.inkSubtle),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -2000,4 +2011,26 @@ class AiActionFab extends StatelessWidget {
       ),
     );
   }
+}
+
+String relativeLastInteraction(DateTime lastContact, {DateTime? now}) {
+  final reference = now ?? DateTime.now();
+  final days = reference.difference(lastContact).inDays;
+
+  if (days < 1) return 'Today';
+  if (days < 7) return '${days}d';
+  if (days < 30) {
+    final weeks = days ~/ 7;
+    final remDays = days % 7;
+    return remDays == 0 ? '${weeks}w' : '${weeks}w ${remDays}d';
+  }
+  if (days < 365) {
+    final months = days ~/ 30;
+    final remDays = days % 30;
+    final remWeeks = remDays ~/ 7;
+    return remWeeks == 0 ? '${months}m' : '${months}m ${remWeeks}w';
+  }
+  final years = days ~/ 365;
+  final remMonths = (days % 365) ~/ 30;
+  return remMonths == 0 ? '${years}y' : '${years}y ${remMonths}m';
 }
