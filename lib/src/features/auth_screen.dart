@@ -27,7 +27,7 @@ class AuthScreen extends ConsumerStatefulWidget {
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends ConsumerState<AuthScreen> with TickerProviderStateMixin {
+class _AuthScreenState extends ConsumerState<AuthScreen> {
   late AuthMode _mode;
   bool _busy = false;
 
@@ -45,29 +45,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with TickerProviderStat
   String? _signupPasswordError;
   String? _signupConfirmError;
 
-  late final AnimationController _peekingController;
-  late final Animation<double> _peekingAnimation;
-
   @override
   void initState() {
     super.initState();
     _mode = widget.initialMode;
-    _peekingController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-    _peekingAnimation = CurvedAnimation(
-      parent: _peekingController,
-      curve: Curves.elasticOut,
-    );
-    if (_mode == AuthMode.login || _mode == AuthMode.signup) {
-      _peekingController.value = 1.0;
-    }
   }
 
   @override
   void dispose() {
-    _peekingController.dispose();
     _loginEmail.dispose();
     _loginPassword.dispose();
     _signupName.dispose();
@@ -217,22 +202,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with TickerProviderStat
     }
   }
 
-  void _switchMode(AuthMode next) {
+  Future<void> _switchMode(AuthMode next) async {
     if (_mode == next) return;
-    setState(() {
-      _mode = next;
+
+    void clearErrors() {
       _loginEmailError = null;
       _loginPasswordError = null;
       _signupNameError = null;
       _signupEmailError = null;
       _signupPasswordError = null;
       _signupConfirmError = null;
-    });
-    if (next == AuthMode.login || next == AuthMode.signup) {
-      _peekingController.forward(from: 0.0);
-    } else {
-      _peekingController.reverse();
     }
+
+    setState(() {
+      _mode = next;
+      clearErrors();
+    });
   }
 
   Future<void> _signInWithGoogle() async {
@@ -264,10 +249,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    final brandedMode = _mode != AuthMode.signup;
+    final tokens = brandedMode ? AppTokens.light() : context.tokens;
 
     return Scaffold(
+      backgroundColor: brandedMode ? Colors.white : null,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final w = constraints.maxWidth;
@@ -275,16 +261,56 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with TickerProviderStat
 
           return Stack(
             children: [
-              // 1. Beautiful organic wave and glow background
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _AuthBackgroundPainter(
-                    mode: _mode,
-                    tokens: tokens,
-                    dark: dark,
+              // 1. Mode-specific background
+              if (_mode == AuthMode.landing)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xFFE6DBFB),
+                            Color(0xFFFAF7FC),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.topRight,
+                        ),
+                      ),
+                      child: const Image(
+                        key: Key('welcome-screen-background'),
+                        image: AssetImage('assets/images/welcome_back.jpg'),
+                        fit: BoxFit.fitWidth,
+                        alignment: Alignment.bottomCenter,
+                        excludeFromSemantics: true,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xFFEDE9FF),
+                            Color(0xFFE0EBFD),
+                            Color(0xFFECE8FF),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.topRight,
+                        ),
+                      ),
+                      child: const Image(
+                        key: Key('login-page-background'),
+                        image: AssetImage('assets/images/login_page.jpg'),
+                        fit: BoxFit.fitWidth,
+                        alignment: Alignment.bottomCenter,
+                        excludeFromSemantics: true,
+                      ),
+                    ),
                   ),
                 ),
-              ),
 
               // 2. Main content layer
               if (_mode == AuthMode.landing)
@@ -292,43 +318,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with TickerProviderStat
                   child: _buildLanding(context, tokens),
                 )
               else ...[
-                // Peeking character at top-right for Login/Signup
-                AnimatedBuilder(
-                  animation: _peekingAnimation,
-                  builder: (context, child) {
-                    final value = _peekingAnimation.value;
-                    // Slide in from top-right: shift by (120 * (1 - value)) horizontally,
-                    // and (-120 * (1 - value)) vertically.
-                    final double slideX = 120 * (1 - value);
-                    final double slideY = -120 * (1 - value);
-                    // Bouncy rotation
-                    final double rotation = -0.4 * (1 - value);
-                    return Positioned(
-                      top: slideY,
-                      right: -slideX,
-                      child: Transform.rotate(
-                        angle: rotation,
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: SizedBox(
-                    width: 180,
-                    height: 160,
-                    child: CustomPaint(
-                      painter: _PeekingCharacterPainter(),
-                    ),
-                  ),
-                ),
 
                 // Curved card inputs (Scrollable to prevent keyboard overflows)
                 SafeArea(
                   child: SingleChildScrollView(
                     child: Padding(
                       padding: EdgeInsets.fromLTRB(
-                        AppSpacing.space5,
-                        h * 0.28,
-                        AppSpacing.space5,
+                        w <= 360
+                            ? AppSpacing.space4
+                            : AppSpacing.space5,
+                        _mode == AuthMode.login
+                            ? math.max(h * 0.27, 188.0)
+                            : h * 0.28,
+                        w <= 360
+                            ? AppSpacing.space4
+                            : AppSpacing.space5,
                         AppSpacing.space5,
                       ),
                       child: Center(
@@ -337,27 +341,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with TickerProviderStat
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // App Logo & title
-                              Center(
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    LinkedChainLogo(
-                                      size: 36,
-                                      color: tokens.primary,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Connect Me',
-                                      style: AppTypography.bodyLg(color: tokens.ink).copyWith(
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 28),
-
                               // Form content
                               if (_mode == AuthMode.login)
                                 _LoginForm(
@@ -369,6 +352,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with TickerProviderStat
                                   onSubmit: _submitLogin,
                                   onSwitch: () => _switchMode(AuthMode.signup),
                                   onGoogleSignIn: _signInWithGoogle,
+                                  tokens: tokens,
                                 )
                               else
                                 _SignupForm(
@@ -425,6 +409,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with TickerProviderStat
   }
 
   Widget _buildLanding(BuildContext context, AppTokens tokens) {
+    final height = MediaQuery.sizeOf(context).height;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -449,7 +435,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with TickerProviderStat
             ],
           ),
         ),
-        const Spacer(),
+        SizedBox(
+          height: math.min(math.max(height * 0.08, 48), 72),
+        ),
         // Welcome headline and subtext
         Center(
           child: Column(
@@ -476,7 +464,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with TickerProviderStat
             ],
           ),
         ),
-        const Spacer(),
+        SizedBox(
+          height: math.min(math.max(height * 0.05, 32), 48),
+        ),
         // Actions
         Center(
           child: Container(
@@ -551,27 +541,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with TickerProviderStat
             ),
           ),
         ),
-        const SizedBox(height: 30),
-        // Bottom Peeking character
-        Center(
-          child: SizedBox(
-            width: 200,
-            height: 110,
-            child: CustomPaint(
-              painter: _BottomPeekingCharacterPainter(),
-            ),
-          ),
-        ),
+        const Spacer(),
       ],
     );
   }
 }
 
-InputDecorationTheme _authInputDecoration(BuildContext context) {
-  final tokens = context.tokens;
+InputDecorationTheme _authInputDecoration(
+  BuildContext context, {
+  AppTokens? tokensOverride,
+  Color? fillColor,
+}) {
+  final tokens = tokensOverride ?? context.tokens;
   return InputDecorationTheme(
     filled: true,
-    fillColor: const Color(0xFFF3F2FF).withValues(alpha: 0.6),
+    fillColor:
+        fillColor ?? const Color(0xFFF3F2FF).withValues(alpha: 0.6),
     labelStyle: AppTypography.body(color: tokens.inkMuted),
     hintStyle: AppTypography.body(color: tokens.inkSubtle),
     errorStyle: AppTypography.caption(color: tokens.danger),
@@ -609,6 +594,7 @@ class _LoginForm extends StatelessWidget {
     required this.onSubmit,
     required this.onSwitch,
     required this.onGoogleSignIn,
+    required this.tokens,
   });
 
   final TextEditingController emailController;
@@ -619,10 +605,10 @@ class _LoginForm extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback onSwitch;
   final VoidCallback onGoogleSignIn;
+  final AppTokens tokens;
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -648,6 +634,7 @@ class _LoginForm extends StatelessWidget {
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
+          style: AppTypography.body(color: tokens.ink),
           decoration: InputDecoration(
             prefixIcon: Padding(
               padding: const EdgeInsets.only(left: 18, right: 10),
@@ -656,7 +643,13 @@ class _LoginForm extends StatelessWidget {
             prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
             labelText: 'Email',
             errorText: emailError,
-          ).applyDefaults(_authInputDecoration(context)),
+          ).applyDefaults(
+            _authInputDecoration(
+              context,
+              tokensOverride: tokens,
+              fillColor: const Color(0xFFF3F2FF),
+            ),
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -665,6 +658,7 @@ class _LoginForm extends StatelessWidget {
           key: const Key('login-password-field'),
           controller: passwordController,
           obscureText: true,
+          style: AppTypography.body(color: tokens.ink),
           decoration: InputDecoration(
             prefixIcon: Padding(
               padding: const EdgeInsets.only(left: 18, right: 10),
@@ -677,7 +671,13 @@ class _LoginForm extends StatelessWidget {
             ),
             labelText: 'Password',
             errorText: passwordError,
-          ).applyDefaults(_authInputDecoration(context)),
+          ).applyDefaults(
+            _authInputDecoration(
+              context,
+              tokensOverride: tokens,
+              fillColor: const Color(0xFFF3F2FF),
+            ),
+          ),
         ),
         const SizedBox(height: 24),
 
@@ -745,7 +745,7 @@ class _LoginForm extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: tokens.ink,
-              side: BorderSide(color: Colors.grey.shade300, width: 1.2),
+              side: BorderSide(color: tokens.border, width: 1.2),
               shape: const StadiumBorder(),
             ),
             child: Row(
@@ -763,12 +763,17 @@ class _LoginForm extends StatelessWidget {
                 else ...[
                   const _GoogleIcon(),
                   const SizedBox(width: 12),
-                  Text(
-                    'Continue with Google',
-                    style: AppTypography.body().copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: tokens.ink,
-                      fontSize: 14.5,
+                  Flexible(
+                    child: Text(
+                      'Continue with Google',
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                      style: AppTypography.body().copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: tokens.ink,
+                        fontSize: 14.5,
+                      ),
                     ),
                   ),
                 ],
@@ -1064,368 +1069,4 @@ class _GoogleIcon extends StatelessWidget {
   }
 }
 
-class _AuthBackgroundPainter extends CustomPainter {
-  final AuthMode mode;
-  final AppTokens tokens;
-  final bool dark;
 
-  _AuthBackgroundPainter({
-    required this.mode,
-    required this.tokens,
-    required this.dark,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    // 1. Draw the base linear gradient with richer, more saturated pastel lavender/violet colors
-    final bgPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Color(0xFFEBE0FF), // Soft vibrant lavender-purple
-          Color(0xFFFAF7FF), // Off-white lavender
-          Color(0xFFD9E4FF), // Soft vibrant blue-indigo
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawRect(Rect.fromLTWH(0, 0, w, h), bgPaint);
-
-    // 2. Draw soft ambient glowing radial lights for gradient depth (the "pop")
-    // Top-Right Pink Glow
-    canvas.drawCircle(
-      Offset(w * 0.8, h * 0.15),
-      w * 0.55,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            const Color(0xFFFDE8F3).withValues(alpha: 0.9),
-            const Color(0xFFFCE7F3).withValues(alpha: 0.35),
-            Colors.transparent,
-          ],
-        ).createShader(Rect.fromCircle(center: Offset(w * 0.8, h * 0.15), radius: w * 0.55)),
-    );
-
-    // Bottom-Left Blue-Indigo Glow
-    canvas.drawCircle(
-      Offset(w * 0.15, h * 0.75),
-      w * 0.75,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            const Color(0xFFE0E7FF).withValues(alpha: 0.95),
-            const Color(0xFFEEF2FF).withValues(alpha: 0.45),
-            Colors.transparent,
-          ],
-        ).createShader(Rect.fromCircle(center: Offset(w * 0.15, h * 0.75), radius: w * 0.75)),
-    );
-
-    // 3. Draw common background decorative blobs/spheres (visible on both screens)
-    // A soft lavender organic wave/blob at top-left
-    final topLeftPath = Path()
-      ..moveTo(0, 0)
-      ..lineTo(w * 0.5, 0)
-      ..quadraticBezierTo(w * 0.35, h * 0.14, 0, h * 0.18)
-      ..close();
-    canvas.drawPath(
-      topLeftPath,
-      Paint()
-        ..color = const Color(0xFFE8EFFF).withValues(alpha: 0.8)
-        ..style = PaintingStyle.fill,
-    );
-
-    // A beautiful 3D-shaded pink sphere at top-right
-    final sphereCenter = Offset(w * 0.85, h * 0.1);
-    const sphereRadius = 38.0;
-    canvas.drawCircle(
-      sphereCenter,
-      sphereRadius,
-      Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(-0.25, -0.3),
-          colors: [
-            Colors.white,
-            const Color(0xFFFBCFE8),
-            const Color(0xFFF472B6),
-          ],
-          stops: const [0.0, 0.4, 1.0],
-        ).createShader(Rect.fromCircle(center: sphereCenter, radius: sphereRadius)),
-    );
-
-    // Bottom-right blob (sweeps up from bottom-right corner behind the character, matches welcome mockup)
-    if (mode == AuthMode.landing) {
-      final bottomRightPath = Path()
-        ..moveTo(w, h)
-        ..lineTo(w, h * 0.7)
-        ..quadraticBezierTo(w * 0.78, h * 0.78, w * 0.55, h)
-        ..close();
-      canvas.drawPath(
-        bottomRightPath,
-        Paint()
-          ..color = const Color(0xFFEBE6FF).withValues(alpha: 0.8)
-          ..style = PaintingStyle.fill,
-      );
-    }
-
-    // Draw decorative stars in the background
-    _drawSparkle(canvas, w * 0.12, h * 0.16, 7, const Color(0xFFF472B6)); // Top-left peach star
-    _drawSparkle(canvas, w * 0.88, h * 0.24, 8, const Color(0xFF818CF8)); // Middle-right violet star
-    _drawSparkle(canvas, w * 0.08, h * 0.72, 6, const Color(0xFF818CF8)); // Bottom-left violet star
-
-    // 4. Draw the curved white card for Form Mode
-    if (mode != AuthMode.landing) {
-      // Draw the curved white card shape that covers the bottom portion of the screen
-      final cardPath = Path()
-        ..moveTo(0, h + 200)
-        ..lineTo(0, h * 0.24)
-        ..cubicTo(w * 0.35, h * 0.16, w * 0.7, h * 0.32, w, h * 0.26)
-        ..lineTo(w, h + 200)
-        ..close();
-
-      final cardPaint = Paint()
-        ..color = dark ? tokens.surface : Colors.white
-        ..style = PaintingStyle.fill;
-      
-      // Draw a soft shadow under the card curve edge
-      canvas.drawPath(
-        cardPath,
-        Paint()
-          ..color = Colors.black.withValues(alpha: 0.04)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6)
-          ..style = PaintingStyle.fill,
-      );
-
-      canvas.drawPath(cardPath, cardPaint);
-
-      // Draw a decorative pink star on the right side of the card
-      _drawSparkle(canvas, w * 0.88, h * 0.34, 7, const Color(0xFFF472B6).withValues(alpha: 0.8));
-    }
-  }
-
-  void _drawSparkle(Canvas canvas, double cx, double cy, double r, Color color) {
-    final paint = Paint()
-      ..color = color.withValues(alpha: 0.6)
-      ..style = PaintingStyle.fill
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.5);
-    final path = Path()
-      ..moveTo(cx, cy - r)
-      ..quadraticBezierTo(cx, cy, cx + r, cy)
-      ..quadraticBezierTo(cx, cy, cx, cy + r)
-      ..quadraticBezierTo(cx, cy, cx - r, cy)
-      ..quadraticBezierTo(cx, cy, cx, cy - r)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
-class _BottomPeekingCharacterPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    // Draw the character body as a large dome at the bottom of the widget
-    final cx = w / 2;
-    final cy = h + 15; // Baseline below bottom
-    final radius = 52.0;
-
-    final bodyRect = Rect.fromCircle(center: Offset(cx, cy), radius: radius);
-    
-    // 3D Radial Pearlescent Gradient
-    final bodyPaint = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(-0.25, -0.45),
-        radius: 1.0,
-        colors: [
-          const Color(0xFFFFFFFF),
-          const Color(0xFFE8F0FE),
-          const Color(0xFFD6C6FF),
-          const Color(0xFFFBCFE8),
-          const Color(0xFFECE6FF),
-        ],
-        stops: const [0.0, 0.35, 0.65, 0.88, 1.0],
-      ).createShader(bodyRect)
-      ..style = PaintingStyle.fill;
-
-    final bodyPath = Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: radius));
-
-    // Waving hand on our right (character's left hand)
-    final leftArmPath = Path()
-      ..moveTo(cx + 38, cy - 20)
-      ..cubicTo(cx + 56, cy - 35, cx + 76, cy - 25, cx + 70, cy - 5)
-      ..cubicTo(cx + 64, cy + 10, cx + 46, cy + 10, cx + 38, cy - 10)
-      ..close();
-
-    var finalPath = Path.combine(PathOperation.union, bodyPath, leftArmPath);
-    canvas.drawPath(finalPath, bodyPaint);
-
-    // Glossy Highlights
-    canvas.drawOval(
-      Rect.fromLTWH(cx - 24, cy - 40, 20, 12),
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.25)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
-    );
-
-    canvas.save();
-    canvas.translate(cx - 16, cy - 34);
-    canvas.rotate(-0.35);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset.zero, width: 14, height: 6),
-      Paint()..color = Colors.white.withValues(alpha: 0.65),
-    );
-    canvas.restore();
-
-    // Eyes (solid dark ovals, no pupils)
-    final eyePaint = Paint()
-      ..color = const Color(0xFF1E1B4B)
-      ..style = PaintingStyle.fill;
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx - 18, cy - 18), width: 7.5, height: 11.5), eyePaint);
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx + 18, cy - 18), width: 7.5, height: 11.5), eyePaint);
-
-    // Mouth (happy open smile)
-    final mouthPath = Path()
-      ..moveTo(cx - 7, cy - 11)
-      ..cubicTo(cx - 7, cy - 4, cx + 7, cy - 4, cx + 7, cy - 11)
-      ..close();
-    canvas.drawPath(mouthPath, eyePaint);
-
-    canvas.save();
-    canvas.clipPath(mouthPath);
-    canvas.drawCircle(Offset(cx, cy - 7.5), 3.5, Paint()..color = const Color(0xFFF43F5E));
-    canvas.restore();
-
-    // Cheeks (soft blush)
-    final cheekPaint = Paint()
-      ..color = const Color(0xFFFDA4AF).withValues(alpha: 0.5)
-      ..style = PaintingStyle.fill;
-    cheekPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
-    canvas.drawCircle(Offset(cx - 28, cy - 11), 4.5, cheekPaint);
-    canvas.drawCircle(Offset(cx + 28, cy - 11), 4.5, cheekPaint);
-
-    // Splash droplets (decoration on bottom-right)
-    final dropPaint = Paint()
-      ..color = const Color(0xFF818CF8).withValues(alpha: 0.45)
-      ..style = PaintingStyle.fill;
-    _drawDroplet(canvas, cx + 58, cy - 38, 3.5, dropPaint);
-    _drawDroplet(canvas, cx + 70, cy - 28, 2.5, dropPaint);
-  }
-
-  void _drawDroplet(Canvas canvas, double cx, double cy, double r, Paint paint) {
-    final path = Path()
-      ..moveTo(cx, cy - r)
-      ..cubicTo(cx + r * 0.7, cy - r * 0.3, cx + r * 0.7, cy + r * 0.7, cx, cy + r)
-      ..cubicTo(cx - r * 0.7, cy + r * 0.7, cx - r * 0.7, cy - r * 0.3, cx, cy - r)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _PeekingCharacterPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    // Draw the character peeking from the top-right
-    final cx = w - 40;
-    final cy = 30.0;
-    final radius = 55.0;
-
-    final bodyRect = Rect.fromCircle(center: Offset(cx, cy), radius: radius);
-    final bodyPaint = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(-0.25, 0.45), // Light source from top-left
-        radius: 1.0,
-        colors: [
-          const Color(0xFFFFFFFF),
-          const Color(0xFFE8F0FE),
-          const Color(0xFFD6C6FF),
-          const Color(0xFFFBCFE8),
-          const Color(0xFFECE6FF),
-        ],
-        stops: const [0.0, 0.35, 0.65, 0.88, 1.0],
-      ).createShader(bodyRect)
-      ..style = PaintingStyle.fill;
-
-    final bodyPath = Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: radius));
-
-    // Resting hand (sausage shape on the left)
-    final leftHandRect = Rect.fromCenter(center: Offset(cx - 52, cy + 38), width: 22, height: 13);
-    final leftHandPath = Path()..addOval(leftHandRect);
-
-    var finalPath = Path.combine(PathOperation.union, bodyPath, leftHandPath);
-    canvas.drawPath(finalPath, bodyPaint);
-
-    // Glossy highlight
-    canvas.drawOval(
-      Rect.fromLTWH(cx - 24, cy - 10, 18, 10),
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.25)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
-    );
-
-    canvas.save();
-    canvas.translate(cx - 16, cy - 5);
-    canvas.rotate(-0.35);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset.zero, width: 12, height: 5),
-      Paint()..color = Colors.white.withValues(alpha: 0.65),
-    );
-    canvas.restore();
-
-    // Eyes (solid ovals, no pupils)
-    final eyePaint = Paint()
-      ..color = const Color(0xFF1E1B4B)
-      ..style = PaintingStyle.fill;
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx - 32, cy + 18), width: 7.5, height: 11.5), eyePaint);
-    canvas.drawOval(Rect.fromCenter(center: Offset(cx + 6, cy + 18), width: 7.5, height: 11.5), eyePaint);
-
-    // Mouth (happy open smile)
-    final mouthPath = Path()
-      ..moveTo(cx - 18, cy + 24)
-      ..cubicTo(cx - 18, cy + 31, cx - 4, cy + 31, cx - 4, cy + 24)
-      ..close();
-    canvas.drawPath(mouthPath, eyePaint);
-
-    canvas.save();
-    canvas.clipPath(mouthPath);
-    canvas.drawCircle(Offset(cx - 11, cy + 27.5), 3.5, Paint()..color = const Color(0xFFF43F5E));
-    canvas.restore();
-
-    // Cheeks (blush)
-    final cheekPaint = Paint()
-      ..color = const Color(0xFFFDA4AF).withValues(alpha: 0.5)
-      ..style = PaintingStyle.fill;
-    cheekPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
-    canvas.drawCircle(Offset(cx - 40, cy + 24), 4.5, cheekPaint);
-    canvas.drawCircle(Offset(cx + 14, cy + 24), 4.5, cheekPaint);
-
-    // Droplets/Sparkles on top-left of top character
-    final dropPaint = Paint()
-      ..color = const Color(0xFF818CF8).withValues(alpha: 0.45)
-      ..style = PaintingStyle.fill;
-    _drawDroplet(canvas, cx - 64, cy - 10, 3.0, dropPaint);
-    _drawDroplet(canvas, cx - 68, cy + 2, 2.0, dropPaint);
-  }
-
-  void _drawDroplet(Canvas canvas, double cx, double cy, double r, Paint paint) {
-    final path = Path()
-      ..moveTo(cx, cy - r)
-      ..cubicTo(cx + r * 0.7, cy - r * 0.3, cx + r * 0.7, cy + r * 0.7, cx, cy + r)
-      ..cubicTo(cx - r * 0.7, cy + r * 0.7, cx - r * 0.7, cy - r * 0.3, cx, cy - r)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
