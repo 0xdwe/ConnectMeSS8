@@ -413,7 +413,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 40),
+        SizedBox(height: height * 0.08),
         // App logo & title
         Center(
           child: Column(
@@ -434,9 +434,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             ],
           ),
         ),
-        SizedBox(
-          height: math.min(math.max(height * 0.08, 48), 72),
-        ),
+        SizedBox(height: height * 0.06),
         // Welcome headline and subtext
         Center(
           child: Column(
@@ -463,13 +461,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             ],
           ),
         ),
-        SizedBox(
-          height: math.min(math.max(height * 0.05, 32), 48),
-        ),
+        SizedBox(height: height * 0.05),
         // Actions
         Center(
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 290),
+            constraints: const BoxConstraints(maxWidth: 325),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -482,23 +478,27 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       backgroundColor: tokens.primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      shape: const StadiumBorder(),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const SizedBox(width: 20),
-                          Text(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Align(
+                          alignment: Alignment.center,
+                          child: Text(
                             'Sign Up',
                             style: AppTypography.bodyLg(color: Colors.white).copyWith(
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const Icon(Icons.arrow_forward, size: 18),
-                        ],
-                      ),
+                        ),
+                        const Align(
+                          alignment: Alignment.centerRight,
+                          child: Icon(Icons.arrow_forward, size: 18),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -515,24 +515,28 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         color: tokens.primary.withValues(alpha: 0.35),
                         width: 1.5,
                       ),
-                      shape: const StadiumBorder(),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       elevation: 0,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const SizedBox(width: 20),
-                          Text(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Align(
+                          alignment: Alignment.center,
+                          child: Text(
                             'Log In',
                             style: AppTypography.bodyLg(color: tokens.primary).copyWith(
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          Icon(Icons.arrow_forward, size: 18, color: tokens.primary),
-                        ],
-                      ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Icon(Icons.arrow_forward, size: 18, color: tokens.primary),
+                        ),
+                      ],
                     ),
                   ),
                 ),
