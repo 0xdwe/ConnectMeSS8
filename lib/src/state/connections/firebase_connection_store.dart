@@ -17,6 +17,7 @@ import 'connection_store.dart';
 ///  * `name`, `email`, `category`, `avatar`, `nextStep`, `notes`
 ///    (string, empty allowed)
 ///  * `bondScore` (int, 0..100)
+///  * `previousBondScore` (int, optional, for trend calculation)
 ///  * `lastContact`, `knownSince` (timestamp)
 ///  * `preferredChannels` (list of strings)
 ///  * `isSample` (bool, optional)
@@ -237,6 +238,10 @@ class FirebaseConnectionStore implements ConnectionStore {
         lastBondDriftAppliedAt,
       );
     }
+    final previousBondScore = c.previousBondScore;
+    if (previousBondScore != null) {
+      data['previousBondScore'] = previousBondScore;
+    }
     return data;
   }
 
@@ -270,6 +275,7 @@ class FirebaseConnectionStore implements ConnectionStore {
       final line = data['line'];
       final isSample = data['isSample'];
       final lastBondDriftAppliedAt = data['lastBondDriftAppliedAt'];
+      final previousBondScore = data['previousBondScore'];
 
       if (id is! String ||
           name is! String ||
@@ -311,6 +317,8 @@ class FirebaseConnectionStore implements ConnectionStore {
         lastBondDriftAppliedAt: lastBondDriftAppliedAt is Timestamp
             ? lastBondDriftAppliedAt.toDate()
             : null,
+        previousBondScore:
+            previousBondScore is int ? previousBondScore : null,
       );
     } catch (_) {
       // Defensive — never let a single bad document block the

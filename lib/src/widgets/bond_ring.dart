@@ -175,12 +175,12 @@ class _BondRingState extends State<BondRing>
       BondTier.drifting => tokens.secondary,
     };
 
-    // Trend color mapping
+    // Trend color mapping: green for up, red for down
     final trendColor = currentTrend == null
         ? tokens.inkMuted
         : switch (currentTrend) {
             BondTrend.up => tokens.success,
-            BondTrend.down => tokens.secondary,
+            BondTrend.down => tokens.danger,
             BondTrend.flat => tokens.inkMuted,
           };
 
@@ -234,12 +234,12 @@ class _BondRingState extends State<BondRing>
                     color: tokens.primary,
                   ),
                 ),
-              // Trend arrow at 4 o'clock
+              // Trend arrow at 4 o'clock (bold arrows)
               if (currentTrend != null && currentTrend != BondTrend.flat)
                 Positioned(
                   right: widget.size * 0.05,
                   bottom: widget.size * 0.15,
-                  child: Icon(currentTrend.icon, size: 12, color: trendColor),
+                  child: Icon(currentTrend.icon, size: 16, color: trendColor),
                 ),
             ],
           );
