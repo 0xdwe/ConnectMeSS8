@@ -126,7 +126,7 @@ expiresAt: 2026-06-20
         expect(group.lastMentionedAt, DateTime(2026, 6, 4));
         expect(group.mentionCount, 2);
         expect(group.expiresAt, DateTime(2026, 6, 20));
-        expect(group.suggestions, hasLength(3));
+        expect(group.suggestions, hasLength(2));
         expect(group.suggestions.first.kind, TopicSuggestionKind.ask);
         expect(
           group.suggestions.first.text,
@@ -258,7 +258,7 @@ this line is not metadata or a suggestion
       expect(rendered, contains('- ask: Ask how planning is going.'));
     });
 
-    test('render caps Topic Suggestions to three per topic group', () {
+    test('render caps Topic Suggestions to two per topic group', () {
       final doc = MemoryDocument(
         contactId: 'sarah',
         displayName: 'Sarah Johnson',
@@ -269,10 +269,9 @@ this line is not metadata or a suggestion
             suggestions: const [
               TopicSuggestion(kind: TopicSuggestionKind.ask, text: 'First.'),
               TopicSuggestion(kind: TopicSuggestionKind.share, text: 'Second.'),
-              TopicSuggestion(kind: TopicSuggestionKind.plan, text: 'Third.'),
               TopicSuggestion(
                 kind: TopicSuggestionKind.remember,
-                text: 'Fourth should not render.',
+                text: 'Third should not render.',
               ),
             ],
           ),
@@ -283,8 +282,7 @@ this line is not metadata or a suggestion
 
       expect(rendered, contains('- ask: First.'));
       expect(rendered, contains('- share: Second.'));
-      expect(rendered, contains('- plan: Third.'));
-      expect(rendered, isNot(contains('Fourth should not render.')));
+      expect(rendered, isNot(contains('Third should not render.')));
     });
 
     test(

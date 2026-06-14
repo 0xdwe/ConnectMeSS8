@@ -13,6 +13,7 @@ import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/notifications/notification_gateway.dart';
 import 'package:connect_me/src/state/notifications/notification_providers.dart';
 import 'package:connect_me/src/state/notifications/notification_token_store.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 
 /// Standard signed-in [firebaseAuthProvider] override plus Pass 4.5
@@ -44,6 +45,7 @@ import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 List<dynamic> headlessStoreOverrides({
   NotificationGateway? notificationGateway,
   NotificationTokenStore? notificationTokenStore,
+  GoogleSignInService? googleSignInService,
 }) {
   final connections = InMemoryConnectionStore();
   connections.seedSync(SeederSampleSource.connections());
@@ -69,6 +71,9 @@ List<dynamic> headlessStoreOverrides({
     // exercise an AI run override `aiUpdateProvider` directly with
     // a Mock and never reach this slot.
     firebaseAiProvider.overrideWithValue(null),
+    googleSignInServiceProvider.overrideWithValue(
+      googleSignInService ?? NoOpGoogleSignInService(),
+    ),
     notificationGatewayProvider.overrideWithValue(
       notificationGateway ?? InMemoryNotificationGateway(),
     ),
@@ -83,10 +88,16 @@ List<dynamic> headlessStoreOverrides({
   ];
 }
 
+class NoOpGoogleSignInService implements GoogleSignInService {
+  @override
+  Future<UserCredential?> signIn() async => null;
+}
+
 List<dynamic> signedOutDemoOverrides({
   String uid = 'demo-uid',
   NotificationGateway? notificationGateway,
   NotificationTokenStore? notificationTokenStore,
+  GoogleSignInService? googleSignInService,
 }) {
   return <dynamic>[
     firebaseAuthProvider.overrideWithValue(
@@ -102,6 +113,7 @@ List<dynamic> signedOutDemoOverrides({
     ...headlessStoreOverrides(
       notificationGateway: notificationGateway,
       notificationTokenStore: notificationTokenStore,
+      googleSignInService: googleSignInService,
     ),
   ];
 }
@@ -110,6 +122,7 @@ List<dynamic> signedInDemoOverrides({
   String uid = 'demo-uid',
   NotificationGateway? notificationGateway,
   NotificationTokenStore? notificationTokenStore,
+  GoogleSignInService? googleSignInService,
 }) {
   return <dynamic>[
     firebaseAuthProvider.overrideWithValue(
@@ -126,6 +139,7 @@ List<dynamic> signedInDemoOverrides({
     ...headlessStoreOverrides(
       notificationGateway: notificationGateway,
       notificationTokenStore: notificationTokenStore,
+      googleSignInService: googleSignInService,
     ),
   ];
 }

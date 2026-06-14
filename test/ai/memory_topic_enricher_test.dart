@@ -104,7 +104,7 @@ void main() {
   });
 
   group('MemoryTopicEnricher Suggestion Merging', () {
-    test('topic suggestions are grouped by selected topic and capped to 3', () {
+    test('topic suggestions are grouped by selected topic and capped to 2', () {
       final existing = <TopicSuggestionGroup>[];
       final incoming = [
         LlmTopicSuggestionGroup(
@@ -130,13 +130,11 @@ void main() {
 
       expect(merged, hasLength(1));
       expect(merged.first.topic, 'pottery');
-      expect(merged.first.suggestions, hasLength(3));
+      expect(merged.first.suggestions, hasLength(2));
       expect(merged.first.suggestions[0].text, 'S1');
       expect(merged.first.suggestions[0].context, 'C1');
       expect(merged.first.suggestions[1].text, 'S2');
       expect(merged.first.suggestions[1].context, isNull);
-      expect(merged.first.suggestions[2].text, 'S3');
-      expect(merged.first.suggestions[2].context, isNull);
     });
 
     test(
