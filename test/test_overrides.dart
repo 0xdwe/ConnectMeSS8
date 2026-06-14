@@ -13,6 +13,8 @@ import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/notifications/notification_gateway.dart';
 import 'package:connect_me/src/state/notifications/notification_providers.dart';
 import 'package:connect_me/src/state/notifications/notification_token_store.dart';
+import 'dart:io';
+import 'package:connect_me/src/state/user_profile/user_profile_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 
@@ -85,7 +87,36 @@ List<dynamic> headlessStoreOverrides({
     eventStoreProvider.overrideWithValue(events),
     userDocStoreProvider.overrideWithValue(userDoc),
     batchedWritesProvider.overrideWithValue(batched),
+    userProfileServiceProvider.overrideWith(
+      (ref) => NoOpUserProfileService(ref.watch(firebaseAuthProvider)),
+    ),
   ];
+}
+
+class NoOpUserProfileService implements UserProfileService {
+  NoOpUserProfileService(this._auth);
+  final FirebaseAuth _auth;
+
+  @override
+  AccountProfile? currentProfile() {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    return AccountProfile.fromAuthValues(
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      photoUrl: user.photoURL,
+    );
+  }
+
+  @override
+  Future<void> updateDisplayName(String displayName) async {}
+
+  @override
+  Future<void> uploadAvatarAndUpdatePhotoUrl(File imageFile) async {}
+
+  @override
+  Future<void> removeAvatar() async {}
 }
 
 class NoOpGoogleSignInService implements GoogleSignInService {

@@ -31,6 +31,10 @@ Future<void> _pumpAndSignIn(WidgetTester tester) async {
           (ref) => MockAiUpdate(
             memoryStore: memoryStore,
             appController: ref.read(appControllerProvider.notifier),
+            onMemoryWritten: () {
+              final clock = ref.read(clockProvider);
+              ref.read(memoryEpochProvider.notifier).bump(clock());
+            },
           ),
         ),
       ],
@@ -165,8 +169,7 @@ void main() {
       await tester.tap(find.text('kindergarten'));
       await tester.pumpAndSettle();
 
-      // Three templated suggestions, slots filled with the topic and
-      // Mike's first name.
+      // Capped at 2 suggestions end-to-end (PRD §Q5)
       expect(find.text("How's the kindergarten going?"), findsOneWidget);
       expect(
         find.text('Last time you mentioned kindergarten \u2014 anything new?'),
@@ -174,7 +177,7 @@ void main() {
       );
       expect(
         find.text("Curious how Mike's kindergarten is going."),
-        findsOneWidget,
+        findsNothing,
       );
     },
   );
