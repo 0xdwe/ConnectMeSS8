@@ -120,6 +120,7 @@ class _BottomNav extends StatelessWidget {
         ),
         child: BottomAppBar(
           height: 74,
+          padding: EdgeInsets.zero,
           color: tokens.surfaceRaised,
           elevation: 0,
           shape: null,
