@@ -204,6 +204,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -211,8 +213,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFA0C4FF), // Soft blue
-              Color(0xFFC4A0FF), // Soft purple
+              tokens.primaryTint,
+              tokens.surface,
+              dark ? tokens.surfaceSunken : tokens.secondaryTint,
             ],
           ),
         ),
@@ -237,17 +240,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   500, // Max width for better readability on larger screens
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(
-                                AppRadius.xl * 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 30,
-                                  offset: Offset(0, 10),
-                                ),
-                              ],
+                              color: tokens.surfaceRaised,
+                              borderRadius: BorderRadius.circular(AppRadius.xl),
+                              border: Border.all(color: tokens.border),
+                              boxShadow: AppTokens.elevation2(dark),
                             ),
                             child: Padding(
                               padding: EdgeInsets.all(AppSpacing.space5),
@@ -258,12 +254,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   Container(
                                     padding: EdgeInsets.all(AppSpacing.space3),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFA0C4FF).withValues(
-                                        alpha: 0.1,
-                                      ), // Soft blue background
+                                      color: tokens.primaryTint,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const LinkedChainLogo(
+                                    child: LinkedChainLogo(
                                       size: 48,
                                       color: Color(
                                         0xFF6B4EFF,
@@ -312,7 +306,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             'Powered by Firebase Auth.',
                             textAlign: TextAlign.center,
                             style: AppTypography.caption(
-                              color: Colors.white.withValues(alpha: 0.9),
+                              color: tokens.inkMuted,
                             ),
                           ),
 
@@ -329,6 +323,37 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       ),
     );
   }
+}
+
+InputDecorationTheme _authInputDecoration(BuildContext context) {
+  final tokens = context.tokens;
+  return InputDecorationTheme(
+    filled: true,
+    fillColor: tokens.surfaceSunken,
+    labelStyle: AppTypography.body(color: tokens.inkMuted),
+    hintStyle: AppTypography.body(color: tokens.inkSubtle),
+    errorStyle: AppTypography.caption(color: tokens.danger),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderSide: BorderSide(color: tokens.border),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderSide: BorderSide(color: tokens.border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderSide: BorderSide(color: tokens.primary, width: 1.4),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderSide: BorderSide(color: tokens.danger),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderSide: BorderSide(color: tokens.danger, width: 1.4),
+    ),
+  );
 }
 
 class _LoginForm extends StatelessWidget {
@@ -351,13 +376,14 @@ class _LoginForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Welcome back text
         Text(
           'Welcome back.',
-          style: AppTypography.display(color: Colors.black),
+          style: AppTypography.display(color: tokens.ink),
           textAlign: TextAlign.center,
         ),
 
@@ -366,7 +392,7 @@ class _LoginForm extends StatelessWidget {
         // Subtitle text
         Text(
           'Log in to keep your connections close.',
-          style: AppTypography.body(color: Colors.grey.shade600),
+          style: AppTypography.body(color: tokens.inkMuted),
           textAlign: TextAlign.center,
         ),
 
@@ -382,29 +408,7 @@ class _LoginForm extends StatelessWidget {
             labelText: 'Email',
             hintText: 'you@example.com',
             errorText: emailError,
-            filled: true,
-            fillColor: Colors.grey.shade100,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: Colors.red, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: Colors.red, width: 1),
-            ),
-          ),
+          ).applyDefaults(_authInputDecoration(context)),
         ),
 
         SizedBox(height: AppSpacing.space4),
@@ -417,29 +421,7 @@ class _LoginForm extends StatelessWidget {
           decoration: InputDecoration(
             labelText: 'Password',
             errorText: passwordError,
-            filled: true,
-            fillColor: Colors.grey.shade100,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: Colors.red, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: Colors.red, width: 1),
-            ),
-          ),
+          ).applyDefaults(_authInputDecoration(context)),
         ),
 
         SizedBox(height: AppSpacing.space5),
@@ -449,10 +431,10 @@ class _LoginForm extends StatelessWidget {
           key: const Key('sign-in-button'),
           onPressed: busy ? null : onSubmit,
           style: FilledButton.styleFrom(
-            backgroundColor: Color(0xFF6B4EFF),
+            backgroundColor: tokens.primary,
             padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
           ),
           icon: busy
@@ -474,7 +456,7 @@ class _LoginForm extends StatelessWidget {
         TextButton(
           key: const Key('auth-mode-signup'),
           onPressed: busy ? null : onSwitch,
-          style: TextButton.styleFrom(foregroundColor: Color(0xFF6B4EFF)),
+          style: TextButton.styleFrom(foregroundColor: tokens.primary),
           child: const Text("Don't have an account? Sign up"),
         ),
       ],
@@ -510,12 +492,13 @@ class _SignupForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
           'Join Connect Me.',
-          style: AppTypography.display(color: Colors.black),
+          style: AppTypography.display(color: tokens.ink),
           textAlign: TextAlign.center,
         ),
 
@@ -523,7 +506,7 @@ class _SignupForm extends StatelessWidget {
 
         Text(
           'Join ConnectMe today', // Updated text
-          style: AppTypography.body(color: Colors.grey.shade600),
+          style: AppTypography.body(color: tokens.inkMuted),
           textAlign: TextAlign.center,
         ),
 
@@ -538,26 +521,26 @@ class _SignupForm extends StatelessWidget {
             labelText: 'Full name',
             errorText: nameError,
             filled: true,
-            fillColor: Colors.grey.shade100,
+            fillColor: tokens.surfaceSunken,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
+              borderSide: BorderSide(color: tokens.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
+              borderSide: BorderSide(color: tokens.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
+              borderSide: BorderSide(color: tokens.primary, width: 1.4),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: Colors.red, width: 1),
+              borderSide: BorderSide(color: tokens.danger, width: 1),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: Colors.red, width: 1),
+              borderSide: BorderSide(color: tokens.danger, width: 1),
             ),
           ),
         ),
@@ -575,26 +558,26 @@ class _SignupForm extends StatelessWidget {
             hintText: 'you@example.com',
             errorText: emailError,
             filled: true,
-            fillColor: Colors.grey.shade100,
+            fillColor: tokens.surfaceSunken,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
+              borderSide: BorderSide(color: tokens.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
+              borderSide: BorderSide(color: tokens.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
+              borderSide: BorderSide(color: tokens.primary, width: 1.4),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: Colors.red, width: 1),
+              borderSide: BorderSide(color: tokens.danger, width: 1),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: Colors.red, width: 1),
+              borderSide: BorderSide(color: tokens.danger, width: 1),
             ),
           ),
         ),
@@ -610,26 +593,26 @@ class _SignupForm extends StatelessWidget {
             labelText: 'Password',
             errorText: passwordError,
             filled: true,
-            fillColor: Colors.grey.shade100,
+            fillColor: tokens.surfaceSunken,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
+              borderSide: BorderSide(color: tokens.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
+              borderSide: BorderSide(color: tokens.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
+              borderSide: BorderSide(color: tokens.primary, width: 1.4),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: Colors.red, width: 1),
+              borderSide: BorderSide(color: tokens.danger, width: 1),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: Colors.red, width: 1),
+              borderSide: BorderSide(color: tokens.danger, width: 1),
             ),
           ),
         ),
@@ -645,26 +628,26 @@ class _SignupForm extends StatelessWidget {
             labelText: 'Confirm password',
             errorText: confirmError,
             filled: true,
-            fillColor: Colors.grey.shade100,
+            fillColor: tokens.surfaceSunken,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
+              borderSide: BorderSide(color: tokens.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
+              borderSide: BorderSide(color: tokens.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide.none,
+              borderSide: BorderSide(color: tokens.primary, width: 1.4),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: Colors.red, width: 1),
+              borderSide: BorderSide(color: tokens.danger, width: 1),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: Colors.red, width: 1),
+              borderSide: BorderSide(color: tokens.danger, width: 1),
             ),
           ),
         ),
@@ -676,10 +659,10 @@ class _SignupForm extends StatelessWidget {
           key: const Key('sign-up-button'),
           onPressed: busy ? null : onSubmit,
           style: FilledButton.styleFrom(
-            backgroundColor: Color(0xFF6B4EFF),
+            backgroundColor: tokens.primary,
             padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
           ),
           icon: busy
@@ -701,7 +684,7 @@ class _SignupForm extends StatelessWidget {
         TextButton(
           key: const Key('auth-mode-login'),
           onPressed: busy ? null : onSwitch,
-          style: TextButton.styleFrom(foregroundColor: Color(0xFF6B4EFF)),
+          style: TextButton.styleFrom(foregroundColor: tokens.primary),
           child: const Text('Already have an account? Log in'),
         ),
       ],

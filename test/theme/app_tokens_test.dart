@@ -7,21 +7,21 @@ void main() {
   group('AppTokens.light', () {
     test('exposes documented values from DESIGN.md', () {
       final tokens = AppTokens.light();
-      expect(tokens.surface, const Color(0xFFFAF9FC));
+      expect(tokens.surface, const Color(0xFFF7F6FF));
       expect(tokens.surfaceRaised, const Color(0xFFFFFFFF));
-      expect(tokens.surfaceSunken, const Color(0xFFF2F1F4));
-      expect(tokens.ink, const Color(0xFF1A1A1A));
-      expect(tokens.inkMuted, const Color(0xFF5C5A66));
-      expect(tokens.inkSubtle, const Color(0xFF8C8995));
-      expect(tokens.border, const Color(0xFFE7E4EB));
-      expect(tokens.primary, const Color(0xFF7C3AED));
+      expect(tokens.surfaceSunken, const Color(0xFFF0EEFA));
+      expect(tokens.ink, const Color(0xFF232033));
+      expect(tokens.inkMuted, const Color(0xFF69647A));
+      expect(tokens.inkSubtle, const Color(0xFF9892AA));
+      expect(tokens.border, const Color(0xFFE5E1F2));
+      expect(tokens.primary, const Color(0xFF7367F0));
       expect(tokens.primaryOn, const Color(0xFFFFFFFF));
-      expect(tokens.primaryTint, const Color(0xFFF1ECFA));
-      expect(tokens.secondary, const Color(0xFFFF8C00));
-      expect(tokens.tertiary, const Color(0xFFFF71CF));
-      expect(tokens.success, const Color(0xFF3B9D6E));
-      expect(tokens.danger, const Color(0xFFC53030));
-      expect(tokens.categoryWork, const Color(0xFF5283A8));
+      expect(tokens.primaryTint, const Color(0xFFEDEBFF));
+      expect(tokens.secondary, const Color(0xFFF59E0B));
+      expect(tokens.tertiary, const Color(0xFFE76BAE));
+      expect(tokens.success, const Color(0xFF2F9E78));
+      expect(tokens.danger, const Color(0xFFD64545));
+      expect(tokens.categoryWork, const Color(0xFF4F8DBD));
     });
 
     test('exposes Pass 2 AI surface tokens', () {
@@ -41,13 +41,13 @@ void main() {
   group('AppTokens.dark', () {
     test('exposes documented dark-mode values from DESIGN.md', () {
       final tokens = AppTokens.dark();
-      expect(tokens.surface, const Color(0xFF191820));
-      expect(tokens.surfaceRaised, const Color(0xFF23222B));
-      expect(tokens.ink, const Color(0xFFF4F2F7));
-      expect(tokens.primary, const Color(0xFF9B6BF0));
+      expect(tokens.surface, const Color(0xFF171722));
+      expect(tokens.surfaceRaised, const Color(0xFF222334));
+      expect(tokens.ink, const Color(0xFFF5F3FF));
+      expect(tokens.primary, const Color(0xFF9B8CFF));
       expect(tokens.primaryOn, const Color(0xFFFFFFFF));
-      expect(tokens.success, const Color(0xFF5BC094));
-      expect(tokens.danger, const Color(0xFFE25555));
+      expect(tokens.success, const Color(0xFF61D0A9));
+      expect(tokens.danger, const Color(0xFFFF6B6B));
     });
 
     test('Pass 2 AI surface tokens differ from light values', () {
@@ -78,16 +78,16 @@ void main() {
       final theme = AppTheme.data(false);
       final tokens = theme.extension<AppTokens>();
       expect(tokens, isNotNull);
-      expect(tokens!.primary, const Color(0xFF7C3AED));
-      expect(tokens.surface, const Color(0xFFFAF9FC));
+      expect(tokens!.primary, const Color(0xFF7367F0));
+      expect(tokens.surface, const Color(0xFFF7F6FF));
     });
 
     test('registers AppTokens in ThemeData.extensions for dark mode', () {
       final theme = AppTheme.data(true);
       final tokens = theme.extension<AppTokens>();
       expect(tokens, isNotNull);
-      expect(tokens!.primary, const Color(0xFF9B6BF0));
-      expect(tokens.surface, const Color(0xFF191820));
+      expect(tokens!.primary, const Color(0xFF9B8CFF));
+      expect(tokens.surface, const Color(0xFF171722));
     });
   });
 

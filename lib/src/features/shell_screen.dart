@@ -38,14 +38,16 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
       appBar: selectedTab == 3
           ? null
           : AppBar(
-              toolbarHeight: 55,
+              toolbarHeight: 58,
               titleSpacing: 20,
-              backgroundColor: Colors.transparent,
+              backgroundColor: tokens.surfaceRaised,
               elevation: 0,
-              flexibleSpace: Container(
-                decoration: BoxDecoration(gradient: tokens.aiGradient),
+              surfaceTintColor: Colors.transparent,
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(1),
+                child: Divider(color: tokens.border, height: 1),
               ),
-              title: const LinkedChainLogo(size: 45, color: Colors.white),
+              title: LinkedChainLogo(size: 42, color: tokens.primary),
               actions: [
                 IconButton(
                   key: const Key('profile-button'),
@@ -54,7 +56,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
                     profile: profile,
                     radius: 18,
                     glyphSize: 14,
-                    backgroundColor: Colors.white,
+                    backgroundColor: tokens.primaryTint,
                     foregroundColor: tokens.primary,
                   ),
                   onPressed: () => context.push('/settings'),
@@ -74,13 +76,13 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
           height: 72,
           child: FloatingActionButton(
             key: const Key('plus-action-button'),
-            shape: const CircleBorder(
-              side: BorderSide(color: Colors.white, width: 5),
+            shape: CircleBorder(
+              side: BorderSide(color: tokens.surfaceRaised, width: 5),
             ),
             backgroundColor: tokens.primary,
-            elevation: 10,
+            elevation: 6,
             onPressed: () => showPlusSheet(context),
-            child: const Icon(Icons.add, color: Colors.white, size: 42),
+            child: Icon(Icons.add, color: tokens.primaryOn, size: 42),
           ),
         ),
       ),
@@ -101,16 +103,18 @@ class _BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     return Material(
       color: Colors.transparent,
       child: Container(
         decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: tokens.border)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: .08),
+              color: Colors.black.withValues(alpha: dark ? .22 : .06),
               offset: const Offset(0, -3),
-              blurRadius: 8,
+              blurRadius: 14,
             ),
           ],
         ),
@@ -190,26 +194,40 @@ class _NavItem extends StatelessWidget {
     final selected = selectedTab == index;
     return InkWell(
       onTap: () => onTap(index),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: SizedBox(
-          width: double.infinity,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: selected ? tokens.primary : tokens.inkMuted,
-                size: 28,
+      child: SizedBox(
+        width: double.infinity,
+        child: Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: selected ? 28 : 0,
+              height: 3,
+              decoration: BoxDecoration(
+                color: tokens.primary,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
-              Text(
-                label,
-                style: AppTypography.caption(
-                  color: selected ? tokens.primary : tokens.inkMuted,
-                ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    color: selected ? tokens.primary : tokens.inkSubtle,
+                    size: 26,
+                  ),
+                  Text(
+                    label,
+                    style: AppTypography.caption(
+                      color: selected ? tokens.primary : tokens.inkSubtle,
+                    ).copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

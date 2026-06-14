@@ -67,7 +67,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                 child: SectionTitle(
                   'Top Recommendations',
                   titleStyle: AppTypography.bodyLg().copyWith(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                   action: Padding(
                     padding: EdgeInsets.only(left: AppSpacing.space3),

@@ -524,12 +524,13 @@ class _CalendarGrid extends StatelessWidget {
       (index) => firstGridDate.add(Duration(days: index)),
     );
 
-     // Pre-expand recurring events for the whole grid range so dots appear
-     // on every occurrence, not just the base date.
-     final lastGridDate = firstGridDate.add(const Duration(days: 41));
-     final expandedForGrid = [
-       for (final e in events) ..._occurrencesInRange(e, firstGridDate, lastGridDate),
-     ];
+    // Pre-expand recurring events for the whole grid range so dots appear
+    // on every occurrence, not just the base date.
+    final lastGridDate = firstGridDate.add(const Duration(days: 41));
+    final expandedForGrid = [
+      for (final e in events)
+        ..._occurrencesInRange(e, firstGridDate, lastGridDate),
+    ];
 
     return Column(
       children: [
@@ -572,8 +573,8 @@ class _CalendarGrid extends StatelessWidget {
             final isToday = DateUtils.isSameDay(day, DateTime.now());
 
             final eventsOnDay = expandedForGrid
-              .where((event) => DateUtils.isSameDay(event.date, day))
-              .toList();
+                .where((event) => DateUtils.isSameDay(event.date, day))
+                .toList();
             final hasEvent = eventsOnDay.isNotEmpty;
 
             // Highlight & text color selection
@@ -729,7 +730,7 @@ class _RedesignedEventCard extends ConsumerWidget {
     final contact = event.contactId != null
         ? ref.watch(contactByIdProvider(event.contactId!))
         : null;
-    final iconTint = _iconTintForEventType(event.eventType);
+    final iconColor = _iconTintForEventType(event.eventType, tokens);
 
     return Container(
       decoration: BoxDecoration(
@@ -758,10 +759,14 @@ class _RedesignedEventCard extends ConsumerWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: iconTint,
+                        color: iconColor.withValues(alpha: .14),
                         borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
-                      child: _getEventIcon(event),
+                      child: Icon(
+                        _eventIconForType(event.eventType),
+                        color: iconColor,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     // Title and Time Subtitle
@@ -858,6 +863,53 @@ class _RedesignedEventCard extends ConsumerWidget {
     );
   }
 
+  IconData _eventIconForType(String eventType) {
+    final value = eventType.toLowerCase().trim();
+    if (value.contains('coffee') || value.contains('cafe')) {
+      return Icons.local_cafe_outlined;
+    }
+    if (value.contains('meeting') ||
+        value.contains('sync') ||
+        value.contains('team')) {
+      return Icons.groups_2_outlined;
+    }
+    if (value.contains('lunch') ||
+        value.contains('dinner') ||
+        value.contains('food') ||
+        value.contains('restaurant')) {
+      return Icons.restaurant_outlined;
+    }
+    if (value.contains('call') || value.contains('phone')) {
+      return Icons.call_outlined;
+    }
+    if (value.contains('party') || value.contains('celebrate')) {
+      return Icons.celebration_outlined;
+    }
+    if (value.contains('birth') || value.contains('anniversary')) {
+      return Icons.cake_outlined;
+    }
+    if (value.contains('remind') || value.contains('alert')) {
+      return Icons.notifications_none;
+    }
+    if (value.contains('workshop') ||
+        value.contains('class') ||
+        value.contains('study') ||
+        value.contains('school')) {
+      return Icons.menu_book_outlined;
+    }
+    if (value.contains('travel') ||
+        value.contains('trip') ||
+        value.contains('flight')) {
+      return Icons.flight_takeoff_outlined;
+    }
+    if (value.contains('plan') || value.contains('schedule')) {
+      return Icons.event_note_outlined;
+    }
+    if (value.contains('gift')) return Icons.card_giftcard_outlined;
+    return Icons.event_outlined;
+  }
+
+  // ignore: unused_element
   Widget _getEventIcon(PlannerEvent event) {
     final emoji = _emojiForEventType(event.eventType);
     return Center(child: Text(emoji, style: const TextStyle(fontSize: 22)));
@@ -897,52 +949,52 @@ class _RedesignedEventCard extends ConsumerWidget {
     return '🗒️';
   }
 
-  Color _iconTintForEventType(String eventType) {
+  Color _iconTintForEventType(String eventType, AppTokens tokens) {
     final value = eventType.toLowerCase().trim();
     if (value.contains('coffee') || value.contains('cafe')) {
-      return const Color(0xFFFFE8D6);
+      return tokens.secondary;
     }
     if (value.contains('meeting') ||
         value.contains('sync') ||
         value.contains('team')) {
-      return const Color(0xFFDDEBFF);
+      return tokens.categoryWork;
     }
     if (value.contains('lunch') ||
         value.contains('dinner') ||
         value.contains('food') ||
         value.contains('restaurant')) {
-      return const Color(0xFFFFEDD5);
+      return tokens.secondary;
     }
     if (value.contains('call') || value.contains('phone')) {
-      return const Color(0xFFDDF7F4);
+      return tokens.success;
     }
     if (value.contains('party') ||
         value.contains('celebrate') ||
         value.contains('birth') ||
         value.contains('anniversary')) {
-      return const Color(0xFFFCE7F3);
+      return tokens.tertiary;
     }
     if (value.contains('remind') || value.contains('alert')) {
-      return const Color(0xFFFEF3C7);
+      return tokens.secondary;
     }
     if (value.contains('workshop') ||
         value.contains('class') ||
         value.contains('study') ||
         value.contains('school')) {
-      return const Color(0xFFEDE9FE);
+      return tokens.categoryCollege;
     }
     if (value.contains('travel') ||
         value.contains('trip') ||
         value.contains('flight')) {
-      return const Color(0xFFDFF6FF);
+      return tokens.categoryWork;
     }
     if (value.contains('gift')) {
-      return const Color(0xFFFDE68A);
+      return tokens.tertiary;
     }
     if (value.contains('plan') || value.contains('schedule')) {
-      return const Color(0xFFE0F2FE);
+      return tokens.primary;
     }
-    return const Color(0xFFEDE9FE);
+    return tokens.primary;
   }
 
   String _formatTimeRange(PlannerEvent event) {
@@ -1008,10 +1060,16 @@ DateTime _nextRecurringDate(
   return switch (pattern) {
     RecurrencePattern.daily => current.add(const Duration(days: 1)),
     RecurrencePattern.weekly => current.add(const Duration(days: 7)),
-    RecurrencePattern.monthly =>
-      _clampedDate(current.year, current.month + 1, anchor.day),
-    RecurrencePattern.yearly =>
-      _clampedDate(current.year + 1, anchor.month, anchor.day),
+    RecurrencePattern.monthly => _clampedDate(
+      current.year,
+      current.month + 1,
+      anchor.day,
+    ),
+    RecurrencePattern.yearly => _clampedDate(
+      current.year + 1,
+      anchor.month,
+      anchor.day,
+    ),
   };
 }
 

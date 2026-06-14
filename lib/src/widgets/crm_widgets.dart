@@ -59,6 +59,7 @@ class AppHeader extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: tokens.surfaceRaised,
+        border: Border(bottom: BorderSide(color: tokens.border)),
         boxShadow: AppTokens.elevation1(dark),
       ),
       child: Row(
@@ -171,7 +172,7 @@ class CardBox extends StatelessWidget {
     final decoration = BoxDecoration(
       color: tokens.surfaceRaised,
       borderRadius: BorderRadius.circular(AppRadius.lg),
-      border: border,
+      border: border ?? Border.all(color: tokens.border),
       boxShadow: AppTokens.elevation1(dark),
     );
     if (onTap == null) {
@@ -226,14 +227,19 @@ class _ContactListCardState extends State<ContactListCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
-        transform: Matrix4.identity()..translate(0.0, hovering ? -3.0 : 0.0),
+        transform: Matrix4.identity()
+          ..translateByDouble(0.0, hovering ? -3.0 : 0.0, 0.0, 1.0),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: hovering ? 0.10 : 0.04),
-              blurRadius: hovering ? 18 : 8,
-              offset: Offset(0, hovering ? 8 : 3),
+              color: Colors.black.withValues(
+                alpha: dark
+                    ? (hovering ? 0.26 : 0.16)
+                    : (hovering ? 0.10 : 0.04),
+              ),
+              blurRadius: hovering ? 18 : 10,
+              offset: Offset(0, hovering ? 8 : 4),
             ),
           ],
         ),
@@ -245,7 +251,7 @@ class _ContactListCardState extends State<ContactListCard> {
           border: Border.all(
             color: hovering
                 ? tokens.primary.withValues(alpha: 0.18)
-                : Colors.transparent,
+                : tokens.border,
           ),
           onTap: widget.onTap,
           child: Row(

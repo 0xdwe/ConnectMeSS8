@@ -57,28 +57,28 @@ class SettingsTab extends ConsumerWidget {
             children: [
               _SettingsRow(
                 icon: Icons.person_outline,
-                iconColor: const Color(0xFF5B8DEF),
+                iconColor: tokens.primary,
                 label: 'Edit Profile',
                 onTap: () => EditProfileScreen.navigateTo(context),
               ),
               Divider(color: tokens.border, height: 1, indent: 68),
               _SettingsRow(
                 icon: Icons.notifications_none,
-                iconColor: const Color(0xFFF5A623),
+                iconColor: tokens.secondary,
                 label: 'Notifications',
                 onTap: () => showNotificationsModal(context),
               ),
               Divider(color: tokens.border, height: 1, indent: 68),
               _SettingsRow(
                 icon: Icons.shield_outlined,
-                iconColor: const Color(0xFF34B5E4),
+                iconColor: tokens.categoryWork,
                 label: 'Privacy & Security',
                 onTap: () => _info(context, 'Privacy controls placeholder'),
               ),
               Divider(color: tokens.border, height: 1, indent: 68),
               _SettingsRow(
                 icon: Icons.delete_outline,
-                iconColor: const Color(0xFFE04B4B),
+                iconColor: tokens.danger,
                 label: 'Remove sample friends',
                 onTap: () => _confirmRemoveSamples(context, ref),
               ),
@@ -131,7 +131,7 @@ class SettingsTab extends ConsumerWidget {
           border: Border.all(color: tokens.border, width: 1),
           child: _SettingsRow(
             icon: Icons.info_outline,
-            iconColor: const Color(0xFF5B8DEF),
+            iconColor: tokens.primary,
             label: 'About Connect Me',
             onTap: () => showAboutBottomSheet(context),
           ),
