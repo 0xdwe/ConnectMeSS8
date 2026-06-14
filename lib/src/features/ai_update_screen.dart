@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io' show File;
 
-import 'package:file_selector/file_selector.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -70,8 +70,12 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     }
   }
 
+  /// Opens the system file/image picker.
+  /// Uses [ImagePicker] which has a native iOS implementation; the
+  /// old `file_selector` approach silently did nothing on iOS.
   Future<void> pick() async {
-    final result = await openFiles();
+    final picker = ImagePicker();
+    final result = await picker.pickMultiImage();
     if (result.isEmpty) return;
     setState(
       () => attachments.addAll(
@@ -81,11 +85,8 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
   }
 
   Future<void> pickImage() async {
-    const imageGroup = XTypeGroup(
-      label: 'images',
-      extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'heic'],
-    );
-    final result = await openFiles(acceptedTypeGroups: [imageGroup]);
+    final picker = ImagePicker();
+    final result = await picker.pickMultiImage();
     if (result.isEmpty) return;
     setState(
       () => attachments.addAll(
