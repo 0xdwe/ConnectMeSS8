@@ -276,9 +276,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           end: Alignment.topRight,
                         ),
                       ),
-                      child: const Image(
-                        key: Key('welcome-screen-background'),
-                        image: AssetImage('assets/images/welcome_back.jpg'),
+                      child: Image(
+                        key: const Key('welcome-screen-background'),
+                        image: const AssetImage('assets/images/welcome_back.jpg'),
+                        width: w,
+                        height: h,
                         fit: BoxFit.fitWidth,
                         alignment: Alignment.bottomCenter,
                         excludeFromSemantics: true,
@@ -290,22 +292,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Color(0xFFEDE9FF),
-                            Color(0xFFE0EBFD),
-                            Color(0xFFECE8FF),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.topRight,
-                        ),
-                      ),
-                      child: const Image(
-                        key: Key('login-page-background'),
-                        image: AssetImage('assets/images/login_page.jpg'),
+                      color: Colors.white,
+                      child: Image(
+                        key: const Key('login-page-background'),
+                        image: const AssetImage('assets/images/login_page.jpg'),
+                        width: w,
+                        height: h,
                         fit: BoxFit.fitWidth,
-                        alignment: Alignment.bottomCenter,
+                        alignment: Alignment.topCenter,
                         excludeFromSemantics: true,
                       ),
                     ),
