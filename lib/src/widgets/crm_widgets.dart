@@ -1347,12 +1347,28 @@ class DailyNudgeCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 120,
-              height: 120,
-              child: CustomPaint(
-                painter: _CuteGhostPainter(),
+            Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: tokens.border,
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.asset(
+                'assets/images/nudge_character.jpg',
+                fit: BoxFit.contain,
               ),
             ),
           ],
