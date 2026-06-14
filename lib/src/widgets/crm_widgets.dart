@@ -1374,7 +1374,17 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
                 );
 
             if (recForThisContact == null) {
-              return const SizedBox.shrink();
+              final interactions = ref.watch(
+                interactionsByContactProvider(widget.connection.id),
+              );
+              final now = ref.read(clockProvider)();
+              return _buildRelationshipHealthCard(
+                connection: widget.connection,
+                interactions: interactions,
+                memorySummary: widget.memorySummary,
+                now: now,
+                tokens: tokens,
+              );
             }
 
             final isCompleted = recForThisContact.isCompleted;
@@ -1528,6 +1538,94 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
       ],
     );
   }
+}
+
+String _qualitativeRecencyLabel({
+  required Connection connection,
+  required List<CrmInteraction> interactions,
+  required DateTime now,
+}) {
+  var latest = connection.lastContact;
+  for (final interaction in interactions) {
+    if (interaction.contactId != connection.id) continue;
+    if (interaction.date.isAfter(latest)) latest = interaction.date;
+  }
+  final days = now.difference(latest).inDays;
+  if (days <= 3) return 'You two connected very recently.';
+  if (days <= 14) return 'You\'ve been in touch recently.';
+  return 'You\'ve kept in touch regularly.';
+}
+
+String _truncateRelationshipHealthSummary(String? summary) {
+  final trimmed = summary?.trim() ?? '';
+  if (trimmed.isEmpty) return '';
+  if (trimmed.length <= 120) return trimmed;
+  return '${trimmed.substring(0, 120)}...';
+}
+
+Widget _buildRelationshipHealthCard({
+  required Connection connection,
+  required List<CrmInteraction> interactions,
+  required String? memorySummary,
+  required DateTime now,
+  required AppTokens tokens,
+}) {
+  final summary = _truncateRelationshipHealthSummary(memorySummary);
+  if (summary.isEmpty) return const SizedBox.shrink();
+
+  final recency = _qualitativeRecencyLabel(
+    connection: connection,
+    interactions: interactions,
+    now: now,
+  );
+
+  return Container(
+    padding: EdgeInsets.all(AppSpacing.space4),
+    decoration: BoxDecoration(
+      color: tokens.success.withValues(alpha: 0.08),
+      border: Border.all(
+        color: tokens.success.withValues(alpha: 0.25),
+        width: 1.5,
+      ),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.favorite_outline,
+          color: tokens.success,
+          size: 22,
+        ),
+        SizedBox(width: AppSpacing.space3),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Relationship healthy',
+                style: AppTypography.h2(color: tokens.success),
+              ),
+              SizedBox(height: AppSpacing.space1),
+              Text(
+                recency,
+                style: AppTypography.body(
+                  color: tokens.success.withValues(alpha: 0.85),
+                ),
+              ),
+              SizedBox(height: AppSpacing.space1),
+              Text(
+                summary,
+                style: AppTypography.body(
+                  color: tokens.success.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 const _stopWords = {
