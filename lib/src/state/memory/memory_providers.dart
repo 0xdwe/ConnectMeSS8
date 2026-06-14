@@ -326,6 +326,7 @@ final memoryProvider = FutureProvider.family<MemoryDocument, String>((
   contactId,
 ) async {
   final store = ref.watch(memoryStoreProvider);
+  ref.watch(memoryEpochProvider); // Trigger automatic reload when memory epoch changes
 
   final loaded = await store.load(contactId);
   if (loaded != null) return loaded;

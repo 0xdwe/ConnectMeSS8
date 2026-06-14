@@ -531,7 +531,7 @@ void main() {
 
   group('LlmAiUpdate constants', () {
     test('default model matches PRD §Q2 / #076 verification', () {
-      expect(kLlmAiUpdateDefaultModel, 'gemini-2.5-flash-lite');
+      expect(kLlmAiUpdateDefaultModel, 'gemini-2.5-flash');
     });
 
     test('default timeout matches PRD §Q6 (20s)', () {

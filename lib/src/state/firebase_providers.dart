@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 /// Active [FirebaseAuth] instance (Pass 4.1, #052).
 ///
@@ -223,4 +224,36 @@ final currentUserProvider = Provider<User?>((ref) {
   });
   ref.onDispose(sub.cancel);
   return auth.currentUser;
+});
+
+abstract class GoogleSignInService {
+  Future<UserCredential?> signIn();
+}
+
+class FirebaseGoogleSignInService implements GoogleSignInService {
+  FirebaseGoogleSignInService(this._auth);
+  final FirebaseAuth _auth;
+
+  @override
+  Future<UserCredential?> signIn() async {
+    String? clientId;
+    if (defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.iOS) {
+      clientId = '588203814855-0qjggoccl0casa7gtkfmvgo0uhb7lnib.apps.googleusercontent.com';
+    }
+    final googleSignIn = GoogleSignIn.instance;
+    await googleSignIn.initialize(
+      clientId: clientId,
+    );
+    final account = await googleSignIn.authenticate();
+
+    final authDetails = account.authentication;
+    final credential = GoogleAuthProvider.credential(
+      idToken: authDetails.idToken,
+    );
+    return await _auth.signInWithCredential(credential);
+  }
+}
+
+final googleSignInServiceProvider = Provider<GoogleSignInService>((ref) {
+  return FirebaseGoogleSignInService(ref.watch(firebaseAuthProvider));
 });

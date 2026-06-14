@@ -12,7 +12,12 @@
           "package_name": "com.connectme.connect_me"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "588203814855-5apbo8vrr5oumln6kikm9kl2aa88dsi4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBEG2dFNTVyA34xzwLCrVAZkK47n3Q6XMY"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "588203814855-5apbo8vrr5oumln6kikm9kl2aa88dsi4.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "588203814855-0qjggoccl0casa7gtkfmvgo0uhb7lnib.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.connectme.connectMe"
+              }
+            }
+          ]
         }
       }
     }
