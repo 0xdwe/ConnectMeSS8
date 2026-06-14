@@ -288,6 +288,8 @@ final recommendationsProvider = FutureProvider<List<Recommendation>>((
     interactions: interactions,
     memories: memories,
     now: now,
+    previousList: holder.cache?.list,
+    previousCacheTime: holder.cache?.computedAt,
   );
   holder.cache = _RecommendationsCache(
     computedAt: now,

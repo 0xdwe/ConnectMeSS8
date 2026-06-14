@@ -330,6 +330,8 @@ class Recommendation {
     required this.priority,
     this.topic,
     this.action,
+    this.isCompleted = false,
+    this.completedAt,
   });
 
   final String contactId;
@@ -344,6 +346,16 @@ class Recommendation {
   /// Prepared Topic Suggestion text to show as the concrete next action.
   /// Null when no high-quality, non-expired topic suggestion is eligible.
   final String? action;
+
+  /// True when this card represents a recommendation the user already
+  /// acted upon (Pass 4.6 / #115). Completed cards keep their original
+  /// slot position and render with a checkmark badge. In-memory only —
+  /// never persisted to Firestore.
+  final bool isCompleted;
+
+  /// Wall-clock time the recommendation was detected as completed.
+  /// Only meaningful when [isCompleted] is true.
+  final DateTime? completedAt;
 }
 
 /// Per-contact derived signals consumed by the contact profile UI.

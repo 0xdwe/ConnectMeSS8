@@ -1092,4 +1092,336 @@ void main() {
       },
     );
   });
+
+  group('rankRecommendations — completion detection (#115)', () {
+    test(
+      'completed card emitted when contact dropped off and has new '
+      'aiSuggested interaction after cache time',
+      () {
+        final connections = [
+          _connection(
+            id: 'a',
+            name: 'Alice',
+            bondScore: 40,
+            lastContact: now.subtract(const Duration(days: 30)),
+          ),
+          _connection(
+            id: 'b',
+            name: 'Bob',
+            bondScore: 60,
+            lastContact: now.subtract(const Duration(days: 25)),
+          ),
+        ];
+        final cacheTime = now.subtract(const Duration(hours: 1));
+        final interactions = [
+          CrmInteraction(
+            id: 'i1',
+            contactId: 'a',
+            type: InteractionType.interaction,
+            title: 'AI Update',
+            note: 'Updated',
+            date: now.subtract(const Duration(minutes: 30)),
+            source: InteractionSource.aiSuggested,
+          ),
+        ];
+        final previousList = [
+          Recommendation(
+            contactId: 'a',
+            reason: 'Wondering how Alice has been?',
+            insight: 'Last chat was a few weeks ago.',
+            priority: 'high priority',
+          ),
+          Recommendation(
+            contactId: 'b',
+            reason: 'Want to check in on Bob?',
+            insight: 'Last chat was a few weeks ago.',
+            priority: 'medium priority',
+          ),
+        ];
+
+        final ranked = rankRecommendations(
+          connections: connections,
+          interactions: interactions,
+          memories: const {},
+          now: now,
+          previousList: previousList,
+          previousCacheTime: cacheTime,
+        );
+
+        expect(ranked.length, lessThanOrEqualTo(3));
+        final completed = ranked.firstWhere((r) => r.isCompleted);
+        expect(completed.contactId, 'a');
+        expect(completed.reason, '✓ Reached out to Alice');
+        expect(completed.insight, 'Just updated with AI');
+        expect(completed.isCompleted, isTrue);
+        expect(completed.completedAt, now);
+        expect(ranked[0].contactId, 'a');
+        expect(ranked[0].isCompleted, isTrue);
+      },
+    );
+
+    test(
+      'completed card NOT emitted for manual source interaction',
+      () {
+        final connections = [
+          _connection(
+            id: 'a',
+            name: 'Alice',
+            bondScore: 40,
+            lastContact: now.subtract(const Duration(days: 30)),
+          ),
+        ];
+        final cacheTime = now.subtract(const Duration(hours: 1));
+        final interactions = [
+          CrmInteraction(
+            id: 'i1',
+            contactId: 'a',
+            type: InteractionType.interaction,
+            title: 'Manual',
+            note: 'Manual',
+            date: now.subtract(const Duration(minutes: 30)),
+            source: InteractionSource.manual,
+          ),
+        ];
+        final previousList = [
+          Recommendation(
+            contactId: 'a',
+            reason: 'Wondering how Alice has been?',
+            insight: 'Last chat was a few weeks ago.',
+            priority: 'high priority',
+          ),
+        ];
+
+        final ranked = rankRecommendations(
+          connections: connections,
+          interactions: interactions,
+          memories: const {},
+          now: now,
+          previousList: previousList,
+          previousCacheTime: cacheTime,
+        );
+
+        expect(ranked.any((r) => r.isCompleted), isFalse);
+      },
+    );
+
+    test(
+      'completed card NOT emitted when contact stays in new list '
+      '(no new interaction to trigger completion)',
+      () {
+        final connections = [
+          _connection(
+            id: 'a',
+            name: 'Alice',
+            bondScore: 40,
+            lastContact: now.subtract(const Duration(days: 30)),
+          ),
+          _connection(
+            id: 'b',
+            name: 'Bob',
+            bondScore: 20,
+            lastContact: now.subtract(const Duration(days: 90)),
+          ),
+        ];
+        final cacheTime = now.subtract(const Duration(hours: 1));
+        // No new interaction at all — Alice stays in the list naturally
+        final interactions = <CrmInteraction>[];
+        final previousList = [
+          Recommendation(
+            contactId: 'a',
+            reason: 'Wondering how Alice has been?',
+            insight: 'Last chat was a few weeks ago.',
+            priority: 'high priority',
+          ),
+        ];
+
+        final ranked = rankRecommendations(
+          connections: connections,
+          interactions: interactions,
+          memories: const {},
+          now: now,
+          previousList: previousList,
+          previousCacheTime: cacheTime,
+        );
+
+        // Alice is still in the list (no interaction triggered drop-off)
+        expect(ranked.any((r) => r.contactId == 'a' && r.isCompleted), isFalse);
+        expect(ranked.any((r) => r.contactId == 'a'), isTrue);
+      },
+    );
+
+    test('at most 1 completed card per recomputation', () {
+      final connections = [
+        _connection(
+          id: 'a',
+          name: 'Alice',
+          bondScore: 40,
+          lastContact: now.subtract(const Duration(days: 30)),
+        ),
+        _connection(
+          id: 'b',
+          name: 'Bob',
+          bondScore: 60,
+          lastContact: now.subtract(const Duration(days: 25)),
+        ),
+      ];
+      final cacheTime = now.subtract(const Duration(hours: 1));
+      final interactions = [
+        CrmInteraction(
+          id: 'i1',
+          contactId: 'a',
+          type: InteractionType.interaction,
+          title: 'Update',
+          note: 'Updated',
+          date: now.subtract(const Duration(minutes: 30)),
+          source: InteractionSource.aiSuggested,
+        ),
+        CrmInteraction(
+          id: 'i2',
+          contactId: 'b',
+          type: InteractionType.interaction,
+          title: 'Update',
+          note: 'Updated',
+          date: now.subtract(const Duration(minutes: 25)),
+          source: InteractionSource.aiSuggested,
+        ),
+      ];
+      final previousList = [
+        Recommendation(
+          contactId: 'a',
+          reason: 'Wondering how Alice has been?',
+          insight: 'Last chat was a few weeks ago.',
+          priority: 'high priority',
+        ),
+        Recommendation(
+          contactId: 'b',
+          reason: 'Want to check in on Bob?',
+          insight: 'Last chat was a few weeks ago.',
+          priority: 'medium priority',
+        ),
+      ];
+
+      final ranked = rankRecommendations(
+        connections: connections,
+        interactions: interactions,
+        memories: const {},
+        now: now,
+        previousList: previousList,
+        previousCacheTime: cacheTime,
+      );
+
+      final completed = ranked.where((r) => r.isCompleted).toList();
+      expect(completed.length, 1);
+      expect(completed.first.contactId, 'a');
+    });
+
+    test(
+      'completed card NOT emitted without previousList (backward compat)',
+      () {
+        final connections = [
+          _connection(
+            id: 'a',
+            name: 'Alice',
+            bondScore: 40,
+            lastContact: now.subtract(const Duration(days: 90)),
+          ),
+        ];
+        // No interactions — Alice stays in rhythm purely on her own
+        final interactions = <CrmInteraction>[];
+
+        final ranked = rankRecommendations(
+          connections: connections,
+          interactions: interactions,
+          memories: const {},
+          now: now,
+        );
+
+        expect(ranked.any((r) => r.isCompleted), isFalse);
+        expect(ranked.length, 1);
+        expect(ranked.first.contactId, 'a');
+      },
+    );
+
+    test(
+      'completed card NOT emitted when interaction date is before cache time',
+      () {
+        final connections = [
+          _connection(
+            id: 'a',
+            name: 'Alice',
+            bondScore: 40,
+            lastContact: now.subtract(const Duration(days: 30)),
+          ),
+        ];
+        final cacheTime = now.subtract(const Duration(hours: 1));
+        final interactions = [
+          CrmInteraction(
+            id: 'i1',
+            contactId: 'a',
+            type: InteractionType.interaction,
+            title: 'Update',
+            note: 'Updated',
+            date: cacheTime.subtract(const Duration(hours: 1)),
+            source: InteractionSource.aiSuggested,
+          ),
+        ];
+        final previousList = [
+          Recommendation(
+            contactId: 'a',
+            reason: 'Wondering how Alice has been?',
+            insight: 'Last chat was a few weeks ago.',
+            priority: 'high priority',
+          ),
+        ];
+
+        final ranked = rankRecommendations(
+          connections: connections,
+          interactions: interactions,
+          memories: const {},
+          now: now,
+          previousList: previousList,
+          previousCacheTime: cacheTime,
+        );
+
+        expect(ranked.any((r) => r.isCompleted), isFalse);
+      },
+    );
+
+    test(
+      'completed card NOT emitted when no interactions exist for the dropped contact',
+      () {
+        final connections = [
+          _connection(
+            id: 'a',
+            name: 'Alice',
+            bondScore: 80,
+            lastContact: now.subtract(const Duration(days: 1)),
+          ),
+        ];
+        final cacheTime = now.subtract(const Duration(hours: 1));
+        final interactions = <CrmInteraction>[];
+        final previousList = [
+          Recommendation(
+            contactId: 'a',
+            reason: 'Wondering how Alice has been?',
+            insight: 'Last chat was a few weeks ago.',
+            priority: 'high priority',
+          ),
+        ];
+
+        final ranked = rankRecommendations(
+          connections: connections,
+          interactions: interactions,
+          memories: const {},
+          now: now,
+          previousList: previousList,
+          previousCacheTime: cacheTime,
+        );
+
+        expect(ranked.any((r) => r.isCompleted), isFalse);
+        expect(ranked, isEmpty);
+      },
+    );
+  });
+
 }
