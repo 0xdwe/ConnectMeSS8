@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:connect_me/src/widgets/crm_widgets.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
@@ -114,56 +114,67 @@ class _ManageCategoriesModalState extends ConsumerState<ManageCategoriesModal> {
                     spacing: 8,
                     runSpacing: 8,
                     children: categories.map((item) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: tokens.primaryTint,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: tokens.primary.withValues(alpha: .16),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              item,
-                              style: AppTypography.body().copyWith(
-                                color: tokens.primary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          final maxChipWidth = MediaQuery.sizeOf(context).width - 
+                              (AppSpacing.space6 * 2) - 50; // account for modal padding + close icon
+
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: tokens.primaryTint,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: tokens.primary.withValues(alpha: .16),
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            GestureDetector(
-                              onTap: () async {
-                                try {
-                                  await ref
-                                      .read(appControllerProvider.notifier)
-                                      .deleteCategory(item);
-                                } catch (_) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Could not delete category.',
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                              child: Icon(
-                                Icons.close,
-                                color: tokens.primary.withValues(alpha: .8),
-                                size: 14,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(maxWidth: maxChipWidth),
+                                  child: FadeOverflowText(
+                                    text: item,
+                                    style: AppTypography.body().copyWith(
+                                      color: tokens.primary,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                    maxWidth: maxChipWidth,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () async {
+                                    try {
+                                      await ref
+                                          .read(appControllerProvider.notifier)
+                                          .deleteCategory(item);
+                                    } catch (_) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Could not delete category.',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: Icon(
+                                    Icons.close,
+                                    color: tokens.primary.withValues(alpha: .8),
+                                    size: 14,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       );
                     }).toList(),
                   ),

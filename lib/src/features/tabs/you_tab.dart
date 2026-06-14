@@ -53,7 +53,7 @@ class YouTab extends ConsumerWidget {
                       icon: Icons.groups_2_outlined,
                       value: '${state.connections.length}',
                       label: 'Total Connections',
-                      helper: 'People in your network',
+                      helper: 'In your network',
                       accent: tokens.secondary,
                     ),
                   ];
