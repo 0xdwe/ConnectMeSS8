@@ -327,7 +327,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         color: tokens.ink,
                       ).copyWith(fontSize: 16, fontWeight: FontWeight.w600),
                       decoration: InputDecoration(
-                        labelText: 'Name',
                         errorText: _nameError,
                         border: InputBorder.none,
                         isDense: true,
@@ -354,7 +353,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         color: tokens.inkMuted,
                       ).copyWith(fontSize: 16, fontWeight: FontWeight.w600),
                       decoration: const InputDecoration(
-                        labelText: 'Email',
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.symmetric(vertical: 8),
