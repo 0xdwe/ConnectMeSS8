@@ -995,10 +995,10 @@ class ConnectionScoreHero extends StatelessWidget {
 
     return CardBox(
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.space5,
         AppSpacing.space4,
-        AppSpacing.space5,
-        AppSpacing.space5,
+        AppSpacing.space4,
+        AppSpacing.space4,
+        AppSpacing.space4,
       ),
       child: Semantics(
         container: true,
@@ -1058,7 +1058,7 @@ class ScoreGauge extends StatelessWidget {
               ),
             ),
             Positioned(
-              bottom: h * 0.06,
+              bottom: h * 0.02, // Shift down to resolve overlap
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1068,14 +1068,14 @@ class ScoreGauge extends StatelessWidget {
                       const Icon(
                         Icons.chat_bubble_outline,
                         color: Colors.white,
-                        size: 26,
+                        size: 22, // Compact size to prevent overlap
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
+                        padding: const EdgeInsets.only(bottom: 3),
                         child: Icon(
                           Icons.favorite,
                           color: Colors.white.withValues(alpha: 0.9),
-                          size: 11,
+                          size: 9.5, // Compact size
                         ),
                       ),
                     ],
@@ -1088,7 +1088,7 @@ class ScoreGauge extends StatelessWidget {
                       Text(
                         '$score',
                         style: AppTypography.glyph(
-                          48,
+                          44, // Slightly smaller score digits
                           color: Colors.white,
                           weight: FontWeight.w700,
                         ),
@@ -1101,19 +1101,26 @@ class ScoreGauge extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     'Keep nurturing your relationships!',
                     style: AppTypography.caption(
                       color: Colors.white,
-                    ).copyWith(fontWeight: FontWeight.w700, fontSize: 11),
+                    ).copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 10.5,
+                      height: 1.1, // Tight line height to reduce height
+                    ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 1),
                   Text(
                     'Small steps lead to stronger connections.',
                     style: AppTypography.caption(
                       color: Colors.white.withValues(alpha: 0.75),
-                    ).copyWith(fontSize: 9),
+                    ).copyWith(
+                      fontSize: 8.5,
+                      height: 1.1, // Tight line height
+                    ),
                   ),
                 ],
               ),
@@ -1137,14 +1144,14 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
     final cy = size.height - 6; // shift baseline down to maximize circle size
     final center = Offset(cx, cy);
 
-    // Segment configuration scaled dynamically based on width
-    final segmentThickness = size.width * 0.075;
+    // Thinner segments to maximize dome space (exactly like mockup)
+    final segmentThickness = size.width * 0.06;
     
-    // Outer track sits exactly at the edge with a 4px safe margin
-    final trackRadius = cx - 4;
+    // Outer track sits exactly at the edge with a 2px safe margin (larger circle)
+    final trackRadius = cx - 2;
     
     // Calculate segment radius based on track position
-    final segmentRadius = trackRadius - (segmentThickness / 2) - 5;
+    final segmentRadius = trackRadius - (segmentThickness / 2) - 4;
 
     // 1. Draw the 5 outer segments
     final segmentLabels = ['0-20', '21-40', '41-60', '61-80', '81-100'];
