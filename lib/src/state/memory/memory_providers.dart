@@ -242,6 +242,11 @@ class _RecommendationsCache {
 /// recomputes.
 class _RecommendationsCacheHolder {
   _RecommendationsCache? cache;
+  /// The last list returned by [rankRecommendations], stored
+  /// independently of cache freshness. Used as [previousList] on
+  /// the next recomputation so completion detection works even
+  /// when the freshness cache is stale or absent. (Pass 4.6 / #115)
+  List<Recommendation>? lastReturnedList;
 }
 
 final _recommendationsCacheProvider = Provider<_RecommendationsCacheHolder>(
@@ -288,8 +293,10 @@ final recommendationsProvider = FutureProvider<List<Recommendation>>((
     interactions: interactions,
     memories: memories,
     now: now,
-    previousList: holder.cache?.list,
-    previousCacheTime: holder.cache?.computedAt,
+    previousList: holder.lastReturnedList,
+    previousCacheTime:
+        holder.cache?.computedAt ??
+        now.subtract(recommendationsFreshness),
   );
   holder.cache = _RecommendationsCache(
     computedAt: now,
@@ -298,6 +305,7 @@ final recommendationsProvider = FutureProvider<List<Recommendation>>((
     connections: connections,
     interactions: interactions,
   );
+  holder.lastReturnedList = list;
   return list;
 });
 

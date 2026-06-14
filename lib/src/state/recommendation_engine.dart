@@ -111,7 +111,8 @@ List<Recommendation> rankRecommendations({
         (ix) =>
             ix.contactId == prev.contactId &&
             ix.source == InteractionSource.aiSuggested &&
-            ix.date.isAfter(previousCacheTime),
+            ix.date.isAfter(previousCacheTime) ||
+            ix.date == previousCacheTime,
       );
       if (!hasNewAiInteraction) continue;
       // Build a completed card at the original slot position
