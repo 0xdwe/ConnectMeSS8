@@ -30,6 +30,7 @@ List<Recommendation> rankRecommendations({
   required DateTime now,
   List<Recommendation>? previousList,
   DateTime? previousCacheTime,
+  String? lastAiUpdatedContactId,
 }) {
   // 1. Upcoming-driven special cards (PRD Q12).
   //
@@ -95,57 +96,133 @@ List<Recommendation> rankRecommendations({
   scored.sort(_compareScored);
   final ranked = scored.take(remainingSlots).map(_toRecommendation);
 
-  // 3. Completion detection (Pass 4.6 / #115): when contacts that
-  //    were in previousList drop off the new list after the user
-  //    completed an AI Update, emit a completed Recommendation at
-  //    the original slot position. At most one per recomputation.
+  // 3. Completion detection (Pass 4.6 / #115, #117).
+  //
+  //    Fast path (#117): when lastAiUpdatedContactId is provided and
+  //    the contact was in previousList but dropped off the new list,
+  //    emit a completed card directly — no interaction check needed.
+  //    This is synchronous: the provider sets lastAiUpdatedContactId
+  //    during AiUpdate.commit() before the new interaction reaches
+  //    the snapshot listener.
+  //
+  //    Fallback path (#115): when lastAiUpdatedContactId is null,
+  //    check for aiSuggested interactions after the cache time.
+  //    Only one completed card per recomputation (fast path wins).
   final result = [...special, ...ranked];
-  if (previousList != null && previousCacheTime != null) {
-    final newContactIds = result.map((r) => r.contactId).toSet();
-    for (var i = 0; i < previousList.length; i++) {
-      final prev = previousList[i];
-      if (prev.isCompleted) continue; // Already a completed card — skip
-      if (newContactIds.contains(prev.contactId)) continue; // Still in top 3
-      // Check for a new AI-suggested interaction after the cache time
-      final hasNewAiInteraction = interactions.any(
-        (ix) =>
-            ix.contactId == prev.contactId &&
-            ix.source == InteractionSource.aiSuggested &&
-            (ix.date.isAfter(previousCacheTime) ||
-                ix.date == previousCacheTime),
+  if (previousList != null) {
+    // --- fast path (#117) ---
+    if (lastAiUpdatedContactId != null) {
+      final prevIndex = previousList.indexWhere(
+        (r) =>
+            r.contactId == lastAiUpdatedContactId && !r.isCompleted,
       );
-      if (!hasNewAiInteraction) continue;
-      // Build a completed card at the original slot position
-      final contact = connections.firstWhere(
-        (c) => c.id == prev.contactId,
-        orElse: () => Connection(
-          id: prev.contactId,
-          name: prev.contactId,
-          email: '',
-          category: 'Friends',
-          avatar: '👤',
-          bondScore: 50,
-          nextStep: '',
-          lastContact: DateTime.now(),
-          notes: '',
-          knownSince: DateTime.now(),
-          preferredChannels: const ['Text'],
-        ),
-      );
-      final completed = Recommendation(
-        contactId: prev.contactId,
-        reason: '✓ Reached out to ${contact.name}',
-        insight: 'Just updated with AI',
-        priority: 'completed',
-        isCompleted: true,
-        completedAt: now,
-      );
-      // Insert at the original slot position, clamping to result length
-      final insertAt = i.clamp(0, result.length);
-      final updated = <Recommendation>[...result];
-      updated.insert(insertAt, completed);
-      // Cap at 3 total
-      return updated.take(3).toList(growable: false);
+      if (prevIndex >= 0) {
+        final newContactIds = result.map((r) => r.contactId).toSet();
+        if (!newContactIds.contains(lastAiUpdatedContactId)) {
+          // #119: Differentiate the two completion scenarios:
+          //   - MaintenanceNeed.none → relationship is healthy after the
+          //     update; emit an affirmative "you're in a good place" card.
+          //   - Still has a need but crowded out of top-3 → keep the
+          //     generic "✓ Reached out" card.
+          final contact = connections.firstWhere(
+            (c) => c.id == lastAiUpdatedContactId,
+            orElse: () => Connection(
+              id: lastAiUpdatedContactId,
+              name: lastAiUpdatedContactId,
+              email: '',
+              category: 'Friends',
+              avatar: '👤',
+              bondScore: 50,
+              nextStep: '',
+              lastContact: DateTime.now(),
+              notes: '',
+              knownSince: DateTime.now(),
+              preferredChannels: const ['Text'],
+            ),
+          );
+          final maintenanceResult = RelationshipMaintenancePolicy.evaluate(
+            connection: contact,
+            interactions: interactions,
+            now: now,
+          );
+          final isHealthy =
+              maintenanceResult.maintenanceNeed == MaintenanceNeed.none;
+          final completed = isHealthy
+              ? Recommendation(
+                  contactId: lastAiUpdatedContactId,
+                  reason: "You're in a good place with ${contact.name}.",
+                  insight: 'This relationship looks healthy — keep it up.',
+                  priority: 'completed',
+                  isCompleted: true,
+                  completedAt: now,
+                )
+              : Recommendation(
+                  contactId: lastAiUpdatedContactId,
+                  reason: '✓ Reached out to ${contact.name}',
+                  insight: 'Just updated with AI',
+                  priority: 'completed',
+                  isCompleted: true,
+                  completedAt: now,
+                );
+
+          final insertAt = prevIndex.clamp(0, result.length);
+          final updated = <Recommendation>[...result];
+          updated.insert(insertAt, completed);
+          return updated.take(3).toList(growable: false);
+        }
+      }
+      // Fast path didn't fire (contact still in list, or not in
+      // previousList). Fall through to fallback.
+    }
+
+    // --- fallback path (#115) ---
+    if (previousCacheTime != null) {
+      final newContactIds = result.map((r) => r.contactId).toSet();
+      for (var i = 0; i < previousList.length; i++) {
+        final prev = previousList[i];
+        if (prev.isCompleted) continue; // Already a completed card — skip
+        if (newContactIds.contains(prev.contactId)) continue; // Still in top 3
+        // Check for a new AI-suggested interaction after the cache time
+        final hasNewAiInteraction = interactions.any(
+          (ix) =>
+              ix.contactId == prev.contactId &&
+              ix.source == InteractionSource.aiSuggested &&
+              (ix.date.isAfter(previousCacheTime) ||
+                  ix.date == previousCacheTime),
+        );
+        if (!hasNewAiInteraction) continue;
+        // Build a completed card at the original slot position
+        final contact = connections.firstWhere(
+          (c) => c.id == prev.contactId,
+          orElse: () => Connection(
+            id: prev.contactId,
+            name: prev.contactId,
+            email: '',
+            category: 'Friends',
+            avatar: '👤',
+            bondScore: 50,
+            nextStep: '',
+            lastContact: DateTime.now(),
+            notes: '',
+            knownSince: DateTime.now(),
+            preferredChannels: const ['Text'],
+          ),
+        );
+        final completed = Recommendation(
+          contactId: prev.contactId,
+          reason: '✓ Reached out to ${contact.name}',
+          insight: 'Just updated with AI',
+          priority: 'completed',
+          isCompleted: true,
+          completedAt: now,
+        );
+        // Insert at the original slot position, clamping to result length
+        final insertAt = i.clamp(0, result.length);
+        final updated = <Recommendation>[...result];
+        updated.insert(insertAt, completed);
+        // Cap at 3 total
+        return updated.take(3).toList(growable: false);
+      }
     }
   }
   return result.take(3).toList(growable: false);
