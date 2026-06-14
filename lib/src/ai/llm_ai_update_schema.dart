@@ -162,15 +162,21 @@ final Schema kLlmAiUpdateResponseSchema = Schema.object(
     ),
     'interactionDepth': Schema.integer(
       description:
-          'How content-rich the user input is, on a 0..100 scale. '
-          'Anchors: 0 = trivial / small talk / no new info; '
+          'Relational impact of the user input on a -100..+100 scale. '
+          'Positive = enriching/connecting; negative = harmful/conflictual. '
+          'Positive anchors: 0 = neutral, no new info; '
           '25 = brief interaction with some content; '
           '50 = a real conversation with new context; '
           '75 = significant news, plans, or shared activity; '
           '100 = deep day-long bonding or major life moment. '
-          'Code applies a diminishing-returns curve client-side to '
-          'translate this into the actual Bond Score delta; do NOT '
-          'try to estimate the delta yourself.',
+          'Negative anchors: -25 = mild friction or awkward exchange; '
+          '-50 = real argument or unresolved tension; '
+          '-75 = significant conflict or hurt feelings; '
+          '-100 = major falling out or severe relational damage. '
+          'Use 0 only when the input is purely neutral with no relational '
+          'impact (e.g. a routine reminder). '
+          'Code applies a curve client-side; do NOT estimate the Bond '
+          'Score delta yourself.',
     ),
     'nextStep': Schema.string(
       description:

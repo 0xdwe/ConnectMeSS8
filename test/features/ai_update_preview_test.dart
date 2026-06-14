@@ -108,6 +108,7 @@ void main() {
       );
 
       await container.read(aiUpdateProvider).commit(result);
+      await Future<void>.delayed(Duration.zero);
 
       final afterState = container.read(appControllerProvider);
 

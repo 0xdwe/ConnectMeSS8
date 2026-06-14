@@ -377,9 +377,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     if (mounted) {
       final count = editedInteractions.length;
       final plural = count == 1 ? '' : 's';
-      final message = person == null
-          ? 'Logged $count update$plural'
-          : 'Logged $count update$plural with ${person.name}';
+      final message = 'Logged $count update$plural with ${person.name}';
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -808,14 +806,42 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                           .copyWith(fontWeight: FontWeight.w600),
                     ),
                     SizedBox(width: AppSpacing.space1),
-                    Icon(Icons.edit_outlined, size: 13, color: tokens.primary),
+                     Icon(Icons.edit_outlined, size: 13, color: tokens.primary),
                   ],
                 ),
               ),
             ),
+            // Bond delta indicator — only for the first card (index 0)
+            // since bondScoreDelta is per-run, not per-interaction.
+            if (index == 0 && previewResult!.bondScoreDelta != 0) ...[
+              SizedBox(height: AppSpacing.space3),
+              _buildBondDeltaRow(tokens, previewResult!.bondScoreDelta),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  /// Small bond delta row: ▲ +N in green (positive) or ▼ −N in amber (negative).
+  Widget _buildBondDeltaRow(AppTokens tokens, int delta) {
+    final isPositive = delta > 0;
+    final color = isPositive ? tokens.success : tokens.secondary;
+    final icon = isPositive
+        ? Icons.arrow_upward_rounded
+        : Icons.arrow_downward_rounded;
+    final label = isPositive ? 'Bond +$delta' : 'Bond $delta';
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color),
+        SizedBox(width: AppSpacing.space1),
+        Text(
+          label,
+          style: AppTypography.caption(color: color).copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 

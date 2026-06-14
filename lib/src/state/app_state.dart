@@ -329,6 +329,7 @@ class AppController extends Notifier<AppState> {
   bool _hasConnectionsSnapshot = false;
   bool _hasInteractionsSnapshot = false;
   bool _bondDriftCheckScheduled = false;
+  bool _disposed = false;
   final Map<String, DateTime> _pendingBondDriftAppliedAtById =
       <String, DateTime>{};
 
@@ -353,6 +354,7 @@ class AppController extends Notifier<AppState> {
     _hasConnectionsSnapshot = false;
     _hasInteractionsSnapshot = false;
     _bondDriftCheckScheduled = false;
+    _disposed = false;
     _pendingBondDriftAppliedAtById.clear();
 
     final connectionStore = ref.watch(connectionStoreProvider);
@@ -422,6 +424,7 @@ class AppController extends Notifier<AppState> {
     }, onError: (_) {});
 
     ref.onDispose(() {
+      _disposed = true;
       _connectionsSub?.cancel();
       _interactionsSub?.cancel();
       _eventsSub?.cancel();
@@ -443,6 +446,7 @@ class AppController extends Notifier<AppState> {
     if (_bondDriftCheckScheduled) return;
     _bondDriftCheckScheduled = true;
     Future(() async {
+      if (_disposed) return;
       _bondDriftCheckScheduled = false;
       await _applyEligibleBondDrift();
     });

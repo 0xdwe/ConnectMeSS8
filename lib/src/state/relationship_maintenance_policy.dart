@@ -137,17 +137,19 @@ class RelationshipMaintenancePolicy {
   }
 
   static int _baseDriftFor(double ratio) {
-    if (ratio < 1.5) return 0;
-    if (ratio < 2.0) return -1;
-    if (ratio <= 3.0) return -2;
-    return -3;
+    // Drift starts as soon as a contact is overdue (ratio >= 1.0).
+    // Demo-tuned: faster decay so the system feels alive during demos.
+    if (ratio < 1.0) return 0;
+    if (ratio < 1.5) return -3;
+    if (ratio <= 2.5) return -5;
+    return -8;
   }
 
   static BondDriftReason _driftReasonFor(int drift) {
     return switch (drift) {
       0 => BondDriftReason.withinDriftGrace,
-      -1 => BondDriftReason.clearlyOutsideRhythm,
-      -2 => BondDriftReason.farOutsideRhythm,
+      -3 => BondDriftReason.clearlyOutsideRhythm,
+      -5 => BondDriftReason.farOutsideRhythm,
       _ => BondDriftReason.veryFarOutsideRhythm,
     };
   }
@@ -158,16 +160,19 @@ class RelationshipMaintenancePolicy {
     required String category,
   }) {
     final tierCap = switch (tier) {
-      BondDurabilityTier.close => -1,
-      BondDurabilityTier.steady => -2,
-      BondDurabilityTier.drifting => -3,
+      BondDurabilityTier.close => -3,
+      BondDurabilityTier.steady => -5,
+      BondDurabilityTier.drifting => -8,
     };
-    final cap = category == 'Work' && tierCap < -1 ? -1 : tierCap;
+    // Work contacts are capped at −2 to reflect professional distance
+    // being more naturally maintained without regular touch.
+    final cap = category == 'Work' && tierCap < -2 ? -2 : tierCap;
     return baseDrift < cap ? cap : baseDrift;
   }
 
   static bool _isEligible(DateTime? lastAppliedAt, DateTime now) {
     if (lastAppliedAt == null) return true;
-    return now.difference(lastAppliedAt) >= const Duration(days: 7);
+    // 3-day window (demo-tuned from 7) so drift is visible quickly.
+    return now.difference(lastAppliedAt) >= const Duration(days: 3);
   }
 }

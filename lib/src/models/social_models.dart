@@ -195,6 +195,18 @@ class Connection {
   /// Wave 4 will replace with real history-based logic.
   BondTrend get bondTrend => bondScore >= 70 ? BondTrend.up : BondTrend.flat;
 
+  /// Returns [BondTrend.down] when this connection's score has drifted
+  /// downward recently (lastBondDriftAppliedAt within 3 days of [now]).
+  /// Otherwise falls back to the existing up/flat heuristic.
+  BondTrend bondTrendAt(DateTime now) {
+    final lastDrift = lastBondDriftAppliedAt;
+    if (lastDrift != null &&
+        now.difference(lastDrift) < const Duration(days: 3)) {
+      return BondTrend.down;
+    }
+    return bondTrend;
+  }
+
   Connection copyWith({
     String? name,
     String? email,
