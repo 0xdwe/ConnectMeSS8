@@ -249,7 +249,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final brandedMode = _mode != AuthMode.signup;
+    final brandedMode = true;
     final tokens = brandedMode ? AppTokens.light() : context.tokens;
 
     return Scaffold(
@@ -263,10 +263,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             children: [
               // 1. Mode-specific background
               if (_mode == AuthMode.landing) ...[
-                Positioned.fill(
+                const Positioned.fill(
                   child: IgnorePointer(
-                    child: Container(
-                      decoration: const BoxDecoration(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
                             Color(0xFFE6DBFB),
@@ -279,36 +279,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     ),
                   ),
                 ),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
+                const Positioned.fill(
                   child: IgnorePointer(
                     child: Image(
-                      key: const Key('welcome-screen-background'),
-                      image: const AssetImage('assets/images/welcome_back.jpg'),
+                      key: Key('welcome-screen-background'),
+                      image: AssetImage('assets/images/welcome_back.jpg'),
                       fit: BoxFit.fitWidth,
+                      alignment: Alignment.bottomCenter,
                       excludeFromSemantics: true,
                     ),
                   ),
                 ),
               ] else ...[
-                Positioned.fill(
+                const Positioned.fill(
                   child: IgnorePointer(
-                    child: Container(
+                    child: ColoredBox(
                       color: Colors.white,
                     ),
                   ),
                 ),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
+                const Positioned.fill(
                   child: IgnorePointer(
                     child: Image(
-                      key: const Key('login-page-background'),
-                      image: const AssetImage('assets/images/login_page.jpg'),
+                      key: Key('login-page-background'),
+                      image: AssetImage('assets/images/login_page.jpg'),
                       fit: BoxFit.fitWidth,
+                      alignment: Alignment.topCenter,
                       excludeFromSemantics: true,
                     ),
                   ),

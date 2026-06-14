@@ -7,9 +7,17 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../test_overrides.dart';
 
-Future<void> pumpConnectMe(WidgetTester tester) async {
-  await tester.binding.setSurfaceSize(const Size(800, 1000));
+Future<void> pumpConnectMe(
+  WidgetTester tester, {
+  Size surfaceSize = const Size(800, 1000),
+  double textScaleFactor = 1,
+}) async {
+  await tester.binding.setSurfaceSize(surfaceSize);
   addTearDown(() => tester.binding.setSurfaceSize(null));
+  tester.platformDispatcher.textScaleFactorTestValue = textScaleFactor;
+  addTearDown(
+    tester.platformDispatcher.clearTextScaleFactorTestValue,
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -37,6 +45,72 @@ Future<void> pumpConnectMe(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('login renders the login page image background', (
+    tester,
+  ) async {
+    await pumpConnectMe(tester);
+
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor,
+      Colors.white,
+    );
+
+    final background = tester.widget<Image>(
+      find.byKey(const Key('login-page-background')),
+    );
+
+    expect(background.image, isA<AssetImage>());
+    expect(
+      (background.image as AssetImage).assetName,
+      'assets/images/login_page.jpg',
+    );
+  });
+
+  testWidgets('back from login shows only the welcome screen background', (
+    tester,
+  ) async {
+    await pumpConnectMe(tester);
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+
+    final background = tester.widget<Image>(
+      find.byKey(const Key('welcome-screen-background')),
+    );
+
+    expect(background.image, isA<AssetImage>());
+    expect(
+      (background.image as AssetImage).assetName,
+      'assets/images/welcome_back.jpg',
+    );
+    expect(
+      find.byKey(const Key('login-page-background')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('compact scaled login remains scrollable without overflow', (
+    tester,
+  ) async {
+    await pumpConnectMe(
+      tester,
+      surfaceSize: const Size(320, 700),
+      textScaleFactor: 1.3,
+    );
+
+    expect(find.byKey(const Key('login-email-field')), findsOneWidget);
+    expect(find.byKey(const Key('login-password-field')), findsOneWidget);
+    expect(find.byKey(const Key('sign-in-button')), findsOneWidget);
+    expect(find.byKey(const Key('google-sign-in-button')), findsOneWidget);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('google-sign-in-button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('valid login enters the main app', (tester) async {
     await pumpConnectMe(tester);
 
