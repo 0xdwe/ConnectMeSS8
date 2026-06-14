@@ -252,5 +252,27 @@ void main() {
       await tester.tap(find.byType(RecommendationCard));
       expect(tapped, isTrue);
     });
+
+    testWidgets('completed card hides action text when present', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildTestCard(
+          recommendation: const Recommendation(
+            contactId: 'test-1',
+            reason: '✓ Reached out to Mike',
+            insight: 'Just updated with AI',
+            priority: 'completed',
+            isCompleted: true,
+            action: 'Ask how the Paris plans are coming together.',
+          ),
+        ),
+      );
+
+      expect(
+        find.text('Ask how the Paris plans are coming together.'),
+        findsNothing,
+      );
+    });
   });
 }

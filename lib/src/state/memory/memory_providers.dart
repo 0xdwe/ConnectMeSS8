@@ -247,9 +247,6 @@ class _RecommendationsCacheHolder {
 /// Module-level memory of the last recommendation list returned.
 /// Survives Provider disposal during GoRouter navigation so
 /// completion detection always has a previous list to diff against.
-///
-/// Exposed for testing only — production code should not read this
-/// directly.
 List<Recommendation>? lastRecommendationList;
 
 final _recommendationsCacheProvider = Provider<_RecommendationsCacheHolder>(
