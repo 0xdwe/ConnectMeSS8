@@ -28,6 +28,8 @@ List<Recommendation> rankRecommendations({
   required List<CrmInteraction> interactions,
   required Map<String, MemoryDocument> memories,
   required DateTime now,
+  List<Recommendation>? previousList,
+  DateTime? previousCacheTime,
 }) {
   // 1. Upcoming-driven special cards (PRD Q12).
   //
@@ -43,7 +45,6 @@ List<Recommendation> rankRecommendations({
   //    The engine logic exists so Pass 4's LLM adapter doesn't have
   //    to revisit the engine when memory.upcoming starts being
   //    populated for real.
-  final byId = {for (final c in connections) c.id: c};
   final special = <Recommendation>[];
   // Iterate connections rather than memories.entries so output order
   // is deterministic regardless of the map's iteration order.
@@ -94,12 +95,59 @@ List<Recommendation> rankRecommendations({
   scored.sort(_compareScored);
   final ranked = scored.take(remainingSlots).map(_toRecommendation);
 
-  // Reference `byId` so the variable isn't dead in builds where the
-  // upcoming branch never matched any contact. Also documents that
-  // the lookup is by id.
-  assert(byId.length == connections.length);
-
-  return [...special, ...ranked];
+  // 3. Completion detection (Pass 4.6 / #115): when contacts that
+  //    were in previousList drop off the new list after the user
+  //    completed an AI Update, emit a completed Recommendation at
+  //    the original slot position. At most one per recomputation.
+  final result = [...special, ...ranked];
+  if (previousList != null && previousCacheTime != null) {
+    final newContactIds = result.map((r) => r.contactId).toSet();
+    for (var i = 0; i < previousList.length; i++) {
+      final prev = previousList[i];
+      if (prev.isCompleted) continue; // Already a completed card — skip
+      if (newContactIds.contains(prev.contactId)) continue; // Still in top 3
+      // Check for a new AI-suggested interaction after the cache time
+      final hasNewAiInteraction = interactions.any(
+        (ix) =>
+            ix.contactId == prev.contactId &&
+            ix.source == InteractionSource.aiSuggested &&
+            ix.date.isAfter(previousCacheTime),
+      );
+      if (!hasNewAiInteraction) continue;
+      // Build a completed card at the original slot position
+      final contact = connections.firstWhere(
+        (c) => c.id == prev.contactId,
+        orElse: () => Connection(
+          id: prev.contactId,
+          name: prev.contactId,
+          email: '',
+          category: 'Friends',
+          avatar: '👤',
+          bondScore: 50,
+          nextStep: '',
+          lastContact: DateTime.now(),
+          notes: '',
+          knownSince: DateTime.now(),
+          preferredChannels: const ['Text'],
+        ),
+      );
+      final completed = Recommendation(
+        contactId: prev.contactId,
+        reason: '✓ Reached out to ${contact.name}',
+        insight: 'Just updated with AI',
+        priority: 'completed',
+        isCompleted: true,
+        completedAt: now,
+      );
+      // Insert at the original slot position, clamping to result length
+      final insertAt = i.clamp(0, result.length);
+      final updated = <Recommendation>[...result];
+      updated.insert(insertAt, completed);
+      // Cap at 3 total
+      return updated.take(3).toList(growable: false);
+    }
+  }
+  return result.take(3).toList(growable: false);
 }
 
 int _compareScored(_Scored a, _Scored b) {
