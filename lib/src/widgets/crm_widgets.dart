@@ -1,9 +1,10 @@
 import 'dart:convert';
-import 'dart:ui' show ImageFilter;
+import 'dart:math' as math;
+import 'dart:ui' show ImageFilter, TextDirection;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 
 import '../models/social_models.dart';
 import '../state/conversation_topics.dart';
@@ -455,12 +456,35 @@ class RecommendationCard extends StatelessWidget {
                   style: AppTypography.body(color: tokens.inkMuted),
                 ),
                 if (recommendation.action case final action?) ...[
-                  SizedBox(height: AppSpacing.space2),
-                  Text(
-                    action,
-                    style: AppTypography.body(color: tokens.primary),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  SizedBox(height: AppSpacing.space3),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.space3,
+                      vertical: AppSpacing.space3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: tokens.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 16,
+                          color: tokens.primary,
+                        ),
+                        SizedBox(width: AppSpacing.space2),
+                        Expanded(
+                          child: Text(
+                            action,
+                            style: AppTypography.caption(color: tokens.ink).copyWith(
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ],
@@ -970,48 +994,492 @@ class ConnectionScoreHero extends StatelessWidget {
     final semanticLabel = 'Connection score: $score, ${tier.label}';
 
     return CardBox(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.space5,
-        vertical: AppSpacing.space6,
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.space5,
+        AppSpacing.space4,
+        AppSpacing.space5,
+        AppSpacing.space5,
       ),
       child: Semantics(
         container: true,
-        excludeSemantics:
-            true, // Excludes inner BondRing semantics to avoid duplication
+        excludeSemantics: true,
         label: semanticLabel,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Connection score',
-              style: AppTypography.bodyLg(color: tokens.inkMuted),
-            ),
-            SizedBox(height: AppSpacing.space4),
-            BondRing.fromScore(
-              score: score,
-              label: 'Bond score',
-              size: 176,
-              strokeWidth: 11,
-            ),
-            SizedBox(height: AppSpacing.space4),
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: AppSpacing.space2,
-              alignment: WrapAlignment.center,
+            Row(
               children: [
-                Icon(Icons.trending_up, color: tokens.primary, size: 18),
                 Text(
-                  'Keep nurturing your relationships!',
-                  style: AppTypography.body(color: tokens.inkMuted),
-                  textAlign: TextAlign.center,
+                  'Connection Score',
+                  style: AppTypography.h2(color: tokens.ink),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: tokens.inkSubtle,
                 ),
               ],
+            ),
+            SizedBox(height: AppSpacing.space4),
+            Center(
+              child: SizedBox(
+                width: 320,
+                height: 180,
+                child: ScoreGauge(score: score),
+              ),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+class ScoreGauge extends StatelessWidget {
+  const ScoreGauge({super.key, required this.score});
+  final int score;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      children: [
+        CustomPaint(
+          size: const Size(320, 180),
+          painter: _ScoreGaugeBackgroundPainter(
+            score: score,
+            tokens: tokens,
+          ),
+        ),
+        Positioned(
+          bottom: 12,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Icon(
+                    Icons.chat_bubble_outline,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Icon(
+                      Icons.favorite,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      size: 11,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '$score',
+                    style: AppTypography.glyph(
+                      48,
+                      color: Colors.white,
+                      weight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    '/100',
+                    style: AppTypography.caption(
+                      color: Colors.white.withValues(alpha: 0.75),
+                    ).copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Keep nurturing your relationships!',
+                style: AppTypography.caption(
+                  color: Colors.white,
+                ).copyWith(fontWeight: FontWeight.w700, fontSize: 11),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Small steps lead to stronger connections.',
+                style: AppTypography.caption(
+                  color: Colors.white.withValues(alpha: 0.75),
+                ).copyWith(fontSize: 9),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ScoreGaugeBackgroundPainter extends CustomPainter {
+  final int score;
+  final AppTokens tokens;
+
+  _ScoreGaugeBackgroundPainter({required this.score, required this.tokens});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height - 15; // center at bottom minus some padding
+    final center = Offset(cx, cy);
+
+    // Segment configuration
+    const segmentThickness = 24.0;
+    const segmentRadius = 120.0; // fixed radius
+
+    // 1. Draw the 5 outer segments
+    final segmentColors = [
+      tokens.danger,
+      tokens.secondary,
+      tokens.primary,
+      tokens.tertiary,
+      tokens.success,
+    ];
+    final segmentLabels = ['0-20', '21-40', '41-60', '61-80', '81-100'];
+
+    final activeSegmentIndex = (score / 20).floor().clamp(0, 4);
+
+    const segmentSweep = math.pi / 5;
+    for (int i = 0; i < 5; i++) {
+      final startAngle = math.pi + i * segmentSweep;
+      final isActive = i == activeSegmentIndex;
+
+      // Outer segment paint
+      final segmentPaint = Paint()
+        ..color = segmentColors[i].withValues(alpha: isActive ? 0.85 : 0.12)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = segmentThickness
+        ..strokeCap = StrokeCap.butt;
+
+      final rect = Rect.fromCircle(center: center, radius: segmentRadius);
+      canvas.drawArc(rect, startAngle, segmentSweep, false, segmentPaint);
+
+      // Draw segment labels inside the segments
+      final labelAngle = startAngle + segmentSweep / 2;
+      const labelRadius = segmentRadius; // inside the segment arc
+      final lx = cx + labelRadius * math.cos(labelAngle);
+      final ly = cy + labelRadius * math.sin(labelAngle);
+
+      // Label text style
+      final labelStyle = AppTypography.caption(
+        color: isActive ? Colors.white : tokens.inkMuted,
+      ).copyWith(
+        fontSize: 9,
+        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+      );
+
+      // Rotate text along the arc
+      _drawTextCentered(canvas, segmentLabels[i], Offset(lx, ly), labelAngle + math.pi / 2, labelStyle);
+    }
+
+    // 2. Draw the outer track for the indicator dot
+    const trackRadius = segmentRadius + segmentThickness / 2 + 10;
+    final trackPaint = Paint()
+      ..color = tokens.border.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawArc(Rect.fromCircle(center: center, radius: trackRadius), math.pi, math.pi, false, trackPaint);
+
+    // 3. Draw the indicator dot on the outer track
+    final scoreRatio = (score / 100).clamp(0.0, 1.0);
+    final dotAngle = math.pi + scoreRatio * math.pi;
+    final dx = cx + trackRadius * math.cos(dotAngle);
+    final dy = cy + trackRadius * math.sin(dotAngle);
+
+    final dotPaint = Paint()
+      ..color = tokens.primary
+      ..style = PaintingStyle.fill;
+    final dotBorderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    canvas.drawCircle(Offset(dx, dy), 6.5, dotPaint);
+    canvas.drawCircle(Offset(dx, dy), 6.5, dotBorderPaint);
+    canvas.drawCircle(Offset(dx, dy), 2.5, Paint()..color = Colors.white); // white inner center
+
+    // 4. Draw the inner gradient semi-circle
+    const innerRadius = segmentRadius - segmentThickness / 2 - 6;
+    final gradientRect = Rect.fromCircle(center: center, radius: innerRadius);
+    final gradientPaint = Paint()
+      ..shader = tokens.aiGradient.createShader(gradientRect)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawArc(gradientRect, math.pi, math.pi, true, gradientPaint);
+  }
+
+  void _drawTextCentered(Canvas canvas, String text, Offset position, double rotationAngle, TextStyle style) {
+    final textPainter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    canvas.save();
+    canvas.translate(position.dx, position.dy);
+    canvas.rotate(rotationAngle);
+    textPainter.paint(
+      canvas,
+      Offset(-textPainter.width / 2, -textPainter.height / 2),
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class DailyNudgeCard extends StatelessWidget {
+  const DailyNudgeCard({super.key, this.onTap});
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: dark
+              ? [
+                  tokens.surfaceRaised,
+                  tokens.surfaceSunken,
+                ]
+              : [
+                  const Color(0xFFEDEBFF),
+                  const Color(0xFFFDF2F8),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: tokens.border),
+        boxShadow: AppTokens.elevation1(dark),
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.space4,
+          vertical: AppSpacing.space4,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 14,
+                        color: tokens.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Daily Nudge',
+                        style: AppTypography.caption(
+                          color: tokens.primary,
+                        ).copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: AppSpacing.space3),
+                  Text(
+                    'A quick check-in can strengthen your connection.',
+                    style: AppTypography.h2(color: tokens.ink).copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: AppSpacing.space4),
+                  ElevatedButton.icon(
+                    onPressed: onTap,
+                    icon: const Icon(Icons.send, size: 14),
+                    label: Text(
+                      'Send a message',
+                      style: AppTypography.body(color: Colors.white).copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: tokens.primary,
+                      foregroundColor: tokens.primaryOn,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 120,
+              height: 120,
+              child: CustomPaint(
+                painter: _CuteGhostPainter(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CuteGhostPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // 1. Draw a soft shadow under the ghost
+    final shadowPaint = Paint()
+      ..color = const Color(0xFF6366F1).withValues(alpha: 0.12)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+    canvas.drawOval(Rect.fromLTRB(15, h - 22, w - 15, h - 8), shadowPaint);
+
+    // 2. Define the main body gradient
+    // A pearlescent gradient: light lavender, soft blue, pale pink
+    final bodyRect = Rect.fromLTWH(20, 15, 90, 110);
+    final bodyPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFFFFFFFF),
+          Color(0xFFE0E7FF),
+          Color(0xFFEEF2F6),
+          Color(0xFFFCE7F3),
+        ],
+        stops: [0.0, 0.4, 0.8, 1.0],
+      ).createShader(bodyRect)
+      ..style = PaintingStyle.fill;
+
+    // 3. Waving Left Arm (Waving up)
+    // Starts around (35, 75), curves up to (10, 48), rounds, and curves back to (35, 88)
+    final leftArmPath = Path()
+      ..moveTo(35, 72)
+      ..cubicTo(20, 65, 8, 52, 12, 42) // outer curve up
+      ..cubicTo(14, 37, 22, 38, 26, 44) // hand tip
+      ..cubicTo(32, 54, 40, 68, 42, 78) // inner curve down
+      ..close();
+
+    // 4. Right Arm (resting/waving slightly down/out)
+    // Starts around (95, 75), curves out to (115, 85), rounds, and back to (95, 92)
+    final rightArmPath = Path()
+      ..moveTo(92, 75)
+      ..cubicTo(105, 76, 118, 80, 118, 88)
+      ..cubicTo(118, 93, 112, 95, 106, 92)
+      ..cubicTo(98, 88, 92, 84, 92, 84)
+      ..close();
+
+    // 5. Main Body Path
+    // Head is a semi-circle from (30, 40) to (100, 40) with radius 35.
+    // Sides curve down to (25, 110) and (105, 110).
+    // Bottom is wavy ripples: 3 wave ripples at the bottom.
+    final bodyPath = Path()
+      ..moveTo(25, 45)
+      ..cubicTo(25, 15, 105, 15, 105, 45) // head dome
+      ..cubicTo(105, 65, 108, 95, 108, 112) // right side
+      // Wavy bottom ripples
+      ..cubicTo(96, 122, 88, 108, 79, 112)
+      ..cubicTo(70, 122, 62, 108, 53, 112)
+      ..cubicTo(44, 122, 36, 108, 25, 112)
+      ..cubicTo(22, 105, 25, 65, 25, 45) // left side
+      ..close();
+
+    // 6. Draw arms and body with the gradient
+    final combinedGhostPath = Path.combine(PathOperation.union, bodyPath, leftArmPath);
+    final finalGhostPath = Path.combine(PathOperation.union, combinedGhostPath, rightArmPath);
+
+    canvas.drawPath(finalGhostPath, bodyPaint);
+
+    // 7. Add a subtle glossy overlay / highlight on the left edge
+    final highlightPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withValues(alpha: 0.65),
+          Colors.white.withValues(alpha: 0.0),
+        ],
+      ).createShader(bodyRect)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(finalGhostPath, highlightPaint);
+
+    // 8. Draw Eyes (large ovals, dark indigo)
+    final eyePaint = Paint()
+      ..color = const Color(0xFF1E1B4B)
+      ..style = PaintingStyle.fill;
+    final pupilPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    // Left eye center at (49, 49), size 10 x 14
+    canvas.drawOval(Rect.fromCenter(center: const Offset(49, 49), width: 10, height: 14), eyePaint);
+    canvas.drawCircle(const Offset(47, 46), 2.2, pupilPaint);
+
+    // Right eye center at (77, 49), size 10 x 14
+    canvas.drawOval(Rect.fromCenter(center: const Offset(77, 49), width: 10, height: 14), eyePaint);
+    canvas.drawCircle(const Offset(75, 46), 2.2, pupilPaint);
+
+    // 9. Draw Mouth (happy open shape, rosy red)
+    final mouthPaint = Paint()
+      ..color = const Color(0xFFF43F5E)
+      ..style = PaintingStyle.fill;
+    
+    final mouthPath = Path()
+      ..moveTo(58, 56)
+      ..cubicTo(58, 66, 68, 66, 68, 56)
+      ..quadraticBezierTo(63, 58, 58, 56)
+      ..close();
+    canvas.drawPath(mouthPath, mouthPaint);
+
+    // 10. Draw rosy cheeks
+    final cheekPaint = Paint()
+      ..color = const Color(0xFFFDA4AF).withValues(alpha: 0.5)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(const Offset(40, 56), 4.5, cheekPaint);
+    canvas.drawCircle(const Offset(86, 56), 4.5, cheekPaint);
+
+    // 11. Draw 4-point stars (sparkles)
+    final sparklePaint = Paint()
+      ..color = const Color(0xFF818CF8).withValues(alpha: 0.4)
+      ..style = PaintingStyle.fill;
+    
+    _drawSparkle(canvas, 15, 25, 6, sparklePaint);
+    _drawSparkle(canvas, 115, 30, 8, sparklePaint);
+    _drawSparkle(canvas, 95, 115, 5, sparklePaint);
+  }
+
+  void _drawSparkle(Canvas canvas, double cx, double cy, double r, Paint paint) {
+    final path = Path()
+      ..moveTo(cx, cy - r)
+      ..quadraticBezierTo(cx, cy, cx + r, cy)
+      ..quadraticBezierTo(cx, cy, cx, cy + r)
+      ..quadraticBezierTo(cx, cy, cx - r, cy)
+      ..quadraticBezierTo(cx, cy, cx, cy - r)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
