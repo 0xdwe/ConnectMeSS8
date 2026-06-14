@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:math' as math;
 
 import '../state/app_state.dart';
 import '../state/firebase_providers.dart';
@@ -12,17 +13,22 @@ import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/chain_logo.dart';
 
-enum _AuthMode { login, signup }
+enum AuthMode { landing, login, signup }
 
 class AuthScreen extends ConsumerStatefulWidget {
-  const AuthScreen({super.key});
+  const AuthScreen({
+    super.key,
+    this.initialMode = AuthMode.landing,
+  });
+
+  final AuthMode initialMode;
 
   @override
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
-  _AuthMode _mode = _AuthMode.login;
+  late AuthMode _mode;
   bool _busy = false;
 
   final _loginEmail = TextEditingController();
@@ -38,6 +44,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String? _signupEmailError;
   String? _signupPasswordError;
   String? _signupConfirmError;
+
+  @override
+  void initState() {
+    super.initState();
+    _mode = widget.initialMode;
+  }
 
   @override
   void dispose() {
@@ -190,7 +202,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
-  void _switchMode(_AuthMode next) {
+  void _switchMode(AuthMode next) {
     if (_mode == next) return;
     setState(() {
       _mode = next;
@@ -234,123 +246,287 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final dark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              tokens.primaryTint,
-              tokens.surface,
-              dark ? tokens.surfaceSunken : tokens.secondaryTint,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          final h = constraints.maxHeight;
+
+          return Stack(
+            children: [
+              // 1. Beautiful organic wave and glow background
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _AuthBackgroundPainter(
+                    mode: _mode,
+                    tokens: tokens,
+                    dark: dark,
+                  ),
+                ),
+              ),
+
+              // 2. Main content layer
+              if (_mode == AuthMode.landing)
+                SafeArea(
+                  child: _buildLanding(context, tokens),
+                )
+              else ...[
+                // Peeking character at top-right for Login/Signup
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: SizedBox(
+                    width: 180,
+                    height: 160,
+                    child: CustomPaint(
+                      painter: _PeekingCharacterPainter(),
+                    ),
+                  ),
+                ),
+
+                // Back Button to Landing Screen
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: SafeArea(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.arrow_back, color: tokens.ink),
+                        onPressed: () => _switchMode(AuthMode.landing),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Curved card inputs (Scrollable to prevent keyboard overflows)
+                SafeArea(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        AppSpacing.space5,
+                        h * 0.28,
+                        AppSpacing.space5,
+                        AppSpacing.space5,
+                      ),
+                      child: Center(
+                        child: Container(
+                          constraints: const BoxConstraints(maxWidth: 460),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // App Logo & title
+                              Center(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    LinkedChainLogo(
+                                      size: 36,
+                                      color: tokens.primary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Connect Me',
+                                      style: AppTypography.bodyLg(color: tokens.ink).copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 28),
+
+                              // Form content
+                              if (_mode == AuthMode.login)
+                                _LoginForm(
+                                  emailController: _loginEmail,
+                                  passwordController: _loginPassword,
+                                  emailError: _loginEmailError,
+                                  passwordError: _loginPasswordError,
+                                  busy: _busy,
+                                  onSubmit: _submitLogin,
+                                  onSwitch: () => _switchMode(AuthMode.signup),
+                                  onGoogleSignIn: _signInWithGoogle,
+                                )
+                              else
+                                _SignupForm(
+                                  nameController: _signupName,
+                                  emailController: _signupEmail,
+                                  passwordController: _signupPassword,
+                                  confirmController: _signupConfirm,
+                                  nameError: _signupNameError,
+                                  emailError: _signupEmailError,
+                                  passwordError: _signupPasswordError,
+                                  confirmError: _signupConfirmError,
+                                  busy: _busy,
+                                  onSubmit: _submitSignup,
+                                  onSwitch: () => _switchMode(AuthMode.login),
+                                  onGoogleSignIn: _signInWithGoogle,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLanding(BuildContext context, AppTokens tokens) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 40),
+        // App logo & title
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LinkedChainLogo(
+                size: 60,
+                color: tokens.primary,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Connect Me',
+                style: AppTypography.bodyLg(color: tokens.ink).copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 19,
+                ),
+              ),
             ],
           ),
         ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: IntrinsicHeight(
+        const Spacer(),
+        // Welcome headline and subtext
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Welcome to\nConnect Me',
+                textAlign: TextAlign.center,
+                style: AppTypography.glyph(
+                  36,
+                  color: tokens.ink,
+                  weight: FontWeight.w700,
+                ).copyWith(height: 1.15),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Nurture the relationships\nthat matter most.',
+                textAlign: TextAlign.center,
+                style: AppTypography.body(color: tokens.inkMuted).copyWith(
+                  height: 1.3,
+                  fontSize: 14.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        // Actions
+        Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 290),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Sign Up
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: () => _switchMode(AuthMode.signup),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: tokens.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: const StadiumBorder(),
+                    ),
                     child: Padding(
-                      padding: EdgeInsets.all(AppSpacing.space5),
-                      child: Column(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Spacer to push white card to center vertically
-                          Spacer(),
-
-                          // White rounded rectangle as base
-                          Container(
-                            constraints: BoxConstraints(
-                              maxWidth:
-                                  500, // Max width for better readability on larger screens
-                            ),
-                            decoration: BoxDecoration(
-                              color: tokens.surfaceRaised,
-                              borderRadius: BorderRadius.circular(AppRadius.xl),
-                              border: Border.all(color: tokens.border),
-                              boxShadow: AppTokens.elevation2(dark),
-                            ),
-                            child: Padding(
-                              padding: EdgeInsets.all(AppSpacing.space5),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  // App logo (smaller)
-                                  Container(
-                                    padding: EdgeInsets.all(AppSpacing.space3),
-                                    decoration: BoxDecoration(
-                                      color: tokens.primaryTint,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: LinkedChainLogo(
-                                      size: 48,
-                                      color: Color(
-                                        0xFF6B4EFF,
-                                      ), // ← ADD THIS: Purple color for the logo
-                                    ),
-                                  ),
-
-                                  SizedBox(height: AppSpacing.space5),
-
-                                  // Content based on mode (no mode selector)
-                                  if (_mode == _AuthMode.login)
-                                    _LoginForm(
-                                      emailController: _loginEmail,
-                                      passwordController: _loginPassword,
-                                      emailError: _loginEmailError,
-                                      passwordError: _loginPasswordError,
-                                      busy: _busy,
-                                      onSubmit: _submitLogin,
-                                      onSwitch: () =>
-                                          _switchMode(_AuthMode.signup),
-                                      onGoogleSignIn: _signInWithGoogle,
-                                    )
-                                  else
-                                    _SignupForm(
-                                      nameController: _signupName,
-                                      emailController: _signupEmail,
-                                      passwordController: _signupPassword,
-                                      confirmController: _signupConfirm,
-                                      nameError: _signupNameError,
-                                      emailError: _signupEmailError,
-                                      passwordError: _signupPasswordError,
-                                      confirmError: _signupConfirmError,
-                                      busy: _busy,
-                                      onSubmit: _submitSignup,
-                                      onSwitch: () =>
-                                          _switchMode(_AuthMode.login),
-                                      onGoogleSignIn: _signInWithGoogle,
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          SizedBox(height: AppSpacing.space5),
-
-                          // Powered by text outside the white box
+                          const SizedBox(width: 20),
                           Text(
-                            'Powered by Firebase Auth.',
-                            textAlign: TextAlign.center,
-                            style: AppTypography.caption(
-                              color: tokens.inkMuted,
+                            'Sign Up',
+                            style: AppTypography.bodyLg(color: Colors.white).copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-
-                          Spacer(),
+                          const Icon(Icons.arrow_forward, size: 18),
                         ],
                       ),
                     ),
                   ),
                 ),
-              );
-            },
+                const SizedBox(height: 16),
+                // Log In
+                SizedBox(
+                  height: 52,
+                  child: OutlinedButton(
+                    onPressed: () => _switchMode(AuthMode.login),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: tokens.primary,
+                      side: BorderSide(
+                        color: tokens.primary.withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
+                      shape: const StadiumBorder(),
+                      elevation: 0,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const SizedBox(width: 20),
+                          Text(
+                            'Log In',
+                            style: AppTypography.bodyLg(color: tokens.primary).copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Icon(Icons.arrow_forward, size: 18, color: tokens.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
+        const SizedBox(height: 30),
+        // Bottom Peeking character
+        Center(
+          child: SizedBox(
+            width: 200,
+            height: 110,
+            child: CustomPaint(
+              painter: _BottomPeekingCharacterPainter(),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -359,28 +535,29 @@ InputDecorationTheme _authInputDecoration(BuildContext context) {
   final tokens = context.tokens;
   return InputDecorationTheme(
     filled: true,
-    fillColor: tokens.surfaceSunken,
+    fillColor: const Color(0xFFF3F2FF).withValues(alpha: 0.6),
     labelStyle: AppTypography.body(color: tokens.inkMuted),
     hintStyle: AppTypography.body(color: tokens.inkSubtle),
     errorStyle: AppTypography.caption(color: tokens.danger),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      borderSide: BorderSide(color: tokens.border),
+      borderRadius: BorderRadius.circular(30),
+      borderSide: BorderSide.none,
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      borderSide: BorderSide(color: tokens.border),
+      borderRadius: BorderRadius.circular(30),
+      borderSide: BorderSide.none,
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderRadius: BorderRadius.circular(30),
       borderSide: BorderSide(color: tokens.primary, width: 1.4),
     ),
     errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      borderSide: BorderSide(color: tokens.danger),
+      borderRadius: BorderRadius.circular(30),
+      borderSide: BorderSide(color: tokens.danger, width: 1),
     ),
     focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderRadius: BorderRadius.circular(30),
       borderSide: BorderSide(color: tokens.danger, width: 1.4),
     ),
   );
@@ -397,6 +574,7 @@ class _LoginForm extends StatelessWidget {
     required this.onSwitch,
     required this.onGoogleSignIn,
   });
+
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final String? emailError;
@@ -412,77 +590,100 @@ class _LoginForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Welcome back text
         Text(
           'Welcome back.',
-          style: AppTypography.display(color: tokens.ink),
+          style: AppTypography.display(color: tokens.ink).copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 28,
+          ),
           textAlign: TextAlign.center,
         ),
-
-        SizedBox(height: AppSpacing.space2),
-
-        // Subtitle text
+        const SizedBox(height: 6),
         Text(
           'Log in to keep your connections close.',
           style: AppTypography.body(color: tokens.inkMuted),
           textAlign: TextAlign.center,
         ),
+        const SizedBox(height: 28),
 
-        SizedBox(height: AppSpacing.space5),
-
-        // Email field - no outline, light grey background
+        // Email field
         TextField(
           key: const Key('login-email-field'),
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
           decoration: InputDecoration(
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 18, right: 10),
+              child: Icon(Icons.email_outlined, color: tokens.inkMuted, size: 18),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
             labelText: 'Email',
-            hintText: 'you@example.com',
             errorText: emailError,
           ).applyDefaults(_authInputDecoration(context)),
         ),
+        const SizedBox(height: 16),
 
-        SizedBox(height: AppSpacing.space4),
-
-        // Password field - no outline, light grey background
+        // Password field
         TextField(
           key: const Key('login-password-field'),
           controller: passwordController,
           obscureText: true,
           decoration: InputDecoration(
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 18, right: 10),
+              child: Icon(Icons.lock_outline, color: tokens.inkMuted, size: 18),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
+            suffixIcon: Padding(
+              padding: const EdgeInsets.only(right: 18),
+              child: Icon(Icons.visibility_outlined, color: tokens.inkSubtle, size: 18),
+            ),
             labelText: 'Password',
             errorText: passwordError,
           ).applyDefaults(_authInputDecoration(context)),
         ),
-
-        SizedBox(height: AppSpacing.space5),
+        const SizedBox(height: 24),
 
         // Login button
-        FilledButton.icon(
-          key: const Key('sign-in-button'),
-          onPressed: busy ? null : onSubmit,
-          style: FilledButton.styleFrom(
-            backgroundColor: tokens.primary,
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+        SizedBox(
+          height: 52,
+          child: FilledButton(
+            key: const Key('sign-in-button'),
+            onPressed: busy ? null : onSubmit,
+            style: FilledButton.styleFrom(
+              backgroundColor: tokens.primary,
+              shape: const StadiumBorder(),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (busy)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                else ...[
+                  const Icon(Icons.arrow_forward, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Log in',
+                    style: AppTypography.bodyLg().copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          icon: busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.arrow_forward),
-          label: Text(busy ? 'Signing in…' : 'Log in'),
         ),
-
-        SizedBox(height: AppSpacing.space3),
+        const SizedBox(height: 20),
 
         Row(
           children: [
@@ -497,41 +698,70 @@ class _LoginForm extends StatelessWidget {
             Expanded(child: Divider(color: Colors.grey.shade300)),
           ],
         ),
+        const SizedBox(height: 20),
 
-        SizedBox(height: AppSpacing.space3),
-
-        OutlinedButton.icon(
-          key: const Key('google-sign-in-button'),
-          onPressed: busy ? null : onGoogleSignIn,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.grey.shade800,
-            side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
+        // Google button
+        SizedBox(
+          height: 52,
+          child: OutlinedButton(
+            key: const Key('google-sign-in-button'),
+            onPressed: busy ? null : onGoogleSignIn,
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: tokens.ink,
+              side: BorderSide(color: Colors.grey.shade300, width: 1.2),
+              shape: const StadiumBorder(),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (busy)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.grey,
+                    ),
+                  )
+                else ...[
+                  const _GoogleIcon(),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Continue with Google',
+                    style: AppTypography.body().copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: tokens.ink,
+                      fontSize: 14.5,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          icon: busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.grey,
-                  ),
-                )
-              : const _GoogleIcon(),
-          label: const Text('Continue with Google'),
         ),
+        const SizedBox(height: 16),
 
-        SizedBox(height: AppSpacing.space3),
-
-        // Sign up option
+        // Switch to Signup
         TextButton(
           key: const Key('auth-mode-signup'),
           onPressed: busy ? null : onSwitch,
           style: TextButton.styleFrom(foregroundColor: tokens.primary),
-          child: const Text("Don't have an account? Sign up"),
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: "Don't have an account? ",
+                  style: TextStyle(color: tokens.inkMuted, fontWeight: FontWeight.normal),
+                ),
+                const TextSpan(
+                  text: "Sign up",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            textAlign: TextAlign.center,
+          ),
         ),
       ],
     );
@@ -553,6 +783,7 @@ class _SignupForm extends StatelessWidget {
     required this.onSwitch,
     required this.onGoogleSignIn,
   });
+
   final TextEditingController nameController;
   final TextEditingController emailController;
   final TextEditingController passwordController;
@@ -574,187 +805,128 @@ class _SignupForm extends StatelessWidget {
       children: [
         Text(
           'Join Connect Me.',
-          style: AppTypography.display(color: tokens.ink),
+          style: AppTypography.display(color: tokens.ink).copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 28,
+          ),
           textAlign: TextAlign.center,
         ),
-
-        SizedBox(height: AppSpacing.space2),
-
+        const SizedBox(height: 6),
         Text(
-          'Join ConnectMe today', // Updated text
+          'Create an account to keep connections close.',
           style: AppTypography.body(color: tokens.inkMuted),
           textAlign: TextAlign.center,
         ),
+        const SizedBox(height: 28),
 
-        SizedBox(height: AppSpacing.space5),
-
-        // Name field - no outline, light grey background
+        // Name
         TextField(
           key: const Key('signup-name-field'),
           controller: nameController,
           textCapitalization: TextCapitalization.words,
           decoration: InputDecoration(
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 18, right: 10),
+              child: Icon(Icons.person_outline, color: tokens.inkMuted, size: 18),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
             labelText: 'Full name',
             errorText: nameError,
-            filled: true,
-            fillColor: tokens.surfaceSunken,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.primary, width: 1.4),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-          ),
+          ).applyDefaults(_authInputDecoration(context)),
         ),
+        const SizedBox(height: 16),
 
-        SizedBox(height: AppSpacing.space4),
-
-        // Email field - no outline, light grey background
+        // Email
         TextField(
           key: const Key('signup-email-field'),
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
           decoration: InputDecoration(
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 18, right: 10),
+              child: Icon(Icons.email_outlined, color: tokens.inkMuted, size: 18),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
             labelText: 'Email',
-            hintText: 'you@example.com',
             errorText: emailError,
-            filled: true,
-            fillColor: tokens.surfaceSunken,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.primary, width: 1.4),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-          ),
+          ).applyDefaults(_authInputDecoration(context)),
         ),
+        const SizedBox(height: 16),
 
-        SizedBox(height: AppSpacing.space4),
-
-        // Password field - no outline, light grey background
+        // Password
         TextField(
           key: const Key('signup-password-field'),
           controller: passwordController,
           obscureText: true,
           decoration: InputDecoration(
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 18, right: 10),
+              child: Icon(Icons.lock_outline, color: tokens.inkMuted, size: 18),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
             labelText: 'Password',
             errorText: passwordError,
-            filled: true,
-            fillColor: tokens.surfaceSunken,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.primary, width: 1.4),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-          ),
+          ).applyDefaults(_authInputDecoration(context)),
         ),
+        const SizedBox(height: 16),
 
-        SizedBox(height: AppSpacing.space4),
-
-        // Confirm password field - no outline, light grey background
+        // Confirm Password
         TextField(
           key: const Key('signup-confirm-field'),
           controller: confirmController,
           obscureText: true,
           decoration: InputDecoration(
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 18, right: 10),
+              child: Icon(Icons.lock_outline, color: tokens.inkMuted, size: 18),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 0),
             labelText: 'Confirm password',
             errorText: confirmError,
-            filled: true,
-            fillColor: tokens.surfaceSunken,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.primary, width: 1.4),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-          ),
+          ).applyDefaults(_authInputDecoration(context)),
         ),
+        const SizedBox(height: 24),
 
-        SizedBox(height: AppSpacing.space5),
-
-        // Sign up button
-        FilledButton.icon(
-          key: const Key('sign-up-button'),
-          onPressed: busy ? null : onSubmit,
-          style: FilledButton.styleFrom(
-            backgroundColor: tokens.primary,
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+        // Signup Button
+        SizedBox(
+          height: 52,
+          child: FilledButton(
+            key: const Key('sign-up-button'),
+            onPressed: busy ? null : onSubmit,
+            style: FilledButton.styleFrom(
+              backgroundColor: tokens.primary,
+              shape: const StadiumBorder(),
             ),
-          ),
-          icon: busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (busy)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                else ...[
+                  const Icon(Icons.check, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Create account',
+                    style: AppTypography.bodyLg().copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      fontSize: 15,
+                    ),
                   ),
-                )
-              : const Icon(Icons.check),
-          label: Text(busy ? 'Creating account…' : 'Create account'),
+                ],
+              ],
+            ),
+          ),
         ),
-
-        SizedBox(height: AppSpacing.space3),
+        const SizedBox(height: 20),
 
         Row(
           children: [
@@ -769,41 +941,70 @@ class _SignupForm extends StatelessWidget {
             Expanded(child: Divider(color: Colors.grey.shade300)),
           ],
         ),
+        const SizedBox(height: 20),
 
-        SizedBox(height: AppSpacing.space3),
-
-        OutlinedButton.icon(
-          key: const Key('google-sign-in-button'),
-          onPressed: busy ? null : onGoogleSignIn,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.grey.shade800,
-            side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
+        // Google sign in
+        SizedBox(
+          height: 52,
+          child: OutlinedButton(
+            key: const Key('google-sign-in-button'),
+            onPressed: busy ? null : onGoogleSignIn,
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: tokens.ink,
+              side: BorderSide(color: Colors.grey.shade300, width: 1.2),
+              shape: const StadiumBorder(),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (busy)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.grey,
+                    ),
+                  )
+                else ...[
+                  const _GoogleIcon(),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Continue with Google',
+                    style: AppTypography.body().copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: tokens.ink,
+                      fontSize: 14.5,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          icon: busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.grey,
-                  ),
-                )
-              : const _GoogleIcon(),
-          label: const Text('Continue with Google'),
         ),
+        const SizedBox(height: 16),
 
-        SizedBox(height: AppSpacing.space3),
-
-        // Login option
+        // Switch to Login
         TextButton(
           key: const Key('auth-mode-login'),
           onPressed: busy ? null : onSwitch,
           style: TextButton.styleFrom(foregroundColor: tokens.primary),
-          child: const Text('Already have an account? Log in'),
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Already have an account? ',
+                  style: TextStyle(color: tokens.inkMuted, fontWeight: FontWeight.normal),
+                ),
+                const TextSpan(
+                  text: 'Log in',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            textAlign: TextAlign.center,
+          ),
         ),
       ],
     );
@@ -825,4 +1026,318 @@ class _GoogleIcon extends StatelessWidget {
       height: 20.0,
     );
   }
+}
+
+class _AuthBackgroundPainter extends CustomPainter {
+  final AuthMode mode;
+  final AppTokens tokens;
+  final bool dark;
+
+  _AuthBackgroundPainter({
+    required this.mode,
+    required this.tokens,
+    required this.dark,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // 1. Draw the base gradient
+    final bgPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFFF3E8FF), // Soft lavender-pink
+          Color(0xFFFFFFFF), // White
+          Color(0xFFE0E7FF), // Soft indigo-tint
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, h), bgPaint);
+
+    if (mode == AuthMode.landing) {
+      // LANDING SCREEN BACKGROUND DETAILS:
+      // A soft pink circle at top-right
+      canvas.drawCircle(
+        Offset(w * 0.85, h * 0.12),
+        35,
+        Paint()
+          ..color = const Color(0xFFFCE7F3)
+          ..style = PaintingStyle.fill,
+      );
+
+      // A soft lavender organic wave at top-left
+      final topLeftPath = Path()
+        ..moveTo(0, 0)
+        ..lineTo(w * 0.45, 0)
+        ..quadraticBezierTo(w * 0.35, h * 0.12, 0, h * 0.16)
+        ..close();
+      canvas.drawPath(
+        topLeftPath,
+        Paint()
+          ..color = const Color(0xFFEEF2FF).withValues(alpha: 0.8)
+          ..style = PaintingStyle.fill,
+      );
+
+      // Draw decorative 4-point stars in landing background
+      _drawSparkle(canvas, w * 0.15, h * 0.18, 6, const Color(0xFFC084FC)); // Violet star
+      _drawSparkle(canvas, w * 0.9, h * 0.25, 7, const Color(0xFFFBBF24));  // Gold star
+      _drawSparkle(canvas, w * 0.15, h * 0.72, 5, const Color(0xFFF472B6));  // Pink star
+    } else {
+      // FORM SCREEN BACKGROUND DETAILS:
+      // Draw the curved white card shape that covers the bottom portion of the screen
+      // The curve sweeps from Y = h * 0.24 on the left down to Y = h * 0.26 on the right
+      final cardPath = Path()
+        ..moveTo(0, h)
+        ..lineTo(0, h * 0.24)
+        ..cubicTo(w * 0.35, h * 0.16, w * 0.7, h * 0.32, w, h * 0.26)
+        ..lineTo(w, h)
+        ..close();
+
+      final cardPaint = Paint()
+        ..color = dark ? tokens.surface : Colors.white
+        ..style = PaintingStyle.fill;
+      
+      // Draw a soft shadow under the card curve edge
+      canvas.drawPath(
+        cardPath,
+        Paint()
+          ..color = Colors.black.withValues(alpha: 0.04)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6)
+          ..style = PaintingStyle.fill,
+      );
+
+      canvas.drawPath(cardPath, cardPaint);
+
+      // Draw a decorative pink star on the right side of the card
+      _drawSparkle(canvas, w * 0.88, h * 0.34, 7, const Color(0xFFF472B6).withValues(alpha: 0.8));
+    }
+  }
+
+  void _drawSparkle(Canvas canvas, double cx, double cy, double r, Color color) {
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.6)
+      ..style = PaintingStyle.fill
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.5);
+    final path = Path()
+      ..moveTo(cx, cy - r)
+      ..quadraticBezierTo(cx, cy, cx + r, cy)
+      ..quadraticBezierTo(cx, cy, cx, cy + r)
+      ..quadraticBezierTo(cx, cy, cx - r, cy)
+      ..quadraticBezierTo(cx, cy, cx, cy - r)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class _BottomPeekingCharacterPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // Draw the character body as a large dome at the bottom of the widget
+    final cx = w / 2;
+    final cy = h + 15; // Baseline below bottom
+    final radius = 52.0;
+
+    final bodyRect = Rect.fromCircle(center: Offset(cx, cy), radius: radius);
+    
+    // 3D Radial Pearlescent Gradient
+    final bodyPaint = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(-0.25, -0.45),
+        radius: 1.0,
+        colors: [
+          const Color(0xFFFFFFFF),
+          const Color(0xFFE8F0FE),
+          const Color(0xFFD6C6FF),
+          const Color(0xFFFBCFE8),
+          const Color(0xFFECE6FF),
+        ],
+        stops: const [0.0, 0.35, 0.65, 0.88, 1.0],
+      ).createShader(bodyRect)
+      ..style = PaintingStyle.fill;
+
+    final bodyPath = Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: radius));
+
+    // Waving hand on our right (character's left hand)
+    final leftArmPath = Path()
+      ..moveTo(cx + 38, cy - 20)
+      ..cubicTo(cx + 56, cy - 35, cx + 76, cy - 25, cx + 70, cy - 5)
+      ..cubicTo(cx + 64, cy + 10, cx + 46, cy + 10, cx + 38, cy - 10)
+      ..close();
+
+    var finalPath = Path.combine(PathOperation.union, bodyPath, leftArmPath);
+    canvas.drawPath(finalPath, bodyPaint);
+
+    // Glossy Highlights
+    canvas.drawOval(
+      Rect.fromLTWH(cx - 24, cy - 40, 20, 12),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.25)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
+    );
+
+    canvas.save();
+    canvas.translate(cx - 16, cy - 34);
+    canvas.rotate(-0.35);
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset.zero, width: 14, height: 6),
+      Paint()..color = Colors.white.withValues(alpha: 0.65),
+    );
+    canvas.restore();
+
+    // Eyes (solid dark ovals, no pupils)
+    final eyePaint = Paint()
+      ..color = const Color(0xFF1E1B4B)
+      ..style = PaintingStyle.fill;
+    canvas.drawOval(Rect.fromCenter(center: Offset(cx - 18, cy - 18), width: 7.5, height: 11.5), eyePaint);
+    canvas.drawOval(Rect.fromCenter(center: Offset(cx + 18, cy - 18), width: 7.5, height: 11.5), eyePaint);
+
+    // Mouth (happy open smile)
+    final mouthPath = Path()
+      ..moveTo(cx - 7, cy - 11)
+      ..cubicTo(cx - 7, cy - 4, cx + 7, cy - 4, cx + 7, cy - 11)
+      ..close();
+    canvas.drawPath(mouthPath, eyePaint);
+
+    canvas.save();
+    canvas.clipPath(mouthPath);
+    canvas.drawCircle(Offset(cx, cy - 7.5), 3.5, Paint()..color = const Color(0xFFF43F5E));
+    canvas.restore();
+
+    // Cheeks (soft blush)
+    final cheekPaint = Paint()
+      ..color = const Color(0xFFFDA4AF).withValues(alpha: 0.5)
+      ..style = PaintingStyle.fill;
+    cheekPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
+    canvas.drawCircle(Offset(cx - 28, cy - 11), 4.5, cheekPaint);
+    canvas.drawCircle(Offset(cx + 28, cy - 11), 4.5, cheekPaint);
+
+    // Splash droplets (decoration on bottom-right)
+    final dropPaint = Paint()
+      ..color = const Color(0xFF818CF8).withValues(alpha: 0.45)
+      ..style = PaintingStyle.fill;
+    _drawDroplet(canvas, cx + 58, cy - 38, 3.5, dropPaint);
+    _drawDroplet(canvas, cx + 70, cy - 28, 2.5, dropPaint);
+  }
+
+  void _drawDroplet(Canvas canvas, double cx, double cy, double r, Paint paint) {
+    final path = Path()
+      ..moveTo(cx, cy - r)
+      ..cubicTo(cx + r * 0.7, cy - r * 0.3, cx + r * 0.7, cy + r * 0.7, cx, cy + r)
+      ..cubicTo(cx - r * 0.7, cy + r * 0.7, cx - r * 0.7, cy - r * 0.3, cx, cy - r)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PeekingCharacterPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // Draw the character peeking from the top-right
+    final cx = w - 40;
+    final cy = 30.0;
+    final radius = 55.0;
+
+    final bodyRect = Rect.fromCircle(center: Offset(cx, cy), radius: radius);
+    final bodyPaint = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(-0.25, 0.45), // Light source from top-left
+        radius: 1.0,
+        colors: [
+          const Color(0xFFFFFFFF),
+          const Color(0xFFE8F0FE),
+          const Color(0xFFD6C6FF),
+          const Color(0xFFFBCFE8),
+          const Color(0xFFECE6FF),
+        ],
+        stops: const [0.0, 0.35, 0.65, 0.88, 1.0],
+      ).createShader(bodyRect)
+      ..style = PaintingStyle.fill;
+
+    final bodyPath = Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: radius));
+
+    // Resting hand (sausage shape on the left)
+    final leftHandRect = Rect.fromCenter(center: Offset(cx - 52, cy + 38), width: 22, height: 13);
+    final leftHandPath = Path()..addOval(leftHandRect);
+
+    var finalPath = Path.combine(PathOperation.union, bodyPath, leftHandPath);
+    canvas.drawPath(finalPath, bodyPaint);
+
+    // Glossy highlight
+    canvas.drawOval(
+      Rect.fromLTWH(cx - 24, cy - 10, 18, 10),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.25)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
+    );
+
+    canvas.save();
+    canvas.translate(cx - 16, cy - 5);
+    canvas.rotate(-0.35);
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset.zero, width: 12, height: 5),
+      Paint()..color = Colors.white.withValues(alpha: 0.65),
+    );
+    canvas.restore();
+
+    // Eyes (solid ovals, no pupils)
+    final eyePaint = Paint()
+      ..color = const Color(0xFF1E1B4B)
+      ..style = PaintingStyle.fill;
+    canvas.drawOval(Rect.fromCenter(center: Offset(cx - 32, cy + 18), width: 7.5, height: 11.5), eyePaint);
+    canvas.drawOval(Rect.fromCenter(center: Offset(cx + 6, cy + 18), width: 7.5, height: 11.5), eyePaint);
+
+    // Mouth (happy open smile)
+    final mouthPath = Path()
+      ..moveTo(cx - 18, cy + 24)
+      ..cubicTo(cx - 18, cy + 31, cx - 4, cy + 31, cx - 4, cy + 24)
+      ..close();
+    canvas.drawPath(mouthPath, eyePaint);
+
+    canvas.save();
+    canvas.clipPath(mouthPath);
+    canvas.drawCircle(Offset(cx - 11, cy + 27.5), 3.5, Paint()..color = const Color(0xFFF43F5E));
+    canvas.restore();
+
+    // Cheeks (blush)
+    final cheekPaint = Paint()
+      ..color = const Color(0xFFFDA4AF).withValues(alpha: 0.5)
+      ..style = PaintingStyle.fill;
+    cheekPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
+    canvas.drawCircle(Offset(cx - 40, cy + 24), 4.5, cheekPaint);
+    canvas.drawCircle(Offset(cx + 14, cy + 24), 4.5, cheekPaint);
+
+    // Droplets/Sparkles on top-left of top character
+    final dropPaint = Paint()
+      ..color = const Color(0xFF818CF8).withValues(alpha: 0.45)
+      ..style = PaintingStyle.fill;
+    _drawDroplet(canvas, cx - 64, cy - 10, 3.0, dropPaint);
+    _drawDroplet(canvas, cx - 68, cy + 2, 2.0, dropPaint);
+  }
+
+  void _drawDroplet(Canvas canvas, double cx, double cy, double r, Paint paint) {
+    final path = Path()
+      ..moveTo(cx, cy - r)
+      ..cubicTo(cx + r * 0.7, cy - r * 0.3, cx + r * 0.7, cy + r * 0.7, cx, cy + r)
+      ..cubicTo(cx - r * 0.7, cy + r * 0.7, cx - r * 0.7, cy - r * 0.3, cx, cy - r)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
