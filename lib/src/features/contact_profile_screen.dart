@@ -67,6 +67,7 @@ class ContactProfileScreen extends ConsumerWidget {
     final state = ref.watch(appControllerProvider);
     final insight = state.contactInsightFor(contactId);
     final history = ref.watch(interactionsByContactProvider(contactId));
+    final lastContactLabel = _lastInteractionLabel(history);
     final memoryAsync = ref.watch(memoryProvider(contactId));
     final memory = memoryAsync.maybeWhen(
       data: (doc) => doc,
@@ -116,56 +117,18 @@ class ContactProfileScreen extends ConsumerWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundColor: tokens.surfaceRaised,
-                          backgroundImage: _contactAvatarImage(person.avatar),
-                          child: _contactAvatarImage(person.avatar) == null
-                              ? Text(
-                                  _contactAvatarGlyph(
-                                    person.avatar,
-                                    person.name,
-                                  ),
-                                  style: AppTypography.bodyLg(
-                                    color: tokens.primary,
-                                  ),
-                                )
-                              : null,
-                        ),
-                        Positioned(
-                          right: -2,
-                          bottom: -2,
-                          child: Material(
-                            color: tokens.surface,
-                            shape: const CircleBorder(),
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: () =>
-                                  showEditConnectionModal(context, person),
-                              child: Container(
-                                width: 26,
-                                height: 26,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: tokens.primary,
-                                  border: Border.all(
-                                    color: tokens.surface,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Icon(
-                                  Icons.edit_outlined,
-                                  size: 14,
-                                  color: tokens.surface,
-                                ),
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: tokens.surfaceRaised,
+                      backgroundImage: _contactAvatarImage(person.avatar),
+                      child: _contactAvatarImage(person.avatar) == null
+                          ? Text(
+                              _contactAvatarGlyph(person.avatar, person.name),
+                              style: AppTypography.bodyLg(
+                                color: tokens.primary,
                               ),
-                            ),
-                          ),
-                        ),
-                      ],
+                            )
+                          : null,
                     ),
                     SizedBox(width: AppSpacing.space4),
                     Expanded(
@@ -313,8 +276,12 @@ class ContactProfileScreen extends ConsumerWidget {
                           ),
                           SizedBox(height: AppSpacing.space1),
                           Text(
-                            DateFormat.yMMMd().format(person.lastContact),
-                            style: AppTypography.bodyLg(),
+                            lastContactLabel,
+                            style: AppTypography.bodyLg(
+                              color: history.isEmpty
+                                  ? tokens.inkMuted
+                                  : tokens.ink,
+                            ),
                           ),
                         ],
                       ),
@@ -333,11 +300,7 @@ class ContactProfileScreen extends ConsumerWidget {
             memory: memory,
             initialSelectedTopic: initialSelectedTopic,
           ),
-          InteractionDetailsCard(
-            person: person,
-            insight: insight,
-            history: history,
-          ),
+          InteractionDetailsCard(person: person, history: history),
           CardBox(
             padding: EdgeInsets.zero,
             child: Column(
@@ -618,6 +581,19 @@ String _connectionStatusLabel(int score) {
   return '${label[0].toUpperCase()}${label.substring(1)}';
 }
 
+DateTime? _latestInteractionDate(List<CrmInteraction> history) {
+  if (history.isEmpty) return null;
+  return history
+      .map((interaction) => interaction.date)
+      .reduce((latest, date) => date.isAfter(latest) ? date : latest);
+}
+
+String _lastInteractionLabel(List<CrmInteraction> history) {
+  final latest = _latestInteractionDate(history);
+  if (latest == null) return 'No interactions yet';
+  return DateFormat.yMMMd().format(latest);
+}
+
 Color _connectionStatusColor(AppTokens tokens, int score) {
   final tier = BondTier.from(score);
   return switch (tier) {
@@ -631,12 +607,10 @@ class InteractionDetailsCard extends StatefulWidget {
   const InteractionDetailsCard({
     super.key,
     required this.person,
-    required this.insight,
     required this.history,
   });
 
   final Connection person;
-  final ContactInsight insight;
   final List<CrmInteraction> history;
 
   @override
@@ -649,6 +623,7 @@ class _InteractionDetailsCardState extends State<InteractionDetailsCard> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final lastContactLabel = _lastInteractionLabel(widget.history);
     final detailRows = [
       _DetailRow(
         label: 'Connection Score',
@@ -658,14 +633,7 @@ class _InteractionDetailsCardState extends State<InteractionDetailsCard> {
         label: 'Status',
         value: _connectionStatusLabel(widget.person.bondScore),
       ),
-      _DetailRow(
-        label: 'Known Since',
-        value: '${widget.insight.knownSinceYears} years',
-      ),
-      _DetailRow(
-        label: 'Last Contact',
-        value: DateFormat.yMMMd().format(widget.person.lastContact),
-      ),
+      _DetailRow(label: 'Last Contact', value: lastContactLabel),
       _DetailRow(
         label: 'Interactions',
         value: widget.history.isEmpty
@@ -769,6 +737,9 @@ class _InteractionDetailsCardState extends State<InteractionDetailsCard> {
   /// Builds a 12-month heatmap row based on the given interactions.
   Widget _buildHeatmap(BuildContext context, List<CrmInteraction> history) {
     final now = DateTime.now();
+    final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final heatColor = categoryColor(widget.person.category, tokens);
     // Build month buckets for the last 12 months (oldest first)
     final months = List<DateTime>.generate(12, (i) {
       final dt = DateTime(now.year, now.month - (11 - i), 1);
@@ -784,50 +755,60 @@ class _InteractionDetailsCardState extends State<InteractionDetailsCard> {
       if (counts.containsKey(key)) counts[key] = counts[key]! + 1;
     }
 
-    final maxCount = counts.values.isEmpty ? 0 : counts.values.reduce(max);
-    final tokens = context.tokens;
+    final maxCount = counts.values.fold(0, max);
 
     return Row(
-      children: [
-        for (final m in months)
-          Padding(
-            padding: EdgeInsets.only(right: AppSpacing.space2),
+      children: months.asMap().entries.map((entry) {
+        final i = entry.key;
+        final month = entry.value;
+        final count = counts[_monthKey(month)] ?? 0;
+        final alpha = count == 0 || maxCount == 0
+            ? 0.0
+            : 0.36 + (count / maxCount) * 0.54;
+
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: i == 0 ? 0 : AppSpacing.space1,
+              right: i == 11 ? 0 : AppSpacing.space1,
+            ),
             child: Tooltip(
+              decoration: BoxDecoration(
+                color: tokens.surfaceRaised,
+                border: Border.all(color: tokens.border),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                boxShadow: AppTokens.elevation2(dark),
+              ),
+              textStyle: AppTypography.caption(
+                color: tokens.ink,
+              ).copyWith(fontWeight: FontWeight.w700),
               message:
-                  '${DateFormat.MMM().format(m)}\n${counts[_monthKey(m)]} interactions',
+                  '${DateFormat.MMM().format(month)}\n$count interaction${count == 1 ? '' : 's'}',
               child: Container(
                 width: 18,
                 height: 18,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _heatColor(
-                    tokens,
-                    counts[_monthKey(m)] ?? 0,
-                    maxCount,
-                  ),
+                  color: count == 0
+                      ? tokens.surfaceSunken
+                      : heatColor.withValues(alpha: alpha),
                   border: Border.all(
-                    color: (counts[_monthKey(m)] ?? 0) == 0
+                    color: count == 0
                         ? tokens.border.withValues(alpha: .72)
-                        : tokens.success.withValues(alpha: .86),
+                        : heatColor.withValues(alpha: .86),
+                    width: 1,
                   ),
                 ),
               ),
             ),
           ),
-      ],
+        );
+      }).toList(),
     );
   }
 
   String _monthKey(DateTime dt) =>
       '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
-
-  Color _heatColor(AppTokens tokens, int count, int maxCount) {
-    if (maxCount <= 0 || count <= 0) return tokens.surfaceSunken;
-    final intensity = count / maxCount; // 0..1
-    // Map intensity to an opacity of the success color for visibility.
-    final base = tokens.success;
-    return base.withValues(alpha: 0.36 + (0.54 * intensity));
-  }
 }
 
 class _DetailRow {

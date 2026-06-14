@@ -295,6 +295,39 @@ void main() {
       expect(find.widgetWithIcon(IconButton, Icons.edit), findsNothing);
     });
 
+    testWidgets(
+      'interaction details omit Known Since and use latest interaction for Last Contact',
+      (tester) async {
+        tester.view.physicalSize = const Size(800 * 2, 1200 * 2);
+        tester.view.devicePixelRatio = 2.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ...signedInDemoOverrides(),
+              memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.data(false),
+              home: const ContactProfileScreen(contactId: 'mike'),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.scrollUntilVisible(
+          find.text('Interaction Details'),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+
+        expect(find.text('Known Since'), findsNothing);
+        expect(find.text('Mar 23, 2026'), findsAtLeastNWidgets(1));
+      },
+    );
+
     testWidgets('activity log rows render inline AI badge in the dense list', (
       tester,
     ) async {
