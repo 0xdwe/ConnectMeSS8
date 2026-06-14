@@ -13,12 +13,21 @@ import '../widgets/crm_widgets.dart';
 @visibleForTesting
 String recommendationContactRoute(Recommendation recommendation) {
   final topic = recommendation.topic;
-  if (topic == null || topic.trim().isEmpty) {
-    return '/contact/${recommendation.contactId}';
+  final reason = recommendation.reason;
+  final insight = recommendation.insight;
+  final action = recommendation.action;
+  final params = <String, String>{};
+  if (topic != null && topic.trim().isNotEmpty) {
+    params['topic'] = topic;
+  }
+  if (reason.trim().isNotEmpty) params['reason'] = reason;
+  if (insight.trim().isNotEmpty) params['insight'] = insight;
+  if (action != null && action.trim().isNotEmpty) {
+    params['action'] = action;
   }
   return Uri(
     path: '/contact/${recommendation.contactId}',
-    queryParameters: {'topic': topic},
+    queryParameters: params.isEmpty ? null : params,
   ).toString();
 }
 

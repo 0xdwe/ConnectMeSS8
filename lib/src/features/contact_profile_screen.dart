@@ -22,9 +22,15 @@ class ContactProfileScreen extends ConsumerWidget {
     super.key,
     required this.contactId,
     this.initialSelectedTopic,
+    this.recommendationReason,
+    this.recommendationInsight,
+    this.recommendationAction,
   });
   final String contactId;
   final String? initialSelectedTopic;
+  final String? recommendationReason;
+  final String? recommendationInsight;
+  final String? recommendationAction;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -309,6 +315,9 @@ class ContactProfileScreen extends ConsumerWidget {
             memorySummary: memorySummary,
             memory: memory,
             initialSelectedTopic: initialSelectedTopic,
+            recommendationReason: recommendationReason,
+            recommendationInsight: recommendationInsight,
+            recommendationAction: recommendationAction,
           ),
           InteractionDetailsCard(person: person, history: history),
           CardBox(

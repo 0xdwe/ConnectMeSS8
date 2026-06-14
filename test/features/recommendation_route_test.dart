@@ -17,7 +17,7 @@ void main() {
         ),
       );
 
-      expect(route, '/contact/sarah?topic=Paris+trip');
+      expect(route, '/contact/sarah?topic=Paris+trip&reason=Sarah+has+Paris+on+her+mind.&insight=A+recent+update+mentioned+Paris.&action=Ask+how+the+Paris+plans+are+coming+together.');
     });
 
     test(
@@ -34,11 +34,11 @@ void main() {
           ),
         );
 
-        expect(route, '/contact/sarah?topic=Paris+trip');
+        expect(route, '/contact/sarah?topic=Paris+trip&reason=Sarah+has+Paris+on+her+mind.&insight=A+recent+update+mentioned+Paris.&action=Ask+how+the+Paris+plans+are+coming+together.');
       },
     );
 
-    test('routes omit topic query for regular cards', () {
+    test('routes include reason and insight for regular cards', () {
       const recommendation = Recommendation(
         contactId: 'mike',
         reason: 'Mike could use a check-in.',
@@ -46,8 +46,10 @@ void main() {
         priority: 'Low',
       );
 
-      expect(contactRouteForRecommendation(recommendation), '/contact/mike');
-      expect(recommendationContactRoute(recommendation), '/contact/mike');
+      expect(contactRouteForRecommendation(recommendation),
+          '/contact/mike?reason=Mike+could+use+a+check-in.&insight=A+quick+hello+keeps+things+warm.');
+      expect(recommendationContactRoute(recommendation),
+          '/contact/mike?reason=Mike+could+use+a+check-in.&insight=A+quick+hello+keeps+things+warm.');
     });
   });
 }

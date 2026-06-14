@@ -1081,6 +1081,9 @@ class AiInsightsCard extends ConsumerStatefulWidget {
     this.memorySummary,
     this.memory,
     this.initialSelectedTopic,
+    this.recommendationReason,
+    this.recommendationInsight,
+    this.recommendationAction,
   });
   final Connection connection;
   final ContactInsight insight;
@@ -1097,6 +1100,13 @@ class AiInsightsCard extends ConsumerStatefulWidget {
 
   /// Optional topic to select when opening from a topic-aware Home card.
   final String? initialSelectedTopic;
+
+  /// Recommendation context from the Home screen. When non-null, the
+  /// card renders a recommendation banner at the top showing why this
+  /// contact was recommended. (Pass 4.6 / #116 follow-up)
+  final String? recommendationReason;
+  final String? recommendationInsight;
+  final String? recommendationAction;
 
   @override
   ConsumerState<AiInsightsCard> createState() => _AiInsightsCardState();
@@ -1244,6 +1254,9 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
                       memorySummary: widget.memorySummary,
                       memory: widget.memory,
                       initialSelectedTopic: widget.initialSelectedTopic,
+                      recommendationReason: widget.recommendationReason,
+                      recommendationInsight: widget.recommendationInsight,
+                      recommendationAction: widget.recommendationAction,
                       tier: tier,
                       tokens: tokens,
                     ),
@@ -1268,6 +1281,9 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
                         memorySummary: widget.memorySummary,
                         memory: widget.memory,
                         initialSelectedTopic: widget.initialSelectedTopic,
+                        recommendationReason: widget.recommendationReason,
+                        recommendationInsight: widget.recommendationInsight,
+                        recommendationAction: widget.recommendationAction,
                         tier: tier,
                         tokens: tokens,
                       ),
@@ -1292,6 +1308,9 @@ class _AiInsightsBody extends StatefulWidget {
     this.memorySummary,
     this.memory,
     this.initialSelectedTopic,
+    this.recommendationReason,
+    this.recommendationInsight,
+    this.recommendationAction,
   });
 
   final Connection connection;
@@ -1299,6 +1318,9 @@ class _AiInsightsBody extends StatefulWidget {
   final String? memorySummary;
   final MemoryDocument? memory;
   final String? initialSelectedTopic;
+  final String? recommendationReason;
+  final String? recommendationInsight;
+  final String? recommendationAction;
   final BondTier tier;
   final AppTokens tokens;
 
@@ -1339,11 +1361,30 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
                     ),
                     SizedBox(height: AppSpacing.space1),
                     Text(
-                      _bondEncouragement(widget.tier),
+                      widget.recommendationReason ??
+                          _bondEncouragement(widget.tier),
                       style: AppTypography.body(
                         color: tokens.recommendationInkMuted,
                       ),
                     ),
+                    if (widget.recommendationInsight != null) ...[
+                      SizedBox(height: AppSpacing.space1),
+                      Text(
+                        widget.recommendationInsight!,
+                        style: AppTypography.caption(
+                          color: tokens.recommendationInkMuted,
+                        ),
+                      ),
+                    ],
+                    if (widget.recommendationAction != null) ...[
+                      SizedBox(height: AppSpacing.space2),
+                      Text(
+                        widget.recommendationAction!,
+                        style: AppTypography.body(
+                          color: tokens.primary,
+                        ).copyWith(fontWeight: FontWeight.w500),
+                      ),
+                    ],
                   ],
                 ),
               ),
