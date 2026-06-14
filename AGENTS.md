@@ -128,6 +128,10 @@ These keep coming up; flag them up-front so you don't step in them.
 - **`AppUser` is dead duplication of `currentUserProvider`** (PRD §Q13 of Pass 4.5). Cleanup is filed but deferred.
 - **The first-frame seeded flash** on signed-in launch (#070 reviewer S5) is documented behavior. Don't reflexively fix it.
 - **The 33 widget test failures** on `main` are NOT Pass 4 work; they're from `ui-login-page` + `fix-navbar` UI merges. Track separately.
+- **`AiUpdate.run()` has `onClassifierPassed` optional named param** (Pass 4.4 / #112–#113). Every `implements AiUpdate` class MUST include this param in `run()`. Check `_SignedOutAiUpdate`, `_ThrowingAiUpdate`, `_NoDeltaAiUpdate`, and any inline test fakes when modifying the interface.
+- **`MockAiUpdate` fakes cannot `implements` final SDK classes.** `GenerativeModel` and `GenerateContentResponse` are `final class` in `firebase_ai-3.12.1`. Tests must use the `GeminiGenerateContentFn` function-injection seam instead of trying to mock the SDK types directly.
+- **`lastRecommendationList` is a module-level variable** in `memory_providers.dart` — it survives Provider disposal during GoRouter navigation. Tests reading it must reset it in `setUp`/`tearDown` to avoid cross-test contamination.
+- **Seeded `lastContact` dates use `DateTime.now()` (wall clock).** When writing recommendation tests with a fake clock, the seeded dates may be too close to the fake time, causing all contacts to have `MaintenanceNeed.none`. Either use explicit connections with old dates or set the fake clock far in the future.
 
 ---
 
