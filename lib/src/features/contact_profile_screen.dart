@@ -344,11 +344,26 @@ class ContactProfileScreen extends ConsumerWidget {
                           // Left date column
                           SizedBox(
                             width: 96,
-                            child: Text(
-                              DateFormat('yyyy-MM-dd').format(history[i].date),
-                              style: AppTypography.caption(
-                                color: tokens.inkMuted,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  DateFormat('yyyy-MM-dd').format(history[i].date),
+                                  style: AppTypography.caption(
+                                    color: tokens.inkMuted,
+                                  ),
+                                ),
+                                if (history[i].attachments.isNotEmpty) ...[
+                                  SizedBox(height: AppSpacing.space2),
+                                  _AttachmentChip(
+                                    attachment: history[i].attachments.first,
+                                    onTap: () => _showAttachmentViewer(
+                                      context,
+                                      history[i].attachments.first,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                           SizedBox(width: AppSpacing.space3),
@@ -415,24 +430,6 @@ class ContactProfileScreen extends ConsumerWidget {
                                     ),
                                   ),
                                 ],
-                                if (history[i].attachments.isNotEmpty) ...[
-                                  SizedBox(height: AppSpacing.space3),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: [
-                                      for (final attachment
-                                          in history[i].attachments)
-                                        _AttachmentChip(
-                                          attachment: attachment,
-                                          onTap: () => _showAttachmentViewer(
-                                            context,
-                                            attachment,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ],
                               ],
                             ),
                           ),
@@ -467,9 +464,6 @@ String _initials(String fullName) {
 }
 
 bool _isImageAttachment(AttachmentRef attachment) {
-  if (attachment.storageUrl?.trim().isNotEmpty == true) {
-    return true;
-  }
   final lower = attachment.name.toLowerCase();
   return lower.endsWith('.png') ||
       lower.endsWith('.jpg') ||
@@ -550,13 +544,38 @@ class _AttachmentChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final isImage = _isImageAttachment(attachment);
+    final hasUrl = attachment.storageUrl?.trim().isNotEmpty == true;
+
+    if (isImage && hasUrl) {
+      return InkWell(
+        onTap: onTap,
+        child: Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: tokens.border),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.md - 1),
+            child: Image.network(
+              attachment.storageUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Center(
+                child: Icon(Icons.broken_image_outlined, color: tokens.inkSubtle),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return ActionChip(
       avatar: Icon(isImage ? Icons.image_outlined : Icons.attach_file),
       label: Text(attachment.name),
-      onPressed: isImage && attachment.storageUrl?.isNotEmpty == true
-          ? onTap
-          : null,
+      onPressed: isImage && hasUrl ? onTap : null,
     );
   }
 }
