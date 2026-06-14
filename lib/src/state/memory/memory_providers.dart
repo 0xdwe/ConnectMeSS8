@@ -245,9 +245,12 @@ class _RecommendationsCacheHolder {
 }
 
 /// Module-level memory of the last recommendation list returned.
-/// Survives provider disposal during GoRouter navigation so
+/// Survives Provider disposal during GoRouter navigation so
 /// completion detection always has a previous list to diff against.
-List<Recommendation>? _lastReturnedRecommendations;
+///
+/// Exposed for testing only — production code should not read this
+/// directly.
+List<Recommendation>? lastRecommendationList;
 
 final _recommendationsCacheProvider = Provider<_RecommendationsCacheHolder>(
   (_) => _RecommendationsCacheHolder(),
@@ -293,7 +296,7 @@ final recommendationsProvider = FutureProvider<List<Recommendation>>((
     interactions: interactions,
     memories: memories,
     now: now,
-    previousList: _lastReturnedRecommendations,
+    previousList: lastRecommendationList,
     previousCacheTime:
         holder.cache?.computedAt ??
         now.subtract(recommendationsFreshness),
@@ -305,7 +308,7 @@ final recommendationsProvider = FutureProvider<List<Recommendation>>((
     connections: connections,
     interactions: interactions,
   );
-  _lastReturnedRecommendations = list;
+  lastRecommendationList = list;
   return list;
 });
 
