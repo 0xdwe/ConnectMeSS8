@@ -1,4 +1,6 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
+import 'package:connect_me/src/features/auth_screen.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,7 +12,24 @@ Future<void> pumpConnectMe(WidgetTester tester) async {
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
     ProviderScope(
-      overrides: signedOutDemoOverrides().cast(),
+      overrides: [
+        ...signedOutDemoOverrides(),
+        routerProvider.overrideWith((ref) => GoRouter(
+          initialLocation: '/auth',
+          routes: [
+            GoRoute(
+              path: '/auth',
+              builder: (context, state) => const AuthScreen(initialMode: AuthMode.login),
+            ),
+            GoRoute(
+              path: '/app',
+              builder: (context, state) => const Scaffold(
+                body: SizedBox(key: Key('home-tab')),
+              ),
+            ),
+          ],
+        )),
+      ],
       child: const ConnectMeApp(),
     ),
   );
