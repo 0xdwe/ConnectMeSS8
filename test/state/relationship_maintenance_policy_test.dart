@@ -139,15 +139,21 @@ void main() {
         now: now,
       );
 
-      expect(result.candidateBondDrift, 0);
-      expect(result.driftReason, BondDriftReason.withinDriftGrace);
+      // ratio = 31/(21*1.0) = 1.476, which is >= 1.0 but < 1.5 → -3
+      // (demo-tuned: drift starts at 1.0×, not 1.5×)
+      expect(result.candidateBondDrift, -3);
+      expect(result.driftReason, BondDriftReason.clearlyOutsideRhythm);
     });
 
     group('exact bucket boundaries', () {
+      // Demo-tuned rates: steady tier cap = -5.
+      // ratio 1.428 (30d) → -3 (< 1.5 bucket → -3, capped at -5 → -3 applied)
+      // ratio 2.0 (42d) → -5 (≤ 2.5 bucket → -5, equals cap → -5)
+      // ratio 3.0 (63d) → -5 (base -8 capped at -5, reason is veryFarOutsideRhythm)
       final steadyCases = [
-        (31.5, -1, BondDriftReason.clearlyOutsideRhythm),
-        (42.0, -2, BondDriftReason.farOutsideRhythm),
-        (63.0, -2, BondDriftReason.farOutsideRhythm),
+        (30.0, -3, BondDriftReason.clearlyOutsideRhythm),
+        (42.0, -5, BondDriftReason.farOutsideRhythm),
+        (63.0, -5, BondDriftReason.veryFarOutsideRhythm),
       ];
 
       for (final (elapsedDays, expectedDrift, expectedReason) in steadyCases) {
@@ -183,13 +189,15 @@ void main() {
           now: now,
         );
 
+        // drifting tier (bond=40 < 50), cadence = 16d
+        // ratio = 49/16 = 3.06 > 2.5 → baseDrift = -8, cap = -8 → -8 applied
         expect(result.adjustedCadence, const Duration(days: 16));
-        expect(result.candidateBondDrift, -3);
+        expect(result.candidateBondDrift, -8);
         expect(result.driftReason, BondDriftReason.veryFarOutsideRhythm);
       });
     });
 
-    test('high Bond Score caps drift at -1', () {
+    test('high Bond Score caps drift at -3', () {
       final result = RelationshipMaintenancePolicy.evaluate(
         connection: connection(
           category: 'Friends',
@@ -200,12 +208,14 @@ void main() {
         now: now,
       );
 
+      // close tier (bond=90 >= 80), cadence = 21*1.5 = 32d
+      // ratio = 100/32 = 3.125 > 2.5 → baseDrift = -8, cap = -3 → -3 applied
       expect(result.adjustedCadence, const Duration(days: 32));
-      expect(result.candidateBondDrift, -1);
+      expect(result.candidateBondDrift, -3);
       expect(result.bondTier, BondDurabilityTier.close);
     });
 
-    test('Work category caps drift at -1 regardless of tier', () {
+    test('Work category caps drift at -2 regardless of tier', () {
       final result = RelationshipMaintenancePolicy.evaluate(
         connection: connection(
           category: 'Work',
@@ -216,7 +226,8 @@ void main() {
         now: now,
       );
 
-      expect(result.candidateBondDrift, -1);
+      // Work cap = -2 (demo-tuned from -1)
+      expect(result.candidateBondDrift, -2);
     });
 
     test('candidate drift clamps so Bond Score cannot go below zero', () {
@@ -230,6 +241,8 @@ void main() {
         now: now,
       );
 
+      // bond=1, drifting tier, ratio > 2.5 → baseDrift = -8, cap -8,
+      // but clamp prevents going below 0: drift = max(-8, -1) = -1
       expect(result.candidateBondDrift, -1);
     });
   });
@@ -245,11 +258,12 @@ void main() {
       expect(result.isBondDriftApplicationEligible, isTrue);
     });
 
-    test('less than 7 days since last drift is ineligible', () {
+    // 3-day gate (demo-tuned from 7 days)
+    test('less than 3 days since last drift is ineligible', () {
       final result = RelationshipMaintenancePolicy.evaluate(
         connection: connection(
           lastBondDriftAppliedAt: now.subtract(
-            const Duration(days: 6, hours: 23, minutes: 59),
+            const Duration(days: 2, hours: 23, minutes: 59),
           ),
         ),
         interactions: const [],
@@ -259,10 +273,10 @@ void main() {
       expect(result.isBondDriftApplicationEligible, isFalse);
     });
 
-    test('exactly 7 days since last drift is eligible', () {
+    test('exactly 3 days since last drift is eligible', () {
       final result = RelationshipMaintenancePolicy.evaluate(
         connection: connection(
-          lastBondDriftAppliedAt: now.subtract(const Duration(days: 7)),
+          lastBondDriftAppliedAt: now.subtract(const Duration(days: 3)),
         ),
         interactions: const [],
         now: now,
@@ -283,7 +297,8 @@ void main() {
 
     expect(result.maintenanceNeed, MaintenanceNeed.high);
     expect(result.maintenanceReason, MaintenanceReason.farOutsideRhythm);
-    expect(result.driftReason, BondDriftReason.clearlyOutsideRhythm);
+    // 40 days / 21d cadence = ratio 1.9 → -5 (≤ 2.5 bucket, steady cap = -5)
+    expect(result.driftReason, BondDriftReason.farOutsideRhythm);
     expect(result.toString(), isNot(contains('check in')));
     expect(result.toString(), isNot(contains('overdue')));
     expect(result.toString(), isNot(contains('neglected')));

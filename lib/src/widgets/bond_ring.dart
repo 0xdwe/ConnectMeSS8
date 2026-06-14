@@ -96,7 +96,7 @@ class BondRing extends StatefulWidget {
   int get score => _connection?.bondScore ?? _score ?? 0;
   String get label => _connection?.name ?? _label ?? '';
   String? get avatar => _connection?.avatar;
-  BondTrend? get trend => _connection?.bondTrend;
+  BondTrend? get trend => _connection?.bondTrendAt(DateTime.now());
 
   @override
   State<BondRing> createState() => _BondRingState();

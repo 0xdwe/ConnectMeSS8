@@ -63,9 +63,9 @@ void main() {
   });
 
   group('interactionDepth clamp', () {
-    test('clamps below zero up to zero', () {
-      final json = _validBase()..['interactionDepth'] = -3;
-      expect(LlmAiUpdateResponse.fromJson(json).interactionDepth, 0);
+    test('clamps below minus one hundred down to minus one hundred', () {
+      final json = _validBase()..['interactionDepth'] = -150;
+      expect(LlmAiUpdateResponse.fromJson(json).interactionDepth, -100);
     });
 
     test('clamps above one hundred down to one hundred', () {
@@ -73,16 +73,16 @@ void main() {
       expect(LlmAiUpdateResponse.fromJson(json).interactionDepth, 100);
     });
 
-    test('preserves in-range values across the 0..100 spectrum', () {
-      for (final v in const [0, 25, 50, 75, 100]) {
+    test('preserves in-range values across the -100..100 spectrum', () {
+      for (final v in const [-100, -50, -25, 0, 25, 50, 75, 100]) {
         final json = _validBase()..['interactionDepth'] = v;
         expect(LlmAiUpdateResponse.fromJson(json).interactionDepth, v);
       }
     });
 
     test('accepts num that is integral (some SDKs return doubles)', () {
-      final json = _validBase()..['interactionDepth'] = 75.0;
-      expect(LlmAiUpdateResponse.fromJson(json).interactionDepth, 75);
+      final json = _validBase()..['interactionDepth'] = -75.0;
+      expect(LlmAiUpdateResponse.fromJson(json).interactionDepth, -75);
     });
   });
 

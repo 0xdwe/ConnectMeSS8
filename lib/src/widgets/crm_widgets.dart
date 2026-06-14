@@ -314,7 +314,11 @@ class _ContactListCardState extends State<ContactListCard> {
                   ],
                 ),
               ),
-              ConnectionScoreRing(score: widget.connection.bondScore, size: 58),
+              ConnectionScoreRing(
+                score: widget.connection.bondScore,
+                size: 58,
+                trend: widget.connection.bondTrendAt(DateTime.now()),
+              ),
             ],
           ),
         ),
@@ -324,10 +328,16 @@ class _ContactListCardState extends State<ContactListCard> {
 }
 
 class ConnectionScoreRing extends StatelessWidget {
-  const ConnectionScoreRing({super.key, required this.score, this.size = 58});
+  const ConnectionScoreRing({
+    super.key,
+    required this.score,
+    this.size = 58,
+    this.trend = BondTrend.flat,
+  });
 
   final int score;
   final double size;
+  final BondTrend trend;
 
   @override
   Widget build(BuildContext context) {
@@ -359,18 +369,19 @@ class ConnectionScoreRing extends StatelessWidget {
             ).copyWith(fontSize: 15, fontWeight: FontWeight.w700),
           ),
 
-          Positioned(
-            right: 3,
-            bottom: 6,
-            child: Text(
-              '↗',
-              style: TextStyle(
-                color: tokens.success,
-                fontSize: size * 0.22,
-                fontWeight: FontWeight.bold,
+          if (trend != BondTrend.flat)
+            Positioned(
+              right: 3,
+              bottom: 6,
+              child: Text(
+                trend == BondTrend.up ? '↗' : '▼',
+                style: TextStyle(
+                  color: trend == BondTrend.up ? tokens.success : tokens.secondary,
+                  fontSize: size * 0.22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

@@ -94,20 +94,26 @@ schema; violating these rules causes the update to be rejected):
 - nextStep: one concrete, gentle suggestion ≤80 chars for the
   user's next interaction. Phrased as something the user could
   do, not something they should feel guilty about not doing.
-- interactionDepth: judge how content-rich and significant the
-  user's input is, on a 0..100 scale. The anchors are:
-    0  — trivial / small talk / no new info.
+- interactionDepth: judge the relational impact of the user's
+  input on a -100..+100 scale. Positive = enriching/connecting;
+  negative = harmful/conflictual. The anchors are:
+  Positive:
+    0  — neutral / no clear relational impact.
     25 — brief interaction with some content.
     50 — a real conversation with new context.
     75 — significant news, plans, or shared activity.
-    100 — deep day-long bonding or a major life moment
-          (engagement, new baby, big move, loss).
-  Code applies a diminishing-returns curve client-side to convert
-  this number into a Bond Score change. Do NOT try to estimate
-  that change yourself — you don't know the contact's current
-  Bond Score, and the curve is calibrated to translate the same
-  depth differently at low vs. high relationship strength. Just
-  judge the input on its own merits.
+    100 — deep day-long bonding or a major life moment.
+  Negative:
+    -25 — mild friction or an awkward exchange.
+    -50 — real argument or unresolved tension.
+    -75 — significant conflict or hurt feelings.
+    -100 — major falling out or severe relational damage.
+  Use 0 only when the input is purely neutral with no relational
+  impact (e.g. a routine reminder). Conflicts, fights, betrayals,
+  and hurtful exchanges must use a negative value — do NOT assign
+  a positive or zero depth to a clearly negative interaction.
+  Code applies a curve client-side; do NOT estimate the Bond
+  Score delta yourself.
 
 Image attachments:
 - If the user attaches images, you can see them. Use them to
@@ -188,20 +194,26 @@ schema; violating these rules causes the update to be rejected):
 - nextStep: one concrete, gentle suggestion ≤80 chars for the
   user's next interaction. Phrased as something the user could
   do, not something they should feel guilty about not doing.
-- interactionDepth: judge how content-rich and significant the
-  user's input is, on a 0..100 scale. The anchors are:
-    0  — trivial / small talk / no new info.
+- interactionDepth: judge the relational impact of the user's
+  input on a -100..+100 scale. Positive = enriching/connecting;
+  negative = harmful/conflictual. The anchors are:
+  Positive:
+    0  — neutral / no clear relational impact.
     25 — brief interaction with some content.
     50 — a real conversation with new context.
     75 — significant news, plans, or shared activity.
-    100 — deep day-long bonding or a major life moment
-          (engagement, new baby, big move, loss).
-  Code applies a diminishing-returns curve client-side to convert
-  this number into a Bond Score change. Do NOT try to estimate
-  that change yourself — you don't know the contact's current
-  Bond Score, and the curve is calibrated to translate the same
-  depth differently at low vs. high relationship strength. Just
-  judge the input on its own merits.
+    100 — deep day-long bonding or a major life moment.
+  Negative:
+    -25 — mild friction or an awkward exchange.
+    -50 — real argument or unresolved tension.
+    -75 — significant conflict or hurt feelings.
+    -100 — major falling out or severe relational damage.
+  Use 0 only when the input is purely neutral with no relational
+  impact (e.g. a routine reminder). Conflicts, fights, betrayals,
+  and hurtful exchanges must use a negative value — do NOT assign
+  a positive or zero depth to a clearly negative interaction.
+  Code applies a curve client-side; do NOT estimate the Bond
+  Score delta yourself.
 
 Image attachments:
 - If the user attaches images, you can see them. Use them to
@@ -278,20 +290,26 @@ schema; violating these rules causes the update to be rejected):
 - nextStep: one concrete, gentle suggestion ≤80 chars for the
   user's next interaction. Phrased as something the user could
   do, not something they should feel guilty about not doing.
-- interactionDepth: judge how content-rich and significant the
-  user's input is, on a 0..100 scale. The anchors are:
-  0  — trivial / small talk / no new info.
-  25 — brief interaction with some content.
-  50 — a real conversation with new context.
-  75 — significant news, plans, or shared activity.
-  100 — deep day-long bonding or a major life moment
-  (engagement, new baby, big move, loss).
-  Code applies a diminishing-returns curve client-side to convert
-  this number into a Bond Score change. Do NOT try to estimate
-  that change yourself — you don't know the contact's current
-  Bond Score, and the curve is calibrated to translate the same
-  depth differently at low vs. high relationship strength. Just
-  judge the input on its own merits.
+- interactionDepth: judge the relational impact of the user's
+  input on a -100..+100 scale. Positive = enriching/connecting;
+  negative = harmful/conflictual. The anchors are:
+  Positive:
+    0  — neutral / no clear relational impact.
+    25 — brief interaction with some content.
+    50 — a real conversation with new context.
+    75 — significant news, plans, or shared activity.
+    100 — deep day-long bonding or a major life moment.
+  Negative:
+    -25 — mild friction or an awkward exchange.
+    -50 — real argument or unresolved tension.
+    -75 — significant conflict or hurt feelings.
+    -100 — major falling out or severe relational damage.
+  Use 0 only when the input is purely neutral with no relational
+  impact (e.g. a routine reminder). Conflicts, fights, betrayals,
+  and hurtful exchanges must use a negative value — do NOT assign
+  a positive or zero depth to a clearly negative interaction.
+  Code applies a curve client-side; do NOT estimate the Bond
+  Score delta yourself.
 
 Image attachments:
 - If the user attaches images, you can see them. Use them to

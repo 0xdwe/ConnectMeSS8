@@ -1132,8 +1132,22 @@ void main() {
       );
     });
 
-    test('depth below 0 is clamped to 0 (no negative deltas ever)', () {
-      expect(debugApplyBondScoreCurve(depth: -5, currentBond: 20), 0);
+    test('negative depth produces a negative delta (conflict/harmful interaction)', () {
+      // Design decision: depth = -100 at bond=60 → -(100*60/160) = -37
+      expect(debugApplyBondScoreCurve(depth: -100, currentBond: 60), -37);
+      // depth = -50 at bond=60 → -(50*60/160) = -18
+      expect(debugApplyBondScoreCurve(depth: -50, currentBond: 60), -18);
+      // depth = -100 at bond=0 → 0 (nothing to lose)
+      expect(debugApplyBondScoreCurve(depth: -100, currentBond: 0), 0);
+      // depth = -25 at bond=80 → -(25*80/160) = -12
+      expect(debugApplyBondScoreCurve(depth: -25, currentBond: 80), -12);
+    });
+
+    test('depth below -100 is clamped to -100 (symmetric with positive clamp)', () {
+      expect(
+        debugApplyBondScoreCurve(depth: -200, currentBond: 60),
+        debugApplyBondScoreCurve(depth: -100, currentBond: 60),
+      );
     });
 
     test('currentBond outside 0..100 is clamped before the curve runs', () {

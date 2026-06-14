@@ -389,16 +389,16 @@ void main() {
         await _settle();
 
         final saved = (await connections.load('drift-target'))!;
-        expect(saved.bondScore, 48);
+        expect(saved.bondScore, 45);
         expect(saved.lastBondDriftAppliedAt, now);
       },
     );
 
     test(
-      'skips drift when last application was less than 7 days ago',
+      'skips drift when last application was less than 3 days ago',
       () async {
         final now = DateTime(2026, 6, 4, 12);
-        final previous = now.subtract(const Duration(days: 6, hours: 23));
+        final previous = now.subtract(const Duration(days: 2, hours: 23));
         final connections = InMemoryConnectionStore();
         final interactions = InMemoryInteractionStore();
         await connections.save(
@@ -468,14 +468,14 @@ void main() {
         container.read(appControllerProvider);
         await _settle();
         final afterHydration = (await connections.load('drift-target'))!;
-        expect(afterHydration.bondScore, 48);
+        expect(afterHydration.bondScore, 45);
         expect(afterHydration.lastBondDriftAppliedAt, now);
 
         await container.read(recommendationsProvider.future);
         await _settle();
 
         final afterRefresh = (await connections.load('drift-target'))!;
-        expect(afterRefresh.bondScore, 48);
+        expect(afterRefresh.bondScore, 45);
         expect(afterRefresh.lastBondDriftAppliedAt, now);
       },
     );
