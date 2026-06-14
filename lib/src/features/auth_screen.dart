@@ -285,30 +285,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ),
                 ),
 
-                // Back Button to Landing Screen
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: SafeArea(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: IconButton(
-                        icon: Icon(Icons.arrow_back, color: tokens.ink),
-                        onPressed: () => _switchMode(AuthMode.landing),
-                      ),
-                    ),
-                  ),
-                ),
-
                 // Curved card inputs (Scrollable to prevent keyboard overflows)
                 SafeArea(
                   child: SingleChildScrollView(
@@ -376,6 +352,30 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             ],
                           ),
                         ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Back Button to Landing Screen (placed on top for hit-testing)
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: SafeArea(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.arrow_back, color: tokens.ink),
+                        onPressed: () => _switchMode(AuthMode.landing),
                       ),
                     ),
                   ),
