@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1386,7 +1387,328 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
   }
 }
 
-class _InlineTopicDetails extends StatelessWidget {
+const _stopWords = {
+  'a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'and', 'or', 'with', 
+  'about', 'is', 'was', 'were', 'trip', 'plans', 'updates', 'recent', 'shared', 
+  'life', 'future', 'old', 'times', 'news', 'team', 'some', 'any', 'how', 
+  'what', 'who', 'where', 'why', 'my', 'your', 'his', 'her', 'their', 'our', 
+  'its', 'he', 'she', 'they', 'we', 'it', 'me', 'you', 'him', 'them', 'us',
+  'like', 'associated', 'person'
+};
+
+enum _HistorySource { checkIn, memory, note }
+
+class _HistoryMatch {
+  final _HistorySource source;
+  final String content;
+  final DateTime? date;
+  final String? title;
+  final int score;
+
+  _HistoryMatch({
+    required this.source,
+    required this.content,
+    this.date,
+    this.title,
+    required this.score,
+  });
+}
+
+int _calculateMatchScore(String text, Set<String> keywords) {
+  final textLower = text.toLowerCase();
+  int score = 0;
+  for (final kw in keywords) {
+    if (textLower.contains(kw)) {
+      score++;
+    }
+  }
+  return score;
+}
+
+List<_HistoryMatch> _findHistoryMatches({
+  required String topic,
+  required List<CrmInteraction> interactions,
+  required MemoryDocument? memory,
+  required Connection connection,
+}) {
+  final cleanTopic = topic.trim();
+  if (cleanTopic.isEmpty) return [];
+
+  final keywords = cleanTopic
+      .toLowerCase()
+      .split(RegExp(r'\W+'))
+      .where((k) => k.isNotEmpty && !_stopWords.contains(k))
+      .toSet();
+
+  if (keywords.isEmpty) return [];
+
+  final matches = <_HistoryMatch>[];
+
+  for (final interaction in interactions) {
+    int score = 0;
+    score += _calculateMatchScore(interaction.title, keywords);
+    score += _calculateMatchScore(interaction.note, keywords);
+
+    if (score > 0) {
+      matches.add(_HistoryMatch(
+        source: _HistorySource.checkIn,
+        content: interaction.note,
+        title: interaction.title,
+        date: interaction.date,
+        score: score,
+      ));
+    }
+  }
+
+  if (memory != null && memory.history.trim().isNotEmpty) {
+    final historyLineRegex =
+        RegExp(r'^\s*[-*]\s*(\d{4}-\d{2}-\d{2})\s*(?:—|–|-|:)\s*(.*)$');
+    final lines = memory.history.split('\n');
+    for (final line in lines) {
+      final match = historyLineRegex.firstMatch(line);
+      if (match != null) {
+        final dateStr = match.group(1)!;
+        final bodyText = match.group(2)!.trim();
+        if (bodyText.isEmpty) continue;
+
+        final parsedDate = DateTime.tryParse('${dateStr}T00:00:00Z');
+        final score = _calculateMatchScore(bodyText, keywords);
+        if (score > 0) {
+          matches.add(_HistoryMatch(
+            source: _HistorySource.memory,
+            content: bodyText,
+            date: parsedDate,
+            score: score,
+          ));
+        }
+      }
+    }
+  }
+
+  if (connection.notes.trim().isNotEmpty) {
+    final lines = connection.notes.split('\n');
+    for (final line in lines) {
+      final cleanLine = line.trim();
+      if (cleanLine.isEmpty) continue;
+
+      final score = _calculateMatchScore(cleanLine, keywords);
+      if (score > 0) {
+        matches.add(_HistoryMatch(
+          source: _HistorySource.note,
+          content: cleanLine,
+          score: score,
+        ));
+      }
+    }
+  }
+
+  matches.sort((a, b) {
+    if (a.date != null && b.date != null) {
+      return b.date!.compareTo(a.date!);
+    }
+    if (a.date != null) return -1;
+    if (b.date != null) return 1;
+    return b.score.compareTo(a.score);
+  });
+
+  return matches;
+}
+
+String _formatMatchDate(DateTime date) {
+  return DateFormat('MMM dd, yyyy').format(date);
+}
+
+Widget _buildSourceBadge(_HistorySource source, AppTokens tokens) {
+  final String label;
+  final Color bgColor;
+  final Color textColor;
+  final IconData icon;
+
+  switch (source) {
+    case _HistorySource.checkIn:
+      label = 'Check-in';
+      bgColor = tokens.secondaryTint;
+      textColor = tokens.secondary;
+      icon = Icons.chat_bubble_outline;
+      break;
+    case _HistorySource.memory:
+      label = 'Memory';
+      bgColor = tokens.primaryTint;
+      textColor = tokens.primary;
+      icon = Icons.psychology;
+      break;
+    case _HistorySource.note:
+      label = 'Note';
+      bgColor = tokens.tertiaryTint;
+      textColor = tokens.tertiary;
+      icon = Icons.edit_note;
+      break;
+  }
+
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: textColor),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: AppTypography.caption(color: textColor).copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showTopicHistoryDialog(
+  BuildContext context, {
+  required String topic,
+  required List<CrmInteraction> interactions,
+  required MemoryDocument? memory,
+  required Connection connection,
+  required AppTokens tokens,
+}) {
+  final matches = _findHistoryMatches(
+    topic: topic,
+    interactions: interactions,
+    memory: memory,
+    connection: connection,
+  );
+
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Close History',
+    barrierColor: Colors.black.withValues(alpha: 0.4),
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (dialogContext, animation1, animation2) {
+      return BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: Dialog(
+          backgroundColor: tokens.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            side: BorderSide(color: tokens.border),
+          ),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 550, maxHeight: 600),
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.space5),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Context History',
+                              style: AppTypography.h2(color: tokens.ink),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              topic,
+                              style: AppTypography.body(color: tokens.inkMuted).copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        icon: Icon(Icons.close, color: tokens.ink),
+                      ),
+                    ],
+                  ),
+                  Divider(color: tokens.border, height: AppSpacing.space5),
+                  if (matches.isEmpty)
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          'No matching history found for this topic.',
+                          style: AppTypography.body(color: tokens.inkSubtle),
+                        ),
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: Scrollbar(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: matches.length,
+                          itemBuilder: (context, index) {
+                            final match = matches[index];
+                            return Container(
+                              margin: EdgeInsets.only(bottom: AppSpacing.space4),
+                              padding: EdgeInsets.all(AppSpacing.space4),
+                              decoration: BoxDecoration(
+                                color: tokens.surfaceRaised,
+                                border: Border.all(color: tokens.border),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      _buildSourceBadge(match.source, tokens),
+                                      const Spacer(),
+                                      if (match.date != null)
+                                        Text(
+                                          _formatMatchDate(match.date!),
+                                          style: AppTypography.caption(
+                                            color: tokens.inkSubtle,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  if (match.title != null &&
+                                      match.title!.trim().isNotEmpty) ...[
+                                    SizedBox(height: AppSpacing.space2),
+                                    Text(
+                                      match.title!,
+                                      style: AppTypography.bodyLg(color: tokens.ink).copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                  SizedBox(height: AppSpacing.space2),
+                                  Text(
+                                    match.content,
+                                    style: AppTypography.body(color: tokens.inkMuted),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _InlineTopicDetails extends ConsumerWidget {
   const _InlineTopicDetails({
     required this.topic,
     required this.connection,
@@ -1398,7 +1720,7 @@ class _InlineTopicDetails extends StatelessWidget {
   final MemoryDocument? memory;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
     final suggestions = preferredSuggestionsForTopic(
       connection: connection,
@@ -1413,6 +1735,9 @@ class _InlineTopicDetails extends StatelessWidget {
               text: 'Ask an open question about how they\'ve been',
             ),
           ];
+
+    final interactions = ref.watch(interactionsByContactProvider(connection.id));
+
     return Container(
       width: double.infinity,
       margin: EdgeInsets.only(top: AppSpacing.space3),
@@ -1476,11 +1801,36 @@ class _InlineTopicDetails extends StatelessWidget {
                     if (suggestion.context != null &&
                         suggestion.context!.trim().isNotEmpty) ...[
                       SizedBox(height: AppSpacing.space3),
-                      Text(
-                        'Context :',
-                        style: AppTypography.h2(
-                          color: tokens.recommendationInk,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Context :',
+                            style: AppTypography.h2(
+                              color: tokens.recommendationInk,
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.open_in_new,
+                              size: 16,
+                              color: tokens.recommendationInkMuted,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: 'Show matching history',
+                            onPressed: () {
+                              _showTopicHistoryDialog(
+                                context,
+                                topic: topic,
+                                interactions: interactions,
+                                memory: memory,
+                                connection: connection,
+                                tokens: tokens,
+                              );
+                            },
+                          ),
+                        ],
                       ),
                       SizedBox(height: AppSpacing.space1),
                       Text(

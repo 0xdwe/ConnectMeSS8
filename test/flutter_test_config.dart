@@ -65,9 +65,70 @@ class _TestPathProvider extends PathProviderPlatform
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
+  HttpOverrides.global = MockHttpOverrides();
 
   final tempRoot = Directory.systemTemp.createTempSync('connectme_test_');
   PathProviderPlatform.instance = _TestPathProvider(tempRoot);
 
   await testMain();
+}
+
+class MockHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return _MockHttpClient();
+  }
+}
+
+class _MockHttpClient implements HttpClient {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    return Future.value(_MockHttpClientRequest());
+  }
+}
+
+class _MockHttpClientRequest implements HttpClientRequest {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName == #close) {
+      return Future.value(_MockHttpClientResponse());
+    }
+    if (invocation.memberName == #headers) {
+      return _MockHttpHeaders();
+    }
+    return null;
+  }
+}
+
+class _MockHttpHeaders implements HttpHeaders {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    return null;
+  }
+}
+
+class _MockHttpClientResponse implements HttpClientResponse {
+  static final List<int> _transparentImage = [
+    0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0xff, 0xff, 0xff, 0x21, 0xf9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00,
+    0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3b
+  ];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName == #statusCode) {
+      return 200;
+    }
+    if (invocation.memberName == #contentLength) {
+      return _transparentImage.length;
+    }
+    if (invocation.memberName == #compressionState) {
+      return HttpClientResponseCompressionState.notCompressed;
+    }
+    if (invocation.memberName == #listen) {
+      final stream = Stream<List<int>>.fromIterable([_transparentImage]);
+      return Function.apply(stream.listen, invocation.positionalArguments, invocation.namedArguments);
+    }
+    return null;
+  }
 }
