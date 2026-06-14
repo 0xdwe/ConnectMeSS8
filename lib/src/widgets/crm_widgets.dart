@@ -1023,9 +1023,8 @@ class ConnectionScoreHero extends StatelessWidget {
             ),
             SizedBox(height: AppSpacing.space4),
             Center(
-              child: SizedBox(
-                width: 320,
-                height: 180,
+              child: AspectRatio(
+                aspectRatio: 1.6,
                 child: ScoreGauge(score: score),
               ),
             ),
@@ -1043,50 +1042,55 @@ class ScoreGauge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    return Stack(
-      alignment: Alignment.bottomCenter,
-      children: [
-        CustomPaint(
-          size: const Size(320, 180),
-          painter: _ScoreGaugeBackgroundPainter(
-            score: score,
-            tokens: tokens,
-          ),
-        ),
-        Positioned(
-          bottom: 12,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(
-                    Icons.chat_bubble_outline,
-                    color: Colors.white,
-                    size: 26,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Icon(
-                      Icons.favorite,
-                      color: Colors.white.withValues(alpha: 0.9),
-                      size: 11,
-                    ),
-                  ),
-                ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+
+        return Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            CustomPaint(
+              size: Size(w, h),
+              painter: _ScoreGaugeBackgroundPainter(
+                score: score,
+                tokens: tokens,
               ),
-              const SizedBox(height: 2),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
+            ),
+            Positioned(
+              bottom: h * 0.12,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    '$score',
-                    style: AppTypography.glyph(
-                      48,
-                      color: Colors.white,
-                      weight: FontWeight.w700,
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Icon(
+                        Icons.chat_bubble_outline,
+                        color: Colors.white,
+                        size: 26,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Icon(
+                          Icons.favorite,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          size: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        '$score',
+                        style: AppTypography.glyph(
+                          48,
+                          color: Colors.white,
+                          weight: FontWeight.w700,
                     ),
                   ),
                   Text(
@@ -1116,7 +1120,9 @@ class ScoreGauge extends StatelessWidget {
         ),
       ],
     );
-  }
+  },
+);
+}
 }
 
 class _ScoreGaugeBackgroundPainter extends CustomPainter {
@@ -1131,20 +1137,12 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
     final cy = size.height - 15; // center at bottom minus some padding
     final center = Offset(cx, cy);
 
-    // Segment configuration
-    const segmentThickness = 24.0;
-    const segmentRadius = 120.0; // fixed radius
+    // Segment configuration scaled dynamically based on width
+    final segmentThickness = size.width * 0.075;
+    final segmentRadius = cx - (size.width * 0.1);
 
     // 1. Draw the 5 outer segments
-    final segmentColors = [
-      tokens.danger,
-      tokens.secondary,
-      tokens.primary,
-      tokens.tertiary,
-      tokens.success,
-    ];
     final segmentLabels = ['0-20', '21-40', '41-60', '61-80', '81-100'];
-
     final activeSegmentIndex = (score / 20).floor().clamp(0, 4);
 
     const segmentSweep = math.pi / 5;
@@ -1152,9 +1150,13 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
       final startAngle = math.pi + i * segmentSweep;
       final isActive = i == activeSegmentIndex;
 
-      // Outer segment paint
+      // Mockup-aligned color scheme: Segment 0 uses tokens.danger (rose), rest use tokens.primary (purple)
+      final isSegment0 = i == 0;
+      final baseColor = isSegment0 ? tokens.danger : tokens.primary;
+      final segmentColor = baseColor.withValues(alpha: isActive ? 0.95 : 0.12);
+
       final segmentPaint = Paint()
-        ..color = segmentColors[i].withValues(alpha: isActive ? 0.85 : 0.12)
+        ..color = segmentColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = segmentThickness
         ..strokeCap = StrokeCap.butt;
@@ -1164,7 +1166,7 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
 
       // Draw segment labels inside the segments
       final labelAngle = startAngle + segmentSweep / 2;
-      const labelRadius = segmentRadius; // inside the segment arc
+      final labelRadius = segmentRadius; // center of the segment stroke
       final lx = cx + labelRadius * math.cos(labelAngle);
       final ly = cy + labelRadius * math.sin(labelAngle);
 
@@ -1172,7 +1174,7 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
       final labelStyle = AppTypography.caption(
         color: isActive ? Colors.white : tokens.inkMuted,
       ).copyWith(
-        fontSize: 9,
+        fontSize: size.width * 0.026,
         fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
       );
 
@@ -1181,7 +1183,7 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
     }
 
     // 2. Draw the outer track for the indicator dot
-    const trackRadius = segmentRadius + segmentThickness / 2 + 10;
+    final trackRadius = segmentRadius + segmentThickness / 2 + 10;
     final trackPaint = Paint()
       ..color = tokens.border.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
@@ -1207,7 +1209,7 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
     canvas.drawCircle(Offset(dx, dy), 2.5, Paint()..color = Colors.white); // white inner center
 
     // 4. Draw the inner gradient semi-circle
-    const innerRadius = segmentRadius - segmentThickness / 2 - 6;
+    final innerRadius = segmentRadius - segmentThickness / 2 - 6;
     final gradientRect = Rect.fromCircle(center: center, radius: innerRadius);
     final gradientPaint = Paint()
       ..shader = tokens.aiGradient.createShader(gradientRect)
@@ -1355,52 +1357,47 @@ class _CuteGhostPainter extends CustomPainter {
 
     // 2. Define the main body gradient
     // A pearlescent gradient: light lavender, soft blue, pale pink
-    final bodyRect = Rect.fromLTWH(20, 15, 90, 110);
+    final bodyRect = Rect.fromLTWH(15, 15, w - 30, h - 30);
     final bodyPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
           Color(0xFFFFFFFF),
-          Color(0xFFE0E7FF),
-          Color(0xFFEEF2F6),
-          Color(0xFFFCE7F3),
+          Color(0xFFE5E9F8),
+          Color(0xFFF1F4F9),
+          Color(0xFFFDE8F4),
         ],
-        stops: [0.0, 0.4, 0.8, 1.0],
+        stops: [0.0, 0.4, 0.7, 1.0],
       ).createShader(bodyRect)
       ..style = PaintingStyle.fill;
 
-    // 3. Waving Left Arm (Waving up)
-    // Starts around (35, 75), curves up to (10, 48), rounds, and curves back to (35, 88)
+    // 3. Waving Left Arm (waving up)
     final leftArmPath = Path()
-      ..moveTo(35, 72)
-      ..cubicTo(20, 65, 8, 52, 12, 42) // outer curve up
-      ..cubicTo(14, 37, 22, 38, 26, 44) // hand tip
-      ..cubicTo(32, 54, 40, 68, 42, 78) // inner curve down
+      ..moveTo(30, 70)
+      ..cubicTo(12, 60, 4, 45, 10, 36) // outer curve up
+      ..cubicTo(14, 30, 24, 32, 28, 40) // round hand tip
+      ..cubicTo(32, 50, 42, 68, 44, 78) // inner curve down
       ..close();
 
     // 4. Right Arm (resting/waving slightly down/out)
-    // Starts around (95, 75), curves out to (115, 85), rounds, and back to (95, 92)
     final rightArmPath = Path()
-      ..moveTo(92, 75)
-      ..cubicTo(105, 76, 118, 80, 118, 88)
-      ..cubicTo(118, 93, 112, 95, 106, 92)
-      ..cubicTo(98, 88, 92, 84, 92, 84)
+      ..moveTo(90, 75)
+      ..cubicTo(106, 75, 116, 78, 116, 86)
+      ..cubicTo(116, 91, 110, 93, 104, 90)
+      ..cubicTo(96, 86, 90, 82, 90, 82)
       ..close();
 
     // 5. Main Body Path
-    // Head is a semi-circle from (30, 40) to (100, 40) with radius 35.
-    // Sides curve down to (25, 110) and (105, 110).
-    // Bottom is wavy ripples: 3 wave ripples at the bottom.
     final bodyPath = Path()
-      ..moveTo(25, 45)
-      ..cubicTo(25, 15, 105, 15, 105, 45) // head dome
-      ..cubicTo(105, 65, 108, 95, 108, 112) // right side
-      // Wavy bottom ripples
-      ..cubicTo(96, 122, 88, 108, 79, 112)
-      ..cubicTo(70, 122, 62, 108, 53, 112)
-      ..cubicTo(44, 122, 36, 108, 25, 112)
-      ..cubicTo(22, 105, 25, 65, 25, 45) // left side
+      ..moveTo(20, 48)
+      ..cubicTo(20, 10, 100, 10, 100, 48) // dome head
+      ..cubicTo(100, 68, 102, 96, 102, 108) // right side body
+      // Smooth bottom waves (ripples)
+      ..cubicTo(90, 116, 84, 102, 75, 106)
+      ..cubicTo(66, 116, 58, 102, 49, 106)
+      ..cubicTo(40, 116, 32, 102, 20, 108)
+      ..cubicTo(18, 102, 20, 68, 20, 48) // left side body
       ..close();
 
     // 6. Draw arms and body with the gradient
@@ -1415,7 +1412,7 @@ class _CuteGhostPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withValues(alpha: 0.65),
+          Colors.white.withValues(alpha: 0.7),
           Colors.white.withValues(alpha: 0.0),
         ],
       ).createShader(bodyRect)
@@ -1430,13 +1427,13 @@ class _CuteGhostPainter extends CustomPainter {
       ..color = Colors.white
       ..style = PaintingStyle.fill;
 
-    // Left eye center at (49, 49), size 10 x 14
-    canvas.drawOval(Rect.fromCenter(center: const Offset(49, 49), width: 10, height: 14), eyePaint);
-    canvas.drawCircle(const Offset(47, 46), 2.2, pupilPaint);
+    // Left eye center at (45, 49), size 9.5 x 13.5
+    canvas.drawOval(Rect.fromCenter(center: const Offset(45, 49), width: 9.5, height: 13.5), eyePaint);
+    canvas.drawCircle(const Offset(43, 46), 2.0, pupilPaint);
 
-    // Right eye center at (77, 49), size 10 x 14
-    canvas.drawOval(Rect.fromCenter(center: const Offset(77, 49), width: 10, height: 14), eyePaint);
-    canvas.drawCircle(const Offset(75, 46), 2.2, pupilPaint);
+    // Right eye center at (75, 49), size 9.5 x 13.5
+    canvas.drawOval(Rect.fromCenter(center: const Offset(75, 49), width: 9.5, height: 13.5), eyePaint);
+    canvas.drawCircle(const Offset(73, 46), 2.0, pupilPaint);
 
     // 9. Draw Mouth (happy open shape, rosy red)
     final mouthPaint = Paint()
@@ -1444,27 +1441,28 @@ class _CuteGhostPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     
     final mouthPath = Path()
-      ..moveTo(58, 56)
-      ..cubicTo(58, 66, 68, 66, 68, 56)
-      ..quadraticBezierTo(63, 58, 58, 56)
+      ..moveTo(55, 54)
+      ..cubicTo(55, 63, 65, 63, 65, 54)
+      ..quadraticBezierTo(60, 56, 55, 54)
       ..close();
     canvas.drawPath(mouthPath, mouthPaint);
 
-    // 10. Draw rosy cheeks
+    // 10. Draw rosy cheeks (soft airbrush blush)
     final cheekPaint = Paint()
-      ..color = const Color(0xFFFDA4AF).withValues(alpha: 0.5)
+      ..color = const Color(0xFFFDA4AF).withValues(alpha: 0.45)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(const Offset(40, 56), 4.5, cheekPaint);
-    canvas.drawCircle(const Offset(86, 56), 4.5, cheekPaint);
+    cheekPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+    canvas.drawCircle(const Offset(34, 57), 5.5, cheekPaint);
+    canvas.drawCircle(const Offset(86, 57), 5.5, cheekPaint);
 
     // 11. Draw 4-point stars (sparkles)
     final sparklePaint = Paint()
-      ..color = const Color(0xFF818CF8).withValues(alpha: 0.4)
+      ..color = const Color(0xFF818CF8).withValues(alpha: 0.35)
       ..style = PaintingStyle.fill;
     
-    _drawSparkle(canvas, 15, 25, 6, sparklePaint);
-    _drawSparkle(canvas, 115, 30, 8, sparklePaint);
-    _drawSparkle(canvas, 95, 115, 5, sparklePaint);
+    _drawSparkle(canvas, 10, 22, 6, sparklePaint);
+    _drawSparkle(canvas, 110, 26, 8, sparklePaint);
+    _drawSparkle(canvas, 95, 108, 5, sparklePaint);
   }
 
   void _drawSparkle(Canvas canvas, double cx, double cy, double r, Paint paint) {
