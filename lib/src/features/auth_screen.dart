@@ -290,7 +290,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
                     ),
                   ),
-                ] else if (_mode == AuthMode.login) ...[
+                ] else ...[
                   const Positioned.fill(
                     child: IgnorePointer(
                       child: ColoredBox(color: Colors.white),
@@ -304,16 +304,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         fit: BoxFit.fitWidth,
                         alignment: Alignment.topCenter,
                         excludeFromSemantics: true,
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: CustomPaint(
-                        painter: _SignupBackgroundPainter(
-                          surfaceColor: tokens.surface,
-                        ),
                       ),
                     ),
                   ),
@@ -556,58 +546,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         const Spacer(),
       ],
     );
-  }
-}
-
-class _SignupBackgroundPainter extends CustomPainter {
-  const _SignupBackgroundPainter({required this.surfaceColor});
-
-  final Color surfaceColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final bounds = Offset.zero & size;
-    canvas.drawRect(
-      bounds,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFEBE0FF), Color(0xFFFAF7FF), Color(0xFFD9E4FF)],
-        ).createShader(bounds),
-    );
-
-    canvas.drawCircle(
-      Offset(size.width * 0.82, size.height * 0.12),
-      size.width * 0.42,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            const Color(0xFFFDE8F3).withValues(alpha: 0.85),
-            Colors.transparent,
-          ],
-        ).createShader(bounds),
-    );
-
-    final formSurface = Path()
-      ..moveTo(0, size.height)
-      ..lineTo(0, size.height * 0.24)
-      ..cubicTo(
-        size.width * 0.35,
-        size.height * 0.16,
-        size.width * 0.7,
-        size.height * 0.32,
-        size.width,
-        size.height * 0.26,
-      )
-      ..lineTo(size.width, size.height)
-      ..close();
-    canvas.drawPath(formSurface, Paint()..color = surfaceColor);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SignupBackgroundPainter oldDelegate) {
-    return oldDelegate.surfaceColor != surfaceColor;
   }
 }
 

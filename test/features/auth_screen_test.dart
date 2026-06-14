@@ -109,14 +109,21 @@ void main() {
     );
   });
 
-  testWidgets('signup shows neither branded image background', (tester) async {
+  testWidgets('signup reuses the login page image background', (tester) async {
     await pumpConnectMe(tester);
 
     await tester.tap(find.byKey(const Key('auth-mode-signup')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('welcome-screen-background')), findsNothing);
-    expect(find.byKey(const Key('login-page-background')), findsNothing);
+    final background = tester.widget<Image>(
+      find.byKey(const Key('login-page-background')),
+    );
+    expect(background.image, isA<AssetImage>());
+    expect(
+      (background.image as AssetImage).assetName,
+      'assets/images/login_page.jpg',
+    );
   });
 
   testWidgets('signup keeps the light auth theme on a dark device', (
