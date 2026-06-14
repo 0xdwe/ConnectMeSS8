@@ -280,11 +280,14 @@ class _ContactListCardState extends State<ContactListCard> {
                     Text(
                       widget.connection.name,
                       style: AppTypography.h2(),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       widget.connection.email,
                       style: AppTypography.caption(color: tokens.inkMuted),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Container(
                       margin: const EdgeInsets.only(top: 3),
@@ -304,11 +307,15 @@ class _ContactListCardState extends State<ContactListCard> {
                             backgroundColor: categoryAccent,
                           ),
                           const SizedBox(width: 5),
-                          Text(
-                            widget.connection.category,
-                            style: AppTypography.caption(
-                              color: dark ? categoryAccent : tokens.ink,
-                            ).copyWith(fontWeight: FontWeight.w700),
+                         ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 120),
+                            child: FadeOverflowText(
+                              text: widget.connection.category,
+                              style: AppTypography.caption(
+                                color: dark ? categoryAccent : tokens.ink,
+                              ).copyWith(fontWeight: FontWeight.w700),
+                              maxWidth: 120,
+                            ),
                           ),
                         ],
                       ),
@@ -566,12 +573,27 @@ class HeatmapCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    const categories = [
+
+    const knownCategories = [
       _HeatmapCategory(label: 'Family', icon: Icons.home_outlined),
       _HeatmapCategory(label: 'Friends', icon: Icons.groups_2_outlined),
       _HeatmapCategory(label: 'High School', icon: Icons.school_outlined),
       _HeatmapCategory(label: 'College', icon: Icons.work_outline),
       _HeatmapCategory(label: 'Work', icon: Icons.business_center_outlined),
+    ];
+
+    // Collect all categories actually present in connections.
+    final presentCategories = connections.map((c) => c.category).toSet();
+
+    // Keep known categories that are present (preserving their order and
+    // icons), then append any new/custom categories with a generic icon
+    // so the heatmap stays up to date when new categories are added.
+    final categories = <_HeatmapCategory>[
+      for (final cat in knownCategories)
+        if (presentCategories.contains(cat.label)) cat,
+      for (final cat in presentCategories)
+        if (!knownCategories.any((k) => k.label == cat))
+          _HeatmapCategory(label: cat, icon: Icons.label_outline),
     ];
 
     // Compute total interaction count per category over all time.
@@ -623,23 +645,32 @@ class HeatmapCard extends StatelessWidget {
             ],
           ),
           SizedBox(height: AppSpacing.space4),
-          for (var i = 0; i < categories.length; i++) ...[
-            _HeatmapRow(
-              category: categories[i],
-              count: connections
-                  .where((c) => c.category == categories[i].label)
-                  .length,
-              color: categoryColor(categories[i].label, tokens),
-              connections: connections,
-              interactions: interactions,
-              categoryLabel: categories[i].label,
-              strength: _categoryStrengthLabel(
-                interactionCountByCategory[categories[i].label] ?? 0,
+          if (categories.isEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.space3),
+              child: Text(
+                'Add a connection to see activity here.',
+                style: AppTypography.body(color: tokens.inkMuted),
               ),
-            ),
-            if (i != categories.length - 1)
-              Divider(height: AppSpacing.space5, color: tokens.border),
-          ],
+            )
+          else
+            for (var i = 0; i < categories.length; i++) ...[
+              _HeatmapRow(
+                category: categories[i],
+                count: connections
+                    .where((c) => c.category == categories[i].label)
+                    .length,
+                color: categoryColor(categories[i].label, tokens),
+                connections: connections,
+                interactions: interactions,
+                categoryLabel: categories[i].label,
+                strength: _categoryStrengthLabel(
+                  interactionCountByCategory[categories[i].label] ?? 0,
+                ),
+              ),
+              if (i != categories.length - 1)
+                Divider(height: AppSpacing.space5, color: tokens.border),
+            ],
         ],
       ),
     );
@@ -693,21 +724,37 @@ class _HeatmapRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: AppSpacing.space2,
-                runSpacing: AppSpacing.space1,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
-                    category.label,
-                    style: AppTypography.bodyLg(
-                      color: tokens.ink,
-                    ).copyWith(fontWeight: FontWeight.w700),
+                  Expanded(
+                    child: ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [
+                          Colors.white,
+                          Colors.white,
+                          Colors.transparent,
+                        ],
+                        stops: [0.0, 0.85, 1.0],
+                      ).createShader(bounds),
+                      blendMode: BlendMode.dstIn,
+                      child: Text(
+                        category.label,
+                        style: AppTypography.bodyLg(
+                          color: tokens.ink,
+                        ).copyWith(fontWeight: FontWeight.w700),
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.clip,
+                      ),
+                    ),
                   ),
+                  SizedBox(width: AppSpacing.space2),
                   Text(
                     '($count contact)',
                     style: AppTypography.caption(color: tokens.inkMuted),
                   ),
+                  SizedBox(width: AppSpacing.space2),
                   Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: AppSpacing.space2,
@@ -2084,4 +2131,51 @@ String relativeLastInteraction(DateTime lastContact, {DateTime? now}) {
   final years = days ~/ 365;
   final remMonths = (days % 365) ~/ 30;
   return remMonths == 0 ? '${years}y' : '${years}y ${remMonths}m';
+}
+
+/// Renders [text] in a single line. If it fits within [maxWidth], it's
+/// shown as-is. If it overflows, it's clipped with a fade-out gradient
+/// on the trailing edge instead of an ellipsis.
+class FadeOverflowText extends StatelessWidget {
+  const FadeOverflowText({
+    required this.text,
+    required this.style,
+    required this.maxWidth,
+  });
+
+  final String text;
+  final TextStyle style;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: 1,
+      textDirection: Directionality.of(context),
+    )..layout(maxWidth: double.infinity);
+
+    final overflows = painter.width > maxWidth;
+
+    final textWidget = Text(
+      text,
+      style: style,
+      maxLines: 1,
+      softWrap: false,
+      overflow: TextOverflow.clip,
+    );
+
+    if (!overflows) {
+      return textWidget;
+    }
+
+    return ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        colors: [Colors.white, Colors.white, Colors.transparent],
+        stops: [0.0, 0.8, 1.0],
+      ).createShader(bounds),
+      blendMode: BlendMode.dstIn,
+      child: textWidget,
+    );
+  }
 }

@@ -145,11 +145,19 @@ class ContactProfileScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Expanded(
-                                child: Text(
-                                  person.name,
-                                  style: AppTypography.display(),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                child: ShaderMask(
+                                  shaderCallback: (bounds) => const LinearGradient(
+                                    colors: [Colors.white, Colors.white, Colors.transparent],
+                                    stops: [0.0, 0.88, 1.0],
+                                  ).createShader(bounds),
+                                  blendMode: BlendMode.dstIn,
+                                  child: Text(
+                                    person.name,
+                                    style: AppTypography.display(),
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    overflow: TextOverflow.clip,
+                                  ),
                                 ),
                               ),
                               SizedBox(width: AppSpacing.space3),
