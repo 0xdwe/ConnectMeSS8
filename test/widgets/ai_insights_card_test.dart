@@ -22,7 +22,12 @@ Widget _wrap(
   List<dynamic> overrides = const [],
 }) {
   return ProviderScope(
-    overrides: [...overrides],
+    overrides: [
+      // _InlineTopicDetails watches this provider; give tests a default
+      // empty interaction list so they don't need Firebase AppController.
+      interactionsByContactProvider('test').overrideWithValue(const []),
+      ...overrides,
+    ],
     child: MaterialApp(
       theme: AppTheme.data(false),
       home: MediaQuery(
@@ -68,12 +73,17 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _wrap(AiInsightsCard(connection: _connection(), insight: _insight())),
+        _wrap(
+          AiInsightsCard(connection: _connection(), insight: _insight()),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
+        ),
       );
       await tester.pump();
 
       expect(find.text('AI Insights'), findsOneWidget);
-      expect(find.text('Recommendation'), findsOneWidget);
+      // No recommendation for this contact → no banner (#118).
       expect(find.text('Person Summary'), findsOneWidget);
       expect(find.text('Conversation Topics'), findsOneWidget);
       expect(
@@ -82,58 +92,91 @@ void main() {
       );
     });
 
-    testWidgets('recommendation copy maps from BondTier (close)', (
+    testWidgets('active recommendation banner renders reason + insight + action', (
       tester,
     ) async {
       await tester.pumpWidget(
         _wrap(
           AiInsightsCard(
-            connection: _connection(bondScore: 90),
-            insight: _insight(),
+            connection: _connection(id: 'test'),
+            insight: _insight(contactId: 'test'),
           ),
+          overrides: [
+            recommendationsProvider.overrideWith(
+              (ref) async => [
+                Recommendation(
+                  contactId: 'test',
+                  reason: 'Wondering how Test Person has been?',
+                  insight: 'Last chat was a few weeks ago.',
+                  priority: 'medium priority',
+                  action: 'Send a quick hello.',
+                ),
+              ],
+            ),
+          ],
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(find.text('Recommendation'), findsOneWidget);
       expect(
-        find.text('Strong bond! Keep up the regular communication.'),
+        find.text('Wondering how Test Person has been?'),
         findsOneWidget,
       );
+      expect(
+        find.text('Last chat was a few weeks ago.'),
+        findsOneWidget,
+      );
+      expect(find.text('Send a quick hello.'), findsOneWidget);
     });
 
-    testWidgets('recommendation copy maps from BondTier (steady)', (
+    testWidgets('completed recommendation banner renders checkmark + reached out text', (
       tester,
     ) async {
       await tester.pumpWidget(
         _wrap(
           AiInsightsCard(
-            connection: _connection(bondScore: 60),
-            insight: _insight(),
+            connection: _connection(id: 'test'),
+            insight: _insight(contactId: 'test'),
           ),
+          overrides: [
+            recommendationsProvider.overrideWith(
+              (ref) async => [
+                Recommendation(
+                  contactId: 'test',
+                  reason: '✓ Reached out to Test Person',
+                  insight: 'Just updated with AI',
+                  priority: 'completed',
+                  isCompleted: true,
+                ),
+              ],
+            ),
+          ],
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(find.text('Completed'), findsOneWidget);
       expect(
-        find.text('Steady ground — a quick check-in keeps it warm.'),
+        find.text('✓ Reached out to Test Person'),
         findsOneWidget,
       );
+      expect(find.text('Just updated with AI'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
     });
 
-    testWidgets('recommendation copy maps from BondTier (drifting)', (
+    testWidgets('no banner when recommendation list is empty', (
       tester,
     ) async {
       await tester.pumpWidget(
         _wrap(
-          AiInsightsCard(
-            connection: _connection(bondScore: 30),
-            insight: _insight(),
-          ),
+          AiInsightsCard(connection: _connection(), insight: _insight()),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
         ),
       );
       await tester.pump();
-      expect(
-        find.text('It\'s been a while. A short hello goes a long way.'),
-        findsOneWidget,
-      );
+      expect(find.text('Recommendation'), findsNothing);
+      expect(find.text('Completed'), findsNothing);
     });
 
     testWidgets('renders Person Summary body from MemoryDocument.summary', (
@@ -149,6 +192,9 @@ void main() {
             insight: _insight(),
             memorySummary: 'Bespoke summary string for this test.',
           ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
         ),
       );
       await tester.pump();
@@ -167,6 +213,9 @@ void main() {
             connection: _connection(category: 'Family'),
             insight: _insight(),
           ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
         ),
       );
       await tester.pump();
@@ -203,6 +252,9 @@ void main() {
               ],
             ),
           ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
         ),
       );
       await tester.pump();
@@ -240,6 +292,9 @@ void main() {
               ],
             ),
           ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
         ),
       );
       await tester.pump();
@@ -287,6 +342,9 @@ void main() {
               ],
             ),
           ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
         ),
       );
       await tester.pump();
@@ -336,6 +394,9 @@ void main() {
               ],
             ),
           ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
         ),
       );
       await tester.pump();
@@ -377,6 +438,9 @@ void main() {
               ],
             ),
           ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
         ),
       );
       await tester.pump();
@@ -423,6 +487,9 @@ void main() {
                 ],
               ),
             ),
+            overrides: [
+              recommendationsProvider.overrideWith((ref) async => const []),
+            ],
           ),
         );
         await tester.pump();
@@ -459,6 +526,9 @@ void main() {
                 topics: const ['Paris trip'],
               ),
             ),
+            overrides: [
+              recommendationsProvider.overrideWith((ref) async => const []),
+            ],
           ),
         );
         await tester.pump();
@@ -497,6 +567,9 @@ void main() {
                 ],
               ),
             ),
+            overrides: [
+              recommendationsProvider.overrideWith((ref) async => const []),
+            ],
           ),
         );
         await tester.pump();
@@ -521,6 +594,9 @@ void main() {
             connection: _connection(category: 'Family'),
             insight: _insight(),
           ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
         ),
       );
       await tester.pump();
@@ -534,23 +610,30 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        _wrap(AiInsightsCard(connection: _connection(), insight: _insight())),
+        _wrap(
+          AiInsightsCard(connection: _connection(), insight: _insight()),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
+        ),
       );
       await tester.pump();
       // Expanded by default — chevron is "less" (up arrow).
       expect(find.byIcon(Icons.expand_less), findsOneWidget);
-      expect(find.text('Recommendation'), findsOneWidget);
+      // No recommendation for this contact → no banner, but Person Summary
+      // is always visible when expanded (#118).
+      expect(find.text('Person Summary'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('ai-insights-header')));
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.expand_more), findsOneWidget);
       // Body is gone after collapse.
-      expect(find.text('Recommendation'), findsNothing);
+      expect(find.text('Person Summary'), findsNothing);
 
       await tester.tap(find.byKey(const Key('ai-insights-header')));
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.expand_less), findsOneWidget);
-      expect(find.text('Recommendation'), findsOneWidget);
+      expect(find.text('Person Summary'), findsOneWidget);
     });
 
     testWidgets('long topic labels truncate without overflowing', (
@@ -569,6 +652,9 @@ void main() {
             connection: _connection(category: 'High School'),
             insight: _insight(),
           ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
         ),
       );
       await tester.pump();
@@ -582,21 +668,29 @@ void main() {
         _wrap(
           AiInsightsCard(connection: _connection(), insight: _insight()),
           disableAnimations: true,
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
         ),
       );
       await tester.pump();
-      expect(find.text('Recommendation'), findsOneWidget);
+      expect(find.text('Person Summary'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('ai-insights-header')));
       // Under disableAnimations the AnimatedSize duration is zero;
       // pumpAndSettle should resolve immediately without spinning.
       await tester.pumpAndSettle(const Duration(milliseconds: 50));
-      expect(find.text('Recommendation'), findsNothing);
+      expect(find.text('Person Summary'), findsNothing);
     });
 
     testWidgets('refresh button is present in card header', (tester) async {
       await tester.pumpWidget(
-        _wrap(AiInsightsCard(connection: _connection(), insight: _insight())),
+        _wrap(
+          AiInsightsCard(connection: _connection(), insight: _insight()),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
+        ),
       );
       await tester.pump();
       expect(
@@ -618,6 +712,7 @@ void main() {
           _wrap(
             AiInsightsCard(connection: _connection(), insight: _insight()),
             overrides: [
+              recommendationsProvider.overrideWith((ref) async => const []),
               memoryTopicEnricherProvider.overrideWithValue(mockEnricher),
               memoryStoreProvider.overrideWithValue(mockStore),
             ],
@@ -625,15 +720,15 @@ void main() {
         );
         await tester.pump();
 
-        // Expanded by default
-        expect(find.text('Recommendation'), findsOneWidget);
+        // Expanded by default — Person Summary always visible when expanded (#118).
+        expect(find.text('Person Summary'), findsOneWidget);
 
         // Tap refresh
         await tester.tap(find.byKey(const Key('ai-insights-refresh-button')));
         await tester.pumpAndSettle();
 
         // Still expanded!
-        expect(find.text('Recommendation'), findsOneWidget);
+        expect(find.text('Person Summary'), findsOneWidget);
       },
     );
 
@@ -649,11 +744,11 @@ void main() {
           _wrap(
             AiInsightsCard(connection: _connection(), insight: _insight()),
             overrides: [
+              recommendationsProvider.overrideWith((ref) async => const []),
               memoryTopicEnricherProvider.overrideWithValue(mockEnricher),
               memoryStoreProvider.overrideWithValue(mockStore),
-              clockProvider.overrideWithValue(() => clockTime),
-              interactionsByContactProvider('test').overrideWithValue(const []),
-            ],
+            clockProvider.overrideWithValue(() => clockTime),
+          ],
           ),
         );
         await tester.pump();
@@ -722,9 +817,9 @@ void main() {
           _wrap(
             AiInsightsCard(connection: _connection(), insight: _insight()),
             overrides: [
+              recommendationsProvider.overrideWith((ref) async => const []),
               memoryTopicEnricherProvider.overrideWithValue(mockEnricher),
               memoryStoreProvider.overrideWithValue(mockStore),
-              interactionsByContactProvider('test').overrideWithValue(const []),
             ],
           ),
         );
@@ -780,7 +875,7 @@ void main() {
               ),
             ),
             overrides: [
-              interactionsByContactProvider('test').overrideWithValue(const []),
+              recommendationsProvider.overrideWith((ref) async => const []),
             ],
           ),
         );
