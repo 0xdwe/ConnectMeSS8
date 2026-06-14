@@ -1351,25 +1351,25 @@ class _CuteGhostPainter extends CustomPainter {
 
     // 1. Draw a soft shadow under the bubble blob character
     final shadowPaint = Paint()
-      ..color = const Color(0xFF6366F1).withValues(alpha: 0.12)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-    canvas.drawOval(Rect.fromLTRB(15, h - 22, w - 15, h - 8), shadowPaint);
+      ..color = const Color(0xFF4F46E5).withValues(alpha: 0.15)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawOval(Rect.fromLTRB(25, h - 18, w - 25, h - 6), shadowPaint);
 
-    // 2. Define the main body gradient
-    // A pearlescent gradient: light lavender, soft blue, pale pink
-    final bodyRect = Rect.fromLTWH(15, 15, w - 30, h - 30);
+    // 2. Define the main body gradient - a 3D radial pearlescent look
+    final mainRect = Rect.fromLTWH(10, 15, 100, 90);
     final bodyPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+      ..shader = RadialGradient(
+        center: const Alignment(-0.25, -0.35),
+        radius: 1.0,
         colors: [
-          Color(0xFFFFFFFF),
-          Color(0xFFE5E9F8),
-          Color(0xFFF1F4F9),
-          Color(0xFFFDE8F4),
+          const Color(0xFFFFFFFF), // Hotspot (white)
+          const Color(0xFFE8F0FE), // Pearlescent light blue/white
+          const Color(0xFFD6C6FF), // Lavender/blue shading
+          const Color(0xFFFBCFE8), // Pink/rose rim light
+          const Color(0xFFECE6FF), // Soft background edge
         ],
-        stops: [0.0, 0.4, 0.7, 1.0],
-      ).createShader(bodyRect)
+        stops: const [0.0, 0.35, 0.65, 0.88, 1.0],
+      ).createShader(mainRect)
       ..style = PaintingStyle.fill;
 
     // 3. Round Bubble Body Path (center 60, 56, radius 38)
@@ -1377,28 +1377,28 @@ class _CuteGhostPainter extends CustomPainter {
 
     // 4. Waving Left Arm (stubby pointing up-left)
     final leftArmPath = Path()
-      ..moveTo(30, 46)
-      ..cubicTo(12, 42, 6, 26, 12, 18)
-      ..cubicTo(16, 12, 28, 22, 32, 38)
+      ..moveTo(28, 48)
+      ..cubicTo(12, 44, 8, 28, 14, 22)
+      ..cubicTo(18, 18, 28, 26, 32, 38)
       ..close();
 
     // 5. Right Arm (stubby resting arm)
     final rightArmPath = Path()
-      ..moveTo(88, 58)
-      ..cubicTo(102, 58, 108, 66, 106, 72)
-      ..cubicTo(104, 76, 96, 74, 88, 70)
+      ..moveTo(88, 52)
+      ..cubicTo(102, 54, 106, 62, 102, 68)
+      ..cubicTo(98, 72, 92, 70, 86, 68)
       ..close();
 
     // 6. Left Foot (stubby bottom-left)
     final leftFootPath = Path()
-      ..moveTo(40, 88)
-      ..cubicTo(38, 98, 48, 100, 52, 92)
+      ..moveTo(42, 91)
+      ..cubicTo(38, 97, 45, 99, 52, 93)
       ..close();
 
     // 7. Right Foot (stubby bottom-right)
     final rightFootPath = Path()
-      ..moveTo(68, 92)
-      ..cubicTo(72, 100, 82, 98, 80, 88)
+      ..moveTo(68, 93)
+      ..cubicTo(75, 99, 82, 97, 78, 91)
       ..close();
 
     // Combine all into a single path for unified gradient fill
@@ -1409,74 +1409,70 @@ class _CuteGhostPainter extends CustomPainter {
 
     canvas.drawPath(finalPath, bodyPaint);
 
-    // 8. Add a subtle glossy overlay / highlight on the left edge
-    final highlightPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Colors.white.withValues(alpha: 0.7),
-          Colors.white.withValues(alpha: 0.0),
-        ],
-      ).createShader(bodyRect)
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(finalPath, highlightPaint);
-
-    // Add a circular shiny reflection overlay at the top-left of the dome
+    // 8. Add subtle glossy overlays / highlights
+    // Soft highlight glow
     canvas.drawOval(
-      Rect.fromLTWH(32, 22, 24, 14),
+      Rect.fromLTWH(34, 24, 20, 12),
       Paint()
-        ..color = Colors.white.withOpacity(0.35)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0),
+        ..color = Colors.white.withValues(alpha: 0.25)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0),
     );
 
-    // 9. Draw Eyes (large vertical ovals, dark indigo)
+    // Crisp, slightly rotated glossy oval reflection hotspot
+    canvas.save();
+    canvas.translate(44, 30);
+    canvas.rotate(-0.3);
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset.zero, width: 16, height: 7),
+      Paint()..color = Colors.white.withValues(alpha: 0.65),
+    );
+    canvas.restore();
+
+    // 9. Draw Eyes (solid vertical ovals, dark indigo, no white pupils matching mockup sheet)
     final eyePaint = Paint()
       ..color = const Color(0xFF1E1B4B)
       ..style = PaintingStyle.fill;
-    final pupilPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
 
-    // Left eye center at (45, 49), size 9.5 x 13.5
-    canvas.drawOval(Rect.fromCenter(center: const Offset(45, 49), width: 9.5, height: 13.5), eyePaint);
-    canvas.drawCircle(const Offset(43, 46), 2.0, pupilPaint);
+    // Left eye center at (45, 48), size 8.5 x 13
+    canvas.drawOval(Rect.fromCenter(center: const Offset(45, 48), width: 8.5, height: 13), eyePaint);
 
-    // Right eye center at (75, 49), size 9.5 x 13.5
-    canvas.drawOval(Rect.fromCenter(center: const Offset(75, 49), width: 9.5, height: 13.5), eyePaint);
-    canvas.drawCircle(const Offset(73, 46), 2.0, pupilPaint);
+    // Right eye center at (75, 48), size 8.5 x 13
+    canvas.drawOval(Rect.fromCenter(center: const Offset(75, 48), width: 8.5, height: 13), eyePaint);
 
-    // 10. Draw Mouth (happy open smile, rosy red)
-    final mouthPaint = Paint()
-      ..color = const Color(0xFFF43F5E)
-      ..style = PaintingStyle.fill;
-    
+    // 10. Draw Mouth (happy open smile in dark indigo with a clipped tongue)
     final mouthPath = Path()
       ..moveTo(55, 54)
-      ..cubicTo(55, 63, 65, 63, 65, 54)
-      ..quadraticBezierTo(60, 56, 55, 54)
+      ..cubicTo(55, 62, 65, 62, 65, 54)
       ..close();
-    canvas.drawPath(mouthPath, mouthPaint);
+    canvas.drawPath(mouthPath, eyePaint);
 
-    // 11. Draw rosy cheeks (soft airbrush blush)
+    canvas.save();
+    canvas.clipPath(mouthPath);
+    final tonguePaint = Paint()
+      ..color = const Color(0xFFF43F5E)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(const Offset(60, 59.5), 4.5, tonguePaint);
+    canvas.restore();
+
+    // 11. Draw rosy cheeks (soft airbrush blush, slightly closer to eyes)
     final cheekPaint = Paint()
-      ..color = const Color(0xFFFDA4AF).withValues(alpha: 0.45)
+      ..color = const Color(0xFFFDA4AF).withValues(alpha: 0.5)
       ..style = PaintingStyle.fill;
-    cheekPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
-    canvas.drawCircle(const Offset(32, 58), 5.5, cheekPaint);
-    canvas.drawCircle(const Offset(88, 58), 5.5, cheekPaint);
+    cheekPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.5);
+    canvas.drawCircle(const Offset(35, 55), 5.5, cheekPaint);
+    canvas.drawCircle(const Offset(85, 55), 5.5, cheekPaint);
 
-    // 12. Draw 4-point stars (sparkles)
-    final sparklePaint = Paint()
-      ..color = const Color(0xFF818CF8).withValues(alpha: 0.35)
-      ..style = PaintingStyle.fill;
-    
-    _drawSparkle(canvas, 10, 22, 6, sparklePaint);
-    _drawSparkle(canvas, 110, 26, 8, sparklePaint);
-    _drawSparkle(canvas, 95, 108, 5, sparklePaint);
+    // 12. Draw multi-colored sparkles / stars (violet, gold/yellow, and pink)
+    _drawSparkle(canvas, 15, 25, 5, const Color(0xFFC084FC)); // Violet star
+    _drawSparkle(canvas, 105, 28, 7, const Color(0xFFFBBF24)); // Gold/yellow star
+    _drawSparkle(canvas, 102, 94, 4.5, const Color(0xFFF472B6)); // Pink star
   }
 
-  void _drawSparkle(Canvas canvas, double cx, double cy, double r, Paint paint) {
+  void _drawSparkle(Canvas canvas, double cx, double cy, double r, Color color) {
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.6)
+      ..style = PaintingStyle.fill
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.5);
     final path = Path()
       ..moveTo(cx, cy - r)
       ..quadraticBezierTo(cx, cy, cx + r, cy)
