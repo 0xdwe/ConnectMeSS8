@@ -467,6 +467,9 @@ String _initials(String fullName) {
 }
 
 bool _isImageAttachment(AttachmentRef attachment) {
+  if (attachment.storageUrl?.trim().isNotEmpty == true) {
+    return true;
+  }
   final lower = attachment.name.toLowerCase();
   return lower.endsWith('.png') ||
       lower.endsWith('.jpg') ||
@@ -551,7 +554,9 @@ class _AttachmentChip extends StatelessWidget {
     return ActionChip(
       avatar: Icon(isImage ? Icons.image_outlined : Icons.attach_file),
       label: Text(attachment.name),
-      onPressed: isImage && attachment.storageUrl != null ? onTap : null,
+      onPressed: isImage && attachment.storageUrl?.isNotEmpty == true
+          ? onTap
+          : null,
     );
   }
 }

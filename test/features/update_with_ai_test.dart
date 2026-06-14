@@ -57,6 +57,7 @@ Future<void> _pumpAndSignIn(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        ...headlessStoreOverrides(),
         memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
         firebaseAuthProvider.overrideWithValue(
           MockFirebaseAuth(

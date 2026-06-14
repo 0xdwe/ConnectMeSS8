@@ -98,7 +98,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     int index,
   ) async {
     final path = attachment.path;
-    if (path == null || path.isEmpty || !_isImage(attachment.name)) {
+    if (path == null || path.isEmpty) {
       return attachment;
     }
 
@@ -110,10 +110,15 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     final storage = ref.read(firebaseStorageProvider);
     final safeName = attachment.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
     final storagePath = 'users/${person.id}/interactions/${interaction.id}/$index-$safeName';
-    final contentType = attachment.name.toLowerCase().endsWith('.png')
-        ? 'image/png'
-        : attachment.name.toLowerCase().endsWith('.webp')
-            ? 'image/webp'
+    final sourceName = path.split(RegExp(r'[\\/]')).last.toLowerCase();
+    final contentType = sourceName.endsWith('.png')
+      ? 'image/png'
+      : sourceName.endsWith('.webp')
+        ? 'image/webp'
+        : sourceName.endsWith('.gif')
+          ? 'image/gif'
+          : sourceName.endsWith('.heic')
+            ? 'image/heic'
             : 'image/jpeg';
 
     final storageRef = storage.ref().child(storagePath);
@@ -497,7 +502,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                     onPressed: pickImage,
                   ),
                   for (final file in attachments)
-                    if (_isImage(file.name))
+                    if (file.path != null || _isImage(file.name))
                       ClipRRect(
                         key: Key('attachment-preview-${file.name}'),
                         borderRadius: BorderRadius.circular(AppRadius.sm),
