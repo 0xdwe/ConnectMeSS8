@@ -246,10 +246,10 @@ class ContactProfileScreen extends ConsumerWidget {
                                   style: AppTypography.display(),
                                 ),
                                 Icon(
-                                  person.bondTrend == BondTrend.up
+                                  person.bondTrendAt(DateTime.now()) == BondTrend.up
                                       ? Icons.trending_up
                                       : Icons.trending_down,
-                                  color: person.bondTrend == BondTrend.up
+                                  color: person.bondTrendAt(DateTime.now()) == BondTrend.up
                                       ? tokens.success
                                       : tokens.danger,
                                   size: 20,

@@ -163,6 +163,7 @@ class Connection {
     this.line = '',
     this.isSample = false,
     this.lastBondDriftAppliedAt,
+    this.previousBondScore,
   });
 
   final String id;
@@ -184,6 +185,7 @@ class Connection {
   final String line;
   final bool isSample;
   final DateTime? lastBondDriftAppliedAt;
+  final int? previousBondScore;
 
   String get role => category;
   String get company => email;
@@ -191,21 +193,22 @@ class Connection {
   int get closeness => bondScore;
   List<String> get tags => [category];
 
-  /// Bond trend stub: score ≥70 → up, else flat.
-  /// Wave 4 will replace with real history-based logic.
-  BondTrend get bondTrend => bondScore >= 70 ? BondTrend.up : BondTrend.flat;
-
-  /// Returns [BondTrend.down] when this connection's score has drifted
-  /// downward recently (lastBondDriftAppliedAt within 3 days of [now]).
-  /// Otherwise falls back to the existing up/flat heuristic.
-  BondTrend bondTrendAt(DateTime now) {
-    final lastDrift = lastBondDriftAppliedAt;
-    if (lastDrift != null &&
-        now.difference(lastDrift) < const Duration(days: 3)) {
-      return BondTrend.down;
-    }
-    return bondTrend;
+  /// Bond trend based on score comparison to previous score.
+  /// Returns:
+  ///   - [BondTrend.up] if bondScore > previousBondScore or no history (default)
+  ///   - [BondTrend.down] if bondScore < previousBondScore
+  ///   - [BondTrend.flat] if bondScore == previousBondScore
+  BondTrend get bondTrend {
+    final prev = previousBondScore;
+    if (prev == null) return BondTrend.up;
+    if (bondScore > prev) return BondTrend.up;
+    if (bondScore < prev) return BondTrend.down;
+    return BondTrend.flat;
   }
+
+  /// Alias for [bondTrend] for backward compatibility with time-windowed access.
+  /// Now that trends are score-based, the time parameter is unused.
+  BondTrend bondTrendAt(DateTime now) => bondTrend;
 
   Connection copyWith({
     String? name,
@@ -226,6 +229,7 @@ class Connection {
     String? line,
     bool? isSample,
     Object? lastBondDriftAppliedAt = _copyWithAbsent,
+    Object? previousBondScore = _copyWithAbsent,
   }) {
     return Connection(
       id: id,
@@ -249,6 +253,9 @@ class Connection {
       lastBondDriftAppliedAt: identical(lastBondDriftAppliedAt, _copyWithAbsent)
           ? this.lastBondDriftAppliedAt
           : lastBondDriftAppliedAt as DateTime?,
+      previousBondScore: identical(previousBondScore, _copyWithAbsent)
+          ? this.previousBondScore
+          : previousBondScore as int?,
     );
   }
 }

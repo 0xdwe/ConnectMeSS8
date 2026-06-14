@@ -1,5 +1,6 @@
 import 'package:connect_me/src/ai/ai_update_commit_plan.dart';
 import 'package:connect_me/src/models/social_models.dart';
+import 'package:connect_me/src/widgets/bond_ring.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -154,6 +155,37 @@ void main() {
             ),
           ),
         );
+      },
+    );
+
+    test(
+      'sets previousBondScore to capture score movement for trend calculation',
+      () {
+        final now = DateTime(2026, 6, 2, 12);
+        final currentConnection = connection(bondScore: 50);
+        final result = AiUpdateResult(
+          summary: 'Negative delta',
+          contactId: 'contact-1',
+          interactions: [interaction()],
+          nextStep: null,
+          bondScoreDelta: -10, // Score will drop from 50 to 40
+        );
+
+        final plan = buildAiUpdateCommitPlan(
+          result: result,
+          connection: currentConnection,
+          now: now,
+        );
+
+        // The updated connection should have previousBondScore set to the
+        // old score (50) so that bondTrend can detect the downward movement
+        // (40 < 50 → BondTrend.down).
+        expect(plan.updatedConnection.previousBondScore, 50);
+        expect(plan.updatedConnection.bondScore, 40);
+        // Verify the trend is down now that we have a score comparison
+        expect(plan.updatedConnection.bondTrend, BondTrend.down);
+        // lastBondDriftAppliedAt should be set to capture when this update happened
+        expect(plan.updatedConnection.lastBondDriftAppliedAt, now);
       },
     );
   });

@@ -361,6 +361,7 @@ class ConnectionScoreRing extends StatelessWidget {
       height: size,
       child: Stack(
         alignment: Alignment.center,
+        clipBehavior: Clip.none,
         children: [
           CircularProgressIndicator(
             value: 1,
@@ -384,15 +385,12 @@ class ConnectionScoreRing extends StatelessWidget {
 
           if (trend != BondTrend.flat)
             Positioned(
-              right: 3,
-              bottom: 6,
-              child: Text(
-                trend == BondTrend.up ? '↗' : '▼',
-                style: TextStyle(
-                  color: trend == BondTrend.up ? tokens.success : tokens.secondary,
-                  fontSize: size * 0.22,
-                  fontWeight: FontWeight.bold,
-                ),
+              right: -12,
+              bottom: 2,
+              child: Icon(
+                trend == BondTrend.up ? Icons.arrow_upward : Icons.arrow_downward,
+                color: trend == BondTrend.up ? tokens.success : tokens.danger,
+                size: size * 0.5,
               ),
             ),
         ],
