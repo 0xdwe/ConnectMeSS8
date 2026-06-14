@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../state/app_state.dart';
 import '../state/user_profile/user_profile_service.dart';
@@ -49,7 +48,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
               actions: [
                 IconButton(
                   key: const Key('profile-button'),
-                  tooltip: 'Open settings',
+                  tooltip: 'Open profile',
                   icon: AccountAvatar(
                     profile: profile,
                     radius: 18,
@@ -57,7 +56,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
                     backgroundColor: Colors.white,
                     foregroundColor: tokens.primary,
                   ),
-                  onPressed: () => context.push('/settings'),
+                  onPressed: () =>
+                      ref.read(appControllerProvider.notifier).setTab(3),
                 ),
                 SizedBox(width: AppSpacing.space2),
               ],

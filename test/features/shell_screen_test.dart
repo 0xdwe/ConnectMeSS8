@@ -1,4 +1,5 @@
 import 'package:connect_me/src/features/shell_screen.dart';
+import 'package:connect_me/src/state/app_state.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:connect_me/src/state/user_profile/user_profile_service.dart';
@@ -104,7 +105,7 @@ void main() {
       expect(find.byKey(const Key('home-tab')), findsOneWidget);
     });
 
-    testWidgets('avatar button navigates to settings', (tester) async {
+    testWidgets('avatar button selects the You tab', (tester) async {
       final router = GoRouter(
         initialLocation: '/',
         routes: [
@@ -128,18 +129,21 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Find and tap the avatar button (CircleAvatar in AppBar)
-      final avatarButton = find.ancestor(
-        of: find.byType(CircleAvatar),
-        matching: find.byType(IconButton),
-      );
-      expect(avatarButton, findsOneWidget);
+      expect(find.byKey(const Key('home-tab')), findsOneWidget);
+      expect(find.byTooltip('Open profile'), findsOneWidget);
 
-      await tester.tap(avatarButton);
+      await tester.tap(find.byKey(const Key('profile-button')));
       await tester.pumpAndSettle();
 
-      // Should navigate to settings
-      expect(find.text('Settings Screen'), findsOneWidget);
+      expect(find.byKey(const Key('you-tab')), findsOneWidget);
+      final shellContext = tester.element(find.byType(ShellScreen));
+      expect(
+        ProviderScope.containerOf(
+          shellContext,
+        ).read(appControllerProvider).selectedTab,
+        3,
+      );
+      expect(find.text('Settings Screen'), findsNothing);
     });
 
     testWidgets('header avatar uses the uploaded account photo', (
