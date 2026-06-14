@@ -215,5 +215,42 @@ void main() {
       );
       expect(find.text('Paris trip'), findsNothing);
     });
+
+    testWidgets('completed card shows Done badge', (tester) async {
+      await tester.pumpWidget(
+        buildTestCard(
+          recommendation: const Recommendation(
+            contactId: 'test-1',
+            reason: '✓ Reached out to Mike',
+            insight: 'Just updated with AI',
+            priority: 'completed',
+            isCompleted: true,
+          ),
+        ),
+      );
+
+      expect(find.text('Done'), findsOneWidget);
+      expect(find.text('✓ Reached out to Mike'), findsOneWidget);
+      expect(find.text('Just updated with AI'), findsOneWidget);
+    });
+
+    testWidgets('completed card is still tappable', (tester) async {
+      var tapped = false;
+      await tester.pumpWidget(
+        buildTestCard(
+          recommendation: const Recommendation(
+            contactId: 'test-1',
+            reason: '✓ Reached out to Mike',
+            insight: 'Just updated with AI',
+            priority: 'completed',
+            isCompleted: true,
+          ),
+          onTap: () => tapped = true,
+        ),
+      );
+
+      await tester.tap(find.byType(RecommendationCard));
+      expect(tapped, isTrue);
+    });
   });
 }

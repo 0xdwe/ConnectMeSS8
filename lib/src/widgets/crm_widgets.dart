@@ -160,18 +160,20 @@ class CardBox extends StatelessWidget {
     this.padding = const EdgeInsets.all(AppSpacing.space5),
     this.border,
     this.onTap,
+    this.color,
   });
   final Widget child;
   final EdgeInsets padding;
   final Border? border;
   final VoidCallback? onTap;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final decoration = BoxDecoration(
-      color: tokens.surfaceRaised,
+      color: color ?? tokens.surfaceRaised,
       borderRadius: BorderRadius.circular(AppRadius.lg),
       border: border ?? Border.all(color: tokens.border),
       boxShadow: AppTokens.elevation1(dark),
@@ -402,11 +404,13 @@ class RecommendationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final priority = _recommendationPriority(connection.bondScore);
-    final priorityColor = _recommendationPriorityColor(
-      connection.bondScore,
-      tokens,
-    );
+    final isCompleted = recommendation.isCompleted;
+    final priority = isCompleted
+        ? 'Done'
+        : _recommendationPriority(connection.bondScore);
+    final priorityColor = isCompleted
+        ? tokens.success
+        : _recommendationPriorityColor(connection.bondScore, tokens);
 
     return CardBox(
       onTap: onTap,
@@ -414,17 +418,21 @@ class RecommendationCard extends StatelessWidget {
         horizontal: AppSpacing.space4,
         vertical: AppSpacing.space4,
       ),
+      color: isCompleted ? tokens.surfaceSunken : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: tokens.primaryTint,
+            backgroundColor: isCompleted
+                ? tokens.success.withValues(alpha: .12)
+                : tokens.primaryTint,
             backgroundImage: connectionAvatarImage(connection.avatar),
             child: connectionAvatarImage(connection.avatar) == null
                 ? Text(
-                    connection.avatar,
-                    style: AppTypography.glyph(20, color: tokens.primary),
+                    isCompleted ? '✓' : connection.avatar,
+                    style: AppTypography.glyph(20,
+                        color: isCompleted ? tokens.success : tokens.primary),
                   )
                 : null,
           ),
@@ -463,9 +471,13 @@ class RecommendationCard extends StatelessWidget {
                 SizedBox(height: AppSpacing.space2),
                 Text(
                   recommendation.insight,
-                  style: AppTypography.body(color: tokens.inkMuted),
+                  style: AppTypography.body(
+                      color: isCompleted
+                          ? tokens.inkMuted
+                          : tokens.inkMuted),
                 ),
-                if (recommendation.action case final action?) ...[
+                if (recommendation.action case final action?)
+                  if (!isCompleted) ...[
                   SizedBox(height: AppSpacing.space2),
                   Text(
                     action,
@@ -497,7 +509,10 @@ class RecommendationCard extends StatelessWidget {
                 ),
               ),
               SizedBox(height: AppSpacing.space3),
-              BondRing(connection: connection, size: 56, showAvatar: false),
+              BondRing(
+                  connection: connection,
+                  size: 56,
+                  showAvatar: false),
             ],
           ),
         ],
