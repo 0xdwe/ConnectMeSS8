@@ -1058,7 +1058,7 @@ class ScoreGauge extends StatelessWidget {
               ),
             ),
             Positioned(
-              bottom: h * 0.02, // Shift down to resolve overlap
+              bottom: h * 0.06, // Positioned inside dome to prevent clipping
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
