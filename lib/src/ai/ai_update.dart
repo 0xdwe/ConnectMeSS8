@@ -104,6 +104,7 @@ abstract interface class AiUpdate {
     required MemoryDocument currentMemory,
     required List<AttachmentRef> attachments,
     Future<void>? cancelToken,
+    Future<void> Function()? onClassifierPassed,
   });
 
   /// Persists a previously-produced [AiUpdateResult]: writes the new
@@ -190,6 +191,7 @@ class MockAiUpdate implements AiUpdate {
     required MemoryDocument currentMemory,
     required List<AttachmentRef> attachments,
     Future<void>? cancelToken,
+    Future<void> Function()? onClassifierPassed,
   }) async {
     if (failOnRelevanceCheck) {
       throw const AiUpdateRejected(
@@ -222,6 +224,13 @@ class MockAiUpdate implements AiUpdate {
           timer.cancel();
           completer.completeError(const AiUpdateCancelled());
         }
+      });
+      // Fire onClassifierPassed after a short delay to simulate
+      // the classifier passing, so widget tests can verify the
+      // loading label transition (Pass 4.4 / #113).
+      final callbackDelay = const Duration(milliseconds: 50);
+      Timer(callbackDelay, () {
+        onClassifierPassed?.call();
       });
       try {
         await completer.future;

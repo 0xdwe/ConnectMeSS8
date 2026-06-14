@@ -210,6 +210,7 @@ class LlmAiUpdate implements AiUpdate {
     required MemoryDocument currentMemory,
     required List<AttachmentRef> attachments,
     Future<void>? cancelToken,
+    Future<void> Function()? onClassifierPassed,
   }) async {
     if (cancelMidRun) {
       throw const AiUpdateCancelled();
@@ -308,7 +309,7 @@ class LlmAiUpdate implements AiUpdate {
         if (!parsed.isRelevant) {
           throw AiUpdateRejected(reason: parsed.reason);
         }
-        onClassifierPassed?.call();
+        (onClassifierPassed ?? this.onClassifierPassed)?.call();
       } on AiUpdateRejected {
         rethrow;
       } on AiUpdateCancelled {

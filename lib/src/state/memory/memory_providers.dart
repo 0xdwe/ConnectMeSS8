@@ -185,6 +185,7 @@ class _SignedOutAiUpdate implements AiUpdate {
     required MemoryDocument currentMemory,
     required List<AttachmentRef> attachments,
     Future<void>? cancelToken,
+    Future<void> Function()? onClassifierPassed,
   }) => Future.error(StateError(_msg));
 
   @override

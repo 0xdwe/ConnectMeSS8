@@ -52,6 +52,11 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
   // [AiUpdateCancelled] when cancellation wins. Reset to null
   // before the next run so a stale completer can't fire mid-future.
   Completer<void>? _cancelCompleter;
+  /// Loading label for the AI Update modal. Starts at "Checking your
+  /// input…" (classifier in-flight), then transitions to "Reading
+  /// what you've shared with \$firstName…" when the adapter fires
+  /// onClassifierPassed. (Pass 4.4 / #113)
+  String _loadingLabel = "Checking your input…";
   List<TextEditingController> titleControllers = [];
   List<TextEditingController> noteControllers = [];
   List<DateTime> interactionDates = [];
@@ -149,12 +154,18 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
   Future<void> submit() async {
     final cancelCompleter = Completer<void>();
     _cancelCompleter = cancelCompleter;
-    setState(() => currentState = AiUpdateState.generating);
+    final connection = ref
+        .read(appControllerProvider)
+        .connections
+        .firstWhere((c) => c.id == widget.contactId);
+    final rawFirst = connection.name.split(' ').first;
+    final firstName =
+        rawFirst.trim().isEmpty ? connection.name : rawFirst;
+    setState(() {
+      currentState = AiUpdateState.generating;
+      _loadingLabel = "Checking your input…";
+    });
     try {
-      final connection = ref
-          .read(appControllerProvider)
-          .connections
-          .firstWhere((c) => c.id == widget.contactId);
       final memory = await ref.read(memoryProvider(widget.contactId).future);
       final result = await ref
           .read(aiUpdateProvider)
@@ -164,6 +175,14 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
             currentMemory: memory,
             attachments: attachments,
             cancelToken: cancelCompleter.future,
+            onClassifierPassed: () async {
+              if (mounted) {
+                setState(() {
+                  _loadingLabel =
+                      "Reading what you've shared with $firstName…";
+                });
+              }
+            },
           );
 
       // Initialize controllers for editable fields
@@ -218,6 +237,23 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
         for (final controller in cardAnimationControllers) {
           controller.value = 1.0;
         }
+      }
+    } on AiUpdateRejected catch (e) {
+      if (mounted) {
+        setState(() => currentState = AiUpdateState.inputting);
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Not quite a relationship update'),
+            content: Text(e.reason),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Got it'),
+              ),
+            ],
+          ),
+        );
       }
     } on AiUpdateCancelled {
       // PRD §Q8 group 3 / #080: cancellation is not an error.
@@ -567,8 +603,6 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     // what you've shared with …" with no name. Falling back to
     // the full name is harmless and correct for any production
     // case we've actually observed.
-    final rawFirst = person.name.split(' ').first;
-    final firstName = rawFirst.trim().isEmpty ? person.name : rawFirst;
     return Center(
       child: Padding(
         padding: EdgeInsets.all(AppSpacing.space8),
@@ -578,7 +612,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
             CircularProgressIndicator(key: const Key('ai-loading-spinner')),
             SizedBox(height: AppSpacing.space5),
             Text(
-              "Reading what you've shared with $firstName…",
+              _loadingLabel,
               style: AppTypography.bodyLg(color: tokens.inkMuted),
               textAlign: TextAlign.center,
             ),
