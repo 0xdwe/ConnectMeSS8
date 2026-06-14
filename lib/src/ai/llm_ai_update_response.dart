@@ -70,7 +70,7 @@ class LlmTopicSuggestionGroup {
     this.lastMentionedAt,
     this.mentionCount,
     this.expiresAt,
-    this.suggestions = const [],
+    this.suggestions = const <LlmTopicSuggestion>[],
   });
 
   final String topic;
@@ -106,10 +106,9 @@ class LlmTopicSuggestionGroup {
       expiresAt: _readOptionalString(json, 'expiresAt'),
       suggestions: (suggestionsRaw ?? const <dynamic>[])
           .whereType<Map<String, dynamic>>()
-          .map(LlmTopicSuggestion.fromJson)
+          .map<LlmTopicSuggestion>((e) => LlmTopicSuggestion.fromJson(e))
           .take(2)
-          .toList(growable: false)
-          .cast<LlmTopicSuggestion>(),
+          .toList(growable: false),
     );
   }
 }
@@ -193,10 +192,10 @@ class LlmMemoryUpdate {
   const LlmMemoryUpdate({
     required this.newHistoryBullet,
     this.summary,
-    this.topicsToAdd = const [],
-    this.preferencesToAdd = const [],
-    this.upcomingToAdd = const [],
-    this.topicSuggestions = const [],
+    this.topicsToAdd = const <String>[],
+    this.preferencesToAdd = const <String>[],
+    this.upcomingToAdd = const <LlmUpcomingEntry>[],
+    this.topicSuggestions = const <LlmTopicSuggestionGroup>[],
   });
 
   /// Full-replacement summary, or null when the input does not
@@ -235,9 +234,9 @@ class LlmMemoryUpdate {
       newHistoryBullet: bullet,
       topicsToAdd: _readStringList(json, 'topicsToAdd'),
       preferencesToAdd: _readStringList(json, 'preferencesToAdd'),
-      upcomingToAdd: (json['upcomingToAdd'] as List<dynamic>? ?? const [])
+      upcomingToAdd: (json['upcomingToAdd'] as List<dynamic>? ?? const <dynamic>[])
           .whereType<Map<String, dynamic>>()
-          .map(LlmUpcomingEntry.fromJson)
+          .map<LlmUpcomingEntry>((e) => LlmUpcomingEntry.fromJson(e))
           .toList(growable: false),
       topicSuggestions: _readTopicSuggestionGroups(json),
     );
@@ -397,7 +396,7 @@ List<LlmTopicSuggestionGroup> _readTopicSuggestionGroups(
   Map<String, dynamic> json,
 ) {
   final value = json['topicSuggestions'];
-  if (value == null) return const [];
+  if (value == null) return const <LlmTopicSuggestionGroup>[];
   if (value is! List) {
     throw LlmResponseParseException(
       'topicSuggestions must be a list but was ${value.runtimeType}',
@@ -405,13 +404,13 @@ List<LlmTopicSuggestionGroup> _readTopicSuggestionGroups(
   }
   return value
       .whereType<Map<String, dynamic>>()
-      .map(LlmTopicSuggestionGroup.fromJson)
+      .map<LlmTopicSuggestionGroup>((e) => LlmTopicSuggestionGroup.fromJson(e))
       .toList(growable: false);
 }
 
 List<String> _readStringList(Map<String, dynamic> json, String key) {
   final value = json[key];
-  if (value == null) return const [];
+  if (value == null) return const <String>[];
   if (value is! List) {
     throw LlmResponseParseException(
       '$key must be a list but was ${value.runtimeType}',

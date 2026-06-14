@@ -45,6 +45,7 @@ dependencies:
   firebase_core: ^4.2.0
   firebase_auth: ^6.2.0
   google_sign_in: ^7.2.0
+  flutter_svg: ^2.3.0
   # Pass 4.2 (#056). Adapter, migration, and provider tests run against
   # the Firestore emulator via `integration_test/firebase_test_setup.dart`.
   # Production wiring of `cloud_firestore` lands in #060.
