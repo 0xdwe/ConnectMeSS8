@@ -284,12 +284,20 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
 
                 DropdownButtonFormField<String>(
                   initialValue: category,
+                  isExpanded: true,
                   decoration: _inputDecoration(
                     'Category',
                     icon: Icons.category_outlined,
                   ),
                   items: state.categories
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .map((c) => DropdownMenuItem(
+                            value: c,
+                            child: Text(
+                              c,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ))
                       .toList(),
                   onChanged: (value) => setState(() => category = value),
                   validator: (value) => value == null || value.isEmpty
