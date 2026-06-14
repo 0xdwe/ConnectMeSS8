@@ -84,7 +84,7 @@ void main() {
     });
 
     testWidgets(
-      'renders insight text with body typography and inkMuted color',
+      'renders insight text with caption typography and inkMuted color',
       (tester) async {
         await tester.pumpWidget(buildTestCard());
 
@@ -93,10 +93,10 @@ void main() {
         );
         expect(insightFinder, findsOneWidget);
 
-        // Verify it's using body style (15pt, weight 400)
+        // Verify it's using caption style (13pt, weight 500)
         final insightWidget = tester.widget<Text>(insightFinder);
-        expect(insightWidget.style?.fontSize, 15);
-        expect(insightWidget.style?.fontWeight, FontWeight.w400);
+        expect(insightWidget.style?.fontSize, 13);
+        expect(insightWidget.style?.fontWeight, FontWeight.w500);
       },
     );
 

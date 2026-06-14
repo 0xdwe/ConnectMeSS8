@@ -482,10 +482,7 @@ class RecommendationCard extends StatelessWidget {
                 SizedBox(height: AppSpacing.space2),
                 Text(
                   recommendation.insight,
-                  style: AppTypography.body(
-                      color: isCompleted
-                          ? tokens.inkMuted
-                          : tokens.inkMuted),
+                  style: AppTypography.caption(color: tokens.inkMuted),
                 ),
                 if (recommendation.action case final action?)
                   if (!isCompleted) ...[
