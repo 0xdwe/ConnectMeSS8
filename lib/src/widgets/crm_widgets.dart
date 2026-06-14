@@ -1097,7 +1097,7 @@ class ConnectionScoreHero extends StatelessWidget {
 // AI Insights card (Pass 2, issue #034)
 //
 // Three subsections:
-//   1. Recommendation callout — bond-tier-derived encouragement
+//   1. Recommendation callout — dynamic from recommendationsProvider (#118)
 //   2. Person Summary         — ContactInsight.why / memory.summary
 //   3. Conversation Topics    — memory-derived pill tags + tap-to-open
 //                                bottom sheet of static suggestions
@@ -1108,13 +1108,6 @@ class ConnectionScoreHero extends StatelessWidget {
 // otherwise the static category-default fallback applies.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Bond-tier-derived encouragement copy for the Recommendation callout.
-String _bondEncouragement(BondTier tier) => switch (tier) {
-  BondTier.close => 'Strong bond! Keep up the regular communication.',
-  BondTier.steady => 'Steady ground — a quick check-in keeps it warm.',
-  BondTier.drifting => 'It\'s been a while. A short hello goes a long way.',
-};
-
 class AiInsightsCard extends ConsumerStatefulWidget {
   const AiInsightsCard({
     super.key,
@@ -1123,9 +1116,6 @@ class AiInsightsCard extends ConsumerStatefulWidget {
     this.memorySummary,
     this.memory,
     this.initialSelectedTopic,
-    this.recommendationReason,
-    this.recommendationInsight,
-    this.recommendationAction,
   });
   final Connection connection;
   final ContactInsight insight;
@@ -1143,13 +1133,6 @@ class AiInsightsCard extends ConsumerStatefulWidget {
   /// Optional topic to select when opening from a topic-aware Home card.
   final String? initialSelectedTopic;
 
-  /// Recommendation context from the Home screen. When non-null, the
-  /// card renders a recommendation banner at the top showing why this
-  /// contact was recommended. (Pass 4.6 / #116 follow-up)
-  final String? recommendationReason;
-  final String? recommendationInsight;
-  final String? recommendationAction;
-
   @override
   ConsumerState<AiInsightsCard> createState() => _AiInsightsCardState();
 }
@@ -1157,6 +1140,7 @@ class AiInsightsCard extends ConsumerStatefulWidget {
 class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
   bool expanded = true;
   bool _isRefreshing = false;
+  bool _autoRefreshed = false;
 
   Future<void> _handleRefresh() async {
     if (_isRefreshing) return;
@@ -1217,8 +1201,21 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final tier = BondTier.from(widget.connection.bondScore);
     final disableAnimations = MediaQuery.of(context).disableAnimations;
+
+    // Auto-refresh after AI Update for this contact.
+    final pendingRefreshId = ref.watch(pendingAiInsightsRefreshProvider);
+    if (pendingRefreshId == widget.connection.id &&
+        !_isRefreshing &&
+        !_autoRefreshed) {
+      _autoRefreshed = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref
+            .read(pendingAiInsightsRefreshProvider.notifier)
+            .setContactId(null);
+        _handleRefresh();
+      });
+    }
 
     return CardBox(
       padding: EdgeInsets.zero,
@@ -1296,10 +1293,6 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
                       memorySummary: widget.memorySummary,
                       memory: widget.memory,
                       initialSelectedTopic: widget.initialSelectedTopic,
-                      recommendationReason: widget.recommendationReason,
-                      recommendationInsight: widget.recommendationInsight,
-                      recommendationAction: widget.recommendationAction,
-                      tier: tier,
                       tokens: tokens,
                     ),
                   )
@@ -1323,10 +1316,6 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
                         memorySummary: widget.memorySummary,
                         memory: widget.memory,
                         initialSelectedTopic: widget.initialSelectedTopic,
-                        recommendationReason: widget.recommendationReason,
-                        recommendationInsight: widget.recommendationInsight,
-                        recommendationAction: widget.recommendationAction,
-                        tier: tier,
                         tokens: tokens,
                       ),
                     )
@@ -1345,14 +1334,10 @@ class _AiInsightsBody extends StatefulWidget {
   const _AiInsightsBody({
     required this.connection,
     required this.insight,
-    required this.tier,
     required this.tokens,
     this.memorySummary,
     this.memory,
     this.initialSelectedTopic,
-    this.recommendationReason,
-    this.recommendationInsight,
-    this.recommendationAction,
   });
 
   final Connection connection;
@@ -1360,10 +1345,6 @@ class _AiInsightsBody extends StatefulWidget {
   final String? memorySummary;
   final MemoryDocument? memory;
   final String? initialSelectedTopic;
-  final String? recommendationReason;
-  final String? recommendationInsight;
-  final String? recommendationAction;
-  final BondTier tier;
   final AppTokens tokens;
 
   @override
@@ -1380,58 +1361,100 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Recommendation callout
-        Container(
-          padding: EdgeInsets.all(AppSpacing.space4),
-          decoration: BoxDecoration(
-            color: tokens.recommendationSurface,
-            border: Border.all(color: tokens.recommendationBorder, width: 1.5),
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.lightbulb_outline, color: tokens.secondary, size: 22),
-              SizedBox(width: AppSpacing.space3),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Recommendation',
-                      style: AppTypography.h2(color: tokens.recommendationInk),
-                    ),
-                    SizedBox(height: AppSpacing.space1),
-                    Text(
-                      widget.recommendationReason ??
-                          _bondEncouragement(widget.tier),
-                      style: AppTypography.body(
-                        color: tokens.recommendationInkMuted,
-                      ),
-                    ),
-                    if (widget.recommendationInsight != null) ...[
-                      SizedBox(height: AppSpacing.space1),
-                      Text(
-                        widget.recommendationInsight!,
-                        style: AppTypography.caption(
-                          color: tokens.recommendationInkMuted,
-                        ),
-                      ),
-                    ],
-                    if (widget.recommendationAction != null) ...[
-                      SizedBox(height: AppSpacing.space2),
-                      Text(
-                        widget.recommendationAction!,
-                        style: AppTypography.body(
-                          color: tokens.primary,
-                        ).copyWith(fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ],
+        // Recommendation callout — dynamic via recommendationsProvider (#118).
+        Consumer(
+          builder: (context, ref, child) {
+            final recommendationsAsync = ref.watch(recommendationsProvider);
+            final recForThisContact =
+                recommendationsAsync.maybeWhen(
+                  data: (list) => list
+                      .where((r) => r.contactId == widget.connection.id)
+                      .firstOrNull,
+                  orElse: () => null,
+                );
+
+            if (recForThisContact == null) {
+              return const SizedBox.shrink();
+            }
+
+            final isCompleted = recForThisContact.isCompleted;
+
+            return Container(
+              padding: EdgeInsets.all(AppSpacing.space4),
+              decoration: BoxDecoration(
+                color: isCompleted
+                    ? tokens.success.withValues(alpha: 0.1)
+                    : tokens.recommendationSurface,
+                border: Border.all(
+                  color: isCompleted
+                      ? tokens.success.withValues(alpha: 0.3)
+                      : tokens.recommendationBorder,
+                  width: 1.5,
                 ),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
               ),
-            ],
-          ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    isCompleted
+                        ? Icons.check_circle_outline
+                        : Icons.lightbulb_outline,
+                    color: isCompleted ? tokens.success : tokens.secondary,
+                    size: 22,
+                  ),
+                  SizedBox(width: AppSpacing.space3),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isCompleted ? 'Completed' : 'Recommendation',
+                          style: AppTypography.h2(
+                            color: isCompleted
+                                ? tokens.success
+                                : tokens.recommendationInk,
+                          ),
+                        ),
+                        SizedBox(height: AppSpacing.space1),
+                        Text(
+                          recForThisContact.reason,
+                          style: AppTypography.body(
+                            color: isCompleted
+                                ? tokens.success.withValues(alpha: 0.85)
+                                : tokens.recommendationInkMuted,
+                          ),
+                        ),
+                        if (recForThisContact.insight.isNotEmpty) ...[
+                          SizedBox(height: AppSpacing.space1),
+                          Text(
+                            recForThisContact.insight,
+                            style: AppTypography.caption(
+                              color: isCompleted
+                                  ? tokens.success.withValues(alpha: 0.7)
+                                  : tokens.recommendationInkMuted,
+                            ),
+                          ),
+                        ],
+                        if (recForThisContact.action != null &&
+                            recForThisContact.action!.trim().isNotEmpty) ...[
+                          SizedBox(height: AppSpacing.space2),
+                          Text(
+                            recForThisContact.action!,
+                            style: AppTypography.body(
+                              color: isCompleted
+                                  ? tokens.success
+                                  : tokens.primary,
+                            ).copyWith(fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
         SizedBox(height: AppSpacing.space5),
         // Person Summary

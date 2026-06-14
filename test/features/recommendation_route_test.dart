@@ -17,7 +17,9 @@ void main() {
         ),
       );
 
-      expect(route, '/contact/sarah?topic=Paris+trip&reason=Sarah+has+Paris+on+her+mind.&insight=A+recent+update+mentioned+Paris.&action=Ask+how+the+Paris+plans+are+coming+together.');
+      // #118: only topic is included — reason/insight/action are now
+      // read dynamically from recommendationsProvider.
+      expect(route, '/contact/sarah?topic=Paris+trip');
     });
 
     test(
@@ -34,11 +36,12 @@ void main() {
           ),
         );
 
-        expect(route, '/contact/sarah?topic=Paris+trip&reason=Sarah+has+Paris+on+her+mind.&insight=A+recent+update+mentioned+Paris.&action=Ask+how+the+Paris+plans+are+coming+together.');
+        // #118: only topic is included.
+        expect(route, '/contact/sarah?topic=Paris+trip');
       },
     );
 
-    test('routes include reason and insight for regular cards', () {
+    test('routes produce bare contact path for non-topic cards', () {
       const recommendation = Recommendation(
         contactId: 'mike',
         reason: 'Mike could use a check-in.',
@@ -46,10 +49,11 @@ void main() {
         priority: 'Low',
       );
 
-      expect(contactRouteForRecommendation(recommendation),
-          '/contact/mike?reason=Mike+could+use+a+check-in.&insight=A+quick+hello+keeps+things+warm.');
-      expect(recommendationContactRoute(recommendation),
-          '/contact/mike?reason=Mike+could+use+a+check-in.&insight=A+quick+hello+keeps+things+warm.');
+      // #118: no topic → no query params at all.
+      expect(
+          contactRouteForRecommendation(recommendation), '/contact/mike');
+      expect(
+          recommendationContactRoute(recommendation), '/contact/mike');
     });
   });
 }

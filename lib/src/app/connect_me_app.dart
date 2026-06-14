@@ -35,12 +35,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => ContactProfileScreen(
           contactId: state.pathParameters['id']!,
           initialSelectedTopic: state.uri.queryParameters['topic'],
-          recommendationReason:
-              state.uri.queryParameters['reason'],
-          recommendationInsight:
-              state.uri.queryParameters['insight'],
-          recommendationAction:
-              state.uri.queryParameters['action'],
         ),
       ),
       GoRoute(

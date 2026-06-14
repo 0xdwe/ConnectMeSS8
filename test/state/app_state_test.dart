@@ -1557,5 +1557,111 @@ void main() {
           .firstWhere((c) => c.id == 'david');
       expect(updatedDavid.bondScore, 100);
     });
+
+    test(
+      '#117: applyAiUpdateResult sets lastAiUpdatedContactId and '
+      'lastAiUpdatedAt synchronously',
+      () async {
+        final connections = InMemoryConnectionStore();
+        final interactions = InMemoryInteractionStore();
+        await _seedConnections(connections);
+
+        final container = _container(
+          connectionStore: connections,
+          interactionStore: interactions,
+        );
+        addTearDown(container.dispose);
+        container.read(appControllerProvider);
+        await _settle();
+
+        final result = AiUpdateResult(
+          summary: 'Signal test',
+          contactId: 'emily',
+          interactions: [
+            CrmInteraction(
+              id: 'signal-test',
+              contactId: 'emily',
+              type: InteractionType.interaction,
+              title: 'AI Update',
+              note: 'Signal lifecycle test.',
+              date: DateTime(2026, 6, 15),
+              source: InteractionSource.aiSuggested,
+            ),
+          ],
+        );
+
+        final before = DateTime.now();
+        await container
+            .read(appControllerProvider.notifier)
+            .applyAiUpdateResult(result);
+        await _settle();
+        final after = DateTime.now();
+
+        final state = container.read(appControllerProvider);
+        expect(state.lastAiUpdatedContactId, 'emily');
+        expect(
+          state.lastAiUpdatedAt,
+          isNotNull,
+        );
+        final at = state.lastAiUpdatedAt!;
+        // Allow ±1 second tolerance for test execution timing.
+        expect(
+          at.isAfter(before.subtract(const Duration(seconds: 1))) &&
+              at.isBefore(after.add(const Duration(seconds: 1))),
+          isTrue,
+          reason: 'lastAiUpdatedAt should be close to wall-clock time of apply',
+        );
+      },
+    );
+
+    test('#117: clearLastAiUpdate clears both fields to null', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      await _seedConnections(connections);
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      final result = AiUpdateResult(
+        summary: 'Clear test',
+        contactId: 'emily',
+        interactions: [
+          CrmInteraction(
+            id: 'clear-test',
+            contactId: 'emily',
+            type: InteractionType.interaction,
+            title: 'AI Update',
+            note: 'Clear lifecycle test.',
+            date: DateTime(2026, 6, 15),
+            source: InteractionSource.aiSuggested,
+          ),
+        ],
+      );
+
+      await container
+          .read(appControllerProvider.notifier)
+          .applyAiUpdateResult(result);
+      await _settle();
+
+      // Verify fields are set
+      expect(container.read(appControllerProvider).lastAiUpdatedContactId,
+          isNotNull);
+      expect(
+          container.read(appControllerProvider).lastAiUpdatedAt, isNotNull);
+
+      // Clear the signal
+      container.read(appControllerProvider.notifier).clearLastAiUpdate();
+      await _settle();
+
+      // Verify fields are cleared
+      final state = container.read(appControllerProvider);
+      expect(state.lastAiUpdatedContactId, isNull);
+      expect(state.lastAiUpdatedAt, isNull);
+    });
   });
 }
