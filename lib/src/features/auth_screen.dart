@@ -1044,51 +1044,103 @@ class _AuthBackgroundPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // 1. Draw the base gradient
+    // 1. Draw the base linear gradient with richer, more saturated pastel lavender/violet colors
     final bgPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFFF3E8FF), // Soft lavender-pink
-          Color(0xFFFFFFFF), // White
-          Color(0xFFE0E7FF), // Soft indigo-tint
+          Color(0xFFEBE0FF), // Soft vibrant lavender-purple
+          Color(0xFFFAF7FF), // Off-white lavender
+          Color(0xFFD9E4FF), // Soft vibrant blue-indigo
         ],
       ).createShader(Rect.fromLTWH(0, 0, w, h));
     canvas.drawRect(Rect.fromLTWH(0, 0, w, h), bgPaint);
 
-    if (mode == AuthMode.landing) {
-      // LANDING SCREEN BACKGROUND DETAILS:
-      // A soft pink circle at top-right
-      canvas.drawCircle(
-        Offset(w * 0.85, h * 0.12),
-        35,
-        Paint()
-          ..color = const Color(0xFFFCE7F3)
-          ..style = PaintingStyle.fill,
-      );
+    // 2. Draw soft ambient glowing radial lights for gradient depth (the "pop")
+    // Top-Right Pink Glow
+    canvas.drawCircle(
+      Offset(w * 0.8, h * 0.15),
+      w * 0.55,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            const Color(0xFFFDE8F3).withValues(alpha: 0.9),
+            const Color(0xFFFCE7F3).withValues(alpha: 0.35),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromCircle(center: Offset(w * 0.8, h * 0.15), radius: w * 0.55)),
+    );
 
-      // A soft lavender organic wave at top-left
-      final topLeftPath = Path()
-        ..moveTo(0, 0)
-        ..lineTo(w * 0.45, 0)
-        ..quadraticBezierTo(w * 0.35, h * 0.12, 0, h * 0.16)
+    // Bottom-Left Blue-Indigo Glow
+    canvas.drawCircle(
+      Offset(w * 0.15, h * 0.75),
+      w * 0.75,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            const Color(0xFFE0E7FF).withValues(alpha: 0.95),
+            const Color(0xFFEEF2FF).withValues(alpha: 0.45),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromCircle(center: Offset(w * 0.15, h * 0.75), radius: w * 0.75)),
+    );
+
+    // 3. Draw common background decorative blobs/spheres (visible on both screens)
+    // A soft lavender organic wave/blob at top-left
+    final topLeftPath = Path()
+      ..moveTo(0, 0)
+      ..lineTo(w * 0.5, 0)
+      ..quadraticBezierTo(w * 0.35, h * 0.14, 0, h * 0.18)
+      ..close();
+    canvas.drawPath(
+      topLeftPath,
+      Paint()
+        ..color = const Color(0xFFE8EFFF).withValues(alpha: 0.8)
+        ..style = PaintingStyle.fill,
+    );
+
+    // A beautiful 3D-shaded pink sphere at top-right
+    final sphereCenter = Offset(w * 0.85, h * 0.1);
+    const sphereRadius = 38.0;
+    canvas.drawCircle(
+      sphereCenter,
+      sphereRadius,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.25, -0.3),
+          colors: [
+            Colors.white,
+            const Color(0xFFFBCFE8),
+            const Color(0xFFF472B6),
+          ],
+          stops: const [0.0, 0.4, 1.0],
+        ).createShader(Rect.fromCircle(center: sphereCenter, radius: sphereRadius)),
+    );
+
+    // Bottom-right blob (sweeps up from bottom-right corner behind the character, matches welcome mockup)
+    if (mode == AuthMode.landing) {
+      final bottomRightPath = Path()
+        ..moveTo(w, h)
+        ..lineTo(w, h * 0.7)
+        ..quadraticBezierTo(w * 0.78, h * 0.78, w * 0.55, h)
         ..close();
       canvas.drawPath(
-        topLeftPath,
+        bottomRightPath,
         Paint()
-          ..color = const Color(0xFFEEF2FF).withValues(alpha: 0.8)
+          ..color = const Color(0xFFEBE6FF).withValues(alpha: 0.8)
           ..style = PaintingStyle.fill,
       );
+    }
 
-      // Draw decorative 4-point stars in landing background
-      _drawSparkle(canvas, w * 0.15, h * 0.18, 6, const Color(0xFFC084FC)); // Violet star
-      _drawSparkle(canvas, w * 0.9, h * 0.25, 7, const Color(0xFFFBBF24));  // Gold star
-      _drawSparkle(canvas, w * 0.15, h * 0.72, 5, const Color(0xFFF472B6));  // Pink star
-    } else {
-      // FORM SCREEN BACKGROUND DETAILS:
+    // Draw decorative stars in the background
+    _drawSparkle(canvas, w * 0.12, h * 0.16, 7, const Color(0xFFF472B6)); // Top-left peach star
+    _drawSparkle(canvas, w * 0.88, h * 0.24, 8, const Color(0xFF818CF8)); // Middle-right violet star
+    _drawSparkle(canvas, w * 0.08, h * 0.72, 6, const Color(0xFF818CF8)); // Bottom-left violet star
+
+    // 4. Draw the curved white card for Form Mode
+    if (mode != AuthMode.landing) {
       // Draw the curved white card shape that covers the bottom portion of the screen
-      // The curve sweeps from Y = h * 0.24 on the left down to Y = h * 0.26 on the right
       final cardPath = Path()
         ..moveTo(0, h)
         ..lineTo(0, h * 0.24)
