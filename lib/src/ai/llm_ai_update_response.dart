@@ -262,6 +262,35 @@ class LlmMemoryUpdate {
   }
 }
 
+/// Relevance-classifier result (Pass 4.4 / #112).
+///
+/// Returned by the lightweight Gemini pre-classifier that runs before
+/// the main AI Update call. [isRelevant] gates whether the main call
+/// proceeds; [reason] provides the user-facing explanation when the
+/// classifier rejects the input.
+class LlmRelevanceResult {
+  const LlmRelevanceResult({required this.isRelevant, required this.reason});
+
+  final bool isRelevant;
+  final String reason;
+
+  factory LlmRelevanceResult.fromJson(Map<String, dynamic> json) {
+    final isRelevant = json['isRelevant'];
+    if (isRelevant is! bool) {
+      throw const LlmResponseParseException(
+        'isRelevant must be a bool',
+      );
+    }
+    final reason = json['reason'];
+    if (reason is! String || reason.isEmpty) {
+      throw const LlmResponseParseException(
+        'reason must be a non-empty string',
+      );
+    }
+    return LlmRelevanceResult(isRelevant: isRelevant, reason: reason);
+  }
+}
+
 /// Top-level shape Gemini returns under PRD §Q4's structured output
 /// schema. The adapter maps this onto an [AiUpdateResult] before
 /// commit; this class is a wire format, not a domain object.

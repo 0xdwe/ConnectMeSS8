@@ -24,6 +24,46 @@
 ///   never invent details from them).
 library;
 
+/// Pre-classifier relevance prompt (Pass 4.4 / #112).
+///
+/// Runs BEFORE the main AI Update to judge whether the user's input
+/// is relevant to relationship maintenance for the named contact.
+/// Returns JSON `{isRelevant: bool, reason: string}`. The reason
+/// must be warm, specific, non-shaming — no day counts, no blame.
+///
+/// This is a separate prompt from v1..v4 because it is called as a
+/// pre-classifier, not as the main system prompt. It does not
+/// participate in [kLlmAiUpdatePromptVersion] versioning — the
+/// version chain is for the main prompt only.
+const String kLlmAiUpdateRelevancePrompt = r'''
+You are a relevance classifier for ConnectMe, a personal-CRM app.
+
+Your job: decide whether the user's input is relevant to relationship
+maintenance for the named contact. The user will provide:
+- A contact name and category (e.g. "David Kim — Family")
+- Their raw text input
+- Whether images are attached (yes/no)
+
+Output a JSON object with exactly these fields:
+- isRelevant: true if the input is about the relationship, the
+  contact personally, or a shared experience/plan/event with them.
+  false if the input is clearly off-topic (spam, random queries,
+  unrelated topics) with no connection to the named contact.
+- reason: a warm, specific, non-shaming explanation. Never mention
+  numeric day counts, time elapsed, or anything that could shame
+  the user for "neglecting" someone. Keep it brief — one sentence.
+
+Examples of irrelevant inputs: "What's the weather?", "Tell me a
+joke", stock prices, coding questions, general knowledge queries.
+
+Examples of relevant inputs: "Had coffee on Tuesday", "She got a
+new job", "Remind me to call next week", "Shared a photo from the
+trip".
+
+When in doubt, return isRelevant: true — it's better to let a
+borderline input through than to block a legitimate update.
+''';
+
 /// Active prompt version. Increment when [kLlmAiUpdatePromptV1]
 /// changes materially. Travels alongside every produced
 /// [AiUpdateResult] via the metadata field on the response model.

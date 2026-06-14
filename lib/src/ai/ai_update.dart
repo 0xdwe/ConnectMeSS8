@@ -38,6 +38,29 @@ class AiUpdateCancelled implements Exception {
   String toString() => 'AiUpdateCancelled';
 }
 
+/// Marker exception thrown by the relevance pre-classifier
+/// (Pass 4.4 / #112) when the LLM judges the user's input as
+/// irrelevant to relationship maintenance for the named contact.
+///
+/// Sibling of [AiUpdateFailure] and [AiUpdateCancelled] rather than
+/// a subtype of either — the routing at the call site is different
+/// (a dialog instead of a snackbar) and the type-exhaustive match in
+/// the AI Update screen catches each branch distinctly. The
+/// classifier sits between attachment preparation and the main
+/// Gemini call, so this exception is only ever thrown from
+/// [AiUpdate.run] — never from [AiUpdate.commit].
+///
+/// [reason] is the warm, specific, non-shaming explanation the
+/// classifier LLM supplied; it lands verbatim in the user-facing
+/// dialog. The prompt explicitly forbids numeric day-count shaming
+/// language, so callers can render the reason without filtering.
+class AiUpdateRejected implements Exception {
+  const AiUpdateRejected({required this.reason});
+  final String reason;
+  @override
+  String toString() => 'AiUpdateRejected: $reason';
+}
+
 /// Unified AI-update seam (PRD Q1).
 ///
 /// One public entry point for the user-level operation "Update with AI
@@ -115,6 +138,7 @@ class MockAiUpdate implements AiUpdate {
     required this.memoryStore,
     required this.appController,
     this.onMemoryWritten,
+    this.failOnRelevanceCheck = false,
     this.failOnRun = false,
     this.failOnSave = false,
     this.failOnApply = false,
@@ -141,6 +165,12 @@ class MockAiUpdate implements AiUpdate {
   /// memory save succeeds, exercising the rollback path. Test-only.
   final bool failOnApply;
 
+  /// When true, [run] throws [AiUpdateRejected] before any other
+  /// work, simulating a relevance-classifier rejection. Test-only
+  /// (Pass 4.4 / #112). Must fire before [failOnRun] so test
+  /// injection precedence is relevance → run → save → apply.
+  final bool failOnRelevanceCheck;
+
   /// Test-only delay before [run] returns. Used by widget tests in
   /// #081 to exercise the modal's loading view + Cancel affordance
   /// without booting Gemini. Production never sets this; the Mock's
@@ -161,6 +191,11 @@ class MockAiUpdate implements AiUpdate {
     required List<AttachmentRef> attachments,
     Future<void>? cancelToken,
   }) async {
+    if (failOnRelevanceCheck) {
+      throw const AiUpdateRejected(
+        reason: 'test-injected relevance rejection',
+      );
+    }
     if (failOnRun) {
       throw const AiUpdateFailure('test-injected run failure');
     }

@@ -20,6 +20,31 @@ import 'package:firebase_ai/firebase_ai.dart';
 import '../models/social_models.dart' show InteractionType;
 import 'llm_ai_update_response.dart';
 
+/// JSON Schema for the relevance pre-classifier (Pass 4.4 / #112).
+///
+/// Mirrors [LlmRelevanceResult.fromJson]. The schema is separate from
+/// [kLlmAiUpdateResponseSchema] because the classifier returns a
+/// simpler shape (`{isRelevant: bool, reason: string}`) and does not
+/// participate in the main response model's validation chain.
+final Schema kLlmAiUpdateRelevanceSchema = Schema.object(
+  description:
+      'Relevance classifier result. isRelevant gates whether the '
+      'main AI Update proceeds; reason provides the user-facing '
+      'explanation when rejected.',
+  properties: {
+    'isRelevant': Schema.boolean(
+      description:
+          'true if the input is relevant to the named contact; '
+          'false if clearly off-topic.',
+    ),
+    'reason': Schema.string(
+      description:
+          'Warm, specific, non-shaming explanation. No numeric day '
+          'counts, no blame language. One sentence.',
+    ),
+  },
+);
+
 /// JSON Schema passed to Gemini via `GenerationConfig.responseSchema`.
 ///
 /// Constructed once at startup and reused per call. The Schema is
