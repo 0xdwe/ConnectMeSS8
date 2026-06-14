@@ -1349,7 +1349,7 @@ class _CuteGhostPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // 1. Draw a soft shadow under the ghost
+    // 1. Draw a soft shadow under the bubble blob character
     final shadowPaint = Paint()
       ..color = const Color(0xFF6366F1).withValues(alpha: 0.12)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
@@ -1372,41 +1372,44 @@ class _CuteGhostPainter extends CustomPainter {
       ).createShader(bodyRect)
       ..style = PaintingStyle.fill;
 
-    // 3. Waving Left Arm (waving up)
+    // 3. Round Bubble Body Path (center 60, 56, radius 38)
+    final bodyPath = Path()..addOval(Rect.fromCircle(center: const Offset(60, 56), radius: 38));
+
+    // 4. Waving Left Arm (stubby pointing up-left)
     final leftArmPath = Path()
-      ..moveTo(30, 70)
-      ..cubicTo(12, 60, 4, 45, 10, 36) // outer curve up
-      ..cubicTo(14, 30, 24, 32, 28, 40) // round hand tip
-      ..cubicTo(32, 50, 42, 68, 44, 78) // inner curve down
+      ..moveTo(30, 46)
+      ..cubicTo(12, 42, 6, 26, 12, 18)
+      ..cubicTo(16, 12, 28, 22, 32, 38)
       ..close();
 
-    // 4. Right Arm (resting/waving slightly down/out)
+    // 5. Right Arm (stubby resting arm)
     final rightArmPath = Path()
-      ..moveTo(90, 75)
-      ..cubicTo(106, 75, 116, 78, 116, 86)
-      ..cubicTo(116, 91, 110, 93, 104, 90)
-      ..cubicTo(96, 86, 90, 82, 90, 82)
+      ..moveTo(88, 58)
+      ..cubicTo(102, 58, 108, 66, 106, 72)
+      ..cubicTo(104, 76, 96, 74, 88, 70)
       ..close();
 
-    // 5. Main Body Path
-    final bodyPath = Path()
-      ..moveTo(20, 48)
-      ..cubicTo(20, 10, 100, 10, 100, 48) // dome head
-      ..cubicTo(100, 68, 102, 96, 102, 108) // right side body
-      // Smooth bottom waves (ripples)
-      ..cubicTo(90, 116, 84, 102, 75, 106)
-      ..cubicTo(66, 116, 58, 102, 49, 106)
-      ..cubicTo(40, 116, 32, 102, 20, 108)
-      ..cubicTo(18, 102, 20, 68, 20, 48) // left side body
+    // 6. Left Foot (stubby bottom-left)
+    final leftFootPath = Path()
+      ..moveTo(40, 88)
+      ..cubicTo(38, 98, 48, 100, 52, 92)
       ..close();
 
-    // 6. Draw arms and body with the gradient
-    final combinedGhostPath = Path.combine(PathOperation.union, bodyPath, leftArmPath);
-    final finalGhostPath = Path.combine(PathOperation.union, combinedGhostPath, rightArmPath);
+    // 7. Right Foot (stubby bottom-right)
+    final rightFootPath = Path()
+      ..moveTo(68, 92)
+      ..cubicTo(72, 100, 82, 98, 80, 88)
+      ..close();
 
-    canvas.drawPath(finalGhostPath, bodyPaint);
+    // Combine all into a single path for unified gradient fill
+    var finalPath = Path.combine(PathOperation.union, bodyPath, leftArmPath);
+    finalPath = Path.combine(PathOperation.union, finalPath, rightArmPath);
+    finalPath = Path.combine(PathOperation.union, finalPath, leftFootPath);
+    finalPath = Path.combine(PathOperation.union, finalPath, rightFootPath);
 
-    // 7. Add a subtle glossy overlay / highlight on the left edge
+    canvas.drawPath(finalPath, bodyPaint);
+
+    // 8. Add a subtle glossy overlay / highlight on the left edge
     final highlightPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
@@ -1417,9 +1420,17 @@ class _CuteGhostPainter extends CustomPainter {
         ],
       ).createShader(bodyRect)
       ..style = PaintingStyle.fill;
-    canvas.drawPath(finalGhostPath, highlightPaint);
+    canvas.drawPath(finalPath, highlightPaint);
 
-    // 8. Draw Eyes (large ovals, dark indigo)
+    // Add a circular shiny reflection overlay at the top-left of the dome
+    canvas.drawOval(
+      Rect.fromLTWH(32, 22, 24, 14),
+      Paint()
+        ..color = Colors.white.withOpacity(0.35)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0),
+    );
+
+    // 9. Draw Eyes (large vertical ovals, dark indigo)
     final eyePaint = Paint()
       ..color = const Color(0xFF1E1B4B)
       ..style = PaintingStyle.fill;
@@ -1435,7 +1446,7 @@ class _CuteGhostPainter extends CustomPainter {
     canvas.drawOval(Rect.fromCenter(center: const Offset(75, 49), width: 9.5, height: 13.5), eyePaint);
     canvas.drawCircle(const Offset(73, 46), 2.0, pupilPaint);
 
-    // 9. Draw Mouth (happy open shape, rosy red)
+    // 10. Draw Mouth (happy open smile, rosy red)
     final mouthPaint = Paint()
       ..color = const Color(0xFFF43F5E)
       ..style = PaintingStyle.fill;
@@ -1447,15 +1458,15 @@ class _CuteGhostPainter extends CustomPainter {
       ..close();
     canvas.drawPath(mouthPath, mouthPaint);
 
-    // 10. Draw rosy cheeks (soft airbrush blush)
+    // 11. Draw rosy cheeks (soft airbrush blush)
     final cheekPaint = Paint()
       ..color = const Color(0xFFFDA4AF).withValues(alpha: 0.45)
       ..style = PaintingStyle.fill;
     cheekPaint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
-    canvas.drawCircle(const Offset(34, 57), 5.5, cheekPaint);
-    canvas.drawCircle(const Offset(86, 57), 5.5, cheekPaint);
+    canvas.drawCircle(const Offset(32, 58), 5.5, cheekPaint);
+    canvas.drawCircle(const Offset(88, 58), 5.5, cheekPaint);
 
-    // 11. Draw 4-point stars (sparkles)
+    // 12. Draw 4-point stars (sparkles)
     final sparklePaint = Paint()
       ..color = const Color(0xFF818CF8).withValues(alpha: 0.35)
       ..style = PaintingStyle.fill;
