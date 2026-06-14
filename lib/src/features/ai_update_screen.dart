@@ -70,20 +70,6 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     }
   }
 
-  /// Opens the system file/image picker.
-  /// Uses [ImagePicker] which has a native iOS implementation; the
-  /// old `file_selector` approach silently did nothing on iOS.
-  Future<void> pick() async {
-    final picker = ImagePicker();
-    final result = await picker.pickMultiImage();
-    if (result.isEmpty) return;
-    setState(
-      () => attachments.addAll(
-        result.map((f) => AttachmentRef(name: f.name, path: f.path)),
-      ),
-    );
-  }
-
   Future<void> pickImage() async {
     final picker = ImagePicker();
     final result = await picker.pickMultiImage();
@@ -504,11 +490,6 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  ActionChip(
-                    avatar: const Icon(Icons.attach_file),
-                    label: const Text('Attach'),
-                    onPressed: pick,
-                  ),
                   ActionChip(
                     key: const Key('add-image-chip'),
                     avatar: const Icon(Icons.image),
