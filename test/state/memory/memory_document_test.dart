@@ -183,6 +183,58 @@ version: 1
     );
 
     test(
+      'parses and renders Topic Suggestions with context and latestNews',
+      () {
+        const raw = '''---
+contactId: 'sarah'
+displayName: 'Sarah Johnson'
+lastUpdated: '2026-05-19T00:00:00.000Z'
+version: 1
+---
+
+## Topic Suggestions
+
+### Paris trip
+- ask: Ask how the Paris plans are coming together. | he talked about his plan to Paris last time and he was very excited about it | Google announced new transit routes to Paris for the summer.
+- share: Send a café rec if you spot one.
+''';
+
+        final doc = MemoryDocument.parse(raw);
+
+        expect(doc.parseErrors, isEmpty);
+        expect(doc.topicSuggestions, hasLength(1));
+        final group = doc.topicSuggestions.single;
+        expect(group.suggestions, hasLength(2));
+        expect(group.suggestions.first.kind, TopicSuggestionKind.ask);
+        expect(
+          group.suggestions.first.text,
+          'Ask how the Paris plans are coming together.',
+        );
+        expect(
+          group.suggestions.first.context,
+          'he talked about his plan to Paris last time and he was very excited about it',
+        );
+        expect(
+          group.suggestions.first.latestNews,
+          'Google announced new transit routes to Paris for the summer.',
+        );
+        expect(group.suggestions.last.kind, TopicSuggestionKind.share);
+        expect(group.suggestions.last.text, 'Send a café rec if you spot one.');
+        expect(group.suggestions.last.context, isNull);
+        expect(group.suggestions.last.latestNews, isNull);
+
+        final rendered = doc.render();
+        expect(
+          rendered,
+          contains(
+            '- ask: Ask how the Paris plans are coming together. | he talked about his plan to Paris last time and he was very excited about it | Google announced new transit routes to Paris for the summer.',
+          ),
+        );
+        expect(rendered, contains('- share: Send a café rec if you spot one.'));
+      },
+    );
+
+    test(
       'malformed Topic Suggestions lines are ignored without parse errors',
       () {
         const raw = '''---

@@ -44,9 +44,7 @@ void main() {
       ProviderScope(
         overrides: [
           firebaseAuthProvider.overrideWithValue(auth),
-          if (profileService != null)
-            userProfileServiceProvider.overrideWithValue(profileService),
-          ...headlessStoreOverrides(),
+          ...headlessStoreOverrides(userProfileService: profileService),
         ],
         child: MaterialApp.router(
           theme: AppTheme.data(false),
@@ -171,7 +169,7 @@ void main() {
 
     expect(googleSignIn.signInCalls, 1);
     expect(find.text('App'), findsNothing);
-    expect(find.text('Google sign-in went sideways — try again.'), findsOneWidget);
+    expect(find.text('Google sign-in went sideways: Exception: google sign in failure'), findsOneWidget);
   });
 }
 

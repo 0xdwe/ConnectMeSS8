@@ -48,6 +48,7 @@ List<dynamic> headlessStoreOverrides({
   NotificationGateway? notificationGateway,
   NotificationTokenStore? notificationTokenStore,
   GoogleSignInService? googleSignInService,
+  UserProfileService? userProfileService,
 }) {
   final connections = InMemoryConnectionStore();
   connections.seedSync(SeederSampleSource.connections());
@@ -88,7 +89,7 @@ List<dynamic> headlessStoreOverrides({
     userDocStoreProvider.overrideWithValue(userDoc),
     batchedWritesProvider.overrideWithValue(batched),
     userProfileServiceProvider.overrideWith(
-      (ref) => NoOpUserProfileService(ref.watch(firebaseAuthProvider)),
+      (ref) => userProfileService ?? NoOpUserProfileService(ref.watch(firebaseAuthProvider)),
     ),
   ];
 }
@@ -129,6 +130,7 @@ List<dynamic> signedOutDemoOverrides({
   NotificationGateway? notificationGateway,
   NotificationTokenStore? notificationTokenStore,
   GoogleSignInService? googleSignInService,
+  UserProfileService? userProfileService,
 }) {
   return <dynamic>[
     firebaseAuthProvider.overrideWithValue(
@@ -145,6 +147,7 @@ List<dynamic> signedOutDemoOverrides({
       notificationGateway: notificationGateway,
       notificationTokenStore: notificationTokenStore,
       googleSignInService: googleSignInService,
+      userProfileService: userProfileService,
     ),
   ];
 }
@@ -154,6 +157,7 @@ List<dynamic> signedInDemoOverrides({
   NotificationGateway? notificationGateway,
   NotificationTokenStore? notificationTokenStore,
   GoogleSignInService? googleSignInService,
+  UserProfileService? userProfileService,
 }) {
   return <dynamic>[
     firebaseAuthProvider.overrideWithValue(
@@ -171,6 +175,7 @@ List<dynamic> signedInDemoOverrides({
       notificationGateway: notificationGateway,
       notificationTokenStore: notificationTokenStore,
       googleSignInService: googleSignInService,
+      userProfileService: userProfileService,
     ),
   ];
 }

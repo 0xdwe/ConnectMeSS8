@@ -217,10 +217,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       setState(() {
         _loginEmailError = _firebaseAuthMessage(e);
       });
-    } catch (_) {
+    } catch (e, stack) {
+      debugPrint('Google Sign-In failed: $e\n$stack');
       if (!mounted) return;
       setState(() {
-        _loginEmailError = 'Google sign-in went sideways — try again.';
+        _loginEmailError = 'Google sign-in went sideways: $e';
       });
     } finally {
       if (mounted) {

@@ -1840,6 +1840,33 @@ class _InlineTopicDetails extends ConsumerWidget {
                         ),
                       ),
                     ],
+                    if (suggestion.latestNews != null &&
+                        suggestion.latestNews!.trim().isNotEmpty) ...[
+                      SizedBox(height: AppSpacing.space3),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.newspaper,
+                            size: 16,
+                            color: tokens.categoryWork,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Latest News :',
+                            style: AppTypography.h2(
+                              color: tokens.categoryWork,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: AppSpacing.space1),
+                      Text(
+                        suggestion.latestNews!,
+                        style: AppTypography.body(
+                          color: tokens.inkMuted,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

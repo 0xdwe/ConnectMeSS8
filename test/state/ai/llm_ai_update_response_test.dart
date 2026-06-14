@@ -270,6 +270,45 @@ void main() {
       );
     });
 
+    test('parses topic suggestion with latestNews and rejects shame in latestNews', () {
+      final json = _validBase();
+      (json['memoryUpdate'] as Map<String, dynamic>)['topicSuggestions'] = [
+        {
+          'topic': 'paris trip',
+          'suggestions': [
+            {
+              'kind': 'ask',
+              'text': 'Ask about Paris.',
+              'latestNews': 'French travel rules updated in 2026.',
+            },
+          ],
+        },
+      ];
+
+      final r = LlmAiUpdateResponse.fromJson(json);
+      final group = r.memoryUpdate.topicSuggestions.single;
+      expect(group.suggestions.first.latestNews, 'French travel rules updated in 2026.');
+
+      // Test anti-shame rejection in latestNews
+      final shamefulJson = _validBase();
+      (shamefulJson['memoryUpdate'] as Map<String, dynamic>)['topicSuggestions'] = [
+        {
+          'topic': 'paris trip',
+          'suggestions': [
+            {
+              'kind': 'ask',
+              'text': 'Ask about Paris.',
+              'latestNews': "You haven't asked about Paris in 47 days.",
+            },
+          ],
+        },
+      ];
+      expect(
+        () => LlmAiUpdateResponse.fromJson(shamefulJson),
+        throwsA(isA<LlmResponseParseException>()),
+      );
+    });
+
     test('rejects unknown topic suggestion kind', () {
       final json = _validBase();
       (json['memoryUpdate'] as Map<String, dynamic>)['topicSuggestions'] = [

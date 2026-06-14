@@ -47,11 +47,17 @@ class UpcomingEntry {
 enum TopicSuggestionKind { ask, share, plan, remember }
 
 class TopicSuggestion {
-  const TopicSuggestion({required this.kind, required this.text, this.context});
+  const TopicSuggestion({
+    required this.kind,
+    required this.text,
+    this.context,
+    this.latestNews,
+  });
 
   final TopicSuggestionKind kind;
   final String text;
   final String? context;
+  final String? latestNews;
 
   @override
   bool operator ==(Object other) =>
@@ -59,10 +65,11 @@ class TopicSuggestion {
       other is TopicSuggestion &&
           kind == other.kind &&
           text == other.text &&
-          context == other.context;
+          context == other.context &&
+          latestNews == other.latestNews;
 
   @override
-  int get hashCode => Object.hash(kind, text, context);
+  int get hashCode => Object.hash(kind, text, context, latestNews);
 }
 
 class TopicSuggestionGroup {
@@ -321,13 +328,18 @@ class MemoryDocument {
       buf.writeln('mentionCount: ${group.mentionCount}');
       buf.writeln('expiresAt: ${_formatNullableDate(group.expiresAt)}');
       for (final suggestion in group.suggestions.take(2)) {
-        if (suggestion.context != null && suggestion.context!.isNotEmpty) {
+        final kindStr = _renderTopicSuggestionKind(suggestion.kind);
+        if (suggestion.latestNews != null && suggestion.latestNews!.isNotEmpty) {
           buf.writeln(
-            '- ${_renderTopicSuggestionKind(suggestion.kind)}: ${suggestion.text} | ${suggestion.context}',
+            '- $kindStr: ${suggestion.text} | ${suggestion.context ?? ''} | ${suggestion.latestNews}',
+          );
+        } else if (suggestion.context != null && suggestion.context!.isNotEmpty) {
+          buf.writeln(
+            '- $kindStr: ${suggestion.text} | ${suggestion.context}',
           );
         } else {
           buf.writeln(
-            '- ${_renderTopicSuggestionKind(suggestion.kind)}: ${suggestion.text}',
+            '- $kindStr: ${suggestion.text}',
           );
         }
       }
@@ -488,17 +500,26 @@ class MemoryDocument {
     final rest = raw.substring(separator + 1).trim();
     if (kind == null || rest.isEmpty) return null;
 
-    final pipeIndex = rest.indexOf(' | ');
-    String text;
+    final parts = rest.split(' | ');
+    final text = parts[0].trim();
     String? context;
-    if (pipeIndex >= 0) {
-      text = rest.substring(0, pipeIndex).trim();
-      context = rest.substring(pipeIndex + 3).trim();
+    String? latestNews;
+
+    if (parts.length > 1) {
+      context = parts[1].trim();
       if (context.isEmpty) context = null;
-    } else {
-      text = rest;
     }
-    return TopicSuggestion(kind: kind, text: text, context: context);
+    if (parts.length > 2) {
+      latestNews = parts[2].trim();
+      if (latestNews.isEmpty) latestNews = null;
+    }
+
+    return TopicSuggestion(
+      kind: kind,
+      text: text,
+      context: context,
+      latestNews: latestNews,
+    );
   }
 
   static TopicSuggestionKind? _parseTopicSuggestionKind(String raw) {

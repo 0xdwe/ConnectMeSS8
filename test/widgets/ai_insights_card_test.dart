@@ -749,6 +749,51 @@ void main() {
         );
       },
     );
+
+    testWidgets(
+      'renders Latest News block when latestNews is present in topic suggestions',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            AiInsightsCard(
+              connection: _connection(category: 'Friends'),
+              insight: _insight(),
+              initialSelectedTopic: 'Lombok',
+              memory: MemoryDocument(
+                contactId: 'test',
+                displayName: 'Test Person',
+                lastUpdated: DateTime.utc(2026, 6, 4),
+                topics: const ['Lombok'],
+                topicSuggestions: [
+                  TopicSuggestionGroup(
+                    topic: 'Lombok',
+                    suggestions: const [
+                      TopicSuggestion(
+                        kind: TopicSuggestionKind.ask,
+                        text: 'Ask how Lombok is.',
+                        context: 'Planning a trip to Lombok',
+                        latestNews: 'Earthquake reported near Lombok with no damage.',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            overrides: [
+              interactionsByContactProvider('test').overrideWithValue(const []),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Latest News :'), findsOneWidget);
+        expect(
+          find.text('Earthquake reported near Lombok with no damage.'),
+          findsOneWidget,
+        );
+        expect(find.byIcon(Icons.newspaper), findsOneWidget);
+      },
+    );
   });
 }
 

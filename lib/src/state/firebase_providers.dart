@@ -245,8 +245,11 @@ class FirebaseGoogleSignInService implements GoogleSignInService {
       clientId: clientId,
     );
     final account = await googleSignIn.authenticate();
+    if (account == null) {
+      return null;
+    }
 
-    final authDetails = account.authentication;
+    final authDetails = await account.authentication;
     final credential = GoogleAuthProvider.credential(
       idToken: authDetails.idToken,
     );

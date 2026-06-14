@@ -32,9 +32,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          ...signedInDemoOverrides(),
-          userProfileServiceProvider.overrideWithValue(
-            _FakeUserProfileService(
+          ...signedInDemoOverrides(
+            userProfileService: _FakeUserProfileService(
               const AccountProfile(
                 uid: 'uid-1',
                 email: 'real@example.com',
@@ -66,9 +65,5 @@ void main() {
       (avatar.backgroundImage! as NetworkImage).url,
       'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
     );
-    // Widget tests block real HTTP image loads; this test asserts the
-    // NetworkImage is wired to the Auth photo URL, then clears the expected
-    // blocked-load exception.
-    expect(tester.takeException(), isNotNull);
   });
 }
