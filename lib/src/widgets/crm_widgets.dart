@@ -1058,7 +1058,7 @@ class ScoreGauge extends StatelessWidget {
               ),
             ),
             Positioned(
-              bottom: h * 0.12,
+              bottom: h * 0.06,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1091,38 +1091,38 @@ class ScoreGauge extends StatelessWidget {
                           48,
                           color: Colors.white,
                           weight: FontWeight.w700,
-                    ),
+                        ),
+                      ),
+                      Text(
+                        '/100',
+                        style: AppTypography.caption(
+                          color: Colors.white.withValues(alpha: 0.75),
+                        ).copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 4),
                   Text(
-                    '/100',
+                    'Keep nurturing your relationships!',
+                    style: AppTypography.caption(
+                      color: Colors.white,
+                    ).copyWith(fontWeight: FontWeight.w700, fontSize: 11),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Small steps lead to stronger connections.',
                     style: AppTypography.caption(
                       color: Colors.white.withValues(alpha: 0.75),
-                    ).copyWith(fontWeight: FontWeight.w600),
+                    ).copyWith(fontSize: 9),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Keep nurturing your relationships!',
-                style: AppTypography.caption(
-                  color: Colors.white,
-                ).copyWith(fontWeight: FontWeight.w700, fontSize: 11),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Small steps lead to stronger connections.',
-                style: AppTypography.caption(
-                  color: Colors.white.withValues(alpha: 0.75),
-                ).copyWith(fontSize: 9),
-              ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
-  },
-);
-}
+  }
 }
 
 class _ScoreGaugeBackgroundPainter extends CustomPainter {
@@ -1134,12 +1134,17 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
-    final cy = size.height - 15; // center at bottom minus some padding
+    final cy = size.height - 6; // shift baseline down to maximize circle size
     final center = Offset(cx, cy);
 
     // Segment configuration scaled dynamically based on width
     final segmentThickness = size.width * 0.075;
-    final segmentRadius = cx - (size.width * 0.1);
+    
+    // Outer track sits exactly at the edge with a 4px safe margin
+    final trackRadius = cx - 4;
+    
+    // Calculate segment radius based on track position
+    final segmentRadius = trackRadius - (segmentThickness / 2) - 5;
 
     // 1. Draw the 5 outer segments
     final segmentLabels = ['0-20', '21-40', '41-60', '61-80', '81-100'];
@@ -1162,7 +1167,8 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
         ..strokeCap = StrokeCap.butt;
 
       final rect = Rect.fromCircle(center: center, radius: segmentRadius);
-      canvas.drawArc(rect, startAngle, segmentSweep, false, segmentPaint);
+      // Add a small gap between segments by reducing the sweep angle slightly
+      canvas.drawArc(rect, startAngle + 0.01, segmentSweep - 0.02, false, segmentPaint);
 
       // Draw segment labels inside the segments
       final labelAngle = startAngle + segmentSweep / 2;
@@ -1183,7 +1189,6 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
     }
 
     // 2. Draw the outer track for the indicator dot
-    final trackRadius = segmentRadius + segmentThickness / 2 + 10;
     final trackPaint = Paint()
       ..color = tokens.border.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
@@ -1202,20 +1207,27 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
     final dotBorderPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+      ..strokeWidth = 2.2;
 
     canvas.drawCircle(Offset(dx, dy), 6.5, dotPaint);
     canvas.drawCircle(Offset(dx, dy), 6.5, dotBorderPaint);
     canvas.drawCircle(Offset(dx, dy), 2.5, Paint()..color = Colors.white); // white inner center
 
-    // 4. Draw the inner gradient semi-circle
-    final innerRadius = segmentRadius - segmentThickness / 2 - 6;
+    // 4. Draw the inner gradient semi-circle dome
+    final innerRadius = segmentRadius - segmentThickness / 2 - 4;
     final gradientRect = Rect.fromCircle(center: center, radius: innerRadius);
     final gradientPaint = Paint()
       ..shader = tokens.aiGradient.createShader(gradientRect)
       ..style = PaintingStyle.fill;
 
     canvas.drawArc(gradientRect, math.pi, math.pi, true, gradientPaint);
+
+    // 5. Draw the thin white divider line separating the dome and the segments
+    final dividerPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.95)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawArc(gradientRect, math.pi, math.pi, false, dividerPaint);
   }
 
   void _drawTextCentered(Canvas canvas, String text, Offset position, double rotationAngle, TextStyle style) {
