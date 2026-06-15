@@ -96,6 +96,7 @@ class _YouHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.space5,
@@ -103,7 +104,11 @@ class _YouHero extends StatelessWidget {
         AppSpacing.space5,
         AppSpacing.space6,
       ),
-      decoration: BoxDecoration(gradient: tokens.aiGradient),
+      decoration: BoxDecoration(
+        gradient: tokens.cardGradient,
+        border: Border(bottom: BorderSide(color: tokens.border)),
+        boxShadow: AppTokens.elevation1(dark),
+      ),
       child: Column(
         children: [
           Row(
@@ -124,7 +129,7 @@ class _YouHero extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: .86),
+                    color: tokens.surfaceRaised.withValues(alpha: .9),
                     width: 3,
                   ),
                 ),
@@ -132,14 +137,14 @@ class _YouHero extends StatelessWidget {
                   profile: profile,
                   radius: 50,
                   glyphSize: 42,
-                  backgroundColor: tokens.primaryTint,
+                  backgroundColor: tokens.surfaceRaised,
                 ),
               ),
               Positioned(
                 right: -2,
                 bottom: 4,
                 child: Material(
-                  color: Colors.white,
+                  color: tokens.surfaceRaised.withValues(alpha: .96),
                   shape: const CircleBorder(),
                   elevation: 2,
                   child: InkWell(
@@ -162,15 +167,13 @@ class _YouHero extends StatelessWidget {
           Text(
             profile?.name ?? 'Your profile',
             textAlign: TextAlign.center,
-            style: AppTypography.h1(color: Colors.white),
+            style: AppTypography.h1(color: tokens.ink),
           ),
           SizedBox(height: AppSpacing.space1),
           Text(
             profile?.email ?? '',
             textAlign: TextAlign.center,
-            style: AppTypography.bodyLg(
-              color: Colors.white.withValues(alpha: .9),
-            ),
+            style: AppTypography.bodyLg(color: tokens.inkMuted),
           ),
         ],
       ),
@@ -186,13 +189,14 @@ class _HeroIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     return Material(
-      color: Colors.white.withValues(alpha: .16),
+      color: tokens.surfaceRaised.withValues(alpha: .72),
       shape: const CircleBorder(),
       child: IconButton(
         tooltip: 'Settings',
         onPressed: onPressed,
-        icon: Icon(icon, color: Colors.white),
+        icon: Icon(icon, color: tokens.primary),
       ),
     );
   }

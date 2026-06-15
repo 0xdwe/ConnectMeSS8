@@ -197,172 +197,177 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.space5,
-            AppSpacing.space4,
-            AppSpacing.space5,
-            AppSpacing.space6,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ─── Center CircleAvatar with floating Camera Icon Overlay ───
-              const SizedBox(height: 12),
-              Center(
-                child: Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: tokens.primary.withValues(alpha: 0.15),
-                          width: 4,
+      body: AppSurface(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.space5,
+              AppSpacing.space4,
+              AppSpacing.space5,
+              AppSpacing.space6,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ─── Center CircleAvatar with floating Camera Icon Overlay ───
+                const SizedBox(height: 12),
+                Center(
+                  child: Stack(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: tokens.primary.withValues(alpha: 0.15),
+                            width: 4,
+                          ),
+                        ),
+                        child: AccountAvatar(
+                          profile: previewProfile,
+                          radius: 64,
+                          glyphSize: 48,
+                          backgroundColor: tokens.primaryTint,
+                          localImage: _pickedAvatar == null
+                              ? null
+                              : FileImage(_pickedAvatar!),
                         ),
                       ),
-                      child: AccountAvatar(
-                        profile: previewProfile,
-                        radius: 64,
-                        glyphSize: 48,
-                        backgroundColor: tokens.primaryTint,
-                        localImage: _pickedAvatar == null
-                            ? null
-                            : FileImage(_pickedAvatar!),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Material(
-                        color: tokens.primary,
-                        elevation: 4,
-                        shape: const CircleBorder(),
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          onTap: _showAvatarOptionSheet,
-                          child: const Padding(
-                            padding: EdgeInsets.all(8.0),
-                            key: Key('edit-avatar-camera-button'),
-                            child: Icon(
-                              Icons.camera_alt_outlined,
-                              color: Colors.white,
-                              size: 18,
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Material(
+                          color: tokens.primary,
+                          elevation: 4,
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: _showAvatarOptionSheet,
+                            child: const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              key: Key('edit-avatar-camera-button'),
+                              child: Icon(
+                                Icons.camera_alt_outlined,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // PROFILE PHOTO Label
-              Center(
-                child: Text(
-                  'PROFILE PHOTO',
-                  style: AppTypography.caption(color: tokens.primary).copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
+                const SizedBox(height: 16),
 
-              // Outlined Remove Photo pilled button
-              Center(
-                child: OutlinedButton(
-                  onPressed: () {
-                    setState(() {
-                      _pickedAvatar = null;
-                      _removePhoto = true;
-                    });
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: tokens.danger,
-                    side: BorderSide(
-                      color: tokens.danger.withValues(alpha: 0.25),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 10,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
+                // PROFILE PHOTO Label
+                Center(
                   child: Text(
-                    'Remove Photo',
-                    style: AppTypography.body(
-                      color: tokens.danger,
-                    ).copyWith(fontSize: 13, fontWeight: FontWeight.w600),
+                    'PROFILE PHOTO',
+                    style: AppTypography.caption(color: tokens.primary)
+                        .copyWith(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                        ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 28),
+                const SizedBox(height: 8),
 
-              // ─── Input Fields Card (Name and Email) ───
-              CardBox(
-                padding: const EdgeInsets.all(16),
-                border: Border.all(color: tokens.border, width: 1),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'NAME',
-                      style: AppTypography.caption(color: tokens.primary)
-                          .copyWith(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.0,
-                          ),
-                    ),
-                    TextField(
-                      key: const Key('profile-name-field'),
-                      controller: name,
-                      onChanged: (_) => setState(() => _nameError = null),
-                      style: AppTypography.body(
-                        color: tokens.ink,
-                      ).copyWith(fontSize: 16, fontWeight: FontWeight.w600),
-                      decoration: InputDecoration(
-                        errorText: _nameError,
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                // Outlined Remove Photo pilled button
+                Center(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _pickedAvatar = null;
+                        _removePhoto = true;
+                      });
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: tokens.danger,
+                      side: BorderSide(
+                        color: tokens.danger.withValues(alpha: 0.25),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Divider(color: tokens.border, height: 1),
-                    const SizedBox(height: 12),
-                    Text(
-                      'EMAIL ADDRESS',
-                      style: AppTypography.caption(color: tokens.primary)
-                          .copyWith(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.0,
-                          ),
-                    ),
-                    TextField(
-                      key: const Key('profile-email-field'),
-                      controller: email,
-                      readOnly: true,
+                    child: Text(
+                      'Remove Photo',
                       style: AppTypography.body(
-                        color: tokens.inkMuted,
-                      ).copyWith(fontSize: 16, fontWeight: FontWeight.w600),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 8),
-                      ),
+                        color: tokens.danger,
+                      ).copyWith(fontSize: 13, fontWeight: FontWeight.w600),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 28),
+
+                // ─── Input Fields Card (Name and Email) ───
+                CardBox(
+                  padding: const EdgeInsets.all(16),
+                  border: Border.all(color: tokens.border, width: 1),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'NAME',
+                        style: AppTypography.caption(color: tokens.primary)
+                            .copyWith(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.0,
+                            ),
+                      ),
+                      TextField(
+                        key: const Key('profile-name-field'),
+                        controller: name,
+                        onChanged: (_) => setState(() => _nameError = null),
+                        style: AppTypography.body(
+                          color: tokens.ink,
+                        ).copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+                        decoration: InputDecoration(
+                          errorText: _nameError,
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Divider(color: tokens.border, height: 1),
+                      const SizedBox(height: 12),
+                      Text(
+                        'EMAIL ADDRESS',
+                        style: AppTypography.caption(color: tokens.primary)
+                            .copyWith(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.0,
+                            ),
+                      ),
+                      TextField(
+                        key: const Key('profile-email-field'),
+                        controller: email,
+                        readOnly: true,
+                        style: AppTypography.body(
+                          color: tokens.inkMuted,
+                        ).copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(vertical: 8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),

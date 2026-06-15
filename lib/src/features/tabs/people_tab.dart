@@ -35,119 +35,109 @@ class _PeopleTabState extends ConsumerState<PeopleTab> {
       appControllerProvider.select((state) => state.connections.isNotEmpty),
     );
 
-    return Container(
-      color: tokens.surface,
-      child: ListView(
-        key: const Key('people-tab'),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-        children: [
-          TextField(
-            decoration: InputDecoration(
-              prefixIcon: Icon(Icons.search, size: 20, color: tokens.inkSubtle),
-              hintText: 'Search contacts...',
-              hintStyle: AppTypography.body(color: tokens.inkSubtle),
-              filled: true,
-              fillColor: tokens.surfaceRaised,
-              contentPadding: const EdgeInsets.symmetric(
-                vertical: 14,
-                horizontal: 16,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(28),
-                borderSide: BorderSide(color: tokens.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(28),
-                borderSide: BorderSide(color: tokens.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(28),
-                borderSide: BorderSide(color: tokens.primary, width: 1.4),
-              ),
+    return ListView(
+      key: const Key('people-tab'),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+      children: [
+        TextField(
+          decoration: InputDecoration(
+            prefixIcon: Icon(Icons.search, size: 20, color: tokens.inkSubtle),
+            hintText: 'Search contacts...',
+            hintStyle: AppTypography.body(color: tokens.inkSubtle),
+            filled: true,
+            fillColor: tokens.surfaceRaised,
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 14,
+              horizontal: 16,
             ),
-            cursorColor: tokens.primary,
-            style: AppTypography.body(color: tokens.ink),
-            onChanged: (value) => setState(() => query = value),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(28),
+              borderSide: BorderSide(color: tokens.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(28),
+              borderSide: BorderSide(color: tokens.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(28),
+              borderSide: BorderSide(color: tokens.primary, width: 1.4),
+            ),
           ),
+          cursorColor: tokens.primary,
+          style: AppTypography.body(color: tokens.ink),
+          onChanged: (value) => setState(() => query = value),
+        ),
 
-          const SizedBox(height: 12),
+        const SizedBox(height: 12),
 
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                Icon(
-                  Icons.filter_alt_outlined,
-                  color: tokens.primary,
-                  size: 18,
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              Icon(Icons.filter_alt_outlined, color: tokens.primary, size: 18),
+              const SizedBox(width: 8),
+              ...categories.map(
+                (item) => _SmallChip(
+                  label: item,
+                  selected: item == category,
+                  onTap: () => setState(() => category = item),
                 ),
-                const SizedBox(width: 8),
-                ...categories.map(
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        Text('Sort by:', style: AppTypography.caption(color: tokens.inkMuted)),
+
+        const SizedBox(height: 8),
+
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: ContactSort.values
+                .map(
                   (item) => _SmallChip(
-                    label: item,
-                    selected: item == category,
-                    onTap: () => setState(() => category = item),
+                    label: item.label,
+                    selected: item == sort,
+                    onTap: () => setState(() => sort = item),
                   ),
-                ),
-              ],
+                )
+                .toList(),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        if (people.isEmpty && !hasAnyConnections)
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Text(
+              'No connections yet. Tap + to add someone.',
+              style: AppTypography.bodyLg(color: tokens.inkMuted),
+              textAlign: TextAlign.center,
             ),
-          ),
-
-          const SizedBox(height: 16),
-
-          Text(
-            'Sort by:',
-            style: AppTypography.caption(color: tokens.inkMuted),
-          ),
-
-          const SizedBox(height: 8),
-
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: ContactSort.values
-                  .map(
-                    (item) => _SmallChip(
-                      label: item.label,
-                      selected: item == sort,
-                      onTap: () => setState(() => sort = item),
-                    ),
-                  )
-                  .toList(),
+          )
+        else if (people.isEmpty && query.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Text(
+              'Nothing matches "$query". Try a different word.',
+              style: AppTypography.bodyLg(color: tokens.inkMuted),
+              textAlign: TextAlign.center,
             ),
-          ),
-
-          const SizedBox(height: 16),
-
-          if (people.isEmpty && !hasAnyConnections)
+          )
+        else
+          for (final person in people)
             Padding(
-              padding: const EdgeInsets.all(32),
-              child: Text(
-                'No connections yet. Tap + to add someone.',
-                style: AppTypography.bodyLg(color: tokens.inkMuted),
-                textAlign: TextAlign.center,
+              padding: const EdgeInsets.only(bottom: 10),
+              child: ContactListCard(
+                connection: person,
+                onTap: () => context.push('/contact/${person.id}'),
               ),
-            )
-          else if (people.isEmpty && query.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.all(32),
-              child: Text(
-                'Nothing matches "$query". Try a different word.',
-                style: AppTypography.bodyLg(color: tokens.inkMuted),
-                textAlign: TextAlign.center,
-              ),
-            )
-          else
-            for (final person in people)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: ContactListCard(
-                  connection: person,
-                  onTap: () => context.push('/contact/${person.id}'),
-                ),
-              ),
-        ],
-      ),
+            ),
+      ],
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/crm_widgets.dart';
 import 'tabs/settings_tab.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -9,7 +10,7 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: const SettingsTab(),
+      body: const AppSurface(child: SettingsTab()),
     );
   }
 }
