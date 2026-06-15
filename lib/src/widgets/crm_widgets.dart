@@ -450,147 +450,109 @@ class RecommendationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final isCompleted = recommendation.isCompleted;
-    final priority = isCompleted
-        ? 'Done'
-        : _recommendationPriority(connection.bondScore);
-    final priorityColor = isCompleted
-        ? tokens.success
-        : _recommendationPriorityColor(connection.bondScore, tokens);
 
     return CardBox(
       onTap: onTap,
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.space4,
-        vertical: AppSpacing.space4,
-      ),
+      padding: EdgeInsets.all(AppSpacing.space4),
       color: isCompleted ? tokens.surfaceSunken : null,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: isCompleted
-                ? tokens.success.withValues(alpha: .12)
-                : tokens.primaryTint,
-            backgroundImage: connectionAvatarImage(connection.avatar),
-            child: connectionAvatarImage(connection.avatar) == null
-                ? Text(
-                    isCompleted ? '✓' : connection.avatar,
-                    style: AppTypography.glyph(20,
-                        color: isCompleted ? tokens.success : tokens.primary),
-                  )
-                : null,
-          ),
-          SizedBox(width: AppSpacing.space4),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+          // Top row: avatar + name + bond ring
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: isCompleted
+                    ? tokens.success.withValues(alpha: .12)
+                    : tokens.primaryTint,
+                backgroundImage: connectionAvatarImage(connection.avatar),
+                child: connectionAvatarImage(connection.avatar) == null
+                    ? Text(
+                        isCompleted ? '✓' : connection.avatar,
+                        style: AppTypography.glyph(22,
+                            color: isCompleted ? tokens.success : tokens.primary),
+                      )
+                    : null,
+              ),
+              SizedBox(width: AppSpacing.space3),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Flexible(
-                      child: Text(
-                        connection.name,
-                        style: AppTypography.h2(color: tokens.ink),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    Text(
+                      connection.name,
+                      style: AppTypography.h2(color: tokens.ink),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(width: 8),
-                    CircleAvatar(
-                      radius: 4,
-                      backgroundColor: categoryColor(
-                        connection.category,
-                        tokens,
-                      ),
+                    SizedBox(height: 2),
+                    Text(
+                      connection.category,
+                      style: AppTypography.caption(color: tokens.inkMuted),
                     ),
                   ],
                 ),
-                SizedBox(height: AppSpacing.space2),
-                Text(
-                  recommendation.reason,
-                  style: AppTypography.body(color: tokens.ink),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: AppSpacing.space2),
-                Text(
-                  recommendation.insight,
-                  style: AppTypography.caption(color: tokens.inkMuted),
-                ),
-                if (!isCompleted)
-                  if (recommendation.action case final action?) ...[
-                  SizedBox(height: AppSpacing.space3),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.space3,
-                      vertical: AppSpacing.space3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: tokens.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.chat_bubble_outline,
-                          size: 16,
-                          color: tokens.primary,
-                        ),
-                        SizedBox(width: AppSpacing.space2),
-                        Expanded(
-                          child: Text(
-                            action,
-                            style: AppTypography.caption(
-                              color: tokens.ink,
-                            ).copyWith(height: 1.3),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          SizedBox(width: AppSpacing.space4),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.space3,
-                  vertical: AppSpacing.space1,
-                ),
-                decoration: BoxDecoration(
-                  color: priorityColor.withValues(alpha: .16),
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                ),
-                child: Text(
-                  priority,
-                  style: AppTypography.caption(color: priorityColor),
-                ),
               ),
-              SizedBox(height: AppSpacing.space3),
+              SizedBox(width: AppSpacing.space3),
               BondRing(
                   connection: connection,
-                  size: 56,
+                  size: 52,
                   showAvatar: false,
                   showTrend: false),
             ],
           ),
+          SizedBox(height: AppSpacing.space3),
+          // Reason
+          Text(
+            recommendation.reason,
+            style: AppTypography.bodyLg(color: tokens.ink),
+          ),
+          SizedBox(height: AppSpacing.space1),
+          // Insight
+          Text(
+            recommendation.insight,
+            style: AppTypography.body(color: tokens.inkMuted),
+          ),
+          // Optional action suggestion
+          if (!isCompleted)
+            if (recommendation.action case final action?) ...[
+            SizedBox(height: AppSpacing.space3),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSpacing.space3,
+                vertical: AppSpacing.space3,
+              ),
+              decoration: BoxDecoration(
+                color: tokens.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 16,
+                    color: tokens.primary,
+                  ),
+                  SizedBox(width: AppSpacing.space2),
+                  Expanded(
+                    child: Text(
+                      action,
+                      style: AppTypography.caption(
+                        color: tokens.ink,
+                      ).copyWith(height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
-
-String _recommendationPriority(int score) => score < 55 ? 'High' : 'Medium';
-
-Color _recommendationPriorityColor(int score, AppTokens tokens) =>
-    score < 55 ? tokens.danger : tokens.secondary;
 
 /// Returns a strength label based on the total number of interactions
 /// logged for a category over the last 12 months.

@@ -655,24 +655,22 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
                       ),
                     ),
                     SizedBox(width: AppSpacing.space3),
-                    // Main content: title (bold) + note (muted)
+                    // Main content
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Title row
+                          Text(
+                            history[i].title,
+                            style: AppTypography.bodyLg(),
+                          ),
+                          SizedBox(height: AppSpacing.space1),
+                          // AI badge + delete row
                           Row(
                             children: [
-                              Expanded(
-                                child: Text(
-                                  history[i].title,
-                                  style: AppTypography.bodyLg(),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
                               if (history[i].source ==
                                   InteractionSource.aiSuggested) ...[
-                                SizedBox(width: AppSpacing.space2),
                                 Container(
                                   padding: EdgeInsets.symmetric(
                                     horizontal: AppSpacing.space2,
@@ -706,10 +704,34 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
                                   ),
                                 ),
                               ],
+                              Spacer(),
+                              IconButton(
+                                key: Key(
+                                    'delete-interaction-${history[i].id}'),
+                                icon: Icon(
+                                  Icons.delete,
+                                  size: 18,
+                                  color: _deletingInteractionId ==
+                                          history[i].id
+                                      ? tokens.inkSubtle
+                                      : tokens.inkMuted,
+                                ),
+                                onPressed:
+                                    _deletingInteractionId == history[i].id
+                                        ? null
+                                        : () => _confirmDelete(history[i]),
+                                tooltip: 'Delete activity',
+                                visualDensity: VisualDensity.compact,
+                                constraints: BoxConstraints(
+                                  minWidth: 28,
+                                  minHeight: 28,
+                                ),
+                              ),
                             ],
                           ),
+                          // Note text
                           if (history[i].note.isNotEmpty) ...[
-                            SizedBox(height: AppSpacing.space2),
+                            SizedBox(height: AppSpacing.space1),
                             Text(
                               history[i].note,
                               style: AppTypography.bodyLg(
@@ -719,22 +741,6 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
                           ],
                         ],
                       ),
-                    ),
-                    // Delete action
-                    SizedBox(width: AppSpacing.space2),
-                    IconButton(
-                      key: Key('delete-interaction-${history[i].id}'),
-                      icon: Icon(
-                        Icons.delete_outline,
-                        size: 20,
-                        color: _deletingInteractionId == history[i].id
-                            ? tokens.inkSubtle
-                            : tokens.inkMuted,
-                      ),
-                      onPressed: _deletingInteractionId == history[i].id
-                          ? null
-                          : () => _confirmDelete(history[i]),
-                      tooltip: 'Delete activity',
                     ),
                   ],
                 ),
