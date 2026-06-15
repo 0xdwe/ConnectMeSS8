@@ -2172,10 +2172,13 @@ void main() {
       final before = await interactions.load('i1');
       expect(before, isNotNull);
 
-      await container
+      final result = await container
           .read(appControllerProvider.notifier)
           .deleteInteraction('i1');
       await _settle();
+
+      // Returns true — rebuild was skipped (no memory doc), not failed
+      expect(result, isTrue);
 
       // Interaction should still be deleted even without memory rebuild
       final after = await interactions.load('i1');
@@ -2222,10 +2225,13 @@ void main() {
 
       final mikeBefore = (await connections.load('mike'))!;
 
-      await container
+      final result = await container
           .read(appControllerProvider.notifier)
           .deleteInteraction('delta-interaction');
       await _settle();
+
+      // Returns false — the memory rebuild threw
+      expect(result, isFalse);
 
       // Interaction is still deleted
       expect(await interactions.load('delta-interaction'), isNull);
@@ -2330,10 +2336,13 @@ void main() {
       container.read(appControllerProvider);
       await _settle();
 
-      await container
+      final result = await container
           .read(appControllerProvider.notifier)
           .deleteInteraction('delta-interaction');
       await _settle();
+
+      // Returns false — the memory rebuild threw
+      expect(result, isFalse);
 
       // Provider should be null even though rebuild threw
       expect(container.read(pendingMemoryRebuildProvider), isNull);

@@ -542,11 +542,24 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
 
     _deleteTimer = Timer(const Duration(seconds: 4), () async {
       if (!mounted) return;
+      // Capture ScaffoldMessenger before the await so it's available
+      // even if the widget tree rebuilds during the async chain.
+      final messenger = ScaffoldMessenger.of(context);
       try {
-        await ref
+        final rebuildSucceeded = await ref
             .read(appControllerProvider.notifier)
             .deleteInteraction(interaction.id);
+        if (!rebuildSucceeded) {
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text(
+                'AI Insights could not be refreshed. Try refreshing manually later.',
+              ),
+            ),
+          );
+        }
       } finally {
+        // ignore: use_build_context_synchronously
         if (mounted) {
           setState(() => _deletingInteractionId = null);
         }

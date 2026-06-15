@@ -876,7 +876,12 @@ class AppController extends Notifier<AppState> {
   ///   if no interactions remain).
   /// - [Connection.bondScore] is reduced by the deleted interaction's
   ///   [CrmInteraction.bondScoreDelta], clamped to 0..100.
-  Future<void> deleteInteraction(String interactionId) async {
+  ///
+  /// Returns `true` if the memory rebuild completed (or was skipped
+  /// because no memory document existed for the contact). Returns
+  /// `false` if the memory rebuild failed — the caller should surface
+  /// this so the user knows AI Insights may be stale.
+  Future<bool> deleteInteraction(String interactionId) async {
     // Find the interaction to delete
     final interaction = state.interactions.firstWhere(
       (i) => i.id == interactionId,
@@ -931,6 +936,7 @@ class AppController extends Notifier<AppState> {
     // would expose an intermediate state to snapshot listeners).
     Connection connectionToSave = updatedConnection;
     bool memoryRebuilt = false;
+    bool rebuildSucceeded = true;
 
     try {
       final memoryStore = ref.read(memoryStoreProvider);
@@ -954,6 +960,9 @@ class AppController extends Notifier<AppState> {
     } catch (_) {
       // Memory rebuild failure is non-fatal; the interaction is already
       // deleted and the connection fields are still updated below.
+      // Return false so the caller can inform the user about stale AI
+      // Insights.
+      rebuildSucceeded = false;
     }
 
     // Single connection save with all updated fields
@@ -970,6 +979,8 @@ class AppController extends Notifier<AppState> {
     ref
         .read(pendingMemoryRebuildProvider.notifier)
         .setContactId(null);
+
+    return rebuildSucceeded;
   }
 
   /// Clear the synchronous AI-update completion signal after the

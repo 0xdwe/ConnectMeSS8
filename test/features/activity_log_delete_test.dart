@@ -1,4 +1,6 @@
+import 'package:connect_me/src/ai/memory_rebuilder.dart';
 import 'package:connect_me/src/features/contact_profile_screen.dart';
+import 'package:connect_me/src/models/social_models.dart';
 import 'package:connect_me/src/state/connections/batched_writes.dart';
 import 'package:connect_me/src/state/connections/batched_writes_providers.dart';
 import 'package:connect_me/src/state/connections/connection_providers.dart';
@@ -12,7 +14,9 @@ import 'package:connect_me/src/state/connections/interaction_providers.dart';
 import 'package:connect_me/src/state/connections/user_doc_store_providers.dart';
 import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
+import 'package:connect_me/src/state/memory/memory_document.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
+import 'package:connect_me/src/state/memory/memory_rebuilder_providers.dart';
 import 'package:connect_me/src/theme/app_theme.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
@@ -21,7 +25,16 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Pump [ContactProfileScreen] with in-memory stores seeded with
 /// sample data matching [AppState.seeded].
-Future<void> _pump(WidgetTester tester, String contactId) async {
+///
+/// [memoryStore] can be provided to pre-seed memory documents; defaults
+/// to an empty [InMemoryMemoryStore]. [additionalOverrides] adds extra
+/// provider overrides (e.g. a throwing memory rebuilder).
+Future<void> _pump(
+  WidgetTester tester,
+  String contactId, {
+  InMemoryMemoryStore? memoryStore,
+  List<dynamic> additionalOverrides = const <dynamic>[],
+}) async {
   final connections = InMemoryConnectionStore();
   connections.seedSync(SeederSampleSource.connections());
   final interactions = InMemoryInteractionStore();
@@ -34,6 +47,7 @@ Future<void> _pump(WidgetTester tester, String contactId) async {
     interactionStore: interactions,
     eventStore: events,
   );
+  final memory = memoryStore ?? InMemoryMemoryStore();
 
   await tester.pumpWidget(
     ProviderScope(
@@ -54,7 +68,8 @@ Future<void> _pump(WidgetTester tester, String contactId) async {
         eventStoreProvider.overrideWithValue(events),
         userDocStoreProvider.overrideWithValue(userDoc),
         batchedWritesProvider.overrideWithValue(batched),
-        memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+        memoryStoreProvider.overrideWithValue(memory),
+        ...additionalOverrides,
       ],
       child: MaterialApp(
         theme: AppTheme.data(false),
@@ -177,5 +192,67 @@ void main() {
       // The interaction row should be removed from the Activity Log
       expect(find.text('Job application'), findsNothing);
     });
+
+    testWidgets('when memory rebuild fails, interaction is still deleted', (
+      tester,
+    ) async {
+      // Pre-seed a memory document for mike so the rebuild branch is entered
+      final memoryStore = InMemoryMemoryStore();
+      await memoryStore.save(MemoryDocument.empty(
+        contactId: 'mike',
+        displayName: 'Mike',
+        now: DateTime(2026),
+      ));
+
+      // Use a throwing memory rebuilder to simulate a rebuild failure
+      final throwingRebuilder = _ThrowingMemoryRebuilder();
+
+      await _pump(
+        tester,
+        'mike',
+        memoryStore: memoryStore,
+        additionalOverrides: [
+          memoryRebuilderProvider.overrideWithValue(throwingRebuilder),
+        ],
+      );
+
+      // Tap delete on i2 (Mike's interaction)
+      await tester.tap(
+        find.byKey(const Key('delete-interaction-i2')),
+      );
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      // Confirm deletion
+      await tester.tap(find.text('Delete'));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      // Advance the fake clock by 4s to fire the undo Timer.
+      await tester.pump(const Duration(seconds: 4));
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      // The interaction should be deleted regardless of rebuild failure
+      expect(find.text('Job application'), findsNothing,
+          reason: 'the interaction should be deleted even if rebuild fails');
+    });
   });
+}
+
+/// A [MemoryRebuilder] that always throws, used to test the non-fatal
+/// error path where the rebuild fails but the interaction is still deleted.
+class _ThrowingMemoryRebuilder implements MemoryRebuilder {
+  @override
+  Future<MemoryRebuildResult> rebuild({
+    required Connection contact,
+    required MemoryDocument currentMemory,
+    required List<CrmInteraction> remainingInteractions,
+    required CrmInteraction deletedInteraction,
+  }) {
+    throw Exception('Rebuild failed — simulated network error');
+  }
 }
