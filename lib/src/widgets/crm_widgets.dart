@@ -354,7 +354,6 @@ class _ContactListCardState extends State<ContactListCard> {
                   ConnectionScoreRing(
                     score: widget.connection.bondScore,
                     size: 58,
-                    trend: widget.connection.bondTrendAt(DateTime.now()),
                   ),
                 ],
               ),
@@ -381,42 +380,53 @@ class ConnectionScoreRing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final hasTrend = trend != BondTrend.flat;
+    final trendArrowSize = (size * 0.28).clamp(14.0, 18.0).toDouble();
+    final trendGap = size * 0.08;
 
     return SizedBox(
-      width: size,
+      width: hasTrend ? size + trendGap + trendArrowSize : size,
       height: size,
       child: Stack(
-        alignment: Alignment.center,
+        alignment: Alignment.centerLeft,
         clipBehavior: Clip.none,
         children: [
-          CircularProgressIndicator(
-            value: 1,
-            strokeWidth: 4,
-            color: tokens.border.withValues(alpha: .7),
+          SizedBox.square(
+            dimension: size,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: 1,
+                  strokeWidth: 4,
+                  color: tokens.border.withValues(alpha: .7),
+                ),
+
+                CircularProgressIndicator(
+                  value: score / 100,
+                  strokeWidth: 4,
+                  strokeCap: StrokeCap.round,
+                  color: tokens.primary,
+                ),
+
+                Text(
+                  '$score',
+                  style: AppTypography.monoTabular(
+                    color: tokens.ink,
+                  ).copyWith(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
           ),
 
-          CircularProgressIndicator(
-            value: score / 100,
-            strokeWidth: 4,
-            strokeCap: StrokeCap.round,
-            color: tokens.primary,
-          ),
-
-          Text(
-            '$score',
-            style: AppTypography.monoTabular(
-              color: tokens.ink,
-            ).copyWith(fontSize: 15, fontWeight: FontWeight.w700),
-          ),
-
-          if (trend != BondTrend.flat)
+          if (hasTrend)
             Positioned(
-              right: -12,
-              bottom: 2,
+              left: size + trendGap,
+              bottom: size * 0.14,
               child: Icon(
                 trend == BondTrend.up ? Icons.arrow_upward : Icons.arrow_downward,
                 color: trend == BondTrend.up ? tokens.success : tokens.danger,
-                size: size * 0.5,
+                size: trendArrowSize,
               ),
             ),
         ],
@@ -567,7 +577,8 @@ class RecommendationCard extends StatelessWidget {
               BondRing(
                   connection: connection,
                   size: 56,
-                  showAvatar: false),
+                  showAvatar: false,
+                  showTrend: false),
             ],
           ),
         ],

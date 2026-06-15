@@ -65,6 +65,7 @@ class BondRing extends StatefulWidget {
     this.size = 64,
     this.onTap,
     this.showAvatar = true,
+    this.showTrend = true,
     this.strokeWidth = 3,
   }) : _connection = connection,
        _score = null,
@@ -77,6 +78,7 @@ class BondRing extends StatefulWidget {
     required String label,
     this.size = 64,
     this.onTap,
+    this.showTrend = true,
     this.strokeWidth = 3,
   }) : _connection = null,
        _score = score,
@@ -89,6 +91,7 @@ class BondRing extends StatefulWidget {
   final double size;
   final VoidCallback? onTap;
   final bool showAvatar;
+  final bool showTrend;
   final double strokeWidth;
 
   // Convenience getters
@@ -96,7 +99,8 @@ class BondRing extends StatefulWidget {
   int get score => _connection?.bondScore ?? _score ?? 0;
   String get label => _connection?.name ?? _label ?? '';
   String? get avatar => _connection?.avatar;
-  BondTrend? get trend => _connection?.bondTrendAt(DateTime.now());
+  BondTrend? get trend =>
+      showTrend ? _connection?.bondTrendAt(DateTime.now()) : null;
 
   @override
   State<BondRing> createState() => _BondRingState();
@@ -187,6 +191,9 @@ class _BondRingState extends State<BondRing>
     final semanticLabel = currentTrend != null && currentTrend != BondTrend.flat
         ? '${widget.label}, ${tier.label}, trending ${currentTrend.name}'
         : '${widget.label}, ${tier.label}';
+    final hasTrend = currentTrend != null && currentTrend != BondTrend.flat;
+    final trendArrowSize = (widget.size * 0.28).clamp(12.0, 18.0).toDouble();
+    final trendGap = widget.size * 0.08;
 
     final ringWidget = SizedBox.square(
       dimension: widget.size,
@@ -234,23 +241,38 @@ class _BondRingState extends State<BondRing>
                     color: tokens.primary,
                   ),
                 ),
-              // Trend arrow at 4 o'clock (bold arrows)
-              if (currentTrend != null && currentTrend != BondTrend.flat)
-                Positioned(
-                  right: widget.size * 0.05,
-                  bottom: widget.size * 0.15,
-                  child: Icon(currentTrend.icon, size: 16, color: trendColor),
-                ),
             ],
           );
         },
       ),
     );
+    final visualWidget = hasTrend
+        ? SizedBox(
+            width: widget.size + trendGap + trendArrowSize,
+            height: widget.size,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                ringWidget,
+                SizedBox(width: trendGap),
+                Padding(
+                  padding: EdgeInsets.only(bottom: widget.size * 0.14),
+                  child: Icon(
+                    currentTrend.icon,
+                    size: trendArrowSize,
+                    color: trendColor,
+                  ),
+                ),
+              ],
+            ),
+          )
+        : ringWidget;
 
     // Wrap in minimum touch target if needed
     final touchTargetWidget = widget.size < 44
-        ? SizedBox(width: 44, height: 44, child: Center(child: ringWidget))
-        : ringWidget;
+        ? SizedBox(width: 44, height: 44, child: Center(child: visualWidget))
+        : visualWidget;
 
     // Wrap in Semantics and optional GestureDetector
     return Semantics(
