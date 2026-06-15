@@ -271,6 +271,22 @@ final pendingAiInsightsRefreshProvider =
   PendingAiInsightsRefreshNotifier.new,
 );
 
+/// Signal set by [AppController.deleteInteraction] to the contact
+/// ID whose memory needs rebuilding. [AiInsightsCard] watches this
+/// to show the refresh spinner while the rebuild runs in
+/// [AppController.deleteInteraction].
+class PendingMemoryRebuildNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void setContactId(String? id) => state = id;
+}
+
+final pendingMemoryRebuildProvider =
+    NotifierProvider<PendingMemoryRebuildNotifier, String?>(
+  PendingMemoryRebuildNotifier.new,
+);
+
 final recommendationsProvider = FutureProvider<List<Recommendation>>((
   ref,
 ) async {

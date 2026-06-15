@@ -1633,9 +1633,13 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
   bool expanded = true;
   bool _isRefreshing = false;
   bool _autoRefreshed = false;
+  /// Tracks whether a manual refresh is in progress so the rebuild
+  /// provider clear does not inadvertently end the manual refresh.
+  bool _manualRefreshInProgress = false;
 
   Future<void> _handleRefresh() async {
     if (_isRefreshing) return;
+    _manualRefreshInProgress = true;
     setState(() => _isRefreshing = true);
 
     try {
@@ -1685,6 +1689,7 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
       }
     } finally {
       if (mounted) {
+        _manualRefreshInProgress = false;
         setState(() => _isRefreshing = false);
       }
     }
@@ -1707,6 +1712,19 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
             .setContactId(null);
         _handleRefresh();
       });
+    }
+
+    // Watch for pending memory rebuild (delete flow).
+    // When pendingMemoryRebuildProvider matches this contact, show the
+    // refresh spinner. The rebuild itself runs in
+    // AppController.deleteInteraction; we just need to show the spinner.
+    // When the provider clears, hide the spinner unless a manual refresh
+    // is in progress (to avoid interrupting _handleRefresh's lifecycle).
+    final pendingRebuildId = ref.watch(pendingMemoryRebuildProvider);
+    if (pendingRebuildId == widget.connection.id && !_isRefreshing) {
+      _isRefreshing = true;
+    } else if (pendingRebuildId == null && _isRefreshing && !_manualRefreshInProgress) {
+      _isRefreshing = false;
     }
 
     return CardBox(

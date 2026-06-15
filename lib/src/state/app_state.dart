@@ -920,6 +920,11 @@ class AppController extends Notifier<AppState> {
       bondScore: newBondScore,
     );
 
+    // Signal AiInsightsCard to show the refresh spinner during rebuild.
+    ref
+        .read(pendingMemoryRebuildProvider.notifier)
+        .setContactId(contactId);
+
     // Rebuild memory to remove references to the deleted interaction.
     // If a memory document exists, rebuild it and update nextStep on
     // the connection in a single save (avoiding a double-write that
@@ -959,10 +964,12 @@ class AppController extends Notifier<AppState> {
       final clock = ref.read(clockProvider);
       ref.read(memoryEpochProvider.notifier).bump(clock());
       ref.read(recommendationsCacheProvider).cache = null;
-      ref
-          .read(pendingAiInsightsRefreshProvider.notifier)
-          .setContactId(contactId);
     }
+
+    // Clear the rebuild spinner regardless of success/failure.
+    ref
+        .read(pendingMemoryRebuildProvider.notifier)
+        .setContactId(null);
   }
 
   /// Clear the synchronous AI-update completion signal after the

@@ -2234,7 +2234,128 @@ void main() {
       final mikeAfter = (await connections.load('mike'))!;
       expect(mikeAfter.bondScore, lessThan(mikeBefore.bondScore));
     });
+
+    test('sets pendingMemoryRebuildProvider during rebuild and clears after',
+        () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      await _seedConnections(connections);
+      await _seedInteractions(interactions);
+
+      await memory.save(MemoryDocument(
+        contactId: 'sarah',
+        displayName: 'Sarah',
+        lastUpdated: DateTime(2026, 5, 1),
+      ));
+
+      final rebuildCompleter = Completer<MemoryRebuildResult>();
+      final delayingRebuilder = _DelayingMemoryRebuilder(rebuildCompleter.future);
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+        overrides: [
+          memoryRebuilderProvider.overrideWithValue(delayingRebuilder),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Start deleteInteraction but don't await — it will pause at the rebuild
+      final deleteFuture =
+          container.read(appControllerProvider.notifier).deleteInteraction('i1');
+
+      // Pump several times to let the method reach the rebuild step
+      for (var i = 0; i < 8; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      // The provider should be set to 'sarah' during the rebuild
+      expect(
+        container.read(pendingMemoryRebuildProvider),
+        equals('sarah'),
+      );
+
+      // Complete the rebuild
+      rebuildCompleter.complete(MemoryRebuildResult(
+        memoryDocument: MemoryDocument(
+          contactId: 'sarah',
+          displayName: 'Sarah',
+          lastUpdated: DateTime(2026, 6, 15),
+          summary: 'Rebuilt memory for Sarah',
+        ),
+        nextStep: 'Check in with Sarah',
+      ));
+
+      await deleteFuture;
+      await _settle();
+
+      // After the method completes, the provider should be cleared
+      expect(container.read(pendingMemoryRebuildProvider), isNull);
+    });
+
+    test('clears pendingMemoryRebuildProvider when rebuild fails', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      await _seedConnections(connections);
+
+      await interactions.save(CrmInteraction(
+        id: 'delta-interaction',
+        contactId: 'mike',
+        type: InteractionType.interaction,
+        title: 'Big boost',
+        note: 'Huge delta',
+        date: DateTime(2026, 6, 10),
+        bondScoreDelta: 10,
+      ));
+
+      await memory.save(MemoryDocument.empty(
+        contactId: 'mike',
+        displayName: 'Mike',
+        now: DateTime(2026),
+      ));
+
+      final throwingRebuilder = _ThrowingMemoryRebuilder();
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+        memoryRebuilder: throwingRebuilder,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('delta-interaction');
+      await _settle();
+
+      // Provider should be null even though rebuild threw
+      expect(container.read(pendingMemoryRebuildProvider), isNull);
+    });
   });
+}
+
+/// A [MemoryRebuilder] that completes from a [Future], used to test
+/// intermediate state during the rebuild.
+class _DelayingMemoryRebuilder implements MemoryRebuilder {
+  _DelayingMemoryRebuilder(this.future);
+  final Future<MemoryRebuildResult> future;
+
+  @override
+  Future<MemoryRebuildResult> rebuild({
+    required Connection contact,
+    required MemoryDocument currentMemory,
+    required List<CrmInteraction> remainingInteractions,
+    required CrmInteraction deletedInteraction,
+  }) {
+    return future;
+  }
 }
 
 /// A [MemoryRebuilder] that always throws, used to test the non-fatal
