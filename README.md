@@ -12,8 +12,6 @@
   <img src="https://img.shields.io/badge/Flutter-%2302569B.svg?style=flat&logo=Flutter&logoColor=white" alt="Flutter" />
   <img src="https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=black" alt="Firebase" />
   <img src="https://img.shields.io/badge/Gemini_API-blue?style=flat&logo=google-gemini&logoColor=white" alt="Gemini API" />
-  <img src="https://img.shields.io/badge/ADHD--Friendly-warmgreen?style=flat" alt="ADHD-Friendly" />
-  <img src="https://img.shields.io/badge/License-MIT-green.svg?style=flat" alt="License" />
 </p>
 
 ---
@@ -22,7 +20,7 @@
 
 **ConnectMe** is an open-source, empathy-driven personal CRM designed to bridge the gap in our working memory. It is built for:
 - **Busy professionals** who feel quiet guilt about losing touch with friends and family.
-- **People with ADHD or working memory differences** who need external systems to hold relationship state, without the anxiety of streaks, notifications, or performance grades.
+- **Anyone** who needs external systems to hold relationship state, without the anxiety of streaks, notifications, or performance grades.
 
 Unlike corporate CRMs (like Salesforce or HubSpot) that treat relationships as sales pipelines, **ConnectMe** focuses on the human element. Success is simple: *open the app, remember a friend, send a genuine message, and close the app.*
 
@@ -60,7 +58,7 @@ Each contact maintains a structured `MemoryDocument` (markdown narrative with YA
 
 ConnectMe is built on a foundation of compassionate product design:
 1. **Never Shame the User**: No "you haven't contacted Sarah in 47 days" pressure. No red overdue badges. Warnings are soft and encouraging (e.g., *"Sarah could use a check-in"*).
-2. **Predictable Cadence**: ADHD users suffer from surprise popups and destructive state changes. ConnectMe requires explicit confirmations and offers an **Undo** capability on all major timeline actions (such as deleting an interaction log).
+2. **Predictable Cadence**: Users benefit from protection against surprise popups and destructive state changes. ConnectMe requires explicit confirmations and offers an **Undo** capability on all major timeline actions (such as deleting an interaction log).
 3. **AI as an Assistant, Not a Stand-in**: AI does not write messages for you, speak in a synthetic assistant persona, or silently mutate your data. It only structures details you provide, showing a confirmation card first.
 4. **Privacy-First Graph**: All relationship data, interaction history, and memory documents are locked behind Firebase Auth, stored in subcollections matching your secure UID, and isolated end-to-end.
 
@@ -157,8 +155,3 @@ We welcome contributions! Please follow these guidelines:
 3. **Preserve Seams**: Ensure you implement both `InMemory` and `Firebase` adapters when introducing new stores.
 4. **Code Quality**: Follow dart rules in `analysis_options.yaml` and ensure targeted tests pass before submitting.
 
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
