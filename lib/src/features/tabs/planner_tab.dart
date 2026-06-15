@@ -1087,7 +1087,7 @@ class _NextUpCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: tokens.aiGradient,
+        color: tokens.primary,
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       padding: EdgeInsets.all(AppSpacing.space4),
