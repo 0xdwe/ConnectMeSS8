@@ -1664,4 +1664,258 @@ void main() {
       expect(state.lastAiUpdatedAt, isNull);
     });
   });
+
+  group('deleteInteraction', () {
+    test('deletes the interaction through the store', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      await _seedConnections(connections);
+      await _seedInteractions(interactions);
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Verify i1 exists before deletion
+      final before = await interactions.load('i1');
+      expect(before, isNotNull);
+
+      await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('i1');
+      await _settle();
+
+      // Verify it's gone from the store
+      final after = await interactions.load('i1');
+      expect(after, isNull);
+    });
+
+    test('recalculates lastContact from remaining interactions', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      await _seedConnections(connections);
+      await _seedInteractions(interactions);
+
+      // Add a second interaction for sarah (she has only i1 at 2026-04-20)
+      final laterInteraction = CrmInteraction(
+        id: 'sarah-late',
+        contactId: 'sarah',
+        type: InteractionType.reminder,
+        title: 'Later check-in',
+        note: '',
+        date: DateTime(2026, 5, 15),
+      );
+      await interactions.save(laterInteraction);
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Delete the older interaction (i1, 2026-04-20)
+      await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('i1');
+      await _settle();
+
+      // lastContact should now be the remaining interaction's date (2026-05-15)
+      final updatedSarah = (await connections.load('sarah'))!;
+      expect(updatedSarah.lastContact, DateTime(2026, 5, 15));
+    });
+
+    test('subtracts bondScoreDelta from bondScore', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final now = DateTime(2026, 6, 15);
+
+      // Use a dedicated connection with no drift risk (recent lastContact)
+      await connections.save(
+        Connection(
+          id: 'delta-target',
+          name: 'Delta Target',
+          email: 'delta@example.com',
+          category: 'Friends',
+          avatar: '😊',
+          bondScore: 50,
+          nextStep: '',
+          lastContact: now.subtract(const Duration(days: 2)),
+          notes: '',
+          knownSince: DateTime(2025, 1, 1),
+          preferredChannels: const ['Text'],
+        ),
+      );
+      await interactions.save(
+        CrmInteraction(
+          id: 'delta-test',
+          contactId: 'delta-target',
+          type: InteractionType.relationshipNote,
+          title: 'Bond booster',
+          note: '',
+          date: now.subtract(const Duration(days: 2)),
+          bondScoreDelta: 10,
+          source: InteractionSource.aiSuggested,
+        ),
+      );
+
+      // Manually bump the connection bondScore to reflect the delta
+      final connection = (await connections.load('delta-target'))!;
+      await connections.save(
+        connection.copyWith(bondScore: connection.bondScore + 10),
+      );
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        clock: () => now,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Verify bondScore was bumped to 60 before deletion (50 + 10)
+      final before = (await connections.load('delta-target'))!;
+      expect(before.bondScore, 60);
+
+      // Delete the delta interaction
+      await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('delta-test');
+      await _settle();
+
+      // bondScore should drop by 10 (the delta), clamped to [0,100]
+      final updated = (await connections.load('delta-target'))!;
+      expect(updated.bondScore, 50);
+    });
+
+    test('falls back to connection lastContact when no interactions remain', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final now = DateTime(2026, 6, 15);
+
+      // Create a connection with a single interaction
+      await connections.save(
+        Connection(
+          id: 'single',
+          name: 'Single Contact',
+          email: 'single@example.com',
+          category: 'Friends',
+          avatar: '😊',
+          bondScore: 50,
+          nextStep: '',
+          lastContact: DateTime(2026, 1, 15),
+          notes: '',
+          knownSince: DateTime(2025, 1, 1),
+          preferredChannels: const ['Text'],
+        ),
+      );
+      await interactions.save(
+        CrmInteraction(
+          id: 'only-interaction',
+          contactId: 'single',
+          type: InteractionType.reminder,
+          title: 'The only one',
+          note: '',
+          date: DateTime(2026, 6, 10),
+        ),
+      );
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        clock: () => now,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Delete the only interaction
+      await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('only-interaction');
+      await _settle();
+
+      // lastContact should remain at the connection's original value
+      final updated = (await connections.load('single'))!;
+      expect(updated.lastContact, DateTime(2026, 1, 15));
+    });
+
+    test('bondScoreDelta=0 leaves bondScore unchanged', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final now = DateTime(2026, 6, 15);
+
+      await connections.save(
+        Connection(
+          id: 'zero-delta',
+          name: 'Zero Delta',
+          email: 'zero@example.com',
+          category: 'Friends',
+          avatar: '😊',
+          bondScore: 42,
+          nextStep: '',
+          lastContact: now.subtract(const Duration(days: 1)),
+          notes: '',
+          knownSince: DateTime(2025, 1, 1),
+          preferredChannels: const ['Text'],
+        ),
+      );
+      await interactions.save(
+        CrmInteraction(
+          id: 'zero-test',
+          contactId: 'zero-delta',
+          type: InteractionType.reminder,
+          title: 'No delta',
+          note: '',
+          date: now.subtract(const Duration(days: 1)),
+          bondScoreDelta: 0,
+        ),
+      );
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        clock: () => now,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('zero-test');
+      await _settle();
+
+      final updated = (await connections.load('zero-delta'))!;
+      expect(updated.bondScore, 42);
+    });
+
+    test('throws StateError when interaction not found', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      await _seedConnections(connections);
+      await _seedInteractions(interactions);
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      await expectLater(
+        container
+            .read(appControllerProvider.notifier)
+            .deleteInteraction('nonexistent'),
+        throwsA(isA<StateError>()),
+      );
+    });
+  });
 }

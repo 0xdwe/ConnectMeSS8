@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
@@ -319,146 +320,9 @@ class ContactProfileScreen extends ConsumerWidget {
             initialSelectedTopic: initialSelectedTopic,
           ),
           InteractionDetailsCard(person: person, history: history),
-          CardBox(
-            padding: EdgeInsets.zero,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.space5,
-                    AppSpacing.space5,
-                    AppSpacing.space5,
-                    AppSpacing.space4,
-                  ),
-                  child: Text('Activity Log', style: AppTypography.h2()),
-                ),
-                if (history.isEmpty)
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      AppSpacing.space5,
-                      0,
-                      AppSpacing.space5,
-                      AppSpacing.space5,
-                    ),
-                    child: Center(
-                      child: Text(
-                        "${person.name.split(' ').first}'s new \u2014 you'll fill this in over time.",
-                        textAlign: TextAlign.center,
-                        style: AppTypography.bodyLg(color: tokens.inkMuted),
-                      ),
-                    ),
-                  )
-                else
-                  for (var i = 0; i < history.length; i++) ...[
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.space5,
-                        vertical: AppSpacing.space3,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Left date column
-                          SizedBox(
-                            width: 96,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  DateFormat('yyyy-MM-dd').format(history[i].date),
-                                  style: AppTypography.caption(
-                                    color: tokens.inkMuted,
-                                  ),
-                                ),
-                                if (history[i].attachments.isNotEmpty) ...[
-                                  SizedBox(height: AppSpacing.space2),
-                                  _AttachmentChip(
-                                    attachment: history[i].attachments.first,
-                                    onTap: () => _showAttachmentViewer(
-                                      context,
-                                      history[i].attachments.first,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          SizedBox(width: AppSpacing.space3),
-                          // Main content: title (bold) + note (muted)
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        history[i].title,
-                                        style: AppTypography.bodyLg(),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    if (history[i].source ==
-                                        InteractionSource.aiSuggested) ...[
-                                      SizedBox(width: AppSpacing.space2),
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: AppSpacing.space2,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: tokens.primaryTint,
-                                          borderRadius: BorderRadius.circular(
-                                            AppRadius.sm,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.auto_awesome,
-                                              size: 11,
-                                              color: tokens.primary,
-                                            ),
-                                            SizedBox(width: 4),
-                                            Text(
-                                              'AI',
-                                              style:
-                                                  AppTypography.caption(
-                                                    color: tokens.primary,
-                                                  ).copyWith(
-                                                    fontSize: 10,
-                                                    height: 1,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                if (history[i].note.isNotEmpty) ...[
-                                  SizedBox(height: AppSpacing.space2),
-                                  Text(
-                                    history[i].note,
-                                    style: AppTypography.bodyLg(
-                                      color: tokens.inkMuted,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (i < history.length - 1)
-                      Divider(color: tokens.border, height: 1, thickness: 1),
-                  ],
-              ],
-            ),
+          _ActivityLogSection(
+            person: person,
+            history: history,
           ),
         ],
       ),
@@ -594,6 +458,257 @@ class _AttachmentChip extends StatelessWidget {
       avatar: Icon(isImage ? Icons.image_outlined : Icons.attach_file),
       label: Text(attachment.name),
       onPressed: isImage && hasUrl ? onTap : null,
+    );
+  }
+}
+
+/// Renders the Activity Log section for a contact with per-row delete
+/// support. Shows a confirmation dialog on tap, then a 4-second undo
+/// SnackBar before actually deleting the interaction and recalculating
+/// the connection fields.
+class _ActivityLogSection extends ConsumerStatefulWidget {
+  const _ActivityLogSection({
+    required this.person,
+    required this.history,
+  });
+
+  final Connection person;
+  final List<CrmInteraction> history;
+
+  @override
+  ConsumerState<_ActivityLogSection> createState() =>
+      _ActivityLogSectionState();
+}
+
+class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
+  String? _deletingInteractionId;
+  Timer? _deleteTimer;
+
+  @override
+  void dispose() {
+    _deleteTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _confirmDelete(CrmInteraction interaction) async {
+    final personName = widget.person.name.split(' ').first;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete this activity?'),
+        content: Text(
+          'This activity is part of $personName\'s history. '
+          'Deleting it will reprocess AI Insights, connection score, '
+          'and last contact from the remaining activity log.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+    _startDeleteWithUndo(interaction);
+  }
+
+  void _startDeleteWithUndo(CrmInteraction interaction) {
+    setState(() => _deletingInteractionId = interaction.id);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 4),
+        content: Text('Deleting ${interaction.title}...'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            _deleteTimer?.cancel();
+            setState(() => _deletingInteractionId = null);
+          },
+        ),
+      ),
+    );
+
+    _deleteTimer = Timer(const Duration(seconds: 4), () async {
+      if (!mounted) return;
+      try {
+        await ref
+            .read(appControllerProvider.notifier)
+            .deleteInteraction(interaction.id);
+      } finally {
+        if (mounted) {
+          setState(() => _deletingInteractionId = null);
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final history = widget.history;
+
+    return CardBox(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.space5,
+              AppSpacing.space5,
+              AppSpacing.space5,
+              AppSpacing.space4,
+            ),
+            child: Text('Activity Log', style: AppTypography.h2()),
+          ),
+          if (history.isEmpty)
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.space5,
+                0,
+                AppSpacing.space5,
+                AppSpacing.space5,
+              ),
+              child: Center(
+                child: Text(
+                  "${widget.person.name.split(' ').first}'s new \u2014 you'll fill this in over time.",
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyLg(color: tokens.inkMuted),
+                ),
+              ),
+            )
+          else
+            for (var i = 0; i < history.length; i++) ...[
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.space5,
+                  vertical: AppSpacing.space3,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Left date column
+                    SizedBox(
+                      width: 96,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            DateFormat('yyyy-MM-dd').format(history[i].date),
+                            style: AppTypography.caption(
+                              color: tokens.inkMuted,
+                            ),
+                          ),
+                          if (history[i].attachments.isNotEmpty) ...[
+                            SizedBox(height: AppSpacing.space2),
+                            _AttachmentChip(
+                              attachment: history[i].attachments.first,
+                              onTap: () => _showAttachmentViewer(
+                                context,
+                                history[i].attachments.first,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: AppSpacing.space3),
+                    // Main content: title (bold) + note (muted)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  history[i].title,
+                                  style: AppTypography.bodyLg(),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (history[i].source ==
+                                  InteractionSource.aiSuggested) ...[
+                                SizedBox(width: AppSpacing.space2),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.space2,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: tokens.primaryTint,
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.sm,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.auto_awesome,
+                                        size: 11,
+                                        color: tokens.primary,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'AI',
+                                        style: AppTypography.caption(
+                                          color: tokens.primary,
+                                        ).copyWith(
+                                          fontSize: 10,
+                                          height: 1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (history[i].note.isNotEmpty) ...[
+                            SizedBox(height: AppSpacing.space2),
+                            Text(
+                              history[i].note,
+                              style: AppTypography.bodyLg(
+                                color: tokens.inkMuted,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    // Delete action
+                    SizedBox(width: AppSpacing.space2),
+                    IconButton(
+                      key: Key('delete-interaction-${history[i].id}'),
+                      icon: Icon(
+                        Icons.delete_outline,
+                        size: 20,
+                        color: _deletingInteractionId == history[i].id
+                            ? tokens.inkSubtle
+                            : tokens.inkMuted,
+                      ),
+                      onPressed: _deletingInteractionId == history[i].id
+                          ? null
+                          : () => _confirmDelete(history[i]),
+                      tooltip: 'Delete activity',
+                    ),
+                  ],
+                ),
+              ),
+              if (i < history.length - 1)
+                Divider(color: tokens.border, height: 1, thickness: 1),
+            ],
+        ],
+      ),
     );
   }
 }
