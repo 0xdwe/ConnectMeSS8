@@ -2139,8 +2139,6 @@ Widget _buildNoRecommendationCard({
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!hasInteractions)
-          Icon(Icons.favorite_outline, color: tokens.success, size: 22),
         Icon(icon, color: iconColor, size: 22),
         SizedBox(width: AppSpacing.space3),
         Expanded(
