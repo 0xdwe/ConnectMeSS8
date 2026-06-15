@@ -182,6 +182,7 @@ function wellFormedInteraction(overrides = {}) {
     title: 'Coffee chat',
     note: 'Discussed the migration project',
     date: Timestamp.fromDate(new Date('2026-05-20T15:00:00Z')),
+    bondScoreDelta: 0,
     schemaVersion: 1,
     updatedAt: Timestamp.fromDate(new Date('2026-05-26T00:00:00Z')),
     // Optional fields included by default; specific tests omit them.
@@ -1393,6 +1394,34 @@ describe('users/{uid}/interactions/{interactionId} — shape validation', () => 
       setDoc(
         interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
         wellFormedInteraction({ attachments: 'note.md' }),
+      ),
+    );
+  });
+
+  // ---- bondScoreDelta optional + type guard (#122) ----------------
+
+  test('create allowed when bondScoreDelta is omitted (defaults to 0)', async () => {
+    const payload = wellFormedInteraction();
+    delete payload.bondScoreDelta;
+    await assertSucceeds(
+      setDoc(interactionDocRef(authedDb(ALICE), ALICE, 'i-1'), payload),
+    );
+  });
+
+  test('create allowed when bondScoreDelta is a positive int', async () => {
+    await assertSucceeds(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ bondScoreDelta: 15 }),
+      ),
+    );
+  });
+
+  test('create denied when bondScoreDelta is not an int', async () => {
+    await assertFails(
+      setDoc(
+        interactionDocRef(authedDb(ALICE), ALICE, 'i-1'),
+        wellFormedInteraction({ bondScoreDelta: 'five' }),
       ),
     );
   });

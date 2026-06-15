@@ -20,6 +20,7 @@ void main() {
     DateTime? date,
     List<AttachmentRef> attachments = const <AttachmentRef>[],
     InteractionSource source = InteractionSource.manual,
+    int bondScoreDelta = 0,
   }) {
     return CrmInteraction(
       id: id,
@@ -30,6 +31,7 @@ void main() {
       date: date ?? DateTime.utc(2026, 5, 26, 12, 0, 0),
       attachments: attachments,
       source: source,
+      bondScoreDelta: bondScoreDelta,
     );
   }
 
@@ -127,6 +129,14 @@ void main() {
       expect(loaded!.attachments, hasLength(1));
       expect(loaded.attachments.first.name, 'file.txt');
       expect(loaded.source, InteractionSource.aiSuggested);
+    });
+
+    test('bondScoreDelta round-trips through save/load', () async {
+      final store = InMemoryInteractionStore();
+      final i = makeInteraction('i1', bondScoreDelta: 15);
+      await store.save(i);
+      final loaded = await store.load('i1');
+      expect(loaded!.bondScoreDelta, 15);
     });
   });
 

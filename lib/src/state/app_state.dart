@@ -686,6 +686,7 @@ class AppController extends Notifier<AppState> {
       title: title,
       note: note,
       date: DateTime.now(),
+      bondScoreDelta: 0,  // Manual interactions carry no delta
     );
     await ref.read(interactionStoreProvider).save(interaction);
   }

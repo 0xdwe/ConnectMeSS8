@@ -19,6 +19,7 @@ import 'interaction_store.dart';
 ///  * `attachments` (list of strings, optional)
 ///  * `attachmentUrls` (list of strings, optional; aligned with attachments)
 ///  * `source` (string, enum from [InteractionSource], optional)
+///  * `bondScoreDelta` (int, default `0`)
 ///  * `schemaVersion` (int, literal `1`)
 ///  * `updatedAt` (server timestamp)
 ///
@@ -191,6 +192,7 @@ class FirebaseInteractionStore implements InteractionStore {
           .map((url) => url?.trim().isEmpty == true ? '' : (url ?? ''))
           .toList(),
       'source': i.source.name,
+      'bondScoreDelta': i.bondScoreDelta,
       'schemaVersion': schemaVersion,
       'updatedAt': FieldValue.serverTimestamp(),
     };
@@ -214,6 +216,7 @@ class FirebaseInteractionStore implements InteractionStore {
       final attachments = data['attachments'];
       final attachmentUrls = data['attachmentUrls'];
       final sourceName = data['source'];
+      final bondScoreDelta = data['bondScoreDelta'];
 
       if (id is! String ||
           contactId is! String ||
@@ -281,6 +284,7 @@ class FirebaseInteractionStore implements InteractionStore {
         date: date.toDate(),
         attachments: attachmentRefs,
         source: source,
+        bondScoreDelta: bondScoreDelta is int ? bondScoreDelta : 0,
       );
     } catch (_) {
       return null;

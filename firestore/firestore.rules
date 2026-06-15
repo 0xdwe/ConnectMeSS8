@@ -148,7 +148,7 @@ service cloud.firestore {
     function isWellFormedInteraction(data) {
       return data.keys().hasOnly([
           'id', 'contactId', 'type', 'title', 'note', 'date',
-          'schemaVersion', 'updatedAt',
+          'bondScoreDelta', 'schemaVersion', 'updatedAt',
           'attachments', 'attachmentUrls', 'source'
         ])
         && data.keys().hasAll([
@@ -169,6 +169,7 @@ service cloud.firestore {
         && data.updatedAt is timestamp
         && (!('attachments' in data.keys()) || data.attachments is list)
         && (!('attachmentUrls' in data.keys()) || data.attachmentUrls is list)
+        && (!('bondScoreDelta' in data.keys()) || data.bondScoreDelta is int)
         && (!('source' in data.keys())
             || (data.source is string
                 && data.source in ['manual', 'aiSuggested']));

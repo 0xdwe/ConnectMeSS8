@@ -52,7 +52,9 @@ void main() {
           now: now,
         );
 
-        expect(plan.interaction, same(acceptedInteraction));
+        expect(plan.interaction.id, acceptedInteraction.id);
+        expect(plan.interaction.title, acceptedInteraction.title);
+        expect(plan.interaction.bondScoreDelta, 15);
         expect(plan.summary, 'AI summary');
         expect(plan.updatedConnection.id, 'contact-1');
         expect(plan.updatedConnection.bondScore, 75);
@@ -157,6 +159,21 @@ void main() {
         );
       },
     );
+
+    test('propagates bondScoreDelta from result to interaction', () {
+      final result = AiUpdateResult(
+        summary: 'AI summary',
+        contactId: 'contact-1',
+        interactions: [interaction()],
+        bondScoreDelta: 12,
+      );
+      final plan = buildAiUpdateCommitPlan(
+        result: result,
+        connection: connection(),
+        now: DateTime(2026, 6, 2),
+      );
+      expect(plan.interaction.bondScoreDelta, 12);
+    });
 
     test(
       'sets previousBondScore to capture score movement for trend calculation',

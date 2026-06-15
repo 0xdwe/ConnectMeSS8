@@ -106,6 +106,7 @@ class CrmInteraction {
     required this.date,
     this.attachments = const [],
     this.source = InteractionSource.manual,
+    this.bondScoreDelta = 0,
   });
 
   final String id;
@@ -116,6 +117,7 @@ class CrmInteraction {
   final DateTime date;
   final List<AttachmentRef> attachments;
   final InteractionSource source;
+  final int bondScoreDelta;
 
   CrmInteraction copyWith({
     String? id,
@@ -126,6 +128,7 @@ class CrmInteraction {
     DateTime? date,
     List<AttachmentRef>? attachments,
     InteractionSource? source,
+    int? bondScoreDelta,
   }) {
     return CrmInteraction(
       id: id ?? this.id,
@@ -136,6 +139,7 @@ class CrmInteraction {
       date: date ?? this.date,
       attachments: attachments ?? this.attachments,
       source: source ?? this.source,
+      bondScoreDelta: bondScoreDelta ?? this.bondScoreDelta,
     );
   }
 }

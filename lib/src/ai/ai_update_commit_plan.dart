@@ -44,7 +44,9 @@ AiUpdateCommitPlan buildAiUpdateCommitPlan({
   );
 
   return AiUpdateCommitPlan(
-    interaction: result.interactions.single,
+    interaction: result.interactions.single.copyWith(
+      bondScoreDelta: result.bondScoreDelta,
+    ),
     updatedConnection: updatedConnection,
     summary: result.summary,
   );
