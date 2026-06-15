@@ -551,7 +551,7 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
           label: 'Undo',
           onPressed: () {
             _deleteTimer?.cancel();
-            setState(() => _deletingInteractionId = null);
+            if (mounted) setState(() => _deletingInteractionId = null);
           },
         ),
       ),

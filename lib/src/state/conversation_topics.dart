@@ -22,7 +22,7 @@ import 'memory/memory_document.dart';
 List<String> topicsForContact(Connection connection, MemoryDocument? memory) {
   final memoryTopics = memory?.topics ?? const <String>[];
   if (memoryTopics.isNotEmpty) {
-    return memoryTopics.take(4).toList(growable: false);
+    return memoryTopics.take(4).map(titleCaseTopic).toList(growable: false);
   }
   final defaults =
       _topicDefaultsByCategory[connection.category] ?? _genericTopicDefaults;
@@ -148,6 +148,92 @@ String _firstNameOf(String contactName) {
   final match = RegExp(r'\s+').firstMatch(contactName);
   if (match == null) return contactName;
   return contactName.substring(0, match.start);
+}
+
+/// Applies title case to a topic string as a safety net for
+/// existing lowercase data from AI prompts.
+///
+/// - If a word is already capitalized (starts with uppercase), leaves it
+///   as-is — this preserves already-properly-capitalized topics like
+///   "Family updates" or "SpaceX IPO".
+/// - For all-lowercase words, capitalizes the first letter.
+/// - Preserves known acronyms in their canonical uppercase form.
+/// - Preserves known proper nouns in their canonical mixed-case form.
+/// - Keeps articles/prepositions/conjunctions lowercase unless
+///   they are the first word.
+String titleCaseTopic(String topic) {
+  if (topic.isEmpty) return topic;
+
+  const knownAcronyms = <String>{
+    'AI', 'IPO', 'CEO', 'CFO', 'CTO', 'MBA', 'PhD', 'VR', 'AR', 'IoT',
+    'API', 'SDK', 'SaaS', 'B2B', 'B2C', 'UX', 'UI', 'HR', 'IT', 'PR',
+    'FAQ', 'DIY', 'BBQ', 'NFL', 'NBA', 'MLB', 'NHL', 'UFC', 'WWE',
+    'UK', 'US', 'EU', 'UN', 'NATO', 'NASA',
+  };
+
+  const knownProperNouns = <String>{
+    'SpaceX', 'GitHub', 'YouTube', 'Netflix', 'Instagram', 'LinkedIn',
+    'WhatsApp', 'WeChat', 'TikTok', 'ChatGPT',
+  };
+
+  const lowercaseWords = <String>{
+    'a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'and', 'or',
+    'but', 'with', 'from', 'by',
+  };
+
+  // Build a quick lookup for known proper nouns (case-insensitive key → canonical form)
+  final properNounLookup = <String, String>{};
+  for (final pn in knownProperNouns) {
+    properNounLookup[pn.toLowerCase()] = pn;
+  }
+
+  final words = topic.split(' ');
+  if (words.isEmpty) return topic;
+
+  for (int i = 0; i < words.length; i++) {
+    final word = words[i];
+    if (word.isEmpty) continue;
+
+    final lower = word.toLowerCase();
+
+    // Known acronym — use canonical uppercase form
+    if (knownAcronyms.contains(lower.toUpperCase())) {
+      words[i] = word.toUpperCase();
+      continue;
+    }
+
+    // Known proper noun — use canonical mixed-case form
+    final canonical = properNounLookup[lower];
+    if (canonical != null) {
+      words[i] = canonical;
+      continue;
+    }
+
+    // If the word already starts with an uppercase letter, leave it as-is.
+    // This preserves already-properly-capitalized topics like "Family updates"
+    // or "Recent meetups" from the category defaults.
+    if (word[0].toUpperCase() == word[0] && word.length > 1 && word.substring(1) != word.substring(1).toUpperCase()) {
+      // Word starts with uppercase but isn't an all-caps acronym —
+      // it's already in a reasonable form. Leave it alone.
+      continue;
+    }
+
+    // Lowercase word (article/preposition/conjunction) — keep lowercase
+    // unless it is the first word of the topic.
+    if (i > 0 && lowercaseWords.contains(lower)) {
+      words[i] = lower;
+      continue;
+    }
+
+    // Default: capitalize first letter, lowercase the rest.
+    if (word.length == 1) {
+      words[i] = word.toUpperCase();
+    } else {
+      words[i] = word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }
+  }
+
+  return words.join(' ');
 }
 
 const Map<String, List<String>> _topicDefaultsByCategory = {
