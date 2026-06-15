@@ -185,6 +185,7 @@ class _SignedOutAiUpdate implements AiUpdate {
     required MemoryDocument currentMemory,
     required List<AttachmentRef> attachments,
     Future<void>? cancelToken,
+    Future<void> Function()? onClassifierPassed,
   }) => Future.error(StateError(_msg));
 
   @override
@@ -197,7 +198,7 @@ class _SignedOutAiUpdate implements AiUpdate {
 /// one-line edit. Six hours is the starting knob.
 const Duration recommendationsFreshness = Duration(hours: 6);
 
-/// Internal cache tuple for [RecommendationsNotifier].
+/// Cache tuple for [RecommendationsNotifier].
 ///
 /// Holds the engine output alongside the wall-clock time at which it
 /// was computed, plus identity-comparable references to the dep
@@ -205,8 +206,8 @@ const Duration recommendationsFreshness = Duration(hours: 6);
 /// invariants (time, memory epoch, store identity, connections
 /// identity, interactions identity) to decide between serving the
 /// cache or recomputing.
-class _RecommendationsCache {
-  const _RecommendationsCache({
+class RecommendationsCache {
+  const RecommendationsCache({
     required this.computedAt,
     required this.list,
     required this.store,
@@ -239,18 +240,41 @@ class _RecommendationsCache {
 /// continues to serve the cache until the next read after the 6h
 /// boundary, at which point the next read reloads memories and
 /// recomputes.
-class _RecommendationsCacheHolder {
-  _RecommendationsCache? cache;
+class RecommendationsCacheHolder {
+  RecommendationsCache? cache;
 }
 
-final _recommendationsCacheProvider = Provider<_RecommendationsCacheHolder>(
-  (_) => _RecommendationsCacheHolder(),
+/// Module-level memory of the last recommendation list returned.
+/// Survives Provider disposal during GoRouter navigation so
+/// completion detection always has a previous list to diff against.
+List<Recommendation>? lastRecommendationList;
+
+/// Public holder so [AppController.applyAiUpdateResult] can clear
+/// the cache after a successful AI Update write (#117 follow-up).
+final recommendationsCacheProvider = Provider<RecommendationsCacheHolder>(
+  (_) => RecommendationsCacheHolder(),
+);
+
+/// Signal set by [AppController.applyAiUpdateResult] to the contact
+/// ID that just completed an AI Update. [AiInsightsCard] watches this
+/// to auto-refresh its content after the user returns from the AI
+/// Update screen.
+class PendingAiInsightsRefreshNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void setContactId(String? id) => state = id;
+}
+
+final pendingAiInsightsRefreshProvider =
+    NotifierProvider<PendingAiInsightsRefreshNotifier, String?>(
+  PendingAiInsightsRefreshNotifier.new,
 );
 
 final recommendationsProvider = FutureProvider<List<Recommendation>>((
   ref,
 ) async {
-  final holder = ref.watch(_recommendationsCacheProvider);
+  final holder = ref.watch(recommendationsCacheProvider);
   final store = ref.watch(memoryStoreProvider);
   final connections = ref.watch(
     appControllerProvider.select((state) => state.connections),
@@ -282,19 +306,39 @@ final recommendationsProvider = FutureProvider<List<Recommendation>>((
     memories = const {};
   }
 
+  // #117: Read the synchronous completion signal before ranking.
+  // The cache may have been served stale after an epoch bump
+  // (see the race documented in app_state.dart). Once we reach
+  // here we are recomputing, so the cache will be repopulated
+  // with fresh data below.
+  final appState = ref.read(appControllerProvider);
+  final lastAiUpdatedContactId = appState.lastAiUpdatedContactId;
+
   final list = rankRecommendations(
     connections: connections,
     interactions: interactions,
     memories: memories,
     now: now,
+    previousList: lastRecommendationList,
+    previousCacheTime:
+        holder.cache?.computedAt ??
+        now.subtract(recommendationsFreshness),
+    lastAiUpdatedContactId: lastAiUpdatedContactId,
   );
-  holder.cache = _RecommendationsCache(
+  holder.cache = RecommendationsCache(
     computedAt: now,
     list: list,
     store: store,
     connections: connections,
     interactions: interactions,
   );
+  lastRecommendationList = list;
+
+  // #117: Consume the signal so it doesn't fire twice.
+  if (lastAiUpdatedContactId != null) {
+    ref.read(appControllerProvider.notifier).clearLastAiUpdate();
+  }
+
   return list;
 });
 

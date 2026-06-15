@@ -24,6 +24,46 @@
 ///   never invent details from them).
 library;
 
+/// Pre-classifier relevance prompt (Pass 4.4 / #112).
+///
+/// Runs BEFORE the main AI Update to judge whether the user's input
+/// is relevant to relationship maintenance for the named contact.
+/// Returns JSON `{isRelevant: bool, reason: string}`. The reason
+/// must be warm, specific, non-shaming — no day counts, no blame.
+///
+/// This is a separate prompt from v1..v4 because it is called as a
+/// pre-classifier, not as the main system prompt. It does not
+/// participate in [kLlmAiUpdatePromptVersion] versioning — the
+/// version chain is for the main prompt only.
+const String kLlmAiUpdateRelevancePrompt = r'''
+You are a relevance classifier for ConnectMe, a personal-CRM app.
+
+Your job: decide whether the user's input is relevant to relationship
+maintenance for the named contact. The user will provide:
+- A contact name and category (e.g. "David Kim — Family")
+- Their raw text input
+- Whether images are attached (yes/no)
+
+Output a JSON object with exactly these fields:
+- isRelevant: true if the input is about the relationship, the
+  contact personally, or a shared experience/plan/event with them.
+  false if the input is clearly off-topic (spam, random queries,
+  unrelated topics) with no connection to the named contact.
+- reason: a warm, specific, non-shaming explanation. Never mention
+  numeric day counts, time elapsed, or anything that could shame
+  the user for "neglecting" someone. Keep it brief — one sentence.
+
+Examples of irrelevant inputs: "What's the weather?", "Tell me a
+joke", stock prices, coding questions, general knowledge queries.
+
+Examples of relevant inputs: "Had coffee on Tuesday", "She got a
+new job", "Remind me to call next week", "Shared a photo from the
+trip".
+
+When in doubt, return isRelevant: true — it's better to let a
+borderline input through than to block a legitimate update.
+''';
+
 /// Active prompt version. Increment when [kLlmAiUpdatePromptV1]
 /// changes materially. Travels alongside every produced
 /// [AiUpdateResult] via the metadata field on the response model.
@@ -94,20 +134,26 @@ schema; violating these rules causes the update to be rejected):
 - nextStep: one concrete, gentle suggestion ≤80 chars for the
   user's next interaction. Phrased as something the user could
   do, not something they should feel guilty about not doing.
-- interactionDepth: judge how content-rich and significant the
-  user's input is, on a 0..100 scale. The anchors are:
-    0  — trivial / small talk / no new info.
+- interactionDepth: judge the relational impact of the user's
+  input on a -100..+100 scale. Positive = enriching/connecting;
+  negative = harmful/conflictual. The anchors are:
+  Positive:
+    0  — neutral / no clear relational impact.
     25 — brief interaction with some content.
     50 — a real conversation with new context.
     75 — significant news, plans, or shared activity.
-    100 — deep day-long bonding or a major life moment
-          (engagement, new baby, big move, loss).
-  Code applies a diminishing-returns curve client-side to convert
-  this number into a Bond Score change. Do NOT try to estimate
-  that change yourself — you don't know the contact's current
-  Bond Score, and the curve is calibrated to translate the same
-  depth differently at low vs. high relationship strength. Just
-  judge the input on its own merits.
+    100 — deep day-long bonding or a major life moment.
+  Negative:
+    -25 — mild friction or an awkward exchange.
+    -50 — real argument or unresolved tension.
+    -75 — significant conflict or hurt feelings.
+    -100 — major falling out or severe relational damage.
+  Use 0 only when the input is purely neutral with no relational
+  impact (e.g. a routine reminder). Conflicts, fights, betrayals,
+  and hurtful exchanges must use a negative value — do NOT assign
+  a positive or zero depth to a clearly negative interaction.
+  Code applies a curve client-side; do NOT estimate the Bond
+  Score delta yourself.
 
 Image attachments:
 - If the user attaches images, you can see them. Use them to
@@ -188,20 +234,26 @@ schema; violating these rules causes the update to be rejected):
 - nextStep: one concrete, gentle suggestion ≤80 chars for the
   user's next interaction. Phrased as something the user could
   do, not something they should feel guilty about not doing.
-- interactionDepth: judge how content-rich and significant the
-  user's input is, on a 0..100 scale. The anchors are:
-    0  — trivial / small talk / no new info.
+- interactionDepth: judge the relational impact of the user's
+  input on a -100..+100 scale. Positive = enriching/connecting;
+  negative = harmful/conflictual. The anchors are:
+  Positive:
+    0  — neutral / no clear relational impact.
     25 — brief interaction with some content.
     50 — a real conversation with new context.
     75 — significant news, plans, or shared activity.
-    100 — deep day-long bonding or a major life moment
-          (engagement, new baby, big move, loss).
-  Code applies a diminishing-returns curve client-side to convert
-  this number into a Bond Score change. Do NOT try to estimate
-  that change yourself — you don't know the contact's current
-  Bond Score, and the curve is calibrated to translate the same
-  depth differently at low vs. high relationship strength. Just
-  judge the input on its own merits.
+    100 — deep day-long bonding or a major life moment.
+  Negative:
+    -25 — mild friction or an awkward exchange.
+    -50 — real argument or unresolved tension.
+    -75 — significant conflict or hurt feelings.
+    -100 — major falling out or severe relational damage.
+  Use 0 only when the input is purely neutral with no relational
+  impact (e.g. a routine reminder). Conflicts, fights, betrayals,
+  and hurtful exchanges must use a negative value — do NOT assign
+  a positive or zero depth to a clearly negative interaction.
+  Code applies a curve client-side; do NOT estimate the Bond
+  Score delta yourself.
 
 Image attachments:
 - If the user attaches images, you can see them. Use them to
@@ -278,20 +330,26 @@ schema; violating these rules causes the update to be rejected):
 - nextStep: one concrete, gentle suggestion ≤80 chars for the
   user's next interaction. Phrased as something the user could
   do, not something they should feel guilty about not doing.
-- interactionDepth: judge how content-rich and significant the
-  user's input is, on a 0..100 scale. The anchors are:
-  0  — trivial / small talk / no new info.
-  25 — brief interaction with some content.
-  50 — a real conversation with new context.
-  75 — significant news, plans, or shared activity.
-  100 — deep day-long bonding or a major life moment
-  (engagement, new baby, big move, loss).
-  Code applies a diminishing-returns curve client-side to convert
-  this number into a Bond Score change. Do NOT try to estimate
-  that change yourself — you don't know the contact's current
-  Bond Score, and the curve is calibrated to translate the same
-  depth differently at low vs. high relationship strength. Just
-  judge the input on its own merits.
+- interactionDepth: judge the relational impact of the user's
+  input on a -100..+100 scale. Positive = enriching/connecting;
+  negative = harmful/conflictual. The anchors are:
+  Positive:
+    0  — neutral / no clear relational impact.
+    25 — brief interaction with some content.
+    50 — a real conversation with new context.
+    75 — significant news, plans, or shared activity.
+    100 — deep day-long bonding or a major life moment.
+  Negative:
+    -25 — mild friction or an awkward exchange.
+    -50 — real argument or unresolved tension.
+    -75 — significant conflict or hurt feelings.
+    -100 — major falling out or severe relational damage.
+  Use 0 only when the input is purely neutral with no relational
+  impact (e.g. a routine reminder). Conflicts, fights, betrayals,
+  and hurtful exchanges must use a negative value — do NOT assign
+  a positive or zero depth to a clearly negative interaction.
+  Code applies a curve client-side; do NOT estimate the Bond
+  Score delta yourself.
 
 Image attachments:
 - If the user attaches images, you can see them. Use them to

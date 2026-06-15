@@ -42,12 +42,18 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 /// negative depth produces 0, a >100 depth is treated as 100, a
 /// >100 currentBond is treated as 100 (so the delta is 0).
 int applyBondScoreCurve({required int depth, required int currentBond}) {
-  final clampedDepth = depth.clamp(0, 100);
+  final clampedDepth = depth.clamp(-100, 100);
   final clampedBond = currentBond.clamp(0, 100);
-  // Use integer math throughout. The formula is mathematically
-  // equivalent to `floor((depth * (100 - bond)) / 160)` because both
-  // operands are non-negative and Dart's `~/` truncates toward zero.
-  return (clampedDepth * (100 - clampedBond)) ~/ 160;
+  if (clampedDepth >= 0) {
+    // Positive: gain proportional to room to grow (diminishing returns at
+    // high bond so the same great interaction matters less once strong).
+    return (clampedDepth * (100 - clampedBond)) ~/ 160;
+  } else {
+    // Negative: drop proportional to current bond (symmetric formula).
+    // A fight with someone you barely know hurts less than a fight with
+    // a close friend — because there is less bond to damage.
+    return -((-clampedDepth) * clampedBond) ~/ 160;
+  }
 }
 
 /// Test-only handle. Re-exports [applyBondScoreCurve] under the

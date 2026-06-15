@@ -42,7 +42,7 @@ void main() {
       // the test resilient to minor wording tweaks while still
       // catching anchor drift.
       final lowered = kLlmAiUpdatePromptV1.toLowerCase();
-      expect(lowered, contains('trivial'));
+      expect(lowered, contains('neutral'));
       expect(lowered, contains('real conversation'));
       expect(lowered, contains('significant'));
       expect(lowered, contains('deep'));

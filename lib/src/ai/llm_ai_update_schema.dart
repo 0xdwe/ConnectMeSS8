@@ -20,6 +20,31 @@ import 'package:firebase_ai/firebase_ai.dart';
 import '../models/social_models.dart' show InteractionType;
 import 'llm_ai_update_response.dart';
 
+/// JSON Schema for the relevance pre-classifier (Pass 4.4 / #112).
+///
+/// Mirrors [LlmRelevanceResult.fromJson]. The schema is separate from
+/// [kLlmAiUpdateResponseSchema] because the classifier returns a
+/// simpler shape (`{isRelevant: bool, reason: string}`) and does not
+/// participate in the main response model's validation chain.
+final Schema kLlmAiUpdateRelevanceSchema = Schema.object(
+  description:
+      'Relevance classifier result. isRelevant gates whether the '
+      'main AI Update proceeds; reason provides the user-facing '
+      'explanation when rejected.',
+  properties: {
+    'isRelevant': Schema.boolean(
+      description:
+          'true if the input is relevant to the named contact; '
+          'false if clearly off-topic.',
+    ),
+    'reason': Schema.string(
+      description:
+          'Warm, specific, non-shaming explanation. No numeric day '
+          'counts, no blame language. One sentence.',
+    ),
+  },
+);
+
 /// JSON Schema passed to Gemini via `GenerationConfig.responseSchema`.
 ///
 /// Constructed once at startup and reused per call. The Schema is
@@ -162,15 +187,21 @@ final Schema kLlmAiUpdateResponseSchema = Schema.object(
     ),
     'interactionDepth': Schema.integer(
       description:
-          'How content-rich the user input is, on a 0..100 scale. '
-          'Anchors: 0 = trivial / small talk / no new info; '
+          'Relational impact of the user input on a -100..+100 scale. '
+          'Positive = enriching/connecting; negative = harmful/conflictual. '
+          'Positive anchors: 0 = neutral, no new info; '
           '25 = brief interaction with some content; '
           '50 = a real conversation with new context; '
           '75 = significant news, plans, or shared activity; '
           '100 = deep day-long bonding or major life moment. '
-          'Code applies a diminishing-returns curve client-side to '
-          'translate this into the actual Bond Score delta; do NOT '
-          'try to estimate the delta yourself.',
+          'Negative anchors: -25 = mild friction or awkward exchange; '
+          '-50 = real argument or unresolved tension; '
+          '-75 = significant conflict or hurt feelings; '
+          '-100 = major falling out or severe relational damage. '
+          'Use 0 only when the input is purely neutral with no relational '
+          'impact (e.g. a routine reminder). '
+          'Code applies a curve client-side; do NOT estimate the Bond '
+          'Score delta yourself.',
     ),
     'nextStep': Schema.string(
       description:

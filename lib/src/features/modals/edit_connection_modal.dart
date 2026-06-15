@@ -196,9 +196,17 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
             SizedBox(height: AppSpacing.space2),
             DropdownButtonFormField<String>(
               initialValue: category,
+              isExpanded: true,
               decoration: const InputDecoration(labelText: 'Category'),
               items: categories
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .map((c) => DropdownMenuItem(
+                        value: c,
+                        child: Text(
+                          c,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ))
                   .toList(),
               onChanged: (v) => setState(() => category = v ?? category),
             ),

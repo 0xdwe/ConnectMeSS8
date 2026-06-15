@@ -108,6 +108,7 @@ void main() {
       );
 
       await container.read(aiUpdateProvider).commit(result);
+      await Future<void>.delayed(Duration.zero);
 
       final afterState = container.read(appControllerProvider);
 
@@ -629,6 +630,7 @@ class _NoDeltaAiUpdate implements AiUpdate {
     required MemoryDocument currentMemory,
     required List<AttachmentRef> attachments,
     Future<void>? cancelToken,
+    Future<void> Function()? onClassifierPassed,
   }) async {
     return AiUpdateResult(
       summary: 'No-op',

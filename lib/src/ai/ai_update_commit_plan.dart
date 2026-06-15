@@ -26,10 +26,7 @@ AiUpdateCommitPlan buildAiUpdateCommitPlan({
     );
   }
 
-  final nextScore = (connection.bondScore + result.bondScoreDelta).clamp(
-    0,
-    100,
-  );
+  final nextScore = (connection.bondScore + result.bondScoreDelta).clamp(0, 100);
 
   // Use the interaction's date as lastContact so a user-chosen date
   // (edited in the preview screen) is reflected on the connection card,
@@ -42,6 +39,8 @@ AiUpdateCommitPlan buildAiUpdateCommitPlan({
     nextStep: result.nextStep ?? connection.nextStep,
     lastContact: lastContact,
     bondScore: nextScore,
+    previousBondScore: connection.bondScore,
+    lastBondDriftAppliedAt: now,
   );
 
   return AiUpdateCommitPlan(

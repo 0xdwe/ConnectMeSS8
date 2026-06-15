@@ -96,7 +96,7 @@ class BondRing extends StatefulWidget {
   int get score => _connection?.bondScore ?? _score ?? 0;
   String get label => _connection?.name ?? _label ?? '';
   String? get avatar => _connection?.avatar;
-  BondTrend? get trend => _connection?.bondTrend;
+  BondTrend? get trend => _connection?.bondTrendAt(DateTime.now());
 
   @override
   State<BondRing> createState() => _BondRingState();
@@ -175,12 +175,12 @@ class _BondRingState extends State<BondRing>
       BondTier.drifting => tokens.secondary,
     };
 
-    // Trend color mapping
+    // Trend color mapping: green for up, red for down
     final trendColor = currentTrend == null
         ? tokens.inkMuted
         : switch (currentTrend) {
             BondTrend.up => tokens.success,
-            BondTrend.down => tokens.secondary,
+            BondTrend.down => tokens.danger,
             BondTrend.flat => tokens.inkMuted,
           };
 
@@ -234,12 +234,12 @@ class _BondRingState extends State<BondRing>
                     color: tokens.primary,
                   ),
                 ),
-              // Trend arrow at 4 o'clock
+              // Trend arrow at 4 o'clock (bold arrows)
               if (currentTrend != null && currentTrend != BondTrend.flat)
                 Positioned(
                   right: widget.size * 0.05,
                   bottom: widget.size * 0.15,
-                  child: Icon(currentTrend.icon, size: 12, color: trendColor),
+                  child: Icon(currentTrend.icon, size: 16, color: trendColor),
                 ),
             ],
           );

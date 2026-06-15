@@ -57,6 +57,27 @@ const Duration kLlmAiUpdateDefaultTimeout = Duration(seconds: 20);
 /// can swap to Flash or Pro per call without a code change.
 const String kLlmAiUpdateDefaultModel = 'gemini-2.5-flash';
 
+/// Function-injection seam for the Gemini `generateContent` call
+/// (Pass 4.4 / #112).
+///
+/// Tests inject a fake function that returns canned text;
+/// production wires the real SDK call. The seam mirrors the
+/// existing [attachmentPreparer] pattern.
+typedef GeminiGenerateContentFn = Future<String> Function({
+  required String modelName,
+  required String systemPrompt,
+  required Schema responseSchema,
+  required List<Content> contents,
+  required Duration timeout,
+});
+
+/// Timeout for the relevance pre-classifier call (Pass 4.4 / #112).
+///
+/// Shorter than [kLlmAiUpdateDefaultTimeout] because the classifier
+/// prompt is small and the output is just `{isRelevant, reason}`.
+/// On timeout the classifier fails open — the main call still fires.
+const Duration kLlmAiUpdateClassifierTimeout = Duration(seconds: 5);
+
 /// Production [AiUpdate] adapter that calls Gemini via Firebase AI
 /// Logic. See module doc for the contract.
 class LlmAiUpdate implements AiUpdate {
@@ -79,7 +100,23 @@ class LlmAiUpdate implements AiUpdate {
     this.cancelMidRun = false,
     this.failOnSave = false,
     this.failOnApply = false,
+    this.geminiGenerateContent,
+    this.onClassifierPassed,
   });
+
+  /// Function-injection seam for the Gemini SDK call. Tests supply a
+  /// fake function that returns canned text; production uses the
+  /// default, which builds a [GenerativeModel] from [firebaseAi] and
+  /// returns `response.text`. Nullable; resolved to the default in a
+  /// private getter when absent (Pass 4.4 / #112).
+  final GeminiGenerateContentFn? geminiGenerateContent;
+
+  /// Optional callback fired when the relevance pre-classifier
+  /// passes (i.e. `isRelevant == true`). Wired by the AI Update
+  /// screen to update the loading label from "Checking your input…"
+  /// to the existing "Reading what you've shared with …" copy
+  /// (Pass 4.4 / #112).
+  final void Function()? onClassifierPassed;
 
   /// Firebase AI Logic SDK handle. Nullable so failure-path tests
   /// can construct the adapter without booting Firebase — the
@@ -173,6 +210,7 @@ class LlmAiUpdate implements AiUpdate {
     required MemoryDocument currentMemory,
     required List<AttachmentRef> attachments,
     Future<void>? cancelToken,
+    Future<void> Function()? onClassifierPassed,
   }) async {
     if (cancelMidRun) {
       throw const AiUpdateCancelled();
@@ -241,6 +279,52 @@ class LlmAiUpdate implements AiUpdate {
       throw AiUpdateFailure(attachmentFailure);
     }
 
+    // ── Relevance pre-classifier (Pass 4.4 / #112) ────────────
+    // Fires after attachment prep but before the main Gemini call.
+    // Uses a lightweight prompt (no memory doc, no image bytes) to
+    // judge whether the input is relevant to relationship
+    // maintenance for the named contact.
+    final effectiveGemini = _effectiveGeminiGenerateContent;
+    {
+      final classifierContents = [
+        Content.multi([
+          TextPart(
+            'Contact: ${contact.name} — ${contact.category}\n'
+            'User input: ${userInput.isEmpty ? '(empty)' : userInput}\n'
+            'Images attached: ${attachments.isNotEmpty ? 'yes' : 'no'}',
+          ),
+        ]),
+      ];
+      try {
+        final rawText = await raceWithCancel(
+          effectiveGemini(
+            modelName: model,
+            systemPrompt: kLlmAiUpdateRelevancePrompt,
+            responseSchema: kLlmAiUpdateRelevanceSchema,
+            contents: classifierContents,
+            timeout: kLlmAiUpdateClassifierTimeout,
+          ).timeout(kLlmAiUpdateClassifierTimeout),
+        );
+        final parsed = _parseRelevanceResult(rawText);
+        if (!parsed.isRelevant) {
+          throw AiUpdateRejected(reason: parsed.reason);
+        }
+        (onClassifierPassed ?? this.onClassifierPassed)?.call();
+      } on AiUpdateRejected {
+        rethrow;
+      } on AiUpdateCancelled {
+        rethrow;
+      } catch (e) {
+        // Fail-open on any classifier error (TimeoutException,
+        // FormatException, LlmResponseParseException,
+        // FirebaseAIException, FirebaseException, etc.). Log
+        // for diagnostics but never block a legitimate update.
+        debugPrint(
+          'LlmAiUpdate: relevance classifier failed open: $e',
+        );
+      }
+    }
+
     final today = clock();
     final userMessage = buildLlmAiUpdateUserMessage(
       today: today,
@@ -261,29 +345,12 @@ class LlmAiUpdate implements AiUpdate {
       parts.add(InlineDataPart(img.mimeType, img.bytes));
     }
 
-    final ai = firebaseAi;
-    if (ai == null) {
-      throw StateError(
-        'LlmAiUpdate.run reached the SDK call site with a null '
-        'firebaseAi. Set a failure injection knob, or wire a real '
-        'FirebaseAI instance.',
-      );
-    }
-    final generative = ai.generativeModel(
-      model: model,
-      systemInstruction: Content.system(systemPrompt),
-      generationConfig: GenerationConfig(
-        responseMimeType: 'application/json',
-        responseSchema: kLlmAiUpdateResponseSchema,
-      ),
-    );
-
     // Generate-then-parse loop with one retry on transient errors
     // (PRD §Q8). Parse is INSIDE the loop so a malformed response
     // gets the same retry budget as a transient SDK error
     // (reviewer BLOCKER 2).
     final llmResult = await raceWithCancel(
-      _generateAndParseWithRetry(generative, [Content.multi(parts)]),
+      _generateAndParseWithRetry([Content.multi(parts)]),
     );
 
     return _projectOntoAiUpdateResult(
@@ -338,6 +405,46 @@ class LlmAiUpdate implements AiUpdate {
 
   // ── private helpers ───────────────────────────────────────────
 
+  /// Resolves [geminiGenerateContent] to the effective function.
+  /// When no custom function was injected, uses the default that
+  /// builds a [GenerativeModel] from [firebaseAi].
+  GeminiGenerateContentFn get _effectiveGeminiGenerateContent =>
+      geminiGenerateContent ?? _defaultGeminiGenerateContent;
+
+  /// Default implementation of [GeminiGenerateContentFn] that
+  /// builds a real [GenerativeModel] from [firebaseAi] and returns
+  /// `response.text`. Throws [StateError] if [firebaseAi] is null
+  /// when called — which only happens when a test forgets to inject
+  /// a custom function or set a failure knob.
+  Future<String> _defaultGeminiGenerateContent({
+    required String modelName,
+    required String systemPrompt,
+    required Schema responseSchema,
+    required List<Content> contents,
+    required Duration timeout,
+  }) async {
+    final ai = firebaseAi;
+    if (ai == null) {
+      throw StateError(
+        'LlmAiUpdate.run reached the SDK call site with a null '
+        'firebaseAi. Set a failure injection knob, or wire a real '
+        'FirebaseAI instance.',
+      );
+    }
+    final generative = ai.generativeModel(
+      model: modelName,
+      systemInstruction: Content.system(systemPrompt),
+      generationConfig: GenerationConfig(
+        responseMimeType: 'application/json',
+        responseSchema: responseSchema,
+      ),
+    );
+    final response = await generative
+        .generateContent(contents)
+        .timeout(timeout);
+    return response.text ?? '';
+  }
+
   /// Generate-and-parse with one retry on transient errors. The
   /// PRD §Q8 transient class includes overload, timeout, network
   /// drop, malformed response, and schema mismatch — all retried
@@ -353,23 +460,26 @@ class LlmAiUpdate implements AiUpdate {
   /// recitation; see firebase_ai api.dart) are also surfaced via
   /// the same routing helper as in-loop FirebaseAIException
   /// instances (reviewer BLOCKER 1).
+  ///
+  /// Uses the injected [geminiGenerateContent] function (or its
+  /// default) via [_effectiveGeminiGenerateContent] so tests can
+  /// substitute a fake without extending final SDK classes
+  /// (Pass 4.4 / #112).
   Future<LlmAiUpdateResponse> _generateAndParseWithRetry(
-    GenerativeModel generative,
     List<Content> contents,
   ) async {
     final stopwatch = Stopwatch()..start();
     Object? lastError;
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        final response = await generative
-            .generateContent(contents)
-            .timeout(timeout);
-        // `response.text` throws FirebaseAIException at the property
-        // access site when a candidate is finished for safety /
-        // recitation reasons or when prompt feedback signals a
-        // block. Catching here routes the throw through the same
-        // taxonomy as in-flight FirebaseAIExceptions.
-        final parsed = _parseResponse(response);
+        final rawText = await _effectiveGeminiGenerateContent(
+          modelName: model,
+          systemPrompt: systemPrompt,
+          responseSchema: kLlmAiUpdateResponseSchema,
+          contents: contents,
+          timeout: timeout,
+        );
+        final parsed = _parseRawResponse(rawText);
         debugPrint(
           'LlmAiUpdate: model=$model attempt=${attempt + 1} '
           'latencyMs=${stopwatch.elapsedMilliseconds} ok',
@@ -447,23 +557,42 @@ class LlmAiUpdate implements AiUpdate {
     throw const AiUpdateFailure("AI didn't respond in time. Try again?");
   }
 
-  /// Reads the model's text from [response] (which can throw
-  /// `FirebaseAIException` for safety / recitation; see
-  /// firebase_ai/api.dart) and parses it via the #078 response
-  /// model. Throws [LlmResponseParseException] on schema rejection
-  /// or [FormatException] on non-JSON body — both are caught and
-  /// retried once by [_generateAndParseWithRetry].
-  LlmAiUpdateResponse _parseResponse(GenerateContentResponse response) {
-    final text = response.text;
-    if (text == null || text.isEmpty) {
+  /// Parses the raw Gemini response text into an
+  /// [LlmAiUpdateResponse]. Throws [LlmResponseParseException] on
+  /// schema rejection or [FormatException] on non-JSON body — both
+  /// are caught and retried once by [_generateAndParseWithRetry].
+  ///
+  /// Refactored from `_parseResponse` in Pass 4.4 / #112 to accept
+  /// raw text (produced by the injected [geminiGenerateContent]
+  /// function) rather than a [GenerateContentResponse] so the
+  /// function-injection seam works.
+  LlmAiUpdateResponse _parseRawResponse(String rawText) {
+    if (rawText.isEmpty) {
       throw const FormatException('empty response body');
     }
-    final stripped = _stripMarkdownFences(text).trim();
+    final stripped = _stripMarkdownFences(rawText).trim();
     final dynamic decoded = json.decode(stripped);
     if (decoded is! Map<String, dynamic>) {
       throw FormatException('expected JSON object, got ${decoded.runtimeType}');
     }
     return LlmAiUpdateResponse.fromJson(decoded);
+  }
+
+  /// Parses a raw Gemini response text into a [LlmRelevanceResult].
+  /// Throws [LlmResponseParseException] or [FormatException] on
+  /// malformed JSON — caught by the fail-open classifier wrapper.
+  LlmRelevanceResult _parseRelevanceResult(String rawText) {
+    final stripped = _stripMarkdownFences(rawText).trim();
+    if (stripped.isEmpty) {
+      throw const FormatException('empty classifier response');
+    }
+    final dynamic decoded = json.decode(stripped);
+    if (decoded is! Map<String, dynamic>) {
+      throw FormatException(
+        'classifier: expected JSON object, got ${decoded.runtimeType}',
+      );
+    }
+    return LlmRelevanceResult.fromJson(decoded);
   }
 
   AiUpdateResult _projectOntoAiUpdateResult({

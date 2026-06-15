@@ -42,6 +42,8 @@ class AppState {
     required this.eventTypes,
     required this.googleCalendarLinked,
     this.lastAiSummary,
+    this.lastAiUpdatedContactId,
+    this.lastAiUpdatedAt,
   });
 
   final bool isAuthed;
@@ -55,6 +57,16 @@ class AppState {
   final List<String> eventTypes;
   final bool googleCalendarLinked;
   final String? lastAiSummary;
+
+  /// The contact ID of the most recent AI Update (#117).
+  /// Set synchronously in [AppController.applyAiUpdateResult] so the
+  /// [recommendationsProvider] can detect completion before the new
+  /// interaction reaches the Firestore snapshot listener.
+  final String? lastAiUpdatedContactId;
+
+  /// Wall-clock timestamp of the most recent AI Update (#117).
+  /// Set alongside [lastAiUpdatedContactId].
+  final DateTime? lastAiUpdatedAt;
 
   int get averageConnectionScore => connections.isEmpty
       ? 0
@@ -247,6 +259,8 @@ class AppState {
     List<String>? eventTypes,
     bool? googleCalendarLinked,
     String? lastAiSummary,
+    String? lastAiUpdatedContactId,
+    DateTime? lastAiUpdatedAt,
   }) {
     return AppState(
       isAuthed: isAuthed ?? this.isAuthed,
@@ -260,6 +274,9 @@ class AppState {
       eventTypes: eventTypes ?? this.eventTypes,
       googleCalendarLinked: googleCalendarLinked ?? this.googleCalendarLinked,
       lastAiSummary: lastAiSummary ?? this.lastAiSummary,
+      lastAiUpdatedContactId:
+          lastAiUpdatedContactId ?? this.lastAiUpdatedContactId,
+      lastAiUpdatedAt: lastAiUpdatedAt ?? this.lastAiUpdatedAt,
     );
   }
 
@@ -329,6 +346,7 @@ class AppController extends Notifier<AppState> {
   bool _hasConnectionsSnapshot = false;
   bool _hasInteractionsSnapshot = false;
   bool _bondDriftCheckScheduled = false;
+  bool _disposed = false;
   final Map<String, DateTime> _pendingBondDriftAppliedAtById =
       <String, DateTime>{};
 
@@ -353,6 +371,7 @@ class AppController extends Notifier<AppState> {
     _hasConnectionsSnapshot = false;
     _hasInteractionsSnapshot = false;
     _bondDriftCheckScheduled = false;
+    _disposed = false;
     _pendingBondDriftAppliedAtById.clear();
 
     final connectionStore = ref.watch(connectionStoreProvider);
@@ -422,6 +441,7 @@ class AppController extends Notifier<AppState> {
     }, onError: (_) {});
 
     ref.onDispose(() {
+      _disposed = true;
       _connectionsSub?.cancel();
       _interactionsSub?.cancel();
       _eventsSub?.cancel();
@@ -443,6 +463,7 @@ class AppController extends Notifier<AppState> {
     if (_bondDriftCheckScheduled) return;
     _bondDriftCheckScheduled = true;
     Future(() async {
+      if (_disposed) return;
       _bondDriftCheckScheduled = false;
       await _applyEligibleBondDrift();
     });
@@ -814,6 +835,58 @@ class AppController extends Notifier<AppState> {
     // lastAiSummary is informational; not part of the persisted
     // Firestore shape. Update only after a successful batch commit
     // so a failed batch leaves the prior summary in place.
-    state = state.copyWith(lastAiSummary: plan.summary);
+    final now = DateTime.now();
+    state = state.copyWith(
+      lastAiSummary: plan.summary,
+      // #117: synchronous completion signal set before the new
+      // interaction reaches the Firestore snapshot listener.
+      lastAiUpdatedContactId: result.contactId,
+      lastAiUpdatedAt: now,
+    );
+
+    // #117 follow-up: the memoryEpoch-triggered recomputation that
+    // ran as a microtask during the batchedWrites await above
+    // resolved the FutureProvider with stale connections/interactions
+    // before this method set lastAiUpdatedContactId.
+    //
+    // Clearing the cache holder alone is not enough — the
+    // FutureProvider caches its resolved value internally and
+    // will serve it on the next read without re-entering the
+    // provider body. We bump memoryEpochProvider again so the
+    // recommendationsProvider (which watches it) recomputes
+    // with the completion signal and fresh snapshot data.
+    ref.read(recommendationsCacheProvider).cache = null;
+    final clock = ref.read(clockProvider);
+    ref.read(memoryEpochProvider.notifier).bump(clock());
+
+    // Signal AiInsightsCard to auto-refresh for this contact.
+    ref
+        .read(pendingAiInsightsRefreshProvider.notifier)
+        .setContactId(result.contactId);
+  }
+
+  /// Clear the synchronous AI-update completion signal after the
+  /// [recommendationsProvider] has consumed it (#117).
+  ///
+  /// Cannot use [AppState.copyWith] for nullable fields because the
+  /// `??` operator treats `null` as "keep current value". Instead,
+  /// construct a new [AppState] with the fields explicitly set to
+  /// `null`.
+  void clearLastAiUpdate() {
+    state = AppState(
+      isAuthed: state.isAuthed,
+      themeMode: state.themeMode,
+      selectedTab: state.selectedTab,
+      user: state.user,
+      connections: state.connections,
+      interactions: state.interactions,
+      events: state.events,
+      categories: state.categories,
+      eventTypes: state.eventTypes,
+      googleCalendarLinked: state.googleCalendarLinked,
+      lastAiSummary: state.lastAiSummary,
+      lastAiUpdatedContactId: null,
+      lastAiUpdatedAt: null,
+    );
   }
 }

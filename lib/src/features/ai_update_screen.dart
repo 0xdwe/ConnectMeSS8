@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io' show File;
 
-import 'package:file_selector/file_selector.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -52,6 +52,11 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
   // [AiUpdateCancelled] when cancellation wins. Reset to null
   // before the next run so a stale completer can't fire mid-future.
   Completer<void>? _cancelCompleter;
+  /// Loading label for the AI Update modal. Starts at "Checking your
+  /// input…" (classifier in-flight), then transitions to "Reading
+  /// what you've shared with \$firstName…" when the adapter fires
+  /// onClassifierPassed. (Pass 4.4 / #113)
+  String _loadingLabel = "Checking your input…";
   List<TextEditingController> titleControllers = [];
   List<TextEditingController> noteControllers = [];
   List<DateTime> interactionDates = [];
@@ -70,22 +75,9 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     }
   }
 
-  Future<void> pick() async {
-    final result = await openFiles();
-    if (result.isEmpty) return;
-    setState(
-      () => attachments.addAll(
-        result.map((f) => AttachmentRef(name: f.name, path: f.path)),
-      ),
-    );
-  }
-
   Future<void> pickImage() async {
-    const imageGroup = XTypeGroup(
-      label: 'images',
-      extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'heic'],
-    );
-    final result = await openFiles(acceptedTypeGroups: [imageGroup]);
+    final picker = ImagePicker();
+    final result = await picker.pickMultiImage();
     if (result.isEmpty) return;
     setState(
       () => attachments.addAll(
@@ -111,7 +103,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     int index,
   ) async {
     final path = attachment.path;
-    if (path == null || path.isEmpty || !_isImage(attachment.name)) {
+    if (path == null || path.isEmpty) {
       return attachment;
     }
 
@@ -123,10 +115,15 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     final storage = ref.read(firebaseStorageProvider);
     final safeName = attachment.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
     final storagePath = 'users/${person.id}/interactions/${interaction.id}/$index-$safeName';
-    final contentType = attachment.name.toLowerCase().endsWith('.png')
-        ? 'image/png'
-        : attachment.name.toLowerCase().endsWith('.webp')
-            ? 'image/webp'
+    final sourceName = path.split(RegExp(r'[\\/]')).last.toLowerCase();
+    final contentType = sourceName.endsWith('.png')
+      ? 'image/png'
+      : sourceName.endsWith('.webp')
+        ? 'image/webp'
+        : sourceName.endsWith('.gif')
+          ? 'image/gif'
+          : sourceName.endsWith('.heic')
+            ? 'image/heic'
             : 'image/jpeg';
 
     final storageRef = storage.ref().child(storagePath);
@@ -157,12 +154,18 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
   Future<void> submit() async {
     final cancelCompleter = Completer<void>();
     _cancelCompleter = cancelCompleter;
-    setState(() => currentState = AiUpdateState.generating);
+    final connection = ref
+        .read(appControllerProvider)
+        .connections
+        .firstWhere((c) => c.id == widget.contactId);
+    final rawFirst = connection.name.split(' ').first;
+    final firstName =
+        rawFirst.trim().isEmpty ? connection.name : rawFirst;
+    setState(() {
+      currentState = AiUpdateState.generating;
+      _loadingLabel = "Checking your input…";
+    });
     try {
-      final connection = ref
-          .read(appControllerProvider)
-          .connections
-          .firstWhere((c) => c.id == widget.contactId);
       final memory = await ref.read(memoryProvider(widget.contactId).future);
       final result = await ref
           .read(aiUpdateProvider)
@@ -172,6 +175,14 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
             currentMemory: memory,
             attachments: attachments,
             cancelToken: cancelCompleter.future,
+            onClassifierPassed: () async {
+              if (mounted) {
+                setState(() {
+                  _loadingLabel =
+                      "Reading what you've shared with $firstName…";
+                });
+              }
+            },
           );
 
       // Initialize controllers for editable fields
@@ -226,6 +237,23 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
         for (final controller in cardAnimationControllers) {
           controller.value = 1.0;
         }
+      }
+    } on AiUpdateRejected catch (e) {
+      if (mounted) {
+        setState(() => currentState = AiUpdateState.inputting);
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Not quite a relationship update'),
+            content: Text(e.reason),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Got it'),
+              ),
+            ],
+          ),
+        );
       }
     } on AiUpdateCancelled {
       // PRD §Q8 group 3 / #080: cancellation is not an error.
@@ -385,9 +413,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     if (mounted) {
       final count = editedInteractions.length;
       final plural = count == 1 ? '' : 's';
-      final message = person == null
-          ? 'Logged $count update$plural'
-          : 'Logged $count update$plural with ${person.name}';
+      final message = 'Logged $count update$plural with ${person.name}';
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -504,18 +530,13 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                 runSpacing: 8,
                 children: [
                   ActionChip(
-                    avatar: const Icon(Icons.attach_file),
-                    label: const Text('Attach'),
-                    onPressed: pick,
-                  ),
-                  ActionChip(
                     key: const Key('add-image-chip'),
                     avatar: const Icon(Icons.image),
                     label: const Text('Add image'),
                     onPressed: pickImage,
                   ),
                   for (final file in attachments)
-                    if (_isImage(file.name))
+                    if (file.path != null || _isImage(file.name))
                       ClipRRect(
                         key: Key('attachment-preview-${file.name}'),
                         borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -582,8 +603,6 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     // what you've shared with …" with no name. Falling back to
     // the full name is harmless and correct for any production
     // case we've actually observed.
-    final rawFirst = person.name.split(' ').first;
-    final firstName = rawFirst.trim().isEmpty ? person.name : rawFirst;
     return Center(
       child: Padding(
         padding: EdgeInsets.all(AppSpacing.space8),
@@ -593,7 +612,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
             CircularProgressIndicator(key: const Key('ai-loading-spinner')),
             SizedBox(height: AppSpacing.space5),
             Text(
-              "Reading what you've shared with $firstName…",
+              _loadingLabel,
               style: AppTypography.bodyLg(color: tokens.inkMuted),
               textAlign: TextAlign.center,
             ),
@@ -821,14 +840,42 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                           .copyWith(fontWeight: FontWeight.w600),
                     ),
                     SizedBox(width: AppSpacing.space1),
-                    Icon(Icons.edit_outlined, size: 13, color: tokens.primary),
+                     Icon(Icons.edit_outlined, size: 13, color: tokens.primary),
                   ],
                 ),
               ),
             ),
+            // Bond delta indicator — only for the first card (index 0)
+            // since bondScoreDelta is per-run, not per-interaction.
+            if (index == 0 && previewResult!.bondScoreDelta != 0) ...[
+              SizedBox(height: AppSpacing.space3),
+              _buildBondDeltaRow(tokens, previewResult!.bondScoreDelta),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  /// Small bond delta row: ▲ +N in green (positive) or ▼ −N in amber (negative).
+  Widget _buildBondDeltaRow(AppTokens tokens, int delta) {
+    final isPositive = delta > 0;
+    final color = isPositive ? tokens.success : tokens.secondary;
+    final icon = isPositive
+        ? Icons.arrow_upward_rounded
+        : Icons.arrow_downward_rounded;
+    final label = isPositive ? 'Bond +$delta' : 'Bond $delta';
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color),
+        SizedBox(width: AppSpacing.space1),
+        Text(
+          label,
+          style: AppTypography.caption(color: color).copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 

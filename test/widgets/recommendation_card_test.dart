@@ -69,7 +69,7 @@ void main() {
       expect(bondRing.connection?.id, 'test-1');
     });
 
-    testWidgets('renders conversational headline with bodyLg typography', (
+    testWidgets('renders conversational headline with body typography', (
       tester,
     ) async {
       await tester.pumpWidget(buildTestCard());
@@ -77,14 +77,14 @@ void main() {
       final headlineFinder = find.text("Mike's been quiet for a while.");
       expect(headlineFinder, findsOneWidget);
 
-      // Verify it's using bodyLg style (17pt, weight 500)
+      // Verify it's using body style (15pt, weight 400)
       final headlineWidget = tester.widget<Text>(headlineFinder);
-      expect(headlineWidget.style?.fontSize, 17);
-      expect(headlineWidget.style?.fontWeight, FontWeight.w500);
+      expect(headlineWidget.style?.fontSize, 15);
+      expect(headlineWidget.style?.fontWeight, FontWeight.w400);
     });
 
     testWidgets(
-      'renders insight text with body typography and inkMuted color',
+      'renders insight text with caption typography and inkMuted color',
       (tester) async {
         await tester.pumpWidget(buildTestCard());
 
@@ -93,10 +93,10 @@ void main() {
         );
         expect(insightFinder, findsOneWidget);
 
-        // Verify it's using body style (15pt, weight 400)
+        // Verify it's using caption style (13pt, weight 500)
         final insightWidget = tester.widget<Text>(insightFinder);
-        expect(insightWidget.style?.fontSize, 15);
-        expect(insightWidget.style?.fontWeight, FontWeight.w400);
+        expect(insightWidget.style?.fontSize, 13);
+        expect(insightWidget.style?.fontWeight, FontWeight.w500);
       },
     );
 
@@ -214,6 +214,65 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Paris trip'), findsNothing);
+    });
+
+    testWidgets('completed card shows Done badge', (tester) async {
+      await tester.pumpWidget(
+        buildTestCard(
+          recommendation: const Recommendation(
+            contactId: 'test-1',
+            reason: '✓ Reached out to Mike',
+            insight: 'Just updated with AI',
+            priority: 'completed',
+            isCompleted: true,
+          ),
+        ),
+      );
+
+      expect(find.text('Done'), findsOneWidget);
+      expect(find.text('✓ Reached out to Mike'), findsOneWidget);
+      expect(find.text('Just updated with AI'), findsOneWidget);
+    });
+
+    testWidgets('completed card is still tappable', (tester) async {
+      var tapped = false;
+      await tester.pumpWidget(
+        buildTestCard(
+          recommendation: const Recommendation(
+            contactId: 'test-1',
+            reason: '✓ Reached out to Mike',
+            insight: 'Just updated with AI',
+            priority: 'completed',
+            isCompleted: true,
+          ),
+          onTap: () => tapped = true,
+        ),
+      );
+
+      await tester.tap(find.byType(RecommendationCard));
+      expect(tapped, isTrue);
+    });
+
+    testWidgets('completed card hides action text when present', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildTestCard(
+          recommendation: const Recommendation(
+            contactId: 'test-1',
+            reason: '✓ Reached out to Mike',
+            insight: 'Just updated with AI',
+            priority: 'completed',
+            isCompleted: true,
+            action: 'Ask how the Paris plans are coming together.',
+          ),
+        ),
+      );
+
+      expect(
+        find.text('Ask how the Paris plans are coming together.'),
+        findsNothing,
+      );
     });
   });
 }

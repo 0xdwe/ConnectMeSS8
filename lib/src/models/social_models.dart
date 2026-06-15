@@ -163,6 +163,7 @@ class Connection {
     this.line = '',
     this.isSample = false,
     this.lastBondDriftAppliedAt,
+    this.previousBondScore,
   });
 
   final String id;
@@ -184,6 +185,7 @@ class Connection {
   final String line;
   final bool isSample;
   final DateTime? lastBondDriftAppliedAt;
+  final int? previousBondScore;
 
   String get role => category;
   String get company => email;
@@ -191,9 +193,22 @@ class Connection {
   int get closeness => bondScore;
   List<String> get tags => [category];
 
-  /// Bond trend stub: score ≥70 → up, else flat.
-  /// Wave 4 will replace with real history-based logic.
-  BondTrend get bondTrend => bondScore >= 70 ? BondTrend.up : BondTrend.flat;
+  /// Bond trend based on score comparison to previous score.
+  /// Returns:
+  ///   - [BondTrend.up] if bondScore > previousBondScore or no history (default)
+  ///   - [BondTrend.down] if bondScore < previousBondScore
+  ///   - [BondTrend.flat] if bondScore == previousBondScore
+  BondTrend get bondTrend {
+    final prev = previousBondScore;
+    if (prev == null) return BondTrend.up;
+    if (bondScore > prev) return BondTrend.up;
+    if (bondScore < prev) return BondTrend.down;
+    return BondTrend.flat;
+  }
+
+  /// Alias for [bondTrend] for backward compatibility with time-windowed access.
+  /// Now that trends are score-based, the time parameter is unused.
+  BondTrend bondTrendAt(DateTime now) => bondTrend;
 
   Connection copyWith({
     String? name,
@@ -214,6 +229,7 @@ class Connection {
     String? line,
     bool? isSample,
     Object? lastBondDriftAppliedAt = _copyWithAbsent,
+    Object? previousBondScore = _copyWithAbsent,
   }) {
     return Connection(
       id: id,
@@ -237,6 +253,9 @@ class Connection {
       lastBondDriftAppliedAt: identical(lastBondDriftAppliedAt, _copyWithAbsent)
           ? this.lastBondDriftAppliedAt
           : lastBondDriftAppliedAt as DateTime?,
+      previousBondScore: identical(previousBondScore, _copyWithAbsent)
+          ? this.previousBondScore
+          : previousBondScore as int?,
     );
   }
 }
@@ -318,6 +337,8 @@ class Recommendation {
     required this.priority,
     this.topic,
     this.action,
+    this.isCompleted = false,
+    this.completedAt,
   });
 
   final String contactId;
@@ -332,6 +353,16 @@ class Recommendation {
   /// Prepared Topic Suggestion text to show as the concrete next action.
   /// Null when no high-quality, non-expired topic suggestion is eligible.
   final String? action;
+
+  /// True when this card represents a recommendation the user already
+  /// acted upon (Pass 4.6 / #115). Completed cards keep their original
+  /// slot position and render with a checkmark badge. In-memory only —
+  /// never persisted to Firestore.
+  final bool isCompleted;
+
+  /// Wall-clock time the recommendation was detected as completed.
+  /// Only meaningful when [isCompleted] is true.
+  final DateTime? completedAt;
 }
 
 /// Per-contact derived signals consumed by the contact profile UI.

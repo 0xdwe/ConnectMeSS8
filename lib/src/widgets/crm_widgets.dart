@@ -161,18 +161,20 @@ class CardBox extends StatelessWidget {
     this.padding = const EdgeInsets.all(AppSpacing.space5),
     this.border,
     this.onTap,
+    this.color,
   });
   final Widget child;
   final EdgeInsets padding;
   final Border? border;
   final VoidCallback? onTap;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final decoration = BoxDecoration(
-      color: tokens.surfaceRaised,
+      color: color ?? tokens.surfaceRaised,
       borderRadius: BorderRadius.circular(AppRadius.lg),
       border: border ?? Border.all(color: tokens.border),
       boxShadow: AppTokens.elevation1(dark),
@@ -279,11 +281,14 @@ class _ContactListCardState extends State<ContactListCard> {
                     Text(
                       widget.connection.name,
                       style: AppTypography.h2(),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       widget.connection.email,
                       style: AppTypography.caption(color: tokens.inkMuted),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Container(
                       margin: const EdgeInsets.only(top: 3),
@@ -303,19 +308,38 @@ class _ContactListCardState extends State<ContactListCard> {
                             backgroundColor: categoryAccent,
                           ),
                           const SizedBox(width: 5),
-                          Text(
-                            widget.connection.category,
-                            style: AppTypography.caption(
-                              color: dark ? categoryAccent : tokens.ink,
-                            ).copyWith(fontWeight: FontWeight.w700),
+                         ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 120),
+                            child: FadeOverflowText(
+                              text: widget.connection.category,
+                              style: AppTypography.caption(
+                                color: dark ? categoryAccent : tokens.ink,
+                              ).copyWith(fontWeight: FontWeight.w700),
+                              maxWidth: 120,
+                            ),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.schedule, size: 12, color: tokens.inkSubtle),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Last interaction: ${relativeLastInteraction(widget.connection.lastContact)}',
+                          style: AppTypography.caption(color: tokens.inkSubtle),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              ConnectionScoreRing(score: widget.connection.bondScore, size: 58),
+              ConnectionScoreRing(
+                score: widget.connection.bondScore,
+                size: 58,
+                trend: widget.connection.bondTrendAt(DateTime.now()),
+              ),
             ],
           ),
         ),
@@ -325,10 +349,16 @@ class _ContactListCardState extends State<ContactListCard> {
 }
 
 class ConnectionScoreRing extends StatelessWidget {
-  const ConnectionScoreRing({super.key, required this.score, this.size = 58});
+  const ConnectionScoreRing({
+    super.key,
+    required this.score,
+    this.size = 58,
+    this.trend = BondTrend.flat,
+  });
 
   final int score;
   final double size;
+  final BondTrend trend;
 
   @override
   Widget build(BuildContext context) {
@@ -339,6 +369,7 @@ class ConnectionScoreRing extends StatelessWidget {
       height: size,
       child: Stack(
         alignment: Alignment.center,
+        clipBehavior: Clip.none,
         children: [
           CircularProgressIndicator(
             value: 1,
@@ -360,18 +391,16 @@ class ConnectionScoreRing extends StatelessWidget {
             ).copyWith(fontSize: 15, fontWeight: FontWeight.w700),
           ),
 
-          Positioned(
-            right: 3,
-            bottom: 6,
-            child: Text(
-              '↗',
-              style: TextStyle(
-                color: tokens.success,
-                fontSize: size * 0.22,
-                fontWeight: FontWeight.bold,
+          if (trend != BondTrend.flat)
+            Positioned(
+              right: -12,
+              bottom: 2,
+              child: Icon(
+                trend == BondTrend.up ? Icons.arrow_upward : Icons.arrow_downward,
+                color: trend == BondTrend.up ? tokens.success : tokens.danger,
+                size: size * 0.5,
               ),
             ),
-          ),
         ],
       ),
     );
@@ -392,11 +421,13 @@ class RecommendationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final priority = _recommendationPriority(connection.bondScore);
-    final priorityColor = _recommendationPriorityColor(
-      connection.bondScore,
-      tokens,
-    );
+    final isCompleted = recommendation.isCompleted;
+    final priority = isCompleted
+        ? 'Done'
+        : _recommendationPriority(connection.bondScore);
+    final priorityColor = isCompleted
+        ? tokens.success
+        : _recommendationPriorityColor(connection.bondScore, tokens);
 
     return CardBox(
       onTap: onTap,
@@ -404,17 +435,21 @@ class RecommendationCard extends StatelessWidget {
         horizontal: AppSpacing.space4,
         vertical: AppSpacing.space4,
       ),
+      color: isCompleted ? tokens.surfaceSunken : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: tokens.primaryTint,
+            backgroundColor: isCompleted
+                ? tokens.success.withValues(alpha: .12)
+                : tokens.primaryTint,
             backgroundImage: connectionAvatarImage(connection.avatar),
             child: connectionAvatarImage(connection.avatar) == null
                 ? Text(
-                    connection.avatar,
-                    style: AppTypography.glyph(20, color: tokens.primary),
+                    isCompleted ? '✓' : connection.avatar,
+                    style: AppTypography.glyph(20,
+                        color: isCompleted ? tokens.success : tokens.primary),
                   )
                 : null,
           ),
@@ -446,16 +481,17 @@ class RecommendationCard extends StatelessWidget {
                 SizedBox(height: AppSpacing.space2),
                 Text(
                   recommendation.reason,
-                  style: AppTypography.bodyLg(color: tokens.ink),
-                  maxLines: 2,
+                  style: AppTypography.body(color: tokens.ink),
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: AppSpacing.space2),
                 Text(
                   recommendation.insight,
-                  style: AppTypography.body(color: tokens.inkMuted),
+                  style: AppTypography.caption(color: tokens.inkMuted),
                 ),
-                if (recommendation.action case final action?) ...[
+                if (!isCompleted &&
+                    recommendation.action case final action?) ...[
                   SizedBox(height: AppSpacing.space3),
                   Container(
                     padding: EdgeInsets.symmetric(
@@ -478,9 +514,9 @@ class RecommendationCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             action,
-                            style: AppTypography.caption(color: tokens.ink).copyWith(
-                              height: 1.3,
-                            ),
+                            style: AppTypography.caption(
+                              color: tokens.ink,
+                            ).copyWith(height: 1.3),
                           ),
                         ),
                       ],
@@ -510,7 +546,10 @@ class RecommendationCard extends StatelessWidget {
                 ),
               ),
               SizedBox(height: AppSpacing.space3),
-              BondRing(connection: connection, size: 56, showAvatar: false),
+              BondRing(
+                  connection: connection,
+                  size: 56,
+                  showAvatar: false),
             ],
           ),
         ],
@@ -558,12 +597,27 @@ class HeatmapCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    const categories = [
+
+    const knownCategories = [
       _HeatmapCategory(label: 'Family', icon: Icons.home_outlined),
       _HeatmapCategory(label: 'Friends', icon: Icons.groups_2_outlined),
       _HeatmapCategory(label: 'High School', icon: Icons.school_outlined),
       _HeatmapCategory(label: 'College', icon: Icons.work_outline),
       _HeatmapCategory(label: 'Work', icon: Icons.business_center_outlined),
+    ];
+
+    // Collect all categories actually present in connections.
+    final presentCategories = connections.map((c) => c.category).toSet();
+
+    // Keep known categories that are present (preserving their order and
+    // icons), then append any new/custom categories with a generic icon
+    // so the heatmap stays up to date when new categories are added.
+    final categories = <_HeatmapCategory>[
+      for (final cat in knownCategories)
+        if (presentCategories.contains(cat.label)) cat,
+      for (final cat in presentCategories)
+        if (!knownCategories.any((k) => k.label == cat))
+          _HeatmapCategory(label: cat, icon: Icons.label_outline),
     ];
 
     // Compute total interaction count per category over all time.
@@ -615,23 +669,32 @@ class HeatmapCard extends StatelessWidget {
             ],
           ),
           SizedBox(height: AppSpacing.space4),
-          for (var i = 0; i < categories.length; i++) ...[
-            _HeatmapRow(
-              category: categories[i],
-              count: connections
-                  .where((c) => c.category == categories[i].label)
-                  .length,
-              color: categoryColor(categories[i].label, tokens),
-              connections: connections,
-              interactions: interactions,
-              categoryLabel: categories[i].label,
-              strength: _categoryStrengthLabel(
-                interactionCountByCategory[categories[i].label] ?? 0,
+          if (categories.isEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.space3),
+              child: Text(
+                'Add a connection to see activity here.',
+                style: AppTypography.body(color: tokens.inkMuted),
               ),
-            ),
-            if (i != categories.length - 1)
-              Divider(height: AppSpacing.space5, color: tokens.border),
-          ],
+            )
+          else
+            for (var i = 0; i < categories.length; i++) ...[
+              _HeatmapRow(
+                category: categories[i],
+                count: connections
+                    .where((c) => c.category == categories[i].label)
+                    .length,
+                color: categoryColor(categories[i].label, tokens),
+                connections: connections,
+                interactions: interactions,
+                categoryLabel: categories[i].label,
+                strength: _categoryStrengthLabel(
+                  interactionCountByCategory[categories[i].label] ?? 0,
+                ),
+              ),
+              if (i != categories.length - 1)
+                Divider(height: AppSpacing.space5, color: tokens.border),
+            ],
         ],
       ),
     );
@@ -685,21 +748,37 @@ class _HeatmapRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: AppSpacing.space2,
-                runSpacing: AppSpacing.space1,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
-                    category.label,
-                    style: AppTypography.bodyLg(
-                      color: tokens.ink,
-                    ).copyWith(fontWeight: FontWeight.w700),
+                  Expanded(
+                    child: ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [
+                          Colors.white,
+                          Colors.white,
+                          Colors.transparent,
+                        ],
+                        stops: [0.0, 0.85, 1.0],
+                      ).createShader(bounds),
+                      blendMode: BlendMode.dstIn,
+                      child: Text(
+                        category.label,
+                        style: AppTypography.bodyLg(
+                          color: tokens.ink,
+                        ).copyWith(fontWeight: FontWeight.w700),
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.clip,
+                      ),
+                    ),
                   ),
+                  SizedBox(width: AppSpacing.space2),
                   Text(
                     '($count contact)',
                     style: AppTypography.caption(color: tokens.inkMuted),
                   ),
+                  SizedBox(width: AppSpacing.space2),
                   Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: AppSpacing.space2,
@@ -1510,7 +1589,7 @@ class _CuteGhostPainter extends CustomPainter {
 // AI Insights card (Pass 2, issue #034)
 //
 // Three subsections:
-//   1. Recommendation callout — bond-tier-derived encouragement
+//   1. Recommendation callout — dynamic from recommendationsProvider (#118)
 //   2. Person Summary         — ContactInsight.why / memory.summary
 //   3. Conversation Topics    — memory-derived pill tags + tap-to-open
 //                                bottom sheet of static suggestions
@@ -1520,13 +1599,6 @@ class _CuteGhostPainter extends CustomPainter {
 // `memory.topics` is non-empty, those topics drive the pill row;
 // otherwise the static category-default fallback applies.
 // ─────────────────────────────────────────────────────────────────────────────
-
-/// Bond-tier-derived encouragement copy for the Recommendation callout.
-String _bondEncouragement(BondTier tier) => switch (tier) {
-  BondTier.close => 'Strong bond! Keep up the regular communication.',
-  BondTier.steady => 'Steady ground — a quick check-in keeps it warm.',
-  BondTier.drifting => 'It\'s been a while. A short hello goes a long way.',
-};
 
 class AiInsightsCard extends ConsumerStatefulWidget {
   const AiInsightsCard({
@@ -1560,6 +1632,7 @@ class AiInsightsCard extends ConsumerStatefulWidget {
 class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
   bool expanded = true;
   bool _isRefreshing = false;
+  bool _autoRefreshed = false;
 
   Future<void> _handleRefresh() async {
     if (_isRefreshing) return;
@@ -1620,8 +1693,21 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final tier = BondTier.from(widget.connection.bondScore);
     final disableAnimations = MediaQuery.of(context).disableAnimations;
+
+    // Auto-refresh after AI Update for this contact.
+    final pendingRefreshId = ref.watch(pendingAiInsightsRefreshProvider);
+    if (pendingRefreshId == widget.connection.id &&
+        !_isRefreshing &&
+        !_autoRefreshed) {
+      _autoRefreshed = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref
+            .read(pendingAiInsightsRefreshProvider.notifier)
+            .setContactId(null);
+        _handleRefresh();
+      });
+    }
 
     return CardBox(
       padding: EdgeInsets.zero,
@@ -1699,7 +1785,6 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
                       memorySummary: widget.memorySummary,
                       memory: widget.memory,
                       initialSelectedTopic: widget.initialSelectedTopic,
-                      tier: tier,
                       tokens: tokens,
                     ),
                   )
@@ -1723,7 +1808,6 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
                         memorySummary: widget.memorySummary,
                         memory: widget.memory,
                         initialSelectedTopic: widget.initialSelectedTopic,
-                        tier: tier,
                         tokens: tokens,
                       ),
                     )
@@ -1742,7 +1826,6 @@ class _AiInsightsBody extends StatefulWidget {
   const _AiInsightsBody({
     required this.connection,
     required this.insight,
-    required this.tier,
     required this.tokens,
     this.memorySummary,
     this.memory,
@@ -1754,7 +1837,6 @@ class _AiInsightsBody extends StatefulWidget {
   final String? memorySummary;
   final MemoryDocument? memory;
   final String? initialSelectedTopic;
-  final BondTier tier;
   final AppTokens tokens;
 
   @override
@@ -1771,39 +1853,110 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Recommendation callout
-        Container(
-          padding: EdgeInsets.all(AppSpacing.space4),
-          decoration: BoxDecoration(
-            color: tokens.recommendationSurface,
-            border: Border.all(color: tokens.recommendationBorder, width: 1.5),
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.lightbulb_outline, color: tokens.secondary, size: 22),
-              SizedBox(width: AppSpacing.space3),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Recommendation',
-                      style: AppTypography.h2(color: tokens.recommendationInk),
-                    ),
-                    SizedBox(height: AppSpacing.space1),
-                    Text(
-                      _bondEncouragement(widget.tier),
-                      style: AppTypography.body(
-                        color: tokens.recommendationInkMuted,
-                      ),
-                    ),
-                  ],
+        // Recommendation callout — dynamic via recommendationsProvider (#118).
+        Consumer(
+          builder: (context, ref, child) {
+            final recommendationsAsync = ref.watch(recommendationsProvider);
+            final recForThisContact =
+                recommendationsAsync.maybeWhen(
+                  data: (list) => list
+                      .where((r) => r.contactId == widget.connection.id)
+                      .firstOrNull,
+                  orElse: () => null,
+                );
+
+            if (recForThisContact == null) {
+              final interactions = ref.watch(
+                interactionsByContactProvider(widget.connection.id),
+              );
+              final now = ref.read(clockProvider)();
+              return _buildRelationshipHealthCard(
+                connection: widget.connection,
+                interactions: interactions,
+                memorySummary: widget.memorySummary,
+                now: now,
+                tokens: tokens,
+              );
+            }
+
+            final isCompleted = recForThisContact.isCompleted;
+
+            return Container(
+              padding: EdgeInsets.all(AppSpacing.space4),
+              decoration: BoxDecoration(
+                color: isCompleted
+                    ? tokens.success.withValues(alpha: 0.1)
+                    : tokens.recommendationSurface,
+                border: Border.all(
+                  color: isCompleted
+                      ? tokens.success.withValues(alpha: 0.3)
+                      : tokens.recommendationBorder,
+                  width: 1.5,
                 ),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
               ),
-            ],
-          ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    isCompleted
+                        ? Icons.check_circle_outline
+                        : Icons.lightbulb_outline,
+                    color: isCompleted ? tokens.success : tokens.secondary,
+                    size: 22,
+                  ),
+                  SizedBox(width: AppSpacing.space3),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isCompleted ? 'Completed' : 'Recommendation',
+                          style: AppTypography.h2(
+                            color: isCompleted
+                                ? tokens.success
+                                : tokens.recommendationInk,
+                          ),
+                        ),
+                        SizedBox(height: AppSpacing.space1),
+                        Text(
+                          recForThisContact.reason,
+                          style: AppTypography.body(
+                            color: isCompleted
+                                ? tokens.success.withValues(alpha: 0.85)
+                                : tokens.recommendationInkMuted,
+                          ),
+                        ),
+                        if (recForThisContact.insight.isNotEmpty) ...[
+                          SizedBox(height: AppSpacing.space1),
+                          Text(
+                            recForThisContact.insight,
+                            style: AppTypography.caption(
+                              color: isCompleted
+                                  ? tokens.success.withValues(alpha: 0.7)
+                                  : tokens.recommendationInkMuted,
+                            ),
+                          ),
+                        ],
+                        if (recForThisContact.action != null &&
+                            recForThisContact.action!.trim().isNotEmpty) ...[
+                          SizedBox(height: AppSpacing.space2),
+                          Text(
+                            recForThisContact.action!,
+                            style: AppTypography.body(
+                              color: isCompleted
+                                  ? tokens.success
+                                  : tokens.primary,
+                            ).copyWith(fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
         SizedBox(height: AppSpacing.space5),
         // Person Summary
@@ -1877,6 +2030,94 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
       ],
     );
   }
+}
+
+String _qualitativeRecencyLabel({
+  required Connection connection,
+  required List<CrmInteraction> interactions,
+  required DateTime now,
+}) {
+  var latest = connection.lastContact;
+  for (final interaction in interactions) {
+    if (interaction.contactId != connection.id) continue;
+    if (interaction.date.isAfter(latest)) latest = interaction.date;
+  }
+  final days = now.difference(latest).inDays;
+  if (days <= 3) return 'You two connected very recently.';
+  if (days <= 14) return 'You\'ve been in touch recently.';
+  return 'You\'ve kept in touch regularly.';
+}
+
+String _truncateRelationshipHealthSummary(String? summary) {
+  final trimmed = summary?.trim() ?? '';
+  if (trimmed.isEmpty) return '';
+  if (trimmed.length <= 120) return trimmed;
+  return '${trimmed.substring(0, 120)}...';
+}
+
+Widget _buildRelationshipHealthCard({
+  required Connection connection,
+  required List<CrmInteraction> interactions,
+  required String? memorySummary,
+  required DateTime now,
+  required AppTokens tokens,
+}) {
+  final summary = _truncateRelationshipHealthSummary(memorySummary);
+  if (summary.isEmpty) return const SizedBox.shrink();
+
+  final recency = _qualitativeRecencyLabel(
+    connection: connection,
+    interactions: interactions,
+    now: now,
+  );
+
+  return Container(
+    padding: EdgeInsets.all(AppSpacing.space4),
+    decoration: BoxDecoration(
+      color: tokens.success.withValues(alpha: 0.08),
+      border: Border.all(
+        color: tokens.success.withValues(alpha: 0.25),
+        width: 1.5,
+      ),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.favorite_outline,
+          color: tokens.success,
+          size: 22,
+        ),
+        SizedBox(width: AppSpacing.space3),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Relationship healthy',
+                style: AppTypography.h2(color: tokens.success),
+              ),
+              SizedBox(height: AppSpacing.space1),
+              Text(
+                recency,
+                style: AppTypography.body(
+                  color: tokens.success.withValues(alpha: 0.85),
+                ),
+              ),
+              SizedBox(height: AppSpacing.space1),
+              Text(
+                summary,
+                style: AppTypography.body(
+                  color: tokens.success.withValues(alpha: 0.8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 const _stopWords = {
@@ -2479,6 +2720,75 @@ class AiActionFab extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+String relativeLastInteraction(DateTime lastContact, {DateTime? now}) {
+  final reference = now ?? DateTime.now();
+  final days = reference.difference(lastContact).inDays;
+
+  if (days < 1) return 'Today';
+  if (days < 7) return '${days}d';
+  if (days < 30) {
+    final weeks = days ~/ 7;
+    final remDays = days % 7;
+    return remDays == 0 ? '${weeks}w' : '${weeks}w ${remDays}d';
+  }
+  if (days < 365) {
+    final months = days ~/ 30;
+    final remDays = days % 30;
+    final remWeeks = remDays ~/ 7;
+    return remWeeks == 0 ? '${months}m' : '${months}m ${remWeeks}w';
+  }
+  final years = days ~/ 365;
+  final remMonths = (days % 365) ~/ 30;
+  return remMonths == 0 ? '${years}y' : '${years}y ${remMonths}m';
+}
+
+/// Renders [text] in a single line. If it fits within [maxWidth], it's
+/// shown as-is. If it overflows, it's clipped with a fade-out gradient
+/// on the trailing edge instead of an ellipsis.
+class FadeOverflowText extends StatelessWidget {
+  const FadeOverflowText({
+    required this.text,
+    required this.style,
+    required this.maxWidth,
+  });
+
+  final String text;
+  final TextStyle style;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: 1,
+      textDirection: Directionality.of(context),
+    )..layout(maxWidth: double.infinity);
+
+    final overflows = painter.width > maxWidth;
+
+    final textWidget = Text(
+      text,
+      style: style,
+      maxLines: 1,
+      softWrap: false,
+      overflow: TextOverflow.clip,
+    );
+
+    if (!overflows) {
+      return textWidget;
+    }
+
+    return ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        colors: [Colors.white, Colors.white, Colors.transparent],
+        stops: [0.0, 0.8, 1.0],
+      ).createShader(bounds),
+      blendMode: BlendMode.dstIn,
+      child: textWidget,
     );
   }
 }

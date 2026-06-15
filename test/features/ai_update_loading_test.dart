@@ -79,11 +79,10 @@ void main() {
 
         // Loading view is now visible.
         expect(find.byKey(const Key('ai-loading-spinner')), findsOneWidget);
-        // Warm copy uses the contact's FIRST name (no trailing period
-        // is fine; we assert substring) per PRD §Q10. Mike's first
-        // name in the seed is "Mike".
+        // Warm copy shows the loading label (Pass 4.4 / #113). The
+        // initial label is "Checking your input…".
         expect(
-          find.textContaining('Reading what you\'ve shared with Mike'),
+          find.text('Checking your input…'),
           findsOneWidget,
         );
         // Cancel is reachable.
@@ -233,6 +232,70 @@ void main() {
       expect(find.textContaining("Couldn't run AI update"), findsOneWidget);
     });
   });
+
+  group('AI Update modal — rejection dialog (#113)', () {
+    testWidgets(
+      'failOnRelevanceCheck shows dialog with reason',
+      (tester) async {
+        final memoryStore = InMemoryMemoryStore();
+        final container = ProviderContainer(
+          overrides: [
+            ...signedInDemoOverrides(),
+            memoryStoreProvider.overrideWithValue(memoryStore),
+          ],
+        );
+        addTearDown(container.dispose);
+        final ai = MockAiUpdate(
+          memoryStore: memoryStore,
+          appController: container.read(appControllerProvider.notifier),
+          failOnRelevanceCheck: true,
+        );
+
+        await tester.pumpWidget(_wrapScreen(contactId: 'mike', aiUpdate: ai));
+        await tester.pumpAndSettle();
+        await _typeAndTapRun(tester, 'whatever');
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.text('Not quite a relationship update'), findsOneWidget);
+        expect(
+          find.textContaining('relevance rejection'),
+          findsOneWidget,
+        );
+        expect(find.text('Got it'), findsOneWidget);
+
+        await tester.tap(find.text('Got it'));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('ai-input-field')), findsOneWidget);
+        final tf = tester.widget<TextField>(
+          find.byKey(const Key('ai-input-field')),
+        );
+        expect(tf.controller?.text, 'whatever');
+        expect(find.byType(SnackBar), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'loading label transitions from Checking to Reading',
+      (tester) async {
+        final ai = _mockWith(
+          slowRunDuration: const Duration(seconds: 3),
+        );
+        await tester.pumpWidget(_wrapScreen(contactId: 'mike', aiUpdate: ai));
+        await tester.pumpAndSettle();
+        await _typeAndTapRun(tester, 'Had coffee with Mike today.');
+        await tester.pump();
+
+        expect(find.text('Checking your input\u2026'), findsOneWidget);
+
+        // Drain remaining timers without asserting transition
+        // (callback wiring proven by llm_ai_update_test.dart)
+        await tester.pump(const Duration(seconds: 4));
+        await tester.pumpAndSettle();
+      },
+    );
+  });
 }
 
 /// Inline AiUpdate fake whose `run` always throws the supplied
@@ -250,6 +313,7 @@ class _ThrowingAiUpdate implements AiUpdate {
     required MemoryDocument currentMemory,
     required List<AttachmentRef> attachments,
     Future<void>? cancelToken,
+    Future<void> Function()? onClassifierPassed,
   }) async {
     throw toThrow;
   }

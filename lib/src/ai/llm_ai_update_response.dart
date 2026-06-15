@@ -16,10 +16,11 @@
 /// without booting the Firebase AI Logic SDK and lets #078 ship
 /// before #077's SDK wiring.
 ///
-/// `interactionDepth` is clamped 0..100 at decode time. The model is
-/// instructed (in the prompt) to stay in that range and the schema
-/// will reject out-of-range values, but the clamp is belt-and-braces
-/// — a single LLM hiccup will not move bond score wildly.
+/// `interactionDepth` is clamped -100..100 at decode time. Negative
+/// values represent conflictual/harmful interactions (fights, betrayals,
+/// etc.) and produce a negative Bond Score delta via the curve in
+/// `bond_score_curve.dart`. The clamp is belt-and-braces — an LLM
+/// hiccup outside the [-100, 100] range is silently bounded.
 library;
 
 import '../models/social_models.dart' show InteractionType;
@@ -261,6 +262,35 @@ class LlmMemoryUpdate {
   }
 }
 
+/// Relevance-classifier result (Pass 4.4 / #112).
+///
+/// Returned by the lightweight Gemini pre-classifier that runs before
+/// the main AI Update call. [isRelevant] gates whether the main call
+/// proceeds; [reason] provides the user-facing explanation when the
+/// classifier rejects the input.
+class LlmRelevanceResult {
+  const LlmRelevanceResult({required this.isRelevant, required this.reason});
+
+  final bool isRelevant;
+  final String reason;
+
+  factory LlmRelevanceResult.fromJson(Map<String, dynamic> json) {
+    final isRelevant = json['isRelevant'];
+    if (isRelevant is! bool) {
+      throw const LlmResponseParseException(
+        'isRelevant must be a bool',
+      );
+    }
+    final reason = json['reason'];
+    if (reason is! String || reason.isEmpty) {
+      throw const LlmResponseParseException(
+        'reason must be a non-empty string',
+      );
+    }
+    return LlmRelevanceResult(isRelevant: isRelevant, reason: reason);
+  }
+}
+
 /// Top-level shape Gemini returns under PRD §Q4's structured output
 /// schema. The adapter maps this onto an [AiUpdateResult] before
 /// commit; this class is a wire format, not a domain object.
@@ -329,7 +359,7 @@ class LlmAiUpdateResponse {
     }
     final memory = LlmMemoryUpdate.fromJson(memoryRaw);
     final depth = _requireInt(json, 'interactionDepth');
-    final clampedDepth = depth < 0 ? 0 : (depth > 100 ? 100 : depth);
+    final clampedDepth = depth.clamp(-100, 100);
     final nextStep = json['nextStep'] as String?;
     if (nextStep != null && nextStep.length > 80) {
       throw LlmResponseParseException(

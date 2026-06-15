@@ -51,12 +51,19 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
                 IconButton(
                   key: const Key('profile-button'),
                   tooltip: 'Open profile',
-                  icon: AccountAvatar(
-                    profile: profile,
-                    radius: 18,
-                    glyphSize: 14,
-                    backgroundColor: tokens.primaryTint,
-                    foregroundColor: tokens.primary,
+                  icon: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: tokens.primary, width: 2),
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: AccountAvatar(
+                      profile: profile,
+                      radius: 18,
+                      glyphSize: 14,
+                      backgroundColor: tokens.primaryTint,
+                      foregroundColor: tokens.primary,
+                    ),
                   ),
                   onPressed: () =>
                       ref.read(appControllerProvider.notifier).setTab(3),
