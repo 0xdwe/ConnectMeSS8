@@ -18,6 +18,7 @@ import 'connections/connection_seeder.dart';
 import 'connections/firebase_connection_store.dart';
 import 'firebase_providers.dart';
 import 'memory/memory_providers.dart';
+import 'memory/memory_rebuilder_providers.dart';
 import 'planner_event_normalizer.dart';
 import 'relationship_maintenance_policy.dart';
 
@@ -919,6 +920,41 @@ class AppController extends Notifier<AppState> {
       bondScore: newBondScore,
     );
     await ref.read(connectionStoreProvider).save(updatedConnection);
+
+    // Rebuild memory to remove references to the deleted interaction
+    try {
+      final memoryStore = ref.read(memoryStoreProvider);
+      final currentMemory = await memoryStore.load(contactId);
+      if (currentMemory != null) {
+        final rebuildResult = await ref.read(memoryRebuilderProvider).rebuild(
+          contact: updatedConnection,
+          currentMemory: currentMemory,
+          remainingInteractions: remainingInteractions,
+          deletedInteraction: interaction,
+        );
+
+        await memoryStore.save(rebuildResult.memoryDocument);
+
+        // Update nextStep from rebuild result
+        final connectionWithNextStep = updatedConnection.copyWith(
+          nextStep: rebuildResult.nextStep ?? '',
+        );
+        await ref
+            .read(connectionStoreProvider)
+            .save(connectionWithNextStep);
+
+        // Bump epoch and clear recommendation cache
+        final clock = ref.read(clockProvider);
+        ref.read(memoryEpochProvider.notifier).bump(clock());
+        ref.read(recommendationsCacheProvider).cache = null;
+        ref
+            .read(pendingAiInsightsRefreshProvider.notifier)
+            .setContactId(contactId);
+      }
+    } catch (_) {
+      // Memory rebuild failure is non-fatal; the interaction is already
+      // deleted. The user can manually refresh AI Insights later.
+    }
   }
 
   /// Clear the synchronous AI-update completion signal after the
