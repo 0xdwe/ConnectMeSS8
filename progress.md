@@ -1,7 +1,7 @@
 # Progress
 
 ## Status
-Shipped #122–#126 (Delete Activity Log + Rebuild Memory feature chain)
+Shipped #122–#126 + LlmMemoryRebuilder implementation
 
 ## Tasks
 
@@ -10,6 +10,7 @@ Shipped #122–#126 (Delete Activity Log + Rebuild Memory feature chain)
 - [x] #124 — `MemoryRebuilder` Seam and Full Memory Rebuild on Delete
 - [x] #125 — AI Insights Spinner for Pending Memory Rebuild
 - [x] #126 — Offline/Error Handling for Activity Log Deletion
+- [x] LlmMemoryRebuilder — Production Gemini adapter (replaces #124 stub)
 
 ## Files Changed
 
@@ -69,7 +70,7 @@ Shipped the full dependency chain #122 → #123 → #124 → #125 → #126. Each
 - Timer race condition fix in `_ActivityLogSection` — cancel previous timer before starting a new one
 
 **Known follow-ups (not in this chain):**
-- `LlmMemoryRebuilder` full prompt implementation (currently a stub)
+- `LlmMemoryRebuilder` full prompt implementation — **DONE** (was a stub, now uses Gemini 2.5 Flash with structured output)
 - `AppUser` cleanup (deferred per AGENTS.md)
 - The 33 widget test failures on `main` from `ui-login-page` + `fix-navbar` UI merges (out of Pass 4 scope)
 - Cross-device evidence chain (deferred per ADR-0003)
