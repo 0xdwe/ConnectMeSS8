@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
-import '../theme/app_spacing.dart';
 import '../theme/app_tokens.dart';
 
 class IntroVideoScreen extends StatefulWidget {
@@ -45,7 +44,7 @@ class _IntroVideoScreenState extends State<IntroVideoScreen> {
       final duration = controller.value.duration;
       if (duration > Duration.zero) {
         _finishTimer = Timer(
-          duration + const Duration(milliseconds: 700),
+          duration + const Duration(milliseconds: 100),
           _goToAuth,
         );
       }
@@ -61,8 +60,7 @@ class _IntroVideoScreenState extends State<IntroVideoScreen> {
     final duration = controller.value.duration;
     if (duration <= Duration.zero) return;
 
-    final almostDone = duration - const Duration(milliseconds: 120);
-    if (controller.value.position >= almostDone) {
+    if (controller.value.position >= duration) {
       _goToAuth();
     }
   }
@@ -71,7 +69,7 @@ class _IntroVideoScreenState extends State<IntroVideoScreen> {
     if (_finished || !mounted) return;
     _finished = true;
     _finishTimer?.cancel();
-    context.go('/auth');
+    context.go('/auth?mode=signup&intro=1');
   }
 
   @override
@@ -88,11 +86,10 @@ class _IntroVideoScreenState extends State<IntroVideoScreen> {
     final tokens = context.tokens;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          const _IntroGradient(),
           if (_ready && _controller != null)
             _IntroVideo(controller: _controller!)
           else
@@ -105,19 +102,6 @@ class _IntroVideoScreenState extends State<IntroVideoScreen> {
                 ),
               ),
             ),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: EdgeInsets.all(AppSpacing.space4),
-                child: IconButton.filledTonal(
-                  tooltip: 'Skip intro',
-                  onPressed: _goToAuth,
-                  icon: const Icon(Icons.arrow_forward_rounded),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -147,19 +131,6 @@ class _IntroVideo extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _IntroGradient extends StatelessWidget {
-  const _IntroGradient();
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(gradient: tokens.pageGradient),
     );
   }
 }

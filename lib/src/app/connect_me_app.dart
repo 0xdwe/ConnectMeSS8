@@ -24,7 +24,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/intro',
         builder: (context, state) => const IntroVideoScreen(),
       ),
-      GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
+      GoRoute(
+        path: '/auth',
+        pageBuilder: (context, state) {
+          final mode = switch (state.uri.queryParameters['mode']) {
+            'login' => AuthMode.login,
+            'signup' => AuthMode.signup,
+            _ => AuthMode.landing,
+          };
+          final fadeFromWhite = state.uri.queryParameters['intro'] == '1';
+
+          return NoTransitionPage(
+            key: state.pageKey,
+            child: AuthScreen(initialMode: mode, fadeFromWhite: fadeFromWhite),
+          );
+        },
+      ),
       GoRoute(path: '/app', builder: (context, state) => const ShellScreen()),
       GoRoute(path: '/me', builder: (context, state) => const ProfileScreen()),
       GoRoute(

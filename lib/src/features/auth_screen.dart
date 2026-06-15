@@ -17,9 +17,14 @@ import '../widgets/chain_logo.dart';
 enum AuthMode { landing, login, signup }
 
 class AuthScreen extends ConsumerStatefulWidget {
-  const AuthScreen({super.key, this.initialMode = AuthMode.landing});
+  const AuthScreen({
+    super.key,
+    this.initialMode = AuthMode.landing,
+    this.fadeFromWhite = false,
+  });
 
   final AuthMode initialMode;
+  final bool fadeFromWhite;
 
   @override
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
@@ -27,6 +32,7 @@ class AuthScreen extends ConsumerStatefulWidget {
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   late AuthMode _mode;
+  late bool _showContent;
   bool _busy = false;
 
   final _loginEmail = TextEditingController();
@@ -47,6 +53,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   void initState() {
     super.initState();
     _mode = widget.initialMode;
+    _showContent = !widget.fadeFromWhite;
+    if (widget.fadeFromWhite) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _showContent = true);
+      });
+    }
   }
 
   @override
@@ -258,114 +270,166 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             final w = constraints.maxWidth;
             final h = constraints.maxHeight;
 
-            return Stack(
-              children: [
-                // 1. Mode-specific background
-                if (_mode == AuthMode.landing) ...[
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: tokens.pageGradient,
+            return AnimatedOpacity(
+              opacity: _showContent ? 1 : 0,
+              duration: widget.fadeFromWhite
+                  ? const Duration(milliseconds: 450)
+                  : Duration.zero,
+              curve: Curves.easeOutCubic,
+              child: Stack(
+                children: [
+                  // 1. Mode-specific background
+                  if (_mode == AuthMode.landing) ...[
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: tokens.pageGradient,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const Positioned(
-                    top: 24,
-                    right: 0,
-                    bottom: -24,
-                    left: 0,
-                    child: IgnorePointer(
-                      child: Image(
-                        key: Key('welcome-screen-background'),
-                        image: AssetImage('assets/images/welcome_back.jpg'),
-                        fit: BoxFit.cover,
-                        alignment: Alignment.center,
-                        excludeFromSemantics: true,
+                    const Positioned.fill(
+                      child: IgnorePointer(
+                        child: Image(
+                          key: Key('welcome-screen-background'),
+                          image: AssetImage('assets/images/welcome_back.jpg'),
+                          fit: BoxFit.cover,
+                          alignment: Alignment.center,
+                          excludeFromSemantics: true,
+                        ),
                       ),
                     ),
-                  ),
-                ] else ...[
-                  const Positioned.fill(
-                    child: IgnorePointer(
-                      child: ColoredBox(color: Colors.white),
-                    ),
-                  ),
-                  const Positioned.fill(
-                    child: IgnorePointer(
-                      child: Image(
-                        key: Key('login-page-background'),
-                        image: AssetImage('assets/images/login_page.jpg'),
-                        fit: BoxFit.fitWidth,
-                        alignment: Alignment.topCenter,
-                        excludeFromSemantics: true,
+                  ] else ...[
+                    const Positioned.fill(
+                      child: IgnorePointer(
+                        child: ColoredBox(color: Colors.white),
                       ),
                     ),
-                  ),
-                ],
+                    const Positioned.fill(
+                      child: IgnorePointer(
+                        child: Image(
+                          key: Key('login-page-background'),
+                          image: AssetImage('assets/images/login_page.jpg'),
+                          fit: BoxFit.fitWidth,
+                          alignment: Alignment.topCenter,
+                          excludeFromSemantics: true,
+                        ),
+                      ),
+                    ),
+                  ],
 
-                // 2. Main content layer
-                if (_mode == AuthMode.landing)
-                  SafeArea(
-                    child: LayoutBuilder(
-                      builder: (context, landingConstraints) {
-                        return SingleChildScrollView(
-                          key: const Key('landing-scroll-view'),
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minHeight: landingConstraints.maxHeight,
-                            ),
-                            child: IntrinsicHeight(
-                              child: _buildLanding(context, tokens),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  )
-                else ...[
-                  if (_mode == AuthMode.login)
+                  // 2. Main content layer
+                  if (_mode == AuthMode.landing)
                     SafeArea(
-                      child: SingleChildScrollView(
-                        child: Builder(
-                          builder: (context) {
-                            final safeAreaHeight =
-                                h - MediaQuery.paddingOf(context).vertical;
-                            final formEstimate = 520.0;
+                      child: LayoutBuilder(
+                        builder: (context, landingConstraints) {
+                          return SingleChildScrollView(
+                            key: const Key('landing-scroll-view'),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: landingConstraints.maxHeight,
+                              ),
+                              child: IntrinsicHeight(
+                                child: _buildLanding(context, tokens),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  else ...[
+                    if (_mode == AuthMode.login)
+                      SafeArea(
+                        child: SingleChildScrollView(
+                          child: Builder(
+                            builder: (context) {
+                              final safeAreaHeight =
+                                  h - MediaQuery.paddingOf(context).vertical;
+                              final formEstimate = 520.0;
 
-                            final topPadding = math.max(
-                              16.0,
-                              (safeAreaHeight - formEstimate) * 0.45,
+                              final topPadding = math.max(
+                                16.0,
+                                (safeAreaHeight - formEstimate) * 0.45,
+                              );
+
+                              return Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  w <= 360
+                                      ? AppSpacing.space4
+                                      : AppSpacing.space5,
+                                  topPadding,
+                                  w <= 360
+                                      ? AppSpacing.space4
+                                      : AppSpacing.space5,
+                                  AppSpacing.space4,
+                                ),
+                                child: Center(
+                                  child: Container(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 460,
+                                    ),
+                                    child: _LoginForm(
+                                      emailController: _loginEmail,
+                                      passwordController: _loginPassword,
+                                      emailError: _loginEmailError,
+                                      passwordError: _loginPasswordError,
+                                      busy: _busy,
+                                      onSubmit: _submitLogin,
+                                      onSwitch: () =>
+                                          _switchMode(AuthMode.signup),
+                                      onGoogleSignIn: _signInWithGoogle,
+                                      tokens: tokens,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    if (_mode == AuthMode.signup)
+                      SafeArea(
+                        child: LayoutBuilder(
+                          builder: (context, signupConstraints) {
+                            final horizontalPadding = w <= 360
+                                ? AppSpacing.space3
+                                : AppSpacing.space5;
+                            final formWidth = math.min(
+                              460.0,
+                              signupConstraints.maxWidth -
+                                  (horizontalPadding * 2),
                             );
 
                             return Padding(
                               padding: EdgeInsets.fromLTRB(
-                                w <= 360
-                                    ? AppSpacing.space4
-                                    : AppSpacing.space5,
-                                topPadding,
-                                w <= 360
-                                    ? AppSpacing.space4
-                                    : AppSpacing.space5,
-                                AppSpacing.space4,
+                                horizontalPadding,
+                                math.max(h * 0.17, 128.0),
+                                horizontalPadding,
+                                AppSpacing.space2,
                               ),
-                              child: Center(
-                                child: Container(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 460,
-                                  ),
-                                  child: _LoginForm(
-                                    emailController: _loginEmail,
-                                    passwordController: _loginPassword,
-                                    emailError: _loginEmailError,
-                                    passwordError: _loginPasswordError,
-                                    busy: _busy,
-                                    onSubmit: _submitLogin,
-                                    onSwitch: () =>
-                                        _switchMode(AuthMode.signup),
-                                    onGoogleSignIn: _signInWithGoogle,
-                                    tokens: tokens,
+                              child: Align(
+                                alignment: Alignment.center,
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.center,
+                                  child: SizedBox(
+                                    width: formWidth,
+                                    child: _SignupForm(
+                                      nameController: _signupName,
+                                      emailController: _signupEmail,
+                                      passwordController: _signupPassword,
+                                      confirmController: _signupConfirm,
+                                      nameError: _signupNameError,
+                                      emailError: _signupEmailError,
+                                      passwordError: _signupPasswordError,
+                                      confirmError: _signupConfirmError,
+                                      busy: _busy,
+                                      onSubmit: _submitSignup,
+                                      onSwitch: () =>
+                                          _switchMode(AuthMode.login),
+                                      onGoogleSignIn: _signInWithGoogle,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -373,81 +437,33 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           },
                         ),
                       ),
-                    ),
-                  if (_mode == AuthMode.signup)
-                    SafeArea(
-                      child: LayoutBuilder(
-                        builder: (context, signupConstraints) {
-                          final horizontalPadding = w <= 360
-                              ? AppSpacing.space3
-                              : AppSpacing.space5;
-                          final formWidth = math.min(
-                            460.0,
-                            signupConstraints.maxWidth -
-                                (horizontalPadding * 2),
-                          );
 
-                          return Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              horizontalPadding,
-                              math.max(h * 0.17, 128.0),
-                              horizontalPadding,
-                              AppSpacing.space2,
-                            ),
-                            child: Align(
-                              alignment: Alignment.center,
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.center,
-                                child: SizedBox(
-                                  width: formWidth,
-                                  child: _SignupForm(
-                                    nameController: _signupName,
-                                    emailController: _signupEmail,
-                                    passwordController: _signupPassword,
-                                    confirmController: _signupConfirm,
-                                    nameError: _signupNameError,
-                                    emailError: _signupEmailError,
-                                    passwordError: _signupPasswordError,
-                                    confirmError: _signupConfirmError,
-                                    busy: _busy,
-                                    onSubmit: _submitSignup,
-                                    onSwitch: () => _switchMode(AuthMode.login),
-                                    onGoogleSignIn: _signInWithGoogle,
-                                  ),
-                                ),
+                    // Back Button to Landing Screen (placed on top for hit-testing)
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: SafeArea(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 8,
                               ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-
-                  // Back Button to Landing Screen (placed on top for hit-testing)
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    child: SafeArea(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 8,
-                            ),
-                          ],
-                        ),
-                        child: IconButton(
-                          icon: Icon(Icons.arrow_back, color: tokens.ink),
-                          onPressed: () => _switchMode(AuthMode.landing),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: Icon(Icons.arrow_back, color: tokens.ink),
+                            onPressed: () => _switchMode(AuthMode.landing),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             );
           },
         ),
