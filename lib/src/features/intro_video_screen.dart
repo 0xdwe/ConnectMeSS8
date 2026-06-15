@@ -88,7 +88,7 @@ class _IntroVideoScreenState extends State<IntroVideoScreen> {
     final tokens = context.tokens;
 
     return Scaffold(
-      backgroundColor: tokens.surface,
+      backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -135,13 +135,16 @@ class _IntroVideo extends StatelessWidget {
     final width = videoSize.width == 0 ? 9.0 : videoSize.width;
     final height = videoSize.height == 0 ? 16.0 : videoSize.height;
 
-    return Center(
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: SizedBox(
-          width: width,
-          height: height,
-          child: VideoPlayer(controller),
+    return SizedBox.expand(
+      child: ClipRect(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: VideoPlayer(controller),
+          ),
         ),
       ),
     );
