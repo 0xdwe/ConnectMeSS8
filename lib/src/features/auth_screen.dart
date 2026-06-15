@@ -262,15 +262,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               children: [
                 // 1. Mode-specific background
                 if (_mode == AuthMode.landing) ...[
-                  const Positioned.fill(
+                  Positioned.fill(
                     child: IgnorePointer(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFFE6DBFB), Color(0xFFFAF7FC)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.topRight,
-                          ),
+                          gradient: tokens.pageGradient,
                         ),
                       ),
                     ),
@@ -334,7 +330,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       child: SingleChildScrollView(
                         child: Builder(
                           builder: (context) {
-                            final safeAreaHeight = h - MediaQuery.paddingOf(context).vertical;
+                            final safeAreaHeight =
+                                h - MediaQuery.paddingOf(context).vertical;
                             final formEstimate = 520.0;
 
                             final topPadding = math.max(
@@ -344,14 +341,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                             return Padding(
                               padding: EdgeInsets.fromLTRB(
-                                w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
+                                w <= 360
+                                    ? AppSpacing.space4
+                                    : AppSpacing.space5,
                                 topPadding,
-                                w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
+                                w <= 360
+                                    ? AppSpacing.space4
+                                    : AppSpacing.space5,
                                 AppSpacing.space4,
                               ),
                               child: Center(
                                 child: Container(
-                                  constraints: const BoxConstraints(maxWidth: 460),
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 460,
+                                  ),
                                   child: _LoginForm(
                                     emailController: _loginEmail,
                                     passwordController: _loginPassword,
@@ -359,7 +362,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                     passwordError: _loginPasswordError,
                                     busy: _busy,
                                     onSubmit: _submitLogin,
-                                    onSwitch: () => _switchMode(AuthMode.signup),
+                                    onSwitch: () =>
+                                        _switchMode(AuthMode.signup),
                                     onGoogleSignIn: _signInWithGoogle,
                                     tokens: tokens,
                                   ),
@@ -644,7 +648,7 @@ InputDecorationTheme _authInputDecoration(
   final radius = BorderRadius.circular(borderRadius);
   return InputDecorationTheme(
     filled: true,
-    fillColor: fillColor ?? const Color(0xFFF3F2FF).withValues(alpha: 0.6),
+    fillColor: fillColor ?? tokens.surfaceSunken.withValues(alpha: 0.72),
     labelStyle: AppTypography.body(color: tokens.inkMuted),
     hintStyle: AppTypography.body(color: tokens.inkSubtle),
     errorStyle: AppTypography.caption(color: tokens.danger),
@@ -715,170 +719,112 @@ class _LoginForm extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _AuthBrandLockup(tokens: tokens, logoSize: 68, textSize: 28),
-        const SizedBox(height: 16),
-        Text(
-          'Welcome back.',
-          style: AppTypography.display(
-            color: tokens.ink,
-          ).copyWith(fontWeight: FontWeight.w700, fontSize: 32),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Log in to keep your connections close.',
-          style: AppTypography.body(color: tokens.inkMuted),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 20),
-
-        // Email field
-        TextField(
-          key: const Key('login-email-field'),
-          controller: emailController,
-          keyboardType: TextInputType.emailAddress,
-          autocorrect: false,
-          style: AppTypography.body(color: tokens.ink),
-          decoration:
-              InputDecoration(
-                prefixIcon: Padding(
-                  padding: const EdgeInsets.only(left: 18, right: 10),
-                  child: Icon(
-                    Icons.email_outlined,
-                    color: tokens.inkMuted,
-                    size: 18,
-                  ),
-                ),
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: 40,
-                  minHeight: 0,
-                ),
-                labelText: 'Email',
-                errorText: emailError,
-              ).applyDefaults(
-                _authInputDecoration(
-                  context,
-                  tokensOverride: tokens,
-                  fillColor: const Color(0xFFF3F2FF),
-                  borderRadius: 18,
-                  minHeight: 56,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                ),
-              ),
-        ),
-        const SizedBox(height: 12),
-
-        // Password field
-        TextField(
-          key: const Key('login-password-field'),
-          controller: passwordController,
-          obscureText: true,
-          style: AppTypography.body(color: tokens.ink),
-          decoration:
-              InputDecoration(
-                prefixIcon: Padding(
-                  padding: const EdgeInsets.only(left: 18, right: 10),
-                  child: Icon(
-                    Icons.lock_outline,
-                    color: tokens.inkMuted,
-                    size: 18,
-                  ),
-                ),
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: 40,
-                  minHeight: 0,
-                ),
-                suffixIcon: Padding(
-                  padding: const EdgeInsets.only(right: 18),
-                  child: Icon(
-                    Icons.visibility_outlined,
-                    color: tokens.inkSubtle,
-                    size: 18,
-                  ),
-                ),
-                labelText: 'Password',
-                errorText: passwordError,
-              ).applyDefaults(
-                _authInputDecoration(
-                  context,
-                  tokensOverride: tokens,
-                  fillColor: const Color(0xFFF3F2FF),
-                  borderRadius: 18,
-                  minHeight: 56,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                ),
-              ),
-        ),
-        const SizedBox(height: 16),
-
-        // Login button
-        _GradientButton(
-          buttonKey: const Key('sign-in-button'),
-          gradient: tokens.aiGradient,
-          onPressed: busy ? null : onSubmit,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (busy)
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              else ...[
-                const Icon(Icons.arrow_forward, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  'Log in',
-                  style: AppTypography.bodyLg().copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    fontSize: 15,
-                  ),
-                ),
-              ],
-            ],
+          const SizedBox(height: 16),
+          Text(
+            'Welcome back.',
+            style: AppTypography.display(
+              color: tokens.ink,
+            ).copyWith(fontWeight: FontWeight.w700, fontSize: 32),
+            textAlign: TextAlign.center,
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 6),
+          Text(
+            'Log in to keep your connections close.',
+            style: AppTypography.body(color: tokens.inkMuted),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
 
-        Row(
-          children: [
-            Expanded(child: Divider(color: Colors.grey.shade300)),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.space3),
-              child: Text(
-                'or',
-                style: AppTypography.caption(color: Colors.grey.shade500),
-              ),
-            ),
-            Expanded(child: Divider(color: Colors.grey.shade300)),
-          ],
-        ),
-        const SizedBox(height: 12),
+          // Email field
+          TextField(
+            key: const Key('login-email-field'),
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            autocorrect: false,
+            style: AppTypography.body(color: tokens.ink),
+            decoration:
+                InputDecoration(
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(left: 18, right: 10),
+                    child: Icon(
+                      Icons.email_outlined,
+                      color: tokens.inkMuted,
+                      size: 18,
+                    ),
+                  ),
+                  prefixIconConstraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 0,
+                  ),
+                  labelText: 'Email',
+                  errorText: emailError,
+                ).applyDefaults(
+                  _authInputDecoration(
+                    context,
+                    tokensOverride: tokens,
+                    fillColor: tokens.surfaceSunken,
+                    borderRadius: 18,
+                    minHeight: 56,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                  ),
+                ),
+          ),
+          const SizedBox(height: 12),
 
-        // Google button
-        SizedBox(
-          height: 56,
-          child: OutlinedButton(
-            key: const Key('google-sign-in-button'),
-            onPressed: busy ? null : onGoogleSignIn,
-            style: OutlinedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: tokens.ink,
-              side: BorderSide(color: tokens.border, width: 1.2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-            ),
+          // Password field
+          TextField(
+            key: const Key('login-password-field'),
+            controller: passwordController,
+            obscureText: true,
+            style: AppTypography.body(color: tokens.ink),
+            decoration:
+                InputDecoration(
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(left: 18, right: 10),
+                    child: Icon(
+                      Icons.lock_outline,
+                      color: tokens.inkMuted,
+                      size: 18,
+                    ),
+                  ),
+                  prefixIconConstraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 0,
+                  ),
+                  suffixIcon: Padding(
+                    padding: const EdgeInsets.only(right: 18),
+                    child: Icon(
+                      Icons.visibility_outlined,
+                      color: tokens.inkSubtle,
+                      size: 18,
+                    ),
+                  ),
+                  labelText: 'Password',
+                  errorText: passwordError,
+                ).applyDefaults(
+                  _authInputDecoration(
+                    context,
+                    tokensOverride: tokens,
+                    fillColor: tokens.surfaceSunken,
+                    borderRadius: 18,
+                    minHeight: 56,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                  ),
+                ),
+          ),
+          const SizedBox(height: 16),
+
+          // Login button
+          _GradientButton(
+            buttonKey: const Key('sign-in-button'),
+            gradient: tokens.aiGradient,
+            onPressed: busy ? null : onSubmit,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -888,57 +834,115 @@ class _LoginForm extends StatelessWidget {
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.grey,
+                      color: Colors.white,
                     ),
                   )
                 else ...[
-                  const _GoogleIcon(),
-                  const SizedBox(width: 12),
-                  Flexible(
-                    child: Text(
-                      'Continue with Google',
-                      maxLines: 1,
-                      overflow: TextOverflow.fade,
-                      softWrap: false,
-                      style: AppTypography.body().copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: tokens.ink,
-                        fontSize: 14.5,
-                      ),
+                  const Icon(Icons.arrow_forward, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Log in',
+                    style: AppTypography.bodyLg().copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      fontSize: 15,
                     ),
                   ),
                 ],
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
-        // Switch to Signup
-        TextButton(
-          key: const Key('auth-mode-signup'),
-          onPressed: busy ? null : onSwitch,
-          style: TextButton.styleFrom(foregroundColor: tokens.primary),
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: "Don't have an account? ",
-                  style: TextStyle(
-                    color: tokens.inkMuted,
-                    fontWeight: FontWeight.normal,
-                  ),
+          Row(
+            children: [
+              Expanded(child: Divider(color: Colors.grey.shade300)),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.space3),
+                child: Text(
+                  'or',
+                  style: AppTypography.caption(color: Colors.grey.shade500),
                 ),
-                const TextSpan(
-                  text: "Sign up",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            textAlign: TextAlign.center,
+              ),
+              Expanded(child: Divider(color: Colors.grey.shade300)),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 12),
+
+          // Google button
+          SizedBox(
+            height: 56,
+            child: OutlinedButton(
+              key: const Key('google-sign-in-button'),
+              onPressed: busy ? null : onGoogleSignIn,
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: tokens.ink,
+                side: BorderSide(color: tokens.border, width: 1.2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (busy)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.grey,
+                      ),
+                    )
+                  else ...[
+                    const _GoogleIcon(),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        'Continue with Google',
+                        maxLines: 1,
+                        overflow: TextOverflow.fade,
+                        softWrap: false,
+                        style: AppTypography.body().copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: tokens.ink,
+                          fontSize: 14.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Switch to Signup
+          TextButton(
+            key: const Key('auth-mode-signup'),
+            onPressed: busy ? null : onSwitch,
+            style: TextButton.styleFrom(foregroundColor: tokens.primary),
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: "Don't have an account? ",
+                    style: TextStyle(
+                      color: tokens.inkMuted,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                  const TextSpan(
+                    text: "Sign up",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
       ),
     );
   }

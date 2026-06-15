@@ -7,27 +7,29 @@ void main() {
   group('AppTokens.light', () {
     test('exposes documented values from DESIGN.md', () {
       final tokens = AppTokens.light();
-      expect(tokens.surface, const Color(0xFFF7F6FF));
+      expect(tokens.surface, const Color(0xFFFBFAFF));
       expect(tokens.surfaceRaised, const Color(0xFFFFFFFF));
-      expect(tokens.surfaceSunken, const Color(0xFFF0EEFA));
-      expect(tokens.ink, const Color(0xFF232033));
-      expect(tokens.inkMuted, const Color(0xFF69647A));
-      expect(tokens.inkSubtle, const Color(0xFF9892AA));
-      expect(tokens.border, const Color(0xFFE5E1F2));
-      expect(tokens.primary, const Color(0xFF7367F0));
+      expect(tokens.surfaceSunken, const Color(0xFFF0F4FF));
+      expect(tokens.ink, const Color(0xFF211F3D));
+      expect(tokens.inkMuted, const Color(0xFF676184));
+      expect(tokens.inkSubtle, const Color(0xFF9D96B8));
+      expect(tokens.border, const Color(0xFFE4DFFA));
+      expect(tokens.primary, const Color(0xFF6F63E8));
       expect(tokens.primaryOn, const Color(0xFFFFFFFF));
-      expect(tokens.primaryTint, const Color(0xFFEDEBFF));
-      expect(tokens.secondary, const Color(0xFFF59E0B));
-      expect(tokens.tertiary, const Color(0xFFE76BAE));
+      expect(tokens.primaryTint, const Color(0xFFEEF0FF));
+      expect(tokens.secondary, const Color(0xFFE46FC4));
+      expect(tokens.tertiary, const Color(0xFF5EADEB));
       expect(tokens.success, const Color(0xFF2F9E78));
       expect(tokens.danger, const Color(0xFFD64545));
-      expect(tokens.categoryWork, const Color(0xFF4F8DBD));
+      expect(tokens.categoryWork, const Color(0xFF5EADEB));
     });
 
     test('exposes Pass 2 AI surface tokens', () {
       final tokens = AppTokens.light();
-      // aiGradient: two-color purple→indigo gradient
-      expect(tokens.aiGradient.colors.length, 2);
+      // aiGradient: saturated mascot blue/lavender/pink gradient.
+      expect(tokens.aiGradient.colors.length, 3);
+      expect(tokens.pageGradient.colors.length, 4);
+      expect(tokens.cardGradient.colors.length, 3);
       // Recommendation callout + topic accent are real, opaque colors
       // (full opacity at every channel-encoded representation).
       expect(tokens.recommendationSurface.a, 1.0);
@@ -41,10 +43,10 @@ void main() {
   group('AppTokens.dark', () {
     test('exposes documented dark-mode values from DESIGN.md', () {
       final tokens = AppTokens.dark();
-      expect(tokens.surface, const Color(0xFF171722));
-      expect(tokens.surfaceRaised, const Color(0xFF222334));
-      expect(tokens.ink, const Color(0xFFF5F3FF));
-      expect(tokens.primary, const Color(0xFF9B8CFF));
+      expect(tokens.surface, const Color(0xFF151525));
+      expect(tokens.surfaceRaised, const Color(0xFF23243A));
+      expect(tokens.ink, const Color(0xFFF7F5FF));
+      expect(tokens.primary, const Color(0xFFA8A0FF));
       expect(tokens.primaryOn, const Color(0xFFFFFFFF));
       expect(tokens.success, const Color(0xFF61D0A9));
       expect(tokens.danger, const Color(0xFFFF6B6B));
@@ -69,7 +71,9 @@ void main() {
         isNot(equals(light.recommendationInkMuted)),
       );
       expect(dark.topicAccent, isNot(equals(light.topicAccent)));
-      expect(dark.aiGradient.colors.length, 2);
+      expect(dark.aiGradient.colors.length, 3);
+      expect(dark.pageGradient.colors.length, 4);
+      expect(dark.cardGradient.colors.length, 3);
     });
   });
 
@@ -78,16 +82,16 @@ void main() {
       final theme = AppTheme.data(false);
       final tokens = theme.extension<AppTokens>();
       expect(tokens, isNotNull);
-      expect(tokens!.primary, const Color(0xFF7367F0));
-      expect(tokens.surface, const Color(0xFFF7F6FF));
+      expect(tokens!.primary, const Color(0xFF6F63E8));
+      expect(tokens.surface, const Color(0xFFFBFAFF));
     });
 
     test('registers AppTokens in ThemeData.extensions for dark mode', () {
       final theme = AppTheme.data(true);
       final tokens = theme.extension<AppTokens>();
       expect(tokens, isNotNull);
-      expect(tokens!.primary, const Color(0xFF9B8CFF));
-      expect(tokens.surface, const Color(0xFF171722));
+      expect(tokens!.primary, const Color(0xFFA8A0FF));
+      expect(tokens.surface, const Color(0xFF151525));
     });
   });
 

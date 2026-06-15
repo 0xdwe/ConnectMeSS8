@@ -22,8 +22,10 @@ class AppSurface extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) =>
-      ColoredBox(color: context.tokens.surface, child: child);
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(gradient: context.tokens.pageGradient),
+    child: child,
+  );
 }
 
 ImageProvider<Object>? connectionAvatarImage(String avatar) {
@@ -1383,13 +1385,7 @@ class DailyNudgeCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark
-              ? [tokens.surfaceRaised, tokens.surfaceSunken]
-              : [const Color(0xFFEDEBFF), const Color(0xFFFDF2F8)],
-        ),
+        gradient: tokens.cardGradient,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: tokens.border),
         boxShadow: AppTokens.elevation1(dark),
@@ -1466,6 +1462,7 @@ class DailyNudgeCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _CuteGhostPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -1687,26 +1684,24 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
     super.initState();
     // Auto-refresh after AI Update: listen for the signal that this
     // contact's insights need refreshing.
-    ref.listenManual<String?>(
-      pendingAiInsightsRefreshProvider,
-      (previous, next) {
-        if (next == widget.connection.id && !_isRefreshing) {
-          // Clear the signal immediately to prevent re-triggering.
-          ref
-              .read(pendingAiInsightsRefreshProvider.notifier)
-              .setContactId(null);
-          setState(() {
-            _isRefreshing = true;
-            _manualRefreshInProgress = true;
-          });
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _performRefresh(showSnackBar: false);
-            }
-          });
-        }
-      },
-    );
+    ref.listenManual<String?>(pendingAiInsightsRefreshProvider, (
+      previous,
+      next,
+    ) {
+      if (next == widget.connection.id && !_isRefreshing) {
+        // Clear the signal immediately to prevent re-triggering.
+        ref.read(pendingAiInsightsRefreshProvider.notifier).setContactId(null);
+        setState(() {
+          _isRefreshing = true;
+          _manualRefreshInProgress = true;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _performRefresh(showSnackBar: false);
+          }
+        });
+      }
+    });
 
     // Watch for pending memory rebuild (delete flow).
     // When pendingMemoryRebuildProvider matches this contact, show the
@@ -1714,16 +1709,13 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
     // AppController.deleteInteraction; we just need to show the spinner.
     // When the provider clears, hide the spinner unless a manual refresh
     // is in progress (to avoid interrupting _handleRefresh's lifecycle).
-    ref.listenManual<String?>(
-      pendingMemoryRebuildProvider,
-      (previous, next) {
-        if (next == widget.connection.id && !_isRefreshing) {
-          setState(() => _isRefreshing = true);
-        } else if (next == null && _isRefreshing && !_manualRefreshInProgress) {
-          setState(() => _isRefreshing = false);
-        }
-      },
-    );
+    ref.listenManual<String?>(pendingMemoryRebuildProvider, (previous, next) {
+      if (next == widget.connection.id && !_isRefreshing) {
+        setState(() => _isRefreshing = true);
+      } else if (next == null && _isRefreshing && !_manualRefreshInProgress) {
+        setState(() => _isRefreshing = false);
+      }
+    });
   }
 
   Future<void> _handleRefresh() async {
@@ -2899,6 +2891,7 @@ String relativeLastInteraction(DateTime lastContact, {DateTime? now}) {
 /// on the trailing edge instead of an ellipsis.
 class FadeOverflowText extends StatelessWidget {
   const FadeOverflowText({
+    super.key,
     required this.text,
     required this.style,
     required this.maxWidth,

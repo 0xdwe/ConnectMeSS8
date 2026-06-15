@@ -156,17 +156,7 @@ class _IntroGradient extends StatelessWidget {
     final tokens = context.tokens;
 
     return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            tokens.primaryTint,
-            tokens.surface,
-            Color.lerp(tokens.primaryTint, tokens.tertiaryTint, 0.45)!,
-          ],
-        ),
-      ),
+      decoration: BoxDecoration(gradient: tokens.pageGradient),
     );
   }
 }

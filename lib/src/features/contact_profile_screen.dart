@@ -30,6 +30,7 @@ class ContactProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final person = ref.watch(contactByIdProvider(contactId));
 
     // Handle missing contact gracefully
@@ -68,20 +69,17 @@ class ContactProfileScreen extends ConsumerWidget {
     final state = ref.watch(appControllerProvider);
     final insight = state.contactInsightFor(contactId);
     final history = ref.watch(interactionsByContactProvider(contactId));
-    final upcomingPlans = state.events
-        .where((event) {
-          if (event.contactId != person.id) return false;
-          final eventDay = DateTime(
-            event.date.year,
-            event.date.month,
-            event.date.day,
-          );
-          final today = DateTime.now();
-          final todayDay = DateTime(today.year, today.month, today.day);
-          return !eventDay.isBefore(todayDay);
-        })
-        .toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final upcomingPlans = state.events.where((event) {
+      if (event.contactId != person.id) return false;
+      final eventDay = DateTime(
+        event.date.year,
+        event.date.month,
+        event.date.day,
+      );
+      final today = DateTime.now();
+      final todayDay = DateTime(today.year, today.month, today.day);
+      return !eventDay.isBefore(todayDay);
+    }).toList()..sort((a, b) => a.date.compareTo(b.date));
     final lastContactLabel = _lastInteractionLabel(history);
     final memoryAsync = ref.watch(memoryProvider(contactId));
     final memory = memoryAsync.maybeWhen(
@@ -107,241 +105,256 @@ class ContactProfileScreen extends ConsumerWidget {
         onTap: () => context.push('/ai-update/${person.id}'),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      body: ListView(
-        // Reserve room at the bottom so the floating Update with AI
-        // button (AiActionFab, ~72pt + safe area) does not obscure the
-        // last History row. Reuses the existing pageBottomPadding token
-        // already used by the home/people tabs for nav-bar clearance.
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.space4,
-          AppSpacing.space4,
-          AppSpacing.space4,
-          AppSpacing.pageBottomPadding,
-        ),
-        children: [
-          // Header section: avatar, email, category, and bond details.
-          Container(
-            padding: EdgeInsets.all(AppSpacing.space5),
-            decoration: BoxDecoration(
-              color: tokens.primaryTint,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: tokens.surfaceRaised,
-                      backgroundImage: _contactAvatarImage(person.avatar),
-                      child: _contactAvatarImage(person.avatar) == null
-                          ? Text(
-                              _contactAvatarGlyph(person.avatar, person.name),
-                              style: AppTypography.bodyLg(
-                                color: tokens.primary,
-                              ),
-                            )
-                          : null,
-                    ),
-                    SizedBox(width: AppSpacing.space4),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: ShaderMask(
-                                  shaderCallback: (bounds) => const LinearGradient(
-                                    colors: [Colors.white, Colors.white, Colors.transparent],
-                                    stops: [0.0, 0.88, 1.0],
-                                  ).createShader(bounds),
-                                  blendMode: BlendMode.dstIn,
-                                  child: Text(
-                                    person.name,
-                                    style: AppTypography.display(),
-                                    maxLines: 1,
-                                    softWrap: false,
-                                    overflow: TextOverflow.clip,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: AppSpacing.space3),
-                              OutlinedButton.icon(
-                                key: const Key('edit-connection-button'),
-                                onPressed: () =>
-                                    showEditConnectionModal(context, person),
-                                icon: Icon(
-                                  Icons.edit,
-                                  size: 16,
-                                  color: tokens.primary,
-                                ),
-                                label: Text(
-                                  'Edit',
-                                  style: TextStyle(
-                                    color: tokens.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  backgroundColor: tokens.surfaceRaised,
-                                  side: BorderSide(color: tokens.surfaceRaised),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AppRadius.pill,
-                                    ),
-                                  ),
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.space3,
-                                    vertical: AppSpacing.space2,
-                                  ),
-                                  minimumSize: const Size(0, 36),
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: AppSpacing.space2),
-                          Text(
-                            person.category,
-                            style: AppTypography.caption(
-                              color: tokens.inkMuted,
-                            ),
-                          ),
-                          SizedBox(height: AppSpacing.space1),
-                          Text(
-                            person.email,
-                            style: AppTypography.body(color: tokens.inkSubtle),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: AppSpacing.space5),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.space4,
-                    AppSpacing.space4,
-                    AppSpacing.space4,
-                    AppSpacing.space4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tokens.surfaceRaised,
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                  ),
-                  child: Row(
+      body: AppSurface(
+        child: ListView(
+          // Reserve room at the bottom so the floating Update with AI
+          // button (AiActionFab, ~72pt + safe area) does not obscure the
+          // last History row. Reuses the existing pageBottomPadding token
+          // already used by the home/people tabs for nav-bar clearance.
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.space4,
+            AppSpacing.space4,
+            AppSpacing.space4,
+            AppSpacing.pageBottomPadding,
+          ),
+          children: [
+            // Header section: avatar, email, category, and bond details.
+            Container(
+              padding: EdgeInsets.all(AppSpacing.space5),
+              decoration: BoxDecoration(
+                gradient: tokens.cardGradient,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                border: Border.all(color: tokens.border),
+                boxShadow: AppTokens.elevation1(dark),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundColor: tokens.surfaceRaised,
+                        backgroundImage: _contactAvatarImage(person.avatar),
+                        child: _contactAvatarImage(person.avatar) == null
+                            ? Text(
+                                _contactAvatarGlyph(person.avatar, person.name),
+                                style: AppTypography.bodyLg(
+                                  color: tokens.primary,
+                                ),
+                              )
+                            : null,
+                      ),
+                      SizedBox(width: AppSpacing.space4),
                       Expanded(
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: ShaderMask(
+                                    shaderCallback: (bounds) =>
+                                        const LinearGradient(
+                                          colors: [
+                                            Colors.white,
+                                            Colors.white,
+                                            Colors.transparent,
+                                          ],
+                                          stops: [0.0, 0.88, 1.0],
+                                        ).createShader(bounds),
+                                    blendMode: BlendMode.dstIn,
+                                    child: Text(
+                                      person.name,
+                                      style: AppTypography.display(),
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      overflow: TextOverflow.clip,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: AppSpacing.space3),
+                                OutlinedButton.icon(
+                                  key: const Key('edit-connection-button'),
+                                  onPressed: () =>
+                                      showEditConnectionModal(context, person),
+                                  icon: Icon(
+                                    Icons.edit,
+                                    size: 16,
+                                    color: tokens.primary,
+                                  ),
+                                  label: Text(
+                                    'Edit',
+                                    style: TextStyle(
+                                      color: tokens.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: tokens.surfaceRaised,
+                                    side: BorderSide(
+                                      color: tokens.surfaceRaised,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadius.pill,
+                                      ),
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.space3,
+                                      vertical: AppSpacing.space2,
+                                    ),
+                                    minimumSize: const Size(0, 36),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: AppSpacing.space2),
                             Text(
-                              'Connection Score',
+                              person.category,
                               style: AppTypography.caption(
                                 color: tokens.inkMuted,
                               ),
                             ),
                             SizedBox(height: AppSpacing.space1),
-                            Wrap(
-                              spacing: AppSpacing.space2,
-                              runSpacing: AppSpacing.space1,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                Text(
-                                  person.bondScore.toString(),
-                                  style: AppTypography.display(),
-                                ),
-                                Icon(
-                                  person.bondTrendAt(DateTime.now()) == BondTrend.up
-                                      ? Icons.trending_up
-                                      : Icons.trending_down,
-                                  color: person.bondTrendAt(DateTime.now()) == BondTrend.up
-                                      ? tokens.success
-                                      : tokens.danger,
-                                  size: 20,
-                                ),
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.space2,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: statusColor.withValues(alpha: 0.14),
-                                    borderRadius: BorderRadius.circular(
-                                      AppRadius.pill,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    statusLabel,
-                                    style: AppTypography.caption(
-                                      color: statusColor,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              person.email,
+                              style: AppTypography.body(
+                                color: tokens.inkSubtle,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
-                      SizedBox(width: AppSpacing.space4),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            'Last contact',
-                            style: AppTypography.caption(
-                              color: tokens.inkMuted,
-                            ),
-                          ),
-                          SizedBox(height: AppSpacing.space2),
-                          Text(
-                            lastContactLabel,
-                            style: AppTypography.h2(
-                              color: history.isEmpty
-                                  ? tokens.inkMuted
-                                  : tokens.ink,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
                     ],
                   ),
-                ),
-              ],
+                  SizedBox(height: AppSpacing.space5),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.space4,
+                      AppSpacing.space4,
+                      AppSpacing.space4,
+                      AppSpacing.space4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: tokens.surfaceRaised,
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Connection Score',
+                                style: AppTypography.caption(
+                                  color: tokens.inkMuted,
+                                ),
+                              ),
+                              SizedBox(height: AppSpacing.space1),
+                              Wrap(
+                                spacing: AppSpacing.space2,
+                                runSpacing: AppSpacing.space1,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Text(
+                                    person.bondScore.toString(),
+                                    style: AppTypography.display(),
+                                  ),
+                                  Icon(
+                                    person.bondTrendAt(DateTime.now()) ==
+                                            BondTrend.up
+                                        ? Icons.trending_up
+                                        : Icons.trending_down,
+                                    color:
+                                        person.bondTrendAt(DateTime.now()) ==
+                                            BondTrend.up
+                                        ? tokens.success
+                                        : tokens.danger,
+                                    size: 20,
+                                  ),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.space2,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withValues(
+                                        alpha: 0.14,
+                                      ),
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadius.pill,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      statusLabel,
+                                      style: AppTypography.caption(
+                                        color: statusColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: AppSpacing.space4),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Last contact',
+                              style: AppTypography.caption(
+                                color: tokens.inkMuted,
+                              ),
+                            ),
+                            SizedBox(height: AppSpacing.space2),
+                            Text(
+                              lastContactLabel,
+                              style: AppTypography.h2(
+                                color: history.isEmpty
+                                    ? tokens.inkMuted
+                                    : tokens.ink,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          SizedBox(height: AppSpacing.space4),
-          // AI Insights collapsible card (Pass 2 #034)
-          AiInsightsCard(
-            connection: person,
-            insight: insight,
-            memorySummary: memorySummary,
-            memory: memory,
-            initialSelectedTopic: initialSelectedTopic,
-          ),
-          InteractionDetailsCard(person: person, history: history),
-          SizedBox(height: AppSpacing.space4),
-          UpcomingPlansCard(person: person, plans: upcomingPlans),
-          SizedBox(height: AppSpacing.space4),
-          _ActivityLogSection(
-            person: person,
-            history: history,
-          ),
-        ],
+            SizedBox(height: AppSpacing.space4),
+            // AI Insights collapsible card (Pass 2 #034)
+            AiInsightsCard(
+              connection: person,
+              insight: insight,
+              memorySummary: memorySummary,
+              memory: memory,
+              initialSelectedTopic: initialSelectedTopic,
+            ),
+            InteractionDetailsCard(person: person, history: history),
+            SizedBox(height: AppSpacing.space4),
+            UpcomingPlansCard(person: person, plans: upcomingPlans),
+            SizedBox(height: AppSpacing.space4),
+            _ActivityLogSection(person: person, history: history),
+          ],
+        ),
       ),
     );
   }
@@ -463,7 +476,10 @@ class _AttachmentChip extends StatelessWidget {
               attachment.storageUrl!,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Center(
-                child: Icon(Icons.broken_image_outlined, color: tokens.inkSubtle),
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  color: tokens.inkSubtle,
+                ),
               ),
             ),
           ),
@@ -484,10 +500,7 @@ class _AttachmentChip extends StatelessWidget {
 /// SnackBar before actually deleting the interaction and recalculating
 /// the connection fields.
 class _ActivityLogSection extends ConsumerStatefulWidget {
-  const _ActivityLogSection({
-    required this.person,
-    required this.history,
-  });
+  const _ActivityLogSection({required this.person, required this.history});
 
   final Connection person;
   final List<CrmInteraction> history;
@@ -569,9 +582,11 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
             if (!exists) {
               // Fire-and-forget restore; the store/save will update
               // the snapshot listeners and UI.
-              unawaited(ref
-                  .read(appControllerProvider.notifier)
-                  .restoreInteraction(interaction));
+              unawaited(
+                ref
+                    .read(appControllerProvider.notifier)
+                    .restoreInteraction(interaction),
+              );
             }
           },
         ),
@@ -751,10 +766,7 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
                                         'AI',
                                         style: AppTypography.caption(
                                           color: tokens.primary,
-                                        ).copyWith(
-                                          fontSize: 10,
-                                          height: 1,
-                                        ),
+                                        ).copyWith(fontSize: 10, height: 1),
                                       ),
                                     ],
                                   ),
@@ -1213,13 +1225,20 @@ class _UpcomingPlansCardState extends State<UpcomingPlansCard> {
                           ),
                           child: Column(
                             children: [
-                              for (var index = 0; index < widget.plans.length; index++) ...[
+                              for (
+                                var index = 0;
+                                index < widget.plans.length;
+                                index++
+                              ) ...[
                                 if (index > 0)
                                   Padding(
                                     padding: EdgeInsets.symmetric(
                                       vertical: AppSpacing.space3,
                                     ),
-                                    child: Divider(color: tokens.border, height: 1),
+                                    child: Divider(
+                                      color: tokens.border,
+                                      height: 1,
+                                    ),
                                   ),
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1228,7 +1247,9 @@ class _UpcomingPlansCardState extends State<UpcomingPlansCard> {
                                       width: 42,
                                       height: 42,
                                       decoration: BoxDecoration(
-                                        color: tokens.primary.withValues(alpha: 0.12),
+                                        color: tokens.primary.withValues(
+                                          alpha: 0.12,
+                                        ),
                                         shape: BoxShape.circle,
                                       ),
                                       child: Icon(
@@ -1242,13 +1263,17 @@ class _UpcomingPlansCardState extends State<UpcomingPlansCard> {
                                     SizedBox(width: AppSpacing.space3),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             widget.plans[index].title,
-                                            style: AppTypography.bodyLg(
-                                              color: tokens.ink,
-                                            ).copyWith(fontWeight: FontWeight.w700),
+                                            style:
+                                                AppTypography.bodyLg(
+                                                  color: tokens.ink,
+                                                ).copyWith(
+                                                  fontWeight: FontWeight.w700,
+                                                ),
                                           ),
                                           SizedBox(height: AppSpacing.space1),
                                           Text(
@@ -1257,7 +1282,9 @@ class _UpcomingPlansCardState extends State<UpcomingPlansCard> {
                                               color: tokens.inkMuted,
                                             ),
                                           ),
-                                          if (widget.plans[index].note.trim().isNotEmpty) ...[
+                                          if (widget.plans[index].note
+                                              .trim()
+                                              .isNotEmpty) ...[
                                             SizedBox(height: AppSpacing.space1),
                                             Text(
                                               widget.plans[index].note,

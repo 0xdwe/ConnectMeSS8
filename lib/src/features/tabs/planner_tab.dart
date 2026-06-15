@@ -74,8 +74,8 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
     ];
     final nextEvent = _nextUpcomingEvent(filteredEvents, now);
     final nextEventContact = nextEvent?.contactId != null
-      ? contactById[nextEvent!.contactId!]
-      : null;
+        ? contactById[nextEvent!.contactId!]
+        : null;
 
     // Group events by day
     final groupedEvents = <DateTime, List<PlannerEvent>>{};
@@ -90,10 +90,18 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
     final sortedDates = groupedEvents.keys.toList()..sort();
 
     final selectedDayEvents = _hasExplicitDateSelection
-        ? groupedEvents[DateTime(selected.year, selected.month, selected.day)] ??
-            <PlannerEvent>[]
+        ? groupedEvents[DateTime(
+                selected.year,
+                selected.month,
+                selected.day,
+              )] ??
+              <PlannerEvent>[]
         : <PlannerEvent>[];
-    final selectedDayMidnight = DateTime(selected.year, selected.month, selected.day);
+    final selectedDayMidnight = DateTime(
+      selected.year,
+      selected.month,
+      selected.day,
+    );
     late final List<PlannerEvent> upcomingEvents;
     if (_hasExplicitDateSelection) {
       upcomingEvents = [
@@ -128,10 +136,7 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
           AppSpacing.pageBottomPadding,
         ),
         children: [
-          _PlanTogetherBanner(
-            upcomingCount: monthEvents.length,
-            month: month,
-          ),
+          _PlanTogetherBanner(upcomingCount: monthEvents.length, month: month),
           SizedBox(height: AppSpacing.space4),
 
           CardBox(
@@ -204,7 +209,8 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
                             onPressed: () {
                               showDialog(
                                 context: context,
-                                builder: (context) => const _PlannerSearchDialog(),
+                                builder: (context) =>
+                                    const _PlannerSearchDialog(),
                               );
                             },
                           ),
@@ -247,7 +253,10 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
                       children: [
                         Center(child: monthControls),
                         SizedBox(height: AppSpacing.space3),
-                        Align(alignment: Alignment.centerRight, child: actionButtons),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: actionButtons,
+                        ),
                       ],
                     );
                   },
@@ -366,10 +375,7 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
                 ),
             ],
             SizedBox(height: AppSpacing.space4),
-            _SectionTitle(
-              title: 'Upcoming',
-              count: upcomingEvents.length,
-            ),
+            _SectionTitle(title: 'Upcoming', count: upcomingEvents.length),
             SizedBox(height: AppSpacing.space2),
             if (upcomingEvents.isEmpty)
               Padding(
@@ -389,7 +395,9 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
                 SizedBox(height: AppSpacing.space2),
                 for (final event in upcomingGroupedEvents[date]!)
                   _RedesignedEventCard(
-                    key: ValueKey('upcoming-${event.id}-${event.date.toIso8601String()}'),
+                    key: ValueKey(
+                      'upcoming-${event.id}-${event.date.toIso8601String()}',
+                    ),
                     event: event,
                     onTap: () => _editEvent(context, event),
                     onDelete: () => _deleteWithUndo(context, event.id),
@@ -397,8 +405,7 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
                 SizedBox(height: AppSpacing.space4),
               ],
             ],
-          ]
-          else if (filteredEvents.isEmpty)
+          ] else if (filteredEvents.isEmpty)
             Center(
               child: Padding(
                 padding: EdgeInsets.all(AppSpacing.space8),
@@ -746,8 +753,12 @@ class _CalendarGrid extends StatelessWidget {
                 uniqueContacts.add(contact);
               }
             }
-            final avatarCount = uniqueContacts.length > 3 ? 3 : uniqueContacts.length;
-            final avatarStripWidth = avatarCount <= 1 ? 12.0 : 12.0 + ((avatarCount - 1) * 6.0);
+            final avatarCount = uniqueContacts.length > 3
+                ? 3
+                : uniqueContacts.length;
+            final avatarStripWidth = avatarCount <= 1
+                ? 12.0
+                : 12.0 + ((avatarCount - 1) * 6.0);
 
             // Highlight & text color selection
             Color? backgroundColor;
@@ -808,11 +819,7 @@ class _CalendarGrid extends StatelessWidget {
                                 child: Stack(
                                   clipBehavior: Clip.none,
                                   children: [
-                                    for (
-                                      var i = 0;
-                                      i < avatarCount;
-                                      i++
-                                    )
+                                    for (var i = 0; i < avatarCount; i++)
                                       Positioned(
                                         left: i * 6,
                                         child: _CalendarDayAvatar(
@@ -963,13 +970,7 @@ class _PlanTogetherBanner extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark
-              ? [tokens.surfaceRaised, tokens.surfaceSunken]
-              : const [Color(0xFFEDEBFF), Color(0xFFFDF2F8)],
-        ),
+        gradient: tokens.cardGradient,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: tokens.border),
         boxShadow: AppTokens.elevation1(dark),
@@ -1020,6 +1021,7 @@ class _PlanTogetherBanner extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _LegendDot extends StatelessWidget {
   const _LegendDot({required this.color, required this.label});
 
@@ -1085,11 +1087,7 @@ class _NextUpCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [tokens.primary, tokens.primary.withValues(alpha: 0.7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: tokens.aiGradient,
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       padding: EdgeInsets.all(AppSpacing.space4),

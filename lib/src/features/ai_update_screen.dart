@@ -63,6 +63,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
   // [AiUpdateCancelled] when cancellation wins. Reset to null
   // before the next run so a stale completer can't fire mid-future.
   Completer<void>? _cancelCompleter;
+
   /// Loading label for the AI Update modal. Starts at "Checking your
   /// input…" (classifier in-flight), then transitions to "Reading
   /// what you've shared with \$firstName…" when the adapter fires
@@ -152,18 +153,22 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     }
 
     final storage = ref.read(firebaseStorageProvider);
-    final safeName = attachment.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    final storagePath = 'users/${person.id}/interactions/${interaction.id}/$index-$safeName';
+    final safeName = attachment.name.replaceAll(
+      RegExp(r'[^A-Za-z0-9._-]'),
+      '_',
+    );
+    final storagePath =
+        'users/${person.id}/interactions/${interaction.id}/$index-$safeName';
     final sourceName = path.split(RegExp(r'[\\/]')).last.toLowerCase();
     final contentType = sourceName.endsWith('.png')
-      ? 'image/png'
-      : sourceName.endsWith('.webp')
+        ? 'image/png'
+        : sourceName.endsWith('.webp')
         ? 'image/webp'
         : sourceName.endsWith('.gif')
-          ? 'image/gif'
-          : sourceName.endsWith('.heic')
-            ? 'image/heic'
-            : 'image/jpeg';
+        ? 'image/gif'
+        : sourceName.endsWith('.heic')
+        ? 'image/heic'
+        : 'image/jpeg';
 
     final storageRef = storage.ref().child(storagePath);
     await storageRef.putFile(file, SettableMetadata(contentType: contentType));
@@ -184,7 +189,12 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     final persisted = <AttachmentRef>[];
     for (var i = 0; i < interaction.attachments.length; i++) {
       persisted.add(
-        await _persistAttachment(person, interaction, interaction.attachments[i], i),
+        await _persistAttachment(
+          person,
+          interaction,
+          interaction.attachments[i],
+          i,
+        ),
       );
     }
     return interaction.copyWith(attachments: persisted);
@@ -198,8 +208,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
         .connections
         .firstWhere((c) => c.id == widget.contactId);
     final rawFirst = connection.name.split(' ').first;
-    final firstName =
-        rawFirst.trim().isEmpty ? connection.name : rawFirst;
+    final firstName = rawFirst.trim().isEmpty ? connection.name : rawFirst;
     setState(() {
       currentState = AiUpdateState.generating;
       _loadingLabel = "Checking your input…";
@@ -217,8 +226,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
             onClassifierPassed: () async {
               if (mounted) {
                 setState(() {
-                  _loadingLabel =
-                      "Reading what you've shared with $firstName…";
+                  _loadingLabel = "Reading what you've shared with $firstName…";
                 });
               }
             },
@@ -562,19 +570,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
 
   Widget _buildAiUpdateShell(AppTokens tokens, Widget child) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFFDFBFF),
-            Color(0xFFF2ECFF),
-            Color(0xFFE6DCFF),
-            Color(0xFFFFFAFF),
-          ],
-          stops: [0, .38, .74, 1],
-        ),
-      ),
+      decoration: BoxDecoration(gradient: tokens.pageGradient),
       child: Column(
         children: [
           _buildGradientHeader(tokens),
@@ -595,10 +591,10 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
         0,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .72),
+        color: tokens.surfaceRaised.withValues(alpha: .78),
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
         border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: .82)),
+          bottom: BorderSide(color: tokens.border.withValues(alpha: .82)),
         ),
         boxShadow: [
           BoxShadow(
@@ -614,7 +610,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
           Align(
             alignment: Alignment.centerLeft,
             child: Material(
-              color: Colors.white,
+              color: tokens.surfaceRaised,
               shape: const CircleBorder(),
               child: IconButton(
                 tooltip: 'Back',
@@ -630,7 +626,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
           Text(
             'Update with AI',
             style: AppTypography.bodyLg(
-              color: const Color(0xFF282451),
+              color: tokens.ink,
             ).copyWith(fontWeight: FontWeight.w700),
             textAlign: TextAlign.center,
           ),
@@ -666,9 +662,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                     SizedBox(height: AppSpacing.space2),
                     Text(
                       'Update ${person.name}',
-                      style: AppTypography.display(
-                        color: const Color(0xFF2E2868),
-                      ),
+                      style: AppTypography.display(color: tokens.ink),
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -682,9 +676,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                     SizedBox(height: AppSpacing.space3),
                     Text(
                       'Text, images, files. AI organizes info into the right basket and updates history/dashboard.',
-                      style: AppTypography.bodyLg(
-                        color: const Color(0xFF5B5790),
-                      ),
+                      style: AppTypography.bodyLg(color: tokens.inkMuted),
                       textAlign: TextAlign.center,
                     ),
                     SizedBox(height: AppSpacing.space4),
@@ -711,7 +703,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
             left: mascotSize * .10,
             child: Icon(
               Icons.auto_awesome,
-              color: const Color(0xFFC7A5FF).withValues(alpha: .82),
+              color: tokens.secondary.withValues(alpha: .72),
               size: 26,
             ),
           ),
@@ -720,7 +712,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
             right: mascotSize * .12,
             child: Icon(
               Icons.auto_awesome,
-              color: const Color(0xFF9DB8FF).withValues(alpha: .74),
+              color: tokens.tertiary.withValues(alpha: .72),
               size: 24,
             ),
           ),
@@ -769,9 +761,9 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     return Container(
       padding: EdgeInsets.all(AppSpacing.space4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .92),
+        color: tokens.surfaceRaised.withValues(alpha: .92),
         borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: Colors.white.withValues(alpha: .86)),
+        border: Border.all(color: tokens.border.withValues(alpha: .72)),
         boxShadow: [
           BoxShadow(
             color: tokens.primary.withValues(alpha: .11),
@@ -795,9 +787,9 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       constraints: const BoxConstraints(minHeight: 164),
       padding: EdgeInsets.all(AppSpacing.space4),
       decoration: BoxDecoration(
-        color: const Color(0xFFFCFAFF).withValues(alpha: .95),
+        color: tokens.surfaceRaised.withValues(alpha: .95),
         borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: const Color(0xFFDCD4F5)),
+        border: Border.all(color: tokens.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -811,7 +803,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
             decoration: InputDecoration(
               hintText:
                   'Example: Sam said today is first day at job.\nAsk how it went tomorrow.',
-              hintStyle: AppTypography.bodyLg(color: const Color(0xFF8580AA)),
+              hintStyle: AppTypography.bodyLg(color: tokens.inkSubtle),
               filled: false,
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
@@ -829,7 +821,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                 avatar: Icon(Icons.image, color: tokens.primary),
                 label: const Text('Add image'),
                 labelStyle: AppTypography.bodyLg(color: tokens.primary),
-                backgroundColor: Colors.white,
+                backgroundColor: tokens.surfaceRaised,
                 side: BorderSide(color: tokens.primary.withValues(alpha: .32)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -882,13 +874,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       borderRadius: BorderRadius.circular(AppRadius.xl),
       child: Ink(
         decoration: BoxDecoration(
-          gradient: disabled
-              ? null
-              : const LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [Color(0xFF675BFF), Color(0xFF7B3DFF)],
-                ),
+          gradient: disabled ? null : tokens.aiGradient,
           color: disabled ? tokens.surfaceSunken : null,
           borderRadius: BorderRadius.circular(AppRadius.xl),
           boxShadow: [

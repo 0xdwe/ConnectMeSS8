@@ -38,40 +38,42 @@ class RecommendationsScreen extends ConsumerWidget {
         backgroundColor: tokens.surface,
         foregroundColor: tokens.ink,
       ),
-      body: ListView(
-        padding: EdgeInsets.all(AppSpacing.space6),
-        children: [
-          recommendations.when(
-            loading: () => const _RecommendationLoadingPlaceholders(
-              key: Key('recommendations-screen-loading'),
-              count: 3,
+      body: AppSurface(
+        child: ListView(
+          padding: EdgeInsets.all(AppSpacing.space6),
+          children: [
+            recommendations.when(
+              loading: () => const _RecommendationLoadingPlaceholders(
+                key: Key('recommendations-screen-loading'),
+                count: 3,
+              ),
+              error: (_, _) => const SizedBox.shrink(),
+              data: (items) => Column(
+                children: [
+                  for (final recommendation in items)
+                    Builder(
+                      builder: (context) {
+                        final contact = ref.watch(
+                          contactByIdProvider(recommendation.contactId),
+                        );
+                        if (contact == null) return const SizedBox.shrink();
+                        return RecommendationCard(
+                          key: Key(
+                            'recommendation-card-${recommendation.contactId}',
+                          ),
+                          connection: contact,
+                          recommendation: recommendation,
+                          onTap: () => context.push(
+                            recommendationContactRoute(recommendation),
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
             ),
-            error: (_, _) => const SizedBox.shrink(),
-            data: (items) => Column(
-              children: [
-                for (final recommendation in items)
-                  Builder(
-                    builder: (context) {
-                      final contact = ref.watch(
-                        contactByIdProvider(recommendation.contactId),
-                      );
-                      if (contact == null) return const SizedBox.shrink();
-                      return RecommendationCard(
-                        key: Key(
-                          'recommendation-card-${recommendation.contactId}',
-                        ),
-                        connection: contact,
-                        recommendation: recommendation,
-                        onTap: () => context.push(
-                          recommendationContactRoute(recommendation),
-                        ),
-                      );
-                    },
-                  ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
