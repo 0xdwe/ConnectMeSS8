@@ -53,10 +53,10 @@ void main() {
       // Verify texts
       expect(find.text('Daily Nudge'), findsOneWidget);
       expect(find.text('A quick check-in can strengthen your connection.'), findsOneWidget);
-      expect(find.text('Send a message'), findsOneWidget);
+      expect(find.text('Log Interaction'), findsOneWidget);
 
       // Tap the send button and verify callback
-      await tester.tap(find.text('Send a message'));
+      await tester.tap(find.text('Log Interaction'));
       await tester.pump();
 
       expect(tapped, isTrue);

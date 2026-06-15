@@ -1110,15 +1110,8 @@ class ConnectionScoreHero extends StatelessWidget {
                   'Connection Score',
                   style: AppTypography.h2(color: tokens.ink),
                 ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.info_outline,
-                  size: 18,
-                  color: tokens.inkSubtle,
-                ),
               ],
             ),
-            SizedBox(height: AppSpacing.space4),
             Center(
               child: AspectRatio(
                 aspectRatio: 1.6,
@@ -1420,9 +1413,9 @@ class DailyNudgeCard extends StatelessWidget {
                   SizedBox(height: AppSpacing.space4),
                   ElevatedButton.icon(
                     onPressed: onTap,
-                    icon: const Icon(Icons.send, size: 14),
+                    icon: const Icon(Icons.edit_note_outlined, size: 20),
                     label: Text(
-                      'Send a message',
+                      'Log Interaction',
                       style: AppTypography.body(color: Colors.white).copyWith(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
