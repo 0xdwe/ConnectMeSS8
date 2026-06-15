@@ -335,13 +335,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         child: Builder(
                           builder: (context) {
                             final safeAreaHeight = h - MediaQuery.paddingOf(context).vertical;
-                            final illustrationHeight = w * 0.72;
+                            final formEstimate = 520.0;
+
                             final topPadding = math.max(
                               16.0,
-                              math.min(
-                                illustrationHeight + 16,
-                                safeAreaHeight - 535,
-                              ),
+                              (safeAreaHeight - formEstimate) * 0.45,
                             );
 
                             return Padding(
@@ -711,10 +709,12 @@ class _LoginForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _AuthBrandLockup(tokens: tokens),
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _AuthBrandLockup(tokens: tokens, logoSize: 68, textSize: 28),
         const SizedBox(height: 16),
         Text(
           'Welcome back.',
@@ -939,6 +939,7 @@ class _LoginForm extends StatelessWidget {
           ),
         ),
       ],
+      ),
     );
   }
 }
@@ -1009,7 +1010,7 @@ class _SignupForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _AuthBrandLockup(tokens: tokens, logoSize: 40, textSize: 18),
+        _AuthBrandLockup(tokens: tokens, logoSize: 56, textSize: 24),
         const SizedBox(height: 16),
         Text(
           'Join Connect Me.',
