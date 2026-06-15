@@ -929,7 +929,7 @@ void main() {
       },
     );
 
-    group('Relationship Health card', () {
+    group('No-recommendation placeholder card', () {
       final now = DateTime.utc(2026, 6, 15, 12, 0, 0);
 
       List<dynamic> healthOverrides({
@@ -947,7 +947,7 @@ void main() {
       }
 
       testWidgets(
-        'shows health card when no recommendation exists and memorySummary is non-empty',
+        'shows encouragement when no recommendation exists and interactions are present',
         (tester) async {
           await tester.pumpWidget(
             _wrap(
@@ -972,23 +972,16 @@ void main() {
           );
           await tester.pump();
 
-          expect(find.text('Relationship healthy'), findsOneWidget);
           expect(
-            find.text('You two connected very recently.'),
+            find.text("You're doing great keeping up with Test Person!"),
             findsOneWidget,
           );
-          // The snippet is rendered in the Relationship Health card (and
-          // also appears verbatim in the Person Summary body).
-          expect(
-            find.text('Memory summary for a healthy relationship.'),
-            findsWidgets,
-          );
-          expect(find.byIcon(Icons.favorite_outline), findsOneWidget);
+          expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
         },
       );
 
       testWidgets(
-        'hides health card when no recommendation exists and memorySummary is null',
+        'shows placeholder when no recommendation exists and no interactions',
         (tester) async {
           await tester.pumpWidget(
             _wrap(
@@ -1001,15 +994,18 @@ void main() {
           );
           await tester.pump();
 
-          expect(find.text('Relationship healthy'), findsNothing);
-          expect(find.text('You two connected very recently.'), findsNothing);
-          expect(find.text('You\'ve been in touch recently.'), findsNothing);
-          expect(find.text('You\'ve kept in touch regularly.'), findsNothing);
+          expect(
+            find.text(
+              'No activity logged yet. Log an interaction or update with AI to get personalized suggestions.',
+            ),
+            findsOneWidget,
+          );
+          expect(find.byIcon(Icons.info_outline), findsOneWidget);
         },
       );
 
       testWidgets(
-        'hides health card when no recommendation exists and memorySummary is empty',
+        'shows placeholder when no recommendation exists and memorySummary is empty',
         (tester) async {
           await tester.pumpWidget(
             _wrap(
@@ -1023,12 +1019,17 @@ void main() {
           );
           await tester.pump();
 
-          expect(find.text('Relationship healthy'), findsNothing);
+          expect(
+            find.text(
+              'No activity logged yet. Log an interaction or update with AI to get personalized suggestions.',
+            ),
+            findsOneWidget,
+          );
         },
       );
 
       testWidgets(
-        'hides health card when an active recommendation exists',
+        'hides placeholder when an active recommendation exists',
         (tester) async {
           await tester.pumpWidget(
             _wrap(
@@ -1053,13 +1054,16 @@ void main() {
           await tester.pump();
 
           expect(find.text('Recommendation'), findsOneWidget);
-          expect(find.text('Relationship healthy'), findsNothing);
-          expect(find.byIcon(Icons.favorite_outline), findsNothing);
+          expect(
+            find.text("You're doing great keeping up with Health!"),
+            findsNothing,
+          );
+          expect(find.byIcon(Icons.info_outline), findsNothing);
         },
       );
 
       testWidgets(
-        'hides health card when a completed recommendation exists',
+        'hides placeholder when a completed recommendation exists',
         (tester) async {
           await tester.pumpWidget(
             _wrap(
@@ -1084,119 +1088,46 @@ void main() {
           await tester.pump();
 
           expect(find.text('Completed'), findsOneWidget);
-          expect(find.text('Relationship healthy'), findsNothing);
-          expect(find.byIcon(Icons.favorite_outline), findsNothing);
+          expect(
+            find.text("You're doing great keeping up with Health!"),
+            findsNothing,
+          );
+          expect(find.byIcon(Icons.info_outline), findsNothing);
         },
       );
 
-      testWidgets('qualitative recency string respects the 3-day bucket', (
-        tester,
-      ) async {
-        await tester.pumpWidget(
-          _wrap(
-            AiInsightsCard(
-              connection: _connection(id: 'health'),
-              insight: _insight(contactId: 'health'),
-              memorySummary: 'Memory.',
+      testWidgets(
+        'shows encouragement with interactions regardless of recency',
+        (tester) async {
+          await tester.pumpWidget(
+            _wrap(
+              AiInsightsCard(
+                connection: _connection(id: 'health'),
+                insight: _insight(contactId: 'health'),
+                memorySummary: 'Memory.',
+              ),
+              overrides: healthOverrides(
+                interactions: [
+                  CrmInteraction(
+                    id: 'i1',
+                    contactId: 'health',
+                    type: InteractionType.interaction,
+                    title: 'Catch-up',
+                    note: 'Talked about life.',
+                    date: now.subtract(const Duration(days: 15)),
+                  ),
+                ],
+              ),
             ),
-            overrides: healthOverrides(
-              interactions: [
-                CrmInteraction(
-                  id: 'i1',
-                  contactId: 'health',
-                  type: InteractionType.interaction,
-                  title: 'Catch-up',
-                  note: 'Talked about life.',
-                  date: now.subtract(const Duration(days: 3)),
-                ),
-              ],
-            ),
-          ),
-        );
-        await tester.pump();
+          );
+          await tester.pump();
 
-        expect(find.text('You two connected very recently.'), findsOneWidget);
-      });
-
-      testWidgets('qualitative recency string respects the 14-day bucket', (
-        tester,
-      ) async {
-        await tester.pumpWidget(
-          _wrap(
-            AiInsightsCard(
-              connection: _connection(id: 'health'),
-              insight: _insight(contactId: 'health'),
-              memorySummary: 'Memory.',
-            ),
-            overrides: healthOverrides(
-              interactions: [
-                CrmInteraction(
-                  id: 'i1',
-                  contactId: 'health',
-                  type: InteractionType.interaction,
-                  title: 'Catch-up',
-                  note: 'Talked about life.',
-                  date: now.subtract(const Duration(days: 14)),
-                ),
-              ],
-            ),
-          ),
-        );
-        await tester.pump();
-
-        expect(find.text('You\'ve been in touch recently.'), findsOneWidget);
-      });
-
-      testWidgets('qualitative recency string uses the regular bucket beyond 14 days', (
-        tester,
-      ) async {
-        await tester.pumpWidget(
-          _wrap(
-            AiInsightsCard(
-              connection: _connection(id: 'health'),
-              insight: _insight(contactId: 'health'),
-              memorySummary: 'Memory.',
-            ),
-            overrides: healthOverrides(
-              interactions: [
-                CrmInteraction(
-                  id: 'i1',
-                  contactId: 'health',
-                  type: InteractionType.interaction,
-                  title: 'Catch-up',
-                  note: 'Talked about life.',
-                  date: now.subtract(const Duration(days: 15)),
-                ),
-              ],
-            ),
-          ),
-        );
-        await tester.pump();
-
-        expect(find.text('You\'ve kept in touch regularly.'), findsOneWidget);
-      });
-
-      testWidgets('memory summary snippet is truncated to 120 chars with ellipsis', (
-        tester,
-      ) async {
-        final longSummary = 'A' * 150;
-        final truncated = '${'A' * 120}...';
-
-        await tester.pumpWidget(
-          _wrap(
-            AiInsightsCard(
-              connection: _connection(id: 'health'),
-              insight: _insight(contactId: 'health'),
-              memorySummary: longSummary,
-            ),
-            overrides: healthOverrides(),
-          ),
-        );
-        await tester.pump();
-
-        expect(find.text(truncated), findsOneWidget);
-      });
-
+          expect(
+            find.text("You're doing great keeping up with Test Person!"),
+            findsOneWidget,
+          );
+        },
+      );
     });
 
     group('pendingMemoryRebuildProvider spinner', () {
