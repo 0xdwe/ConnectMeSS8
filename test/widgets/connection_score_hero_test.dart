@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ConnectionScoreHero', () {
-    testWidgets('renders with correct score and labels', (tester) async {
+    testWidgets('renders with score only inside the gauge', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.data(false),
@@ -17,7 +17,11 @@ void main() {
       // Score is inside the ScoreGauge, so '73' is found.
       expect(find.text('73'), findsWidgets);
       expect(find.text('Connection Score'), findsOneWidget);
-      expect(find.text('Keep nurturing your relationships!'), findsOneWidget);
+      expect(find.text('Keep nurturing your relationships!'), findsNothing);
+      expect(
+        find.text('Small steps lead to stronger connections.'),
+        findsNothing,
+      );
 
       // Verify ScoreGauge is present
       expect(find.byType(ScoreGauge), findsOneWidget);
@@ -122,7 +126,6 @@ void main() {
 
       final semantics = tester.widget<Semantics>(semanticsFinder);
       expect(semantics.properties.label, contains('73'));
-      expect(semantics.properties.label, contains('steady'));
     });
   });
 

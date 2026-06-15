@@ -228,7 +228,9 @@ class _ContactListCardState extends State<ContactListCard> {
     return Consumer(
       builder: (context, ref, _) {
         // Get interactions for this connection
-        final interactions = ref.watch(interactionsByContactProvider(widget.connection.id));
+        final interactions = ref.watch(
+          interactionsByContactProvider(widget.connection.id),
+        );
 
         // Determine the display text for last interaction
         String lastInteractionText;
@@ -237,7 +239,9 @@ class _ContactListCardState extends State<ContactListCard> {
           lastInteractionText = '-';
         } else {
           // Has interactions - show the latest interaction date
-          final latestInteraction = interactions.reduce((a, b) => a.date.isAfter(b.date) ? a : b);
+          final latestInteraction = interactions.reduce(
+            (a, b) => a.date.isAfter(b.date) ? a : b,
+          );
           lastInteractionText = relativeLastInteraction(latestInteraction.date);
         }
 
@@ -282,7 +286,8 @@ class _ContactListCardState extends State<ContactListCard> {
                     backgroundImage: connectionAvatarImage(
                       widget.connection.avatar,
                     ),
-                    child: connectionAvatarImage(widget.connection.avatar) == null
+                    child:
+                        connectionAvatarImage(widget.connection.avatar) == null
                         ? Text(
                             widget.connection.avatar,
                             style: AppTypography.glyph(26),
@@ -324,8 +329,10 @@ class _ContactListCardState extends State<ContactListCard> {
                                 backgroundColor: categoryAccent,
                               ),
                               const SizedBox(width: 5),
-                             ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 120),
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 120,
+                                ),
                                 child: FadeOverflowText(
                                   text: widget.connection.category,
                                   style: AppTypography.caption(
@@ -340,11 +347,17 @@ class _ContactListCardState extends State<ContactListCard> {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            Icon(Icons.schedule, size: 12, color: tokens.inkSubtle),
+                            Icon(
+                              Icons.schedule,
+                              size: 12,
+                              color: tokens.inkSubtle,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               'Last interaction: $lastInteractionText',
-                              style: AppTypography.caption(color: tokens.inkSubtle),
+                              style: AppTypography.caption(
+                                color: tokens.inkSubtle,
+                              ),
                             ),
                           ],
                         ),
@@ -424,7 +437,9 @@ class ConnectionScoreRing extends StatelessWidget {
               left: size + trendGap,
               bottom: size * 0.14,
               child: Icon(
-                trend == BondTrend.up ? Icons.arrow_upward : Icons.arrow_downward,
+                trend == BondTrend.up
+                    ? Icons.arrow_upward
+                    : Icons.arrow_downward,
                 color: trend == BondTrend.up ? tokens.success : tokens.danger,
                 size: trendArrowSize,
               ),
@@ -476,8 +491,10 @@ class RecommendationCard extends StatelessWidget {
             child: connectionAvatarImage(connection.avatar) == null
                 ? Text(
                     isCompleted ? '✓' : connection.avatar,
-                    style: AppTypography.glyph(20,
-                        color: isCompleted ? tokens.success : tokens.primary),
+                    style: AppTypography.glyph(
+                      20,
+                      color: isCompleted ? tokens.success : tokens.primary,
+                    ),
                   )
                 : null,
           ),
@@ -520,37 +537,37 @@ class RecommendationCard extends StatelessWidget {
                 ),
                 if (!isCompleted)
                   if (recommendation.action case final action?) ...[
-                  SizedBox(height: AppSpacing.space3),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.space3,
-                      vertical: AppSpacing.space3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: tokens.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.chat_bubble_outline,
-                          size: 16,
-                          color: tokens.primary,
-                        ),
-                        SizedBox(width: AppSpacing.space2),
-                        Expanded(
-                          child: Text(
-                            action,
-                            style: AppTypography.caption(
-                              color: tokens.ink,
-                            ).copyWith(height: 1.3),
+                    SizedBox(height: AppSpacing.space3),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.space3,
+                        vertical: AppSpacing.space3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: tokens.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline,
+                            size: 16,
+                            color: tokens.primary,
                           ),
-                        ),
-                      ],
+                          SizedBox(width: AppSpacing.space2),
+                          Expanded(
+                            child: Text(
+                              action,
+                              style: AppTypography.caption(
+                                color: tokens.ink,
+                              ).copyWith(height: 1.3),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
               ],
             ),
           ),
@@ -575,10 +592,11 @@ class RecommendationCard extends StatelessWidget {
               ),
               SizedBox(height: AppSpacing.space3),
               BondRing(
-                  connection: connection,
-                  size: 56,
-                  showAvatar: false,
-                  showTrend: false),
+                connection: connection,
+                size: 56,
+                showAvatar: false,
+                showTrend: false,
+              ),
             ],
           ),
         ],
@@ -1086,10 +1104,7 @@ class GradientScaffold extends AppSurface {
 }
 
 /// ConnectionScoreHero: displays the user's average connection score
-/// as a horizontal layout with the BondRing on the left and a
-/// display-size score number plus tier label on the right. The score
-/// is rendered at AppTypography.display so it reads as the page hero,
-/// larger than the section titles below it.
+/// inside the existing half-circle gauge.
 class ConnectionScoreHero extends StatelessWidget {
   const ConnectionScoreHero({super.key, required this.score});
 
@@ -1098,8 +1113,7 @@ class ConnectionScoreHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final tier = BondTier.from(score);
-    final semanticLabel = 'Connection score: $score, ${tier.label}';
+    final semanticLabel = 'Connection score: $score';
 
     return CardBox(
       padding: EdgeInsets.fromLTRB(
@@ -1159,71 +1173,14 @@ class ScoreGauge extends StatelessWidget {
               ),
             ),
             Positioned(
-              bottom: h * 0.06, // Positioned inside dome to prevent clipping
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      const Icon(
-                        Icons.chat_bubble_outline,
-                        color: Colors.white,
-                        size: 22, // Compact size to prevent overlap
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 3),
-                        child: Icon(
-                          Icons.favorite,
-                          color: Colors.white.withValues(alpha: 0.9),
-                          size: 9.5, // Compact size
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        '$score',
-                        style: AppTypography.glyph(
-                          44, // Slightly smaller score digits
-                          color: Colors.white,
-                          weight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        '/100',
-                        style: AppTypography.caption(
-                          color: Colors.white.withValues(alpha: 0.75),
-                        ).copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Keep nurturing your relationships!',
-                    style: AppTypography.caption(
-                      color: Colors.white,
-                    ).copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 10.5,
-                      height: 1.1, // Tight line height to reduce height
-                    ),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    'Small steps lead to stronger connections.',
-                    style: AppTypography.caption(
-                      color: Colors.white.withValues(alpha: 0.75),
-                    ).copyWith(
-                      fontSize: 8.5,
-                      height: 1.1, // Tight line height
-                    ),
-                  ),
-                ],
+              bottom: h * 0.16,
+              child: Text(
+                '$score',
+                style: AppTypography.glyph(
+                  50,
+                  color: Colors.white,
+                  weight: FontWeight.w700,
+                ),
               ),
             ),
           ],
@@ -1242,30 +1199,21 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
-    final cy = size.height - 6; // shift baseline down to maximize circle size
+    final cy = size.height - 6;
     final center = Offset(cx, cy);
-
-    // Thinner segments to maximize dome space (exactly like mockup)
     final segmentThickness = size.width * 0.06;
-    
-    // Outer track sits exactly at the edge with a 2px safe margin (larger circle)
     final trackRadius = cx - 2;
-    
-    // Calculate segment radius based on track position
     final segmentRadius = trackRadius - (segmentThickness / 2) - 4;
 
-    // 1. Draw the 5 outer segments
     final segmentLabels = ['0-20', '21-40', '41-60', '61-80', '81-100'];
     final activeSegmentIndex = (score / 20).floor().clamp(0, 4);
+    final segmentColors = _scoreSegmentColors(tokens);
 
     const segmentSweep = math.pi / 5;
     for (int i = 0; i < 5; i++) {
       final startAngle = math.pi + i * segmentSweep;
       final isActive = i == activeSegmentIndex;
-
-      // Mockup-aligned color scheme: Segment 0 uses tokens.danger (rose), rest use tokens.primary (purple)
-      final isSegment0 = i == 0;
-      final baseColor = isSegment0 ? tokens.danger : tokens.primary;
+      final baseColor = segmentColors[i];
       final segmentColor = baseColor.withValues(alpha: isActive ? 0.95 : 0.12);
 
       final segmentPaint = Paint()
@@ -1275,42 +1223,55 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
         ..strokeCap = StrokeCap.butt;
 
       final rect = Rect.fromCircle(center: center, radius: segmentRadius);
-      // Add a small gap between segments by reducing the sweep angle slightly
-      canvas.drawArc(rect, startAngle + 0.01, segmentSweep - 0.02, false, segmentPaint);
+      canvas.drawArc(
+        rect,
+        startAngle + 0.01,
+        segmentSweep - 0.02,
+        false,
+        segmentPaint,
+      );
 
-      // Draw segment labels inside the segments
       final labelAngle = startAngle + segmentSweep / 2;
-      final labelRadius = segmentRadius; // center of the segment stroke
+      final labelRadius = segmentRadius;
       final lx = cx + labelRadius * math.cos(labelAngle);
       final ly = cy + labelRadius * math.sin(labelAngle);
 
-      // Label text style
-      final labelStyle = AppTypography.caption(
-        color: isActive ? Colors.white : tokens.inkMuted,
-      ).copyWith(
-        fontSize: size.width * 0.026,
-        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-      );
+      final labelStyle =
+          AppTypography.caption(
+            color: isActive ? Colors.white : tokens.inkMuted,
+          ).copyWith(
+            fontSize: size.width * 0.026,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+          );
 
-      // Rotate text along the arc
-      _drawTextCentered(canvas, segmentLabels[i], Offset(lx, ly), labelAngle + math.pi / 2, labelStyle);
+      _drawTextCentered(
+        canvas,
+        segmentLabels[i],
+        Offset(lx, ly),
+        labelAngle + math.pi / 2,
+        labelStyle,
+      );
     }
 
-    // 2. Draw the outer track for the indicator dot
     final trackPaint = Paint()
       ..color = tokens.border.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
-    canvas.drawArc(Rect.fromCircle(center: center, radius: trackRadius), math.pi, math.pi, false, trackPaint);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: trackRadius),
+      math.pi,
+      math.pi,
+      false,
+      trackPaint,
+    );
 
-    // 3. Draw the indicator dot on the outer track
     final scoreRatio = (score / 100).clamp(0.0, 1.0);
     final dotAngle = math.pi + scoreRatio * math.pi;
     final dx = cx + trackRadius * math.cos(dotAngle);
     final dy = cy + trackRadius * math.sin(dotAngle);
 
     final dotPaint = Paint()
-      ..color = tokens.primary
+      ..color = _scoreTone(scoreRatio, tokens)
       ..style = PaintingStyle.fill;
     final dotBorderPaint = Paint()
       ..color = Colors.white
@@ -1319,18 +1280,20 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
 
     canvas.drawCircle(Offset(dx, dy), 6.5, dotPaint);
     canvas.drawCircle(Offset(dx, dy), 6.5, dotBorderPaint);
-    canvas.drawCircle(Offset(dx, dy), 2.5, Paint()..color = Colors.white); // white inner center
+    canvas.drawCircle(Offset(dx, dy), 2.5, Paint()..color = Colors.white);
 
-    // 4. Draw the inner gradient semi-circle dome
     final innerRadius = segmentRadius - segmentThickness / 2 - 4;
     final gradientRect = Rect.fromCircle(center: center, radius: innerRadius);
     final gradientPaint = Paint()
-      ..shader = tokens.aiGradient.createShader(gradientRect)
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: _scoreGradientColors(score, tokens),
+      ).createShader(gradientRect)
       ..style = PaintingStyle.fill;
 
     canvas.drawArc(gradientRect, math.pi, math.pi, true, gradientPaint);
 
-    // 5. Draw the thin white divider line separating the dome and the segments
     final dividerPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.95)
       ..style = PaintingStyle.stroke
@@ -1338,7 +1301,57 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
     canvas.drawArc(gradientRect, math.pi, math.pi, false, dividerPaint);
   }
 
-  void _drawTextCentered(Canvas canvas, String text, Offset position, double rotationAngle, TextStyle style) {
+  List<Color> _scoreGradientColors(int score, AppTokens tokens) {
+    final scoreRatio = score.clamp(0, 100) / 100;
+    final lowTone = _scoreTone(_clamp01(scoreRatio - 0.12), tokens);
+    final highTone = _scoreTone(_clamp01(scoreRatio + 0.22), tokens);
+
+    return [
+      Color.lerp(tokens.surfaceRaised, lowTone, 0.24)!,
+      Color.lerp(lowTone, highTone, 0.46)!,
+      highTone,
+    ];
+  }
+
+  List<Color> _scoreSegmentColors(AppTokens tokens) {
+    return [
+      Color.lerp(tokens.surfaceRaised, tokens.danger, 0.22)!,
+      Color.lerp(tokens.danger, tokens.tertiaryTint, 0.58)!,
+      Color.lerp(tokens.tertiary, tokens.primaryTint, 0.3)!,
+      Color.lerp(tokens.primaryTint, tokens.primary, 0.5)!,
+      tokens.primary,
+    ];
+  }
+
+  Color _scoreTone(double ratio, AppTokens tokens) {
+    final stops = [0.0, 0.2, 0.45, 0.7, 1.0];
+    final colors = _scoreSegmentColors(tokens);
+    final clampedRatio = _clamp01(ratio);
+
+    for (var i = 0; i < stops.length - 1; i++) {
+      final currentStop = stops[i];
+      final nextStop = stops[i + 1];
+      if (clampedRatio <= nextStop) {
+        final localRatio =
+            (clampedRatio - currentStop) / (nextStop - currentStop);
+        return Color.lerp(colors[i], colors[i + 1], localRatio)!;
+      }
+    }
+
+    return colors.last;
+  }
+
+  double _clamp01(double value) {
+    return value.clamp(0.0, 1.0).toDouble();
+  }
+
+  void _drawTextCentered(
+    Canvas canvas,
+    String text,
+    Offset position,
+    double rotationAngle,
+    TextStyle style,
+  ) {
     final textPainter = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
@@ -1355,7 +1368,8 @@ class _ScoreGaugeBackgroundPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _ScoreGaugeBackgroundPainter oldDelegate) =>
+      oldDelegate.score != score || oldDelegate.tokens != tokens;
 }
 
 class DailyNudgeCard extends StatelessWidget {
@@ -1373,14 +1387,8 @@ class DailyNudgeCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: dark
-              ? [
-                  tokens.surfaceRaised,
-                  tokens.surfaceSunken,
-                ]
-              : [
-                  const Color(0xFFEDEBFF),
-                  const Color(0xFFFDF2F8),
-                ],
+              ? [tokens.surfaceRaised, tokens.surfaceSunken]
+              : [const Color(0xFFEDEBFF), const Color(0xFFFDF2F8)],
         ),
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: tokens.border),
@@ -1400,11 +1408,7 @@ class DailyNudgeCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        Icons.auto_awesome,
-                        size: 14,
-                        color: tokens.primary,
-                      ),
+                      Icon(Icons.auto_awesome, size: 14, color: tokens.primary),
                       const SizedBox(width: 4),
                       Text(
                         'Daily Nudge',
@@ -1417,9 +1421,9 @@ class DailyNudgeCard extends StatelessWidget {
                   SizedBox(height: AppSpacing.space3),
                   Text(
                     'A quick check-in can strengthen your connection.',
-                    style: AppTypography.h2(color: tokens.ink).copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: AppTypography.h2(
+                      color: tokens.ink,
+                    ).copyWith(fontWeight: FontWeight.w700),
                   ),
                   SizedBox(height: AppSpacing.space4),
                   ElevatedButton.icon(
@@ -1427,10 +1431,9 @@ class DailyNudgeCard extends StatelessWidget {
                     icon: const Icon(Icons.edit_note_outlined, size: 20),
                     label: Text(
                       'Log Interaction',
-                      style: AppTypography.body(color: Colors.white).copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
+                      style: AppTypography.body(
+                        color: Colors.white,
+                      ).copyWith(fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: tokens.primary,
@@ -1493,7 +1496,8 @@ class _CuteGhostPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     // 3. Round Bubble Body Path (center 60, 56, radius 38)
-    final bodyPath = Path()..addOval(Rect.fromCircle(center: const Offset(60, 56), radius: 38));
+    final bodyPath = Path()
+      ..addOval(Rect.fromCircle(center: const Offset(60, 56), radius: 38));
 
     // 4. Waving Left Arm (stubby pointing up-left)
     final leftArmPath = Path()
@@ -1554,10 +1558,16 @@ class _CuteGhostPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     // Left eye center at (45, 48), size 8.5 x 13
-    canvas.drawOval(Rect.fromCenter(center: const Offset(45, 48), width: 8.5, height: 13), eyePaint);
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(45, 48), width: 8.5, height: 13),
+      eyePaint,
+    );
 
     // Right eye center at (75, 48), size 8.5 x 13
-    canvas.drawOval(Rect.fromCenter(center: const Offset(75, 48), width: 8.5, height: 13), eyePaint);
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(75, 48), width: 8.5, height: 13),
+      eyePaint,
+    );
 
     // 10. Draw Mouth (happy open smile in dark indigo with a clipped tongue)
     final mouthPath = Path()
@@ -1584,11 +1594,23 @@ class _CuteGhostPainter extends CustomPainter {
 
     // 12. Draw multi-colored sparkles / stars (violet, gold/yellow, and pink)
     _drawSparkle(canvas, 15, 25, 5, const Color(0xFFC084FC)); // Violet star
-    _drawSparkle(canvas, 105, 28, 7, const Color(0xFFFBBF24)); // Gold/yellow star
+    _drawSparkle(
+      canvas,
+      105,
+      28,
+      7,
+      const Color(0xFFFBBF24),
+    ); // Gold/yellow star
     _drawSparkle(canvas, 102, 94, 4.5, const Color(0xFFF472B6)); // Pink star
   }
 
-  void _drawSparkle(Canvas canvas, double cx, double cy, double r, Color color) {
+  void _drawSparkle(
+    Canvas canvas,
+    double cx,
+    double cy,
+    double r,
+    Color color,
+  ) {
     final paint = Paint()
       ..color = color.withValues(alpha: 0.6)
       ..style = PaintingStyle.fill
@@ -1655,6 +1677,7 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
   bool expanded = true;
   bool _isRefreshing = false;
   bool _autoRefreshed = false;
+
   /// Tracks whether a manual refresh is in progress so the rebuild
   /// provider clear does not inadvertently end the manual refresh.
   bool _manualRefreshInProgress = false;
@@ -1729,9 +1752,7 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
         !_autoRefreshed) {
       _autoRefreshed = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref
-            .read(pendingAiInsightsRefreshProvider.notifier)
-            .setContactId(null);
+        ref.read(pendingAiInsightsRefreshProvider.notifier).setContactId(null);
         _handleRefresh();
       });
     }
@@ -1745,7 +1766,9 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
     final pendingRebuildId = ref.watch(pendingMemoryRebuildProvider);
     if (pendingRebuildId == widget.connection.id && !_isRefreshing) {
       _isRefreshing = true;
-    } else if (pendingRebuildId == null && _isRefreshing && !_manualRefreshInProgress) {
+    } else if (pendingRebuildId == null &&
+        _isRefreshing &&
+        !_manualRefreshInProgress) {
       _isRefreshing = false;
     }
 
@@ -1897,13 +1920,12 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
         Consumer(
           builder: (context, ref, child) {
             final recommendationsAsync = ref.watch(recommendationsProvider);
-            final recForThisContact =
-                recommendationsAsync.maybeWhen(
-                  data: (list) => list
-                      .where((r) => r.contactId == widget.connection.id)
-                      .firstOrNull,
-                  orElse: () => null,
-                );
+            final recForThisContact = recommendationsAsync.maybeWhen(
+              data: (list) => list
+                  .where((r) => r.contactId == widget.connection.id)
+                  .firstOrNull,
+              orElse: () => null,
+            );
 
             if (recForThisContact == null) {
               final interactions = ref.watch(
@@ -2124,11 +2146,7 @@ Widget _buildRelationshipHealthCard({
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          Icons.favorite_outline,
-          color: tokens.success,
-          size: 22,
-        ),
+        Icon(Icons.favorite_outline, color: tokens.success, size: 22),
         SizedBox(width: AppSpacing.space3),
         Expanded(
           child: Column(
@@ -2161,12 +2179,60 @@ Widget _buildRelationshipHealthCard({
 }
 
 const _stopWords = {
-  'a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of', 'and', 'or', 'with', 
-  'about', 'is', 'was', 'were', 'trip', 'plans', 'updates', 'recent', 'shared', 
-  'life', 'future', 'old', 'times', 'news', 'team', 'some', 'any', 'how', 
-  'what', 'who', 'where', 'why', 'my', 'your', 'his', 'her', 'their', 'our', 
-  'its', 'he', 'she', 'they', 'we', 'it', 'me', 'you', 'him', 'them', 'us',
-  'like', 'associated', 'person'
+  'a',
+  'an',
+  'the',
+  'in',
+  'on',
+  'at',
+  'to',
+  'for',
+  'of',
+  'and',
+  'or',
+  'with',
+  'about',
+  'is',
+  'was',
+  'were',
+  'trip',
+  'plans',
+  'updates',
+  'recent',
+  'shared',
+  'life',
+  'future',
+  'old',
+  'times',
+  'news',
+  'team',
+  'some',
+  'any',
+  'how',
+  'what',
+  'who',
+  'where',
+  'why',
+  'my',
+  'your',
+  'his',
+  'her',
+  'their',
+  'our',
+  'its',
+  'he',
+  'she',
+  'they',
+  'we',
+  'it',
+  'me',
+  'you',
+  'him',
+  'them',
+  'us',
+  'like',
+  'associated',
+  'person',
 };
 
 enum _HistorySource { checkIn, memory, note }
@@ -2223,19 +2289,22 @@ List<_HistoryMatch> _findHistoryMatches({
     score += _calculateMatchScore(interaction.note, keywords);
 
     if (score > 0) {
-      matches.add(_HistoryMatch(
-        source: _HistorySource.checkIn,
-        content: interaction.note,
-        title: interaction.title,
-        date: interaction.date,
-        score: score,
-      ));
+      matches.add(
+        _HistoryMatch(
+          source: _HistorySource.checkIn,
+          content: interaction.note,
+          title: interaction.title,
+          date: interaction.date,
+          score: score,
+        ),
+      );
     }
   }
 
   if (memory != null && memory.history.trim().isNotEmpty) {
-    final historyLineRegex =
-        RegExp(r'^\s*[-*]\s*(\d{4}-\d{2}-\d{2})\s*(?:—|–|-|:)\s*(.*)$');
+    final historyLineRegex = RegExp(
+      r'^\s*[-*]\s*(\d{4}-\d{2}-\d{2})\s*(?:—|–|-|:)\s*(.*)$',
+    );
     final lines = memory.history.split('\n');
     for (final line in lines) {
       final match = historyLineRegex.firstMatch(line);
@@ -2247,12 +2316,14 @@ List<_HistoryMatch> _findHistoryMatches({
         final parsedDate = DateTime.tryParse('${dateStr}T00:00:00Z');
         final score = _calculateMatchScore(bodyText, keywords);
         if (score > 0) {
-          matches.add(_HistoryMatch(
-            source: _HistorySource.memory,
-            content: bodyText,
-            date: parsedDate,
-            score: score,
-          ));
+          matches.add(
+            _HistoryMatch(
+              source: _HistorySource.memory,
+              content: bodyText,
+              date: parsedDate,
+              score: score,
+            ),
+          );
         }
       }
     }
@@ -2266,11 +2337,13 @@ List<_HistoryMatch> _findHistoryMatches({
 
       final score = _calculateMatchScore(cleanLine, keywords);
       if (score > 0) {
-        matches.add(_HistoryMatch(
-          source: _HistorySource.note,
-          content: cleanLine,
-          score: score,
-        ));
+        matches.add(
+          _HistoryMatch(
+            source: _HistorySource.note,
+            content: cleanLine,
+            score: score,
+          ),
+        );
       }
     }
   }
@@ -2331,9 +2404,9 @@ Widget _buildSourceBadge(_HistorySource source, AppTokens tokens) {
         const SizedBox(width: 4),
         Text(
           label,
-          style: AppTypography.caption(color: textColor).copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTypography.caption(
+            color: textColor,
+          ).copyWith(fontWeight: FontWeight.bold),
         ),
       ],
     ),
@@ -2370,7 +2443,10 @@ void _showTopicHistoryDialog(
             borderRadius: BorderRadius.circular(AppRadius.lg),
             side: BorderSide(color: tokens.border),
           ),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 550, maxHeight: 600),
             child: Padding(
@@ -2393,9 +2469,9 @@ void _showTopicHistoryDialog(
                             const SizedBox(height: 2),
                             Text(
                               topic,
-                              style: AppTypography.body(color: tokens.inkMuted).copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: AppTypography.body(
+                                color: tokens.inkMuted,
+                              ).copyWith(fontWeight: FontWeight.w600),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
@@ -2426,12 +2502,16 @@ void _showTopicHistoryDialog(
                           itemBuilder: (context, index) {
                             final match = matches[index];
                             return Container(
-                              margin: EdgeInsets.only(bottom: AppSpacing.space4),
+                              margin: EdgeInsets.only(
+                                bottom: AppSpacing.space4,
+                              ),
                               padding: EdgeInsets.all(AppSpacing.space4),
                               decoration: BoxDecoration(
                                 color: tokens.surfaceRaised,
                                 border: Border.all(color: tokens.border),
-                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.md,
+                                ),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2454,15 +2534,17 @@ void _showTopicHistoryDialog(
                                     SizedBox(height: AppSpacing.space2),
                                     Text(
                                       match.title!,
-                                      style: AppTypography.bodyLg(color: tokens.ink).copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: AppTypography.bodyLg(
+                                        color: tokens.ink,
+                                      ).copyWith(fontWeight: FontWeight.bold),
                                     ),
                                   ],
                                   SizedBox(height: AppSpacing.space2),
                                   Text(
                                     match.content,
-                                    style: AppTypography.body(color: tokens.inkMuted),
+                                    style: AppTypography.body(
+                                      color: tokens.inkMuted,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -2509,7 +2591,9 @@ class _InlineTopicDetails extends ConsumerWidget {
             ),
           ];
 
-    final interactions = ref.watch(interactionsByContactProvider(connection.id));
+    final interactions = ref.watch(
+      interactionsByContactProvider(connection.id),
+    );
 
     return Container(
       width: double.infinity,
@@ -2626,18 +2710,14 @@ class _InlineTopicDetails extends ConsumerWidget {
                           const SizedBox(width: 6),
                           Text(
                             'Latest News :',
-                            style: AppTypography.h2(
-                              color: tokens.categoryWork,
-                            ),
+                            style: AppTypography.h2(color: tokens.categoryWork),
                           ),
                         ],
                       ),
                       SizedBox(height: AppSpacing.space1),
                       Text(
                         suggestion.latestNews!,
-                        style: AppTypography.body(
-                          color: tokens.inkMuted,
-                        ),
+                        style: AppTypography.body(color: tokens.inkMuted),
                       ),
                     ],
                   ],
