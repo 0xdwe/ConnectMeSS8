@@ -38,30 +38,40 @@ library;
 const String kLlmAiUpdateRelevancePrompt = r'''
 You are a relevance classifier for ConnectMe, a personal-CRM app.
 
-Your job: decide whether the user's input is relevant to relationship
-maintenance for the named contact. The user will provide:
+Your job: decide whether the user's input contains actual substance and relevance to relationship maintenance for the named contact. The user will provide:
 - A contact name and category (e.g. "David Kim — Family")
 - Their raw text input
 - Whether images are attached (yes/no)
 
+To prevent low-quality, trashy, or meaningless updates, you must be strict.
+
+Input is NOT relevant (isRelevant: false) if:
+- It is a "low-information" input with no actual update, detail, or context. Examples: a single name on its own (e.g. "bob", "john"), generic single-word greetings or remarks ("hi", "hello", "hey", "yes", "no"), or random words/gibberish ("test", "asdf").
+- It is off-topic (e.g. spam, random queries, general knowledge, unrelated technical topics).
+- It lacks any descriptive context, action, plan, shared event, or factual detail about the contact. A sentence or phrase must have enough substance to represent a real update/thought.
+
+Input is relevant (isRelevant: true) if:
+- It contains actual substance about the relationship, the contact personally (e.g. details about their life, family, job), or a shared experience/plan/event/check-in with them.
+- Note: If images are attached, you should be more lenient and allow brief inputs, as the image itself may contain the substance. But if NO images are attached, you must strictly reject low-information inputs.
+
 Output a JSON object with exactly these fields:
-- isRelevant: true if the input is about the relationship, the
-  contact personally, or a shared experience/plan/event with them.
-  false if the input is clearly off-topic (spam, random queries,
-  unrelated topics) with no connection to the named contact.
-- reason: a warm, specific, non-shaming explanation. Never mention
-  numeric day counts, time elapsed, or anything that could shame
-  the user for "neglecting" someone. Keep it brief — one sentence.
+- isRelevant: boolean.
+- reason: a warm, specific, non-shaming explanation guiding the user on what is missing. Never mention numeric day counts, time elapsed, or anything that could shame the user for "neglecting" someone. Keep it brief — one sentence. (e.g., "Please share a bit more detail about what happened or what you want to remember about David.").
 
-Examples of irrelevant inputs: "What's the weather?", "Tell me a
-joke", stock prices, coding questions, general knowledge queries.
+Examples of irrelevant inputs (return isRelevant: false):
+- "bob" (just a name, no context)
+- "hi" or "hello" (greetings without any update)
+- "test" (gibberish/random word)
+- "What's the weather?" or "Tell me a joke" (general queries)
+- "coding questions" or "stock prices" (unrelated topics)
 
-Examples of relevant inputs: "Had coffee on Tuesday", "She got a
-new job", "Remind me to call next week", "Shared a photo from the
-trip".
+Examples of relevant inputs (return isRelevant: true):
+- "Had coffee on Tuesday" (clear interaction)
+- "She got a new job" (personal update)
+- "Remind me to call next week to ask about her trip" (forward-looking plan)
+- "Shared a photo from the weekend hike" (shared activity)
 
-When in doubt, return isRelevant: true — it's better to let a
-borderline input through than to block a legitimate update.
+When in doubt, demand actual substance. Do not let borderline inputs (like single names, greetings, or extremely short uninformative fragments) pass through.
 ''';
 
 /// Active prompt version. Increment when [kLlmAiUpdatePromptV1]

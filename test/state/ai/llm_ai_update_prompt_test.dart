@@ -153,5 +153,15 @@ void main() {
       expect(lowered, contains('image'));
       expect(lowered, contains('you can see them'));
     });
+
+    test('relevance classifier prompt contains strict guardrails against low-information input', () {
+      final lowered = kLlmAiUpdateRelevancePrompt.toLowerCase();
+      expect(lowered, contains('substance'));
+      expect(lowered, contains('low-information'));
+      expect(lowered, contains('bob'));
+      expect(lowered, contains('hi'));
+      expect(lowered, contains('test'));
+      expect(lowered, contains('when in doubt, demand actual substance'));
+    });
   });
 }
