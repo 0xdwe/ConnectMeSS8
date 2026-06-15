@@ -333,7 +333,10 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       if (mounted) {
         setState(() => currentState = AiUpdateState.inputting);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Couldn't run AI update — try again. ($e)")),
+          SnackBar(
+            behavior: SnackBarBehavior.fixed,
+            content: Text("Couldn't run AI update — try again. ($e)"),
+          ),
         );
       }
     } finally {
@@ -440,7 +443,10 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       if (mounted) {
         setState(() => currentState = AiUpdateState.previewing);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Couldn\'t save update — try again. ($e)')),
+          SnackBar(
+            behavior: SnackBarBehavior.fixed,
+            content: Text('Couldn\'t save update — try again. ($e)'),
+          ),
         );
       }
       return;
@@ -453,14 +459,24 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       final count = editedInteractions.length;
       final plural = count == 1 ? '' : 's';
       final message = 'Logged $count update$plural with ${person.name}';
+      final appController = ref.read(appControllerProvider.notifier);
+      final savedInteractions = List<CrmInteraction>.unmodifiable(
+        persistedInteractions,
+      );
+      final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.fixed,
           content: Text(message),
           action: SnackBarAction(
             label: 'Undo',
             onPressed: () {
-              // TODO: Implement undo by removing the saved interactions
+              for (final interaction in savedInteractions) {
+                // Fire-and-forget: deletion triggers memory rebuilds
+                // and connection updates via AppController.
+                unawaited(appController.deleteInteraction(interaction.id));
+              }
             },
           ),
         ),

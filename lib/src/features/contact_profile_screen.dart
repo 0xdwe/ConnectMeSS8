@@ -500,6 +500,8 @@ class _ActivityLogSection extends ConsumerStatefulWidget {
 class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
   String? _deletingInteractionId;
   Timer? _deleteTimer;
+  bool _deleteCancelled = false;
+  CrmInteraction? _pendingDeletedInteraction;
 
   @override
   void dispose() {
@@ -540,25 +542,50 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
     // to prevent a silent double-delete race condition.
     _deleteTimer?.cancel();
     _deleteTimer = null;
+    _deleteCancelled = false;
 
     setState(() => _deletingInteractionId = interaction.id);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        behavior: SnackBarBehavior.fixed,
         duration: const Duration(seconds: 4),
         content: Text('Deleting ${interaction.title}...'),
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () {
             _deleteTimer?.cancel();
-            if (mounted) setState(() => _deletingInteractionId = null);
+            _deleteTimer = null;
+            _deleteCancelled = true;
+            setState(() => _deletingInteractionId = null);
+
+            // If the interaction has already been removed (race/case
+            // where timer fired before the user tapped Undo), attempt
+            // to restore it so it reappears in the Activity Log.
+            final exists = ref
+                .read(appControllerProvider)
+                .interactions
+                .any((i) => i.id == interaction.id);
+            if (!exists) {
+              // Fire-and-forget restore; the store/save will update
+              // the snapshot listeners and UI.
+              unawaited(ref
+                  .read(appControllerProvider.notifier)
+                  .restoreInteraction(interaction));
+            }
           },
         ),
       ),
     );
 
-    _deleteTimer = Timer(const Duration(seconds: 4), () async {
-      if (!mounted) return;
+    _pendingDeletedInteraction = interaction;
+    _deleteTimer = Timer(const Duration(milliseconds: 4100), () async {
+      if (!mounted || _deleteCancelled) {
+        _pendingDeletedInteraction = null;
+        _deleteTimer = null;
+        return;
+      }
+
       // Capture ScaffoldMessenger before the await so it's available
       // even if the widget tree rebuilds during the async chain.
       final messenger = ScaffoldMessenger.of(context);
@@ -569,6 +596,7 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
         if (!rebuildSucceeded) {
           messenger.showSnackBar(
             const SnackBar(
+              behavior: SnackBarBehavior.fixed,
               content: Text(
                 'AI Insights could not be refreshed. Try refreshing manually later.',
               ),
@@ -578,7 +606,33 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
       } finally {
         // ignore: use_build_context_synchronously
         if (mounted) {
-          setState(() => _deletingInteractionId = null);
+          setState(() {
+            _deletingInteractionId = null;
+            _deleteTimer = null;
+          });
+          // Offer a post-delete Undo so users can restore even after
+          // the deletion completed (mirrors restoreEvent behavior).
+          final deleted = _pendingDeletedInteraction;
+          if (deleted != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                behavior: SnackBarBehavior.fixed,
+                content: Text('Deleted ${deleted.title}'),
+                action: SnackBarAction(
+                  label: 'Undo',
+                  onPressed: () {
+                    ref
+                        .read(appControllerProvider.notifier)
+                        .restoreInteraction(deleted);
+                  },
+                ),
+              ),
+            );
+          }
+          _pendingDeletedInteraction = null;
+        } else {
+          _pendingDeletedInteraction = null;
+          _deleteTimer = null;
         }
       }
     });
