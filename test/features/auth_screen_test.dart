@@ -126,6 +126,27 @@ void main() {
     );
   });
 
+  testWidgets('signup shows the Connect Me lockup above the heading', (
+    tester,
+  ) async {
+    await pumpConnectMe(tester, surfaceSize: const Size(390, 844));
+
+    await tester.ensureVisible(find.byKey(const Key('auth-mode-signup')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('auth-mode-signup')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LinkedChainLogo), findsOneWidget);
+    expect(find.text('Connect Me'), findsOneWidget);
+
+    final lockupTop = tester.getTopLeft(find.byType(LinkedChainLogo)).dy;
+    final brandTop = tester.getTopLeft(find.text('Connect Me')).dy;
+    final headingTop = tester.getTopLeft(find.text('Join Connect Me.')).dy;
+
+    expect(lockupTop, lessThan(brandTop));
+    expect(brandTop, lessThan(headingTop));
+  });
+
   testWidgets('signup keeps the light auth theme on a dark device', (
     tester,
   ) async {
@@ -176,6 +197,28 @@ void main() {
     expect(find.byKey(const Key('sign-in-button')), findsOneWidget);
     expect(find.byKey(const Key('google-sign-in-button')), findsOneWidget);
 
+    await tester.ensureVisible(find.byKey(const Key('google-sign-in-button')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact scaled signup remains scrollable without overflow', (
+    tester,
+  ) async {
+    await pumpConnectMe(
+      tester,
+      surfaceSize: const Size(320, 700),
+      textScaleFactor: 1.3,
+    );
+
+    await tester.ensureVisible(find.byKey(const Key('auth-mode-signup')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('auth-mode-signup')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LinkedChainLogo), findsOneWidget);
+    expect(find.byKey(const Key('signup-name-field')), findsOneWidget);
     await tester.ensureVisible(find.byKey(const Key('google-sign-in-button')));
     await tester.pumpAndSettle();
 

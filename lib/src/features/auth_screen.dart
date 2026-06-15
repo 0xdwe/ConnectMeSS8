@@ -335,9 +335,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(
                           w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
-                          _mode == AuthMode.login
-                              ? math.max(h * 0.255, 176.0)
-                              : h * 0.28,
+                          math.max(h * 0.255, 176.0),
                           w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
                           AppSpacing.space5,
                         ),
@@ -668,21 +666,7 @@ class _LoginForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              LinkedChainLogo(size: 47, color: tokens.primary),
-              const SizedBox(height: 6),
-              Text(
-                'Connect Me',
-                style: AppTypography.bodyLg(
-                  color: tokens.ink,
-                ).copyWith(fontSize: 20, fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-        ),
+        _AuthBrandLockup(tokens: tokens),
         const SizedBox(height: 36),
         Text(
           'Welcome back.',
@@ -911,6 +895,31 @@ class _LoginForm extends StatelessWidget {
   }
 }
 
+class _AuthBrandLockup extends StatelessWidget {
+  const _AuthBrandLockup({required this.tokens});
+
+  final AppTokens tokens;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LinkedChainLogo(size: 47, color: tokens.primary),
+          const SizedBox(height: 6),
+          Text(
+            'Connect Me',
+            style: AppTypography.bodyLg(
+              color: tokens.ink,
+            ).copyWith(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SignupForm extends StatelessWidget {
   const _SignupForm({
     required this.nameController,
@@ -946,6 +955,8 @@ class _SignupForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _AuthBrandLockup(tokens: tokens),
+        const SizedBox(height: 28),
         Text(
           'Join Connect Me.',
           style: AppTypography.display(
