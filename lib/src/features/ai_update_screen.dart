@@ -571,7 +571,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
   Widget _buildGradientHeader(AppTokens tokens) {
     final topInset = MediaQuery.paddingOf(context).top;
     return Container(
-      height: topInset + 112,
+      height: topInset + 64,
       padding: EdgeInsets.fromLTRB(
         AppSpacing.space5,
         topInset,
@@ -580,7 +580,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       ),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: .72),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(34)),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
         border: Border(
           bottom: BorderSide(color: Colors.white.withValues(alpha: .82)),
         ),
@@ -606,14 +606,16 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                 icon: Icon(
                   Icons.arrow_back_rounded,
                   color: tokens.primary,
-                  size: 30,
+                  size: 22,
                 ),
               ),
             ),
           ),
           Text(
             'Update with AI',
-            style: AppTypography.display(color: const Color(0xFF282451)),
+            style: AppTypography.bodyLg(
+              color: const Color(0xFF282451),
+            ).copyWith(fontWeight: FontWeight.w700),
             textAlign: TextAlign.center,
           ),
         ],
@@ -627,16 +629,16 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
         final horizontalPadding = constraints.maxWidth < 420
             ? AppSpacing.space5
             : AppSpacing.space6;
-        final mascotSize = (constraints.maxWidth * .66)
-            .clamp(236.0, 380.0)
+        final mascotSize = (constraints.maxWidth * .44)
+            .clamp(168.0, 260.0)
             .toDouble();
 
         return ListView(
           padding: EdgeInsets.fromLTRB(
             horizontalPadding,
-            AppSpacing.space5,
+            AppSpacing.space3,
             horizontalPadding,
-            AppSpacing.space8,
+            AppSpacing.space6,
           ),
           children: [
             Center(
@@ -669,7 +671,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: AppSpacing.space5),
+                    SizedBox(height: AppSpacing.space4),
                     _buildUpdatePanel(tokens),
                   ],
                 ),
@@ -683,7 +685,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
 
   Widget _buildMascotHero(AppTokens tokens, double mascotSize) {
     return SizedBox(
-      height: mascotSize + AppSpacing.space8,
+      height: mascotSize + AppSpacing.space4,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.center,
@@ -749,7 +751,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
 
   Widget _buildUpdatePanel(AppTokens tokens) {
     return Container(
-      padding: EdgeInsets.all(AppSpacing.space5),
+      padding: EdgeInsets.all(AppSpacing.space4),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: .92),
         borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -765,7 +767,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       child: Column(
         children: [
           _buildInputBox(tokens),
-          SizedBox(height: AppSpacing.space4),
+          SizedBox(height: AppSpacing.space3),
           _buildGradientSubmitButton(tokens),
         ],
       ),
@@ -774,7 +776,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
 
   Widget _buildInputBox(AppTokens tokens) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 196),
+      constraints: const BoxConstraints(minHeight: 164),
       padding: EdgeInsets.all(AppSpacing.space4),
       decoration: BoxDecoration(
         color: const Color(0xFFFCFAFF).withValues(alpha: .95),
@@ -787,7 +789,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
           TextField(
             key: const Key('ai-input-field'),
             controller: input,
-            minLines: 4,
+            minLines: 3,
             maxLines: 12,
             style: AppTypography.bodyLg(color: tokens.ink),
             decoration: InputDecoration(
@@ -886,11 +888,11 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
           borderRadius: BorderRadius.circular(AppRadius.xl),
           onTap: disabled ? null : submit,
           child: SizedBox(
-            height: 64,
+            height: 58,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.auto_awesome, color: tokens.primaryOn, size: 28),
+                Icon(Icons.auto_awesome, color: tokens.primaryOn, size: 24),
                 SizedBox(width: AppSpacing.space3),
                 Text(
                   disabled ? 'Generating...' : 'Update Connection',
