@@ -332,29 +332,43 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   if (_mode == AuthMode.login)
                     SafeArea(
                       child: SingleChildScrollView(
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
-                            math.max(h * 0.255, 176.0),
-                            w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
-                            AppSpacing.space5,
-                          ),
-                          child: Center(
-                            child: Container(
-                              constraints: const BoxConstraints(maxWidth: 460),
-                              child: _LoginForm(
-                                emailController: _loginEmail,
-                                passwordController: _loginPassword,
-                                emailError: _loginEmailError,
-                                passwordError: _loginPasswordError,
-                                busy: _busy,
-                                onSubmit: _submitLogin,
-                                onSwitch: () => _switchMode(AuthMode.signup),
-                                onGoogleSignIn: _signInWithGoogle,
-                                tokens: tokens,
+                        child: Builder(
+                          builder: (context) {
+                            final safeAreaHeight = h - MediaQuery.paddingOf(context).vertical;
+                            final illustrationHeight = w * 0.72;
+                            final topPadding = math.max(
+                              16.0,
+                              math.min(
+                                illustrationHeight + 16,
+                                safeAreaHeight - 535,
                               ),
-                            ),
-                          ),
+                            );
+
+                            return Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
+                                topPadding,
+                                w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
+                                AppSpacing.space4,
+                              ),
+                              child: Center(
+                                child: Container(
+                                  constraints: const BoxConstraints(maxWidth: 460),
+                                  child: _LoginForm(
+                                    emailController: _loginEmail,
+                                    passwordController: _loginPassword,
+                                    emailError: _loginEmailError,
+                                    passwordError: _loginPasswordError,
+                                    busy: _busy,
+                                    onSubmit: _submitLogin,
+                                    onSwitch: () => _switchMode(AuthMode.signup),
+                                    onGoogleSignIn: _signInWithGoogle,
+                                    tokens: tokens,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -701,7 +715,7 @@ class _LoginForm extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _AuthBrandLockup(tokens: tokens),
-        const SizedBox(height: 36),
+        const SizedBox(height: 16),
         Text(
           'Welcome back.',
           style: AppTypography.display(
@@ -715,7 +729,7 @@ class _LoginForm extends StatelessWidget {
           style: AppTypography.body(color: tokens.inkMuted),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 34),
+        const SizedBox(height: 20),
 
         // Email field
         TextField(
@@ -754,7 +768,7 @@ class _LoginForm extends StatelessWidget {
                 ),
               ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
 
         // Password field
         TextField(
@@ -800,7 +814,7 @@ class _LoginForm extends StatelessWidget {
                 ),
               ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
 
         // Login button
         _GradientButton(
@@ -834,7 +848,7 @@ class _LoginForm extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
 
         Row(
           children: [
@@ -849,7 +863,7 @@ class _LoginForm extends StatelessWidget {
             Expanded(child: Divider(color: Colors.grey.shade300)),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
 
         // Google button
         SizedBox(
@@ -898,7 +912,7 @@ class _LoginForm extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
 
         // Switch to Signup
         TextButton(
