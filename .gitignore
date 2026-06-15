@@ -54,3 +54,6 @@ app.*.map.json
 
 # Subagent run outputs
 .subagent-runs/
+
+# Isolated git worktrees
+.worktrees/
