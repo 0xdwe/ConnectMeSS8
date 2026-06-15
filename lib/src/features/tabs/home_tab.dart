@@ -40,7 +40,6 @@ class _HomeTabState extends ConsumerState<HomeTab> {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
     final state = ref.watch(appControllerProvider);
     final recommendations = ref.watch(recommendationsProvider);
     return ListView(
@@ -108,11 +107,11 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                   key: Key('home-recommendations-loading'),
                   count: 2,
                 ),
-                error: (_, _) => _EmptyRecommendations(tokens: tokens),
+                error: (_, _) => _SampleRecommendations(),
                 data: (allRecs) {
                   final recs = showAll ? allRecs : allRecs.take(2).toList();
                   if (recs.isEmpty) {
-                    return _EmptyRecommendations(tokens: tokens);
+                    return _SampleRecommendations();
                   }
                   return Column(
                     children: [
@@ -159,22 +158,58 @@ class _HomeTabState extends ConsumerState<HomeTab> {
   }
 }
 
-class _EmptyRecommendations extends StatelessWidget {
-  const _EmptyRecommendations({required this.tokens});
-
-  final AppTokens tokens;
+class _SampleRecommendations extends StatelessWidget {
+  const _SampleRecommendations();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(AppSpacing.space8),
-        child: Text(
-          'You\'re in touch with everyone right now.',
-          style: AppTypography.bodyLg(color: tokens.inkMuted),
-          textAlign: TextAlign.center,
-        ),
+    final sampleConnections = [
+      Connection(
+        id: 'david',
+        name: 'David Kim',
+        email: 'david.k@email.com',
+        category: 'Family',
+        avatar: '👨‍👩‍👧',
+        bondScore: 95,
+        nextStep: 'Ask about family dinner plans',
+        lastContact: DateTime.now().subtract(const Duration(days: 4)),
+        notes: 'Family anchor. Likes weekend updates.',
+        knownSince: DateTime(1998, 5, 1),
+        preferredChannels: const ['Text', 'Phone', 'FaceTime'],
+        isSample: true,
       ),
+      Connection(
+        id: 'emily',
+        name: 'Emily Rodriguez',
+        email: 'emily.r@email.com',
+        category: 'Work',
+        avatar: '👩‍💼',
+        bondScore: 85,
+        nextStep: 'Ask about first week in new role',
+        lastContact: DateTime.now().subtract(const Duration(days: 5)),
+        notes: 'First week at new role. Keep momentum going.',
+        knownSince: DateTime(2023, 9, 1),
+        preferredChannels: const ['Slack', 'Email', 'Text'],
+        isSample: true,
+      ),
+    ];
+
+    return Column(
+      children: [
+        for (var i = 0; i < sampleConnections.length; i++) ...[
+          RecommendationCard(
+            connection: sampleConnections[i],
+            recommendation: Recommendation(
+              contactId: sampleConnections[i].id,
+              reason: 'Curious how ${sampleConnections[i].name} is doing?',
+              insight: 'Last chat was a few weeks ago.',
+              priority: 'medium priority',
+            ),
+          ),
+          if (i < sampleConnections.length - 1)
+            SizedBox(height: AppSpacing.space3),
+        ],
+      ],
     );
   }
 }
