@@ -233,6 +233,12 @@ void main() {
       expect(rect.top, greaterThanOrEqualTo(0));
       expect(rect.bottom, lessThanOrEqualTo(800));
     }
+    final logoTop = tester.getRect(find.byType(LinkedChainLogo)).top;
+    final footerBottom = tester
+        .getRect(find.byKey(const Key('auth-mode-login')))
+        .bottom;
+    final contentCenter = (logoTop + footerBottom) / 2;
+    expect(contentCenter, closeTo(464, 8));
     expect(tester.takeException(), isNull);
   });
 

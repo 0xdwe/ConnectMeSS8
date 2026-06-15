@@ -379,10 +379,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               AppSpacing.space2,
                             ),
                             child: Align(
-                              alignment: Alignment.topCenter,
+                              alignment: Alignment.center,
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
-                                alignment: Alignment.topCenter,
+                                alignment: Alignment.center,
                                 child: SizedBox(
                                   width: formWidth,
                                   child: _SignupForm(
