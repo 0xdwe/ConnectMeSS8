@@ -746,6 +746,8 @@ class _CalendarGrid extends StatelessWidget {
                 uniqueContacts.add(contact);
               }
             }
+            final avatarCount = uniqueContacts.length > 3 ? 3 : uniqueContacts.length;
+            final avatarStripWidth = avatarCount <= 1 ? 12.0 : 12.0 + ((avatarCount - 1) * 6.0);
 
             // Highlight & text color selection
             Color? backgroundColor;
@@ -799,22 +801,28 @@ class _CalendarGrid extends StatelessWidget {
                     SizedBox(
                       height: 14,
                       child: uniqueContacts.isNotEmpty
-                          ? Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                for (
-                                  var i = 0;
-                                  i < uniqueContacts.length && i < 3;
-                                  i++
-                                )
-                                  Positioned(
-                                    left: i * 6,
-                                    child: _CalendarDayAvatar(
-                                      contact: uniqueContacts[i],
-                                      size: 12,
-                                    ),
-                                  ),
-                              ],
+                          ? Center(
+                              child: SizedBox(
+                                width: avatarStripWidth,
+                                height: 12,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    for (
+                                      var i = 0;
+                                      i < avatarCount;
+                                      i++
+                                    )
+                                      Positioned(
+                                        left: i * 6,
+                                        child: _CalendarDayAvatar(
+                                          contact: uniqueContacts[i],
+                                          size: 12,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
                             )
                           : Container(
                               width: 4,
@@ -1142,7 +1150,7 @@ class _NextUpCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
           ],
-          const Icon(Icons.chevron_right, color: Colors.white),
+          //const Icon(Icons.chevron_right, color: Colors.white),
         ],
       ),
     );
