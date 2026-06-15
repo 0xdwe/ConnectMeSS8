@@ -473,8 +473,9 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
               child: FilledButton(
                 style: FilledButton.styleFrom(
                   backgroundColor: tokens.primary,
+                  foregroundColor: tokens.primaryOn,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
                 ),
                 onPressed: () async {
@@ -530,7 +531,13 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
             if (widget.event != null) ...[
               const SizedBox(height: 8),
               TextButton.icon(
-                style: TextButton.styleFrom(foregroundColor: tokens.danger),
+                style: TextButton.styleFrom(
+                  backgroundColor: tokens.danger,
+                  foregroundColor: tokens.primaryOn,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                ),
                 onPressed: () async {
                   try {
                     final deleted = await ref
@@ -547,8 +554,13 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                     }
                   }
                 },
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('Delete Event'),
+                icon: Icon(Icons.delete_outline, color: tokens.primaryOn),
+                label: Text(
+                  'Delete Event',
+                  style: AppTypography.body(
+                    color: tokens.primaryOn,
+                  ).copyWith(fontWeight: FontWeight.w700),
+                ),
               ),
             ],
           ],
@@ -780,6 +792,12 @@ class _CustomDatePickerDialogState
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: tokens.inkMuted,
+                    shadowColor: Colors.transparent,
+                    surfaceTintColor: Colors.transparent,
+                  ),
                   onPressed: () => Navigator.pop(context),
                   child: Text(
                     'Cancel',
@@ -790,6 +808,12 @@ class _CustomDatePickerDialogState
                 ),
                 const SizedBox(width: 8),
                 TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: tokens.primary,
+                    shadowColor: Colors.transparent,
+                    surfaceTintColor: Colors.transparent,
+                  ),
                   onPressed: () => Navigator.pop(context, _selectedDate),
                   child: Text(
                     'OK',

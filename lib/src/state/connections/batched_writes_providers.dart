@@ -40,6 +40,7 @@ class _SignedOutBatchedWrites implements BatchedWrites {
   Future<void> commitAiUpdate({
     required CrmInteraction interaction,
     required Connection updatedConnection,
+    Iterable<PlannerEvent> plannedEvents = const <PlannerEvent>[],
   }) => Future.error(StateError(_msg));
 
   @override

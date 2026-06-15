@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../state/app_state.dart';
 import '../../theme/app_spacing.dart';
+import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 
 Future<void> showAddConnectionModal(BuildContext context) =>
@@ -65,11 +66,10 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
         });
       }
     } catch (error) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not pick image. $error')));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not pick image. $error')));
     }
   }
 
@@ -102,7 +102,29 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
   Widget build(BuildContext context) {
     final state = ref.watch(appControllerProvider);
     category ??= state.categories.first;
+    final tokens = context.tokens;
     final colors = Theme.of(context).colorScheme;
+    final selectedButtonStyle = FilledButton.styleFrom(
+      backgroundColor: tokens.primary,
+      foregroundColor: tokens.primaryOn,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+    );
+    final unselectedButtonStyle = OutlinedButton.styleFrom(
+      backgroundColor: colors.surface,
+      foregroundColor: tokens.primary,
+      side: BorderSide(color: tokens.primary.withValues(alpha: 0.4)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+    );
+    final selectedLabelStyle = AppTypography.body(
+      color: tokens.primaryOn,
+    ).copyWith(fontWeight: FontWeight.w700);
+    final unselectedLabelStyle = AppTypography.body(
+      color: tokens.primary,
+    ).copyWith(fontWeight: FontWeight.w700);
 
     return SafeArea(
       child: Padding(
@@ -136,7 +158,9 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
                   width: double.infinity,
                   padding: EdgeInsets.all(AppSpacing.space4),
                   decoration: BoxDecoration(
-                    color: colors.surfaceVariant.withOpacity(0.18),
+                    color: colors.surfaceContainerHighest.withValues(
+                      alpha: 0.18,
+                    ),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Column(
@@ -148,7 +172,9 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
                         alignment: Alignment.center,
                         child: CircleAvatar(
                           radius: 42,
-                          backgroundColor: colors.primary.withOpacity(0.12),
+                          backgroundColor: colors.primary.withValues(
+                            alpha: 0.12,
+                          ),
                           backgroundImage: _hasUploadedImage
                               ? MemoryImage(avatarBytes!)
                               : null,
@@ -180,7 +206,11 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
                                     icon: const Icon(
                                       Icons.emoji_emotions_outlined,
                                     ),
-                                    label: const Text('Emoji'),
+                                    style: selectedButtonStyle,
+                                    label: Text(
+                                      'Emoji',
+                                      style: selectedLabelStyle,
+                                    ),
                                   )
                                 : OutlinedButton.icon(
                                     onPressed: () => setState(() {
@@ -195,7 +225,11 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
                                     icon: const Icon(
                                       Icons.emoji_emotions_outlined,
                                     ),
-                                    label: const Text('Emoji'),
+                                    style: unselectedButtonStyle,
+                                    label: Text(
+                                      'Emoji',
+                                      style: unselectedLabelStyle,
+                                    ),
                                   ),
                           ),
                           SizedBox(width: AppSpacing.space2),
@@ -207,7 +241,11 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
                                           _ProfilePictureMode.image,
                                     ),
                                     icon: const Icon(Icons.image_outlined),
-                                    label: const Text('Image'),
+                                    style: selectedButtonStyle,
+                                    label: Text(
+                                      'Image',
+                                      style: selectedLabelStyle,
+                                    ),
                                   )
                                 : OutlinedButton.icon(
                                     onPressed: () => setState(
@@ -215,7 +253,11 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
                                           _ProfilePictureMode.image,
                                     ),
                                     icon: const Icon(Icons.image_outlined),
-                                    label: const Text('Image'),
+                                    style: unselectedButtonStyle,
+                                    label: Text(
+                                      'Image',
+                                      style: unselectedLabelStyle,
+                                    ),
                                   ),
                           ),
                         ],
@@ -244,20 +286,31 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
                             FilledButton.icon(
                               onPressed: _pickAvatarImage,
                               icon: const Icon(Icons.upload_file),
+                              style: selectedButtonStyle,
                               label: Text(
                                 _hasUploadedImage
                                     ? 'Change photo'
                                     : 'Upload photo',
+                                style: selectedLabelStyle,
                               ),
                             ),
                             if (_hasUploadedImage)
                               TextButton(
+                                style: TextButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  foregroundColor: tokens.primary,
+                                  shadowColor: Colors.transparent,
+                                  surfaceTintColor: Colors.transparent,
+                                ),
                                 onPressed: () => setState(() {
                                   avatar.text = '👤';
                                   avatarBytes = null;
                                   pictureMode = _ProfilePictureMode.emoji;
                                 }),
-                                child: const Text('Remove photo'),
+                                child: Text(
+                                  'Remove photo',
+                                  style: unselectedLabelStyle,
+                                ),
                               ),
                           ],
                         ),
@@ -290,14 +343,16 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
                     icon: Icons.category_outlined,
                   ),
                   items: state.categories
-                      .map((c) => DropdownMenuItem(
-                            value: c,
-                            child: Text(
-                              c,
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ))
+                      .map(
+                        (c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(
+                            c,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) => setState(() => category = value),
                   validator: (value) => value == null || value.isEmpty
@@ -398,14 +453,16 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
+                        style: unselectedButtonStyle,
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
+                        child: Text('Cancel', style: unselectedLabelStyle),
                       ),
                     ),
                     SizedBox(width: AppSpacing.space3),
                     Expanded(
                       child: FilledButton(
                         key: const Key('save-connection-button'),
+                        style: selectedButtonStyle,
                         onPressed: () async {
                           if (!_formKey.currentState!.validate()) return;
                           try {
@@ -447,7 +504,7 @@ class _AddConnectionModalState extends ConsumerState<AddConnectionModal> {
                             }
                           }
                         },
-                        child: const Text('Save'),
+                        child: Text('Save', style: selectedLabelStyle),
                       ),
                     ),
                   ],

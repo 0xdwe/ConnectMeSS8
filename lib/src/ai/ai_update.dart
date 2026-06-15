@@ -194,9 +194,7 @@ class MockAiUpdate implements AiUpdate {
     Future<void> Function()? onClassifierPassed,
   }) async {
     if (failOnRelevanceCheck) {
-      throw const AiUpdateRejected(
-        reason: 'test-injected relevance rejection',
-      );
+      throw const AiUpdateRejected(reason: 'test-injected relevance rejection');
     }
     if (failOnRun) {
       throw const AiUpdateFailure('test-injected run failure');
@@ -276,6 +274,11 @@ class MockAiUpdate implements AiUpdate {
     // shows the post-cap candidate — and in `MemoryDocument.render()`.
     final extracted = _extractTopics(userInput);
     final mergedTopics = _mergeTopics(currentMemory.topics, extracted);
+    final plannedEvents = _extractPlannedEvents(
+      userInput: userInput,
+      contact: contact,
+      now: now,
+    );
 
     final newMemory = currentMemory.copyWith(
       history: newHistory,
@@ -290,6 +293,7 @@ class MockAiUpdate implements AiUpdate {
       interactions: [interaction],
       nextStep: type == InteractionType.reminder ? 'Follow up this week' : null,
       memoryDocument: newMemory,
+      plannedEvents: plannedEvents,
       // Pass 4.3 PRD §Q6 addendum / #085: parity with LlmAiUpdate.
       // Mock pretends the LLM judged interactionDepth=50 (a
       // "substantive" middle-of-the-rubric value) and applies the
@@ -469,4 +473,90 @@ List<String> _mergeTopics(List<String> existing, List<String> extracted) {
   if (out.length <= MemoryDocument.topicCap) return out;
   // Oldest-first eviction: drop from the head until we hit the cap.
   return out.sublist(out.length - MemoryDocument.topicCap);
+}
+
+List<PlannerEvent> _extractPlannedEvents({
+  required String userInput,
+  required Connection contact,
+  required DateTime now,
+}) {
+  if (userInput.trim().isEmpty) return const <PlannerEvent>[];
+  final date = _extractDayMonth(userInput, now: now);
+  if (date == null) return const <PlannerEvent>[];
+  final title = _extractTripTitle(userInput) ?? 'Planned Event';
+  return <PlannerEvent>[
+    PlannerEvent(
+      id: MockAiUpdate._uuid.v4(),
+      title: title,
+      contactId: contact.id,
+      category: contact.category,
+      date: date,
+      note: 'Created from AI Update: ${_truncateText(userInput, 240)}',
+      eventType: 'Plan',
+    ),
+  ];
+}
+
+DateTime? _extractDayMonth(String input, {required DateTime now}) {
+  const months = <String, int>{
+    'jan': 1,
+    'january': 1,
+    'feb': 2,
+    'february': 2,
+    'mar': 3,
+    'march': 3,
+    'apr': 4,
+    'april': 4,
+    'may': 5,
+    'jun': 6,
+    'june': 6,
+    'jul': 7,
+    'july': 7,
+    'aug': 8,
+    'august': 8,
+    'sep': 9,
+    'sept': 9,
+    'september': 9,
+    'oct': 10,
+    'october': 10,
+    'nov': 11,
+    'november': 11,
+    'dec': 12,
+    'december': 12,
+  };
+  final dayMonth = RegExp(
+    r'\b(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)\b',
+    caseSensitive: false,
+  ).firstMatch(input);
+  final monthDay = RegExp(
+    r'\b([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?\b',
+    caseSensitive: false,
+  ).firstMatch(input);
+  final match = dayMonth ?? monthDay;
+  if (match == null) return null;
+
+  final dayRaw = dayMonth != null ? match.group(1)! : match.group(2)!;
+  final monthRaw = dayMonth != null ? match.group(2)! : match.group(1)!;
+  final month = months[monthRaw.toLowerCase()];
+  if (month == null) return null;
+  final day = int.tryParse(dayRaw);
+  if (day == null || day < 1 || day > 31) return null;
+  return DateTime(now.year, month, day);
+}
+
+String? _extractTripTitle(String input) {
+  final explicitTrip = RegExp(
+    r'\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){0,2})\s+trip\b',
+  ).firstMatch(input);
+  final toPlace = RegExp(
+    r'\b(?:go(?:ing)?|travel(?:ing|ling)?|fly(?:ing)?|head(?:ing)?)\s+to\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){0,2})',
+  ).firstMatch(input);
+  final place = explicitTrip?.group(1) ?? toPlace?.group(1);
+  if (place == null || place.trim().isEmpty) return null;
+  return '${place.trim()} Trip';
+}
+
+String _truncateText(String value, int max) {
+  if (value.length <= max) return value;
+  return '${value.substring(0, max)}...';
 }

@@ -64,13 +64,14 @@ const String kLlmAiUpdateDefaultModel = 'gemini-2.5-flash';
 /// Tests inject a fake function that returns canned text;
 /// production wires the real SDK call. The seam mirrors the
 /// existing [attachmentPreparer] pattern.
-typedef GeminiGenerateContentFn = Future<String> Function({
-  required String modelName,
-  required String systemPrompt,
-  required Schema responseSchema,
-  required List<Content> contents,
-  required Duration timeout,
-});
+typedef GeminiGenerateContentFn =
+    Future<String> Function({
+      required String modelName,
+      required String systemPrompt,
+      required Schema responseSchema,
+      required List<Content> contents,
+      required Duration timeout,
+    });
 
 /// Timeout for the relevance pre-classifier call (Pass 4.4 / #112).
 ///
@@ -327,9 +328,7 @@ class LlmAiUpdate implements AiUpdate {
         // FormatException, LlmResponseParseException,
         // FirebaseAIException, FirebaseException, etc.). Log
         // for diagnostics but never block a legitimate update.
-        debugPrint(
-          'LlmAiUpdate: relevance classifier failed open: $e',
-        );
+        debugPrint('LlmAiUpdate: relevance classifier failed open: $e');
       }
     }
 
@@ -654,6 +653,11 @@ class LlmAiUpdate implements AiUpdate {
       for (final entry in llmResult.memoryUpdate.upcomingToAdd)
         _toUpcomingEntry(entry, now: now),
     ];
+    final plannedEvents = <PlannerEvent>[
+      for (final entry in llmResult.memoryUpdate.upcomingToAdd)
+        if (entry.dateIso != null && entry.dateIso!.isNotEmpty)
+          _toPlannerEvent(entry, contact: contact),
+    ];
 
     final mergedTopicSuggestions = _mergeTopicSuggestions(
       existing: currentMemory.topicSuggestions,
@@ -682,6 +686,7 @@ class LlmAiUpdate implements AiUpdate {
       interactions: [interaction],
       nextStep: llmResult.nextStep,
       memoryDocument: newMemory,
+      plannedEvents: plannedEvents,
       // Pass 4.3 PRD §Q6 addendum / #085: the LLM judges
       // interactionDepth on the input's own merits; code applies
       // the diminishing-returns curve here so the same depth moves
@@ -816,6 +821,25 @@ class LlmAiUpdate implements AiUpdate {
           : '${entry.label} (${entry.relativeWhen})';
     }
     return UpcomingEntry(startDate: startDate, description: description);
+  }
+
+  static PlannerEvent _toPlannerEvent(
+    LlmUpcomingEntry entry, {
+    required Connection contact,
+  }) {
+    final parsed = _parseLlmDate(entry.dateIso);
+    final date = parsed == null
+        ? DateTime.now()
+        : DateTime.utc(parsed.year, parsed.month, parsed.day);
+    return PlannerEvent(
+      id: _uuid.v4(),
+      title: entry.label,
+      contactId: contact.id,
+      category: contact.category,
+      date: date,
+      note: 'Created from AI Update',
+      eventType: 'Plan',
+    );
   }
 
   static List<String> _mergeStrings(

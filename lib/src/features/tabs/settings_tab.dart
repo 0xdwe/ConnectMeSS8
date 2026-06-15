@@ -143,10 +143,14 @@ class SettingsTab extends ConsumerWidget {
         Center(
           child: TextButton.icon(
             style: TextButton.styleFrom(
-              foregroundColor: tokens.danger,
+              backgroundColor: tokens.danger,
+              foregroundColor: tokens.primaryOn,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
             ),
-            icon: Icon(Icons.logout, size: 18, color: tokens.danger),
+            icon: Icon(Icons.logout, size: 18, color: tokens.primaryOn),
             onPressed: () async {
               try {
                 await ref.read(firebaseAuthProvider).signOut();
@@ -158,8 +162,8 @@ class SettingsTab extends ConsumerWidget {
             label: Text(
               'Sign out',
               style: AppTypography.body(
-                color: tokens.danger,
-              ).copyWith(fontWeight: FontWeight.w600),
+                color: tokens.primaryOn,
+              ).copyWith(fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -227,7 +231,13 @@ class SettingsTab extends ConsumerWidget {
                 }
               }
             },
-            style: FilledButton.styleFrom(backgroundColor: tokens.danger),
+            style: FilledButton.styleFrom(
+              backgroundColor: tokens.danger,
+              foregroundColor: tokens.primaryOn,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+            ),
             child: const Text('Remove'),
           ),
         ],

@@ -183,20 +183,19 @@ class ContactProfileScreen extends ConsumerWidget {
                                   icon: Icon(
                                     Icons.edit,
                                     size: 16,
-                                    color: tokens.primary,
+                                    color: tokens.primaryOn,
                                   ),
                                   label: Text(
                                     'Edit',
                                     style: TextStyle(
-                                      color: tokens.primary,
-                                      fontWeight: FontWeight.w600,
+                                      color: tokens.primaryOn,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                   style: OutlinedButton.styleFrom(
-                                    backgroundColor: tokens.surfaceRaised,
-                                    side: BorderSide(
-                                      color: tokens.surfaceRaised,
-                                    ),
+                                    backgroundColor: tokens.primary,
+                                    foregroundColor: tokens.primaryOn,
+                                    side: BorderSide.none,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(
                                         AppRadius.pill,
@@ -730,10 +729,7 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Title row
-                          Text(
-                            history[i].title,
-                            style: AppTypography.bodyLg(),
-                          ),
+                          Text(history[i].title, style: AppTypography.bodyLg()),
                           SizedBox(height: AppSpacing.space1),
                           // AI badge + delete row
                           Row(
@@ -772,20 +768,18 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
                               ],
                               Spacer(),
                               IconButton(
-                                key: Key(
-                                    'delete-interaction-${history[i].id}'),
+                                key: Key('delete-interaction-${history[i].id}'),
                                 icon: Icon(
                                   Icons.delete,
                                   size: 18,
-                                  color: _deletingInteractionId ==
-                                          history[i].id
+                                  color: _deletingInteractionId == history[i].id
                                       ? tokens.inkSubtle
                                       : tokens.inkMuted,
                                 ),
                                 onPressed:
                                     _deletingInteractionId == history[i].id
-                                        ? null
-                                        : () => _confirmDelete(history[i]),
+                                    ? null
+                                    : () => _confirmDelete(history[i]),
                                 tooltip: 'Delete activity',
                                 visualDensity: VisualDensity.compact,
                                 constraints: BoxConstraints(

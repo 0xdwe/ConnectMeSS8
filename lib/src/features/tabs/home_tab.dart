@@ -40,6 +40,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final state = ref.watch(appControllerProvider);
     final recommendations = ref.watch(recommendationsProvider);
     return ListView(
@@ -80,6 +81,11 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                     padding: EdgeInsets.only(left: AppSpacing.space3),
                     child: TextButton.icon(
                       style: TextButton.styleFrom(
+                        backgroundColor: tokens.primary,
+                        foregroundColor: tokens.primaryOn,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
                         padding: EdgeInsets.symmetric(
                           horizontal: AppSpacing.space2,
                           vertical: AppSpacing.space1,

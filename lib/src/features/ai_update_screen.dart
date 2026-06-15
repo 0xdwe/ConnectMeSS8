@@ -72,6 +72,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
   List<TextEditingController> titleControllers = [];
   List<TextEditingController> noteControllers = [];
   List<DateTime> interactionDates = [];
+  List<PlannerEvent> plannedEvents = [];
   // Animation controllers for the staggered preview entrance. There are
   // N controllers for N interaction cards plus one extra controller at
   // index N driving the "About <Name> ✨" memory delta card when one is
@@ -240,6 +241,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
           .map((i) => TextEditingController(text: i.note))
           .toList();
       interactionDates = result.interactions.map((i) => i.date).toList();
+      plannedEvents = result.plannedEvents.toList(growable: true);
 
       // Compute whether a memory delta card will render so we know
       // whether to allocate the extra animation controller. The view
@@ -393,6 +395,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       noteControllers.clear();
       cardAnimationControllers.clear();
       interactionDates.clear();
+      plannedEvents.clear();
     });
   }
 
@@ -407,8 +410,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     }
 
     // Capture pre-update state for undo before committing.
-    final preUpdateConnection =
-        ref.read(contactByIdProvider(widget.contactId));
+    final preUpdateConnection = ref.read(contactByIdProvider(widget.contactId));
     final savedPriorMemory = priorMemory;
 
     // Build edited result with user changes
@@ -440,6 +442,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       // interaction title/note in this slice; the memory append is
       // produced by `AiUpdate.run` and committed as-is.
       memoryDocument: previewResult!.memoryDocument,
+      plannedEvents: plannedEvents,
       // Pass 4.3 #085 (2026-06-01 stall regression): forward the
       // curve's bondScoreDelta from the run() result. Without this,
       // the constructor default of 0 takes over and the contact's
@@ -450,6 +453,9 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     // Capture undo data from the edited result.
     final interactionId = editedResult.interactions.single.id;
     final savedBondScoreDelta = editedResult.bondScoreDelta;
+    final savedPlannedEventIds = editedResult.plannedEvents
+        .map((event) => event.id)
+        .toList(growable: false);
 
     try {
       await ref.read(aiUpdateProvider).commit(editedResult);
@@ -495,6 +501,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                 priorMemory: savedPriorMemory,
                 preUpdateConnection: preUpdateConnection!,
                 bondScoreDelta: savedBondScoreDelta,
+                plannedEventIds: savedPlannedEventIds,
               );
               messenger.showSnackBar(
                 const SnackBar(
@@ -562,7 +569,8 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       );
     }
 
-    final inputFlow = currentState == AiUpdateState.inputting ||
+    final inputFlow =
+        currentState == AiUpdateState.inputting ||
         currentState == AiUpdateState.generating;
 
     return Scaffold(
@@ -575,7 +583,8 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
               backgroundColor: tokens.surface,
               foregroundColor: tokens.ink,
             ),
-      body: (currentState == AiUpdateState.previewing ||
+      body:
+          (currentState == AiUpdateState.previewing ||
               currentState == AiUpdateState.saving)
           ? _buildPreviewView(tokens, person)
           : _buildAiUpdateShell(
@@ -795,7 +804,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
         children: [
           _buildInputBox(tokens),
           SizedBox(height: AppSpacing.space3),
-          _buildGradientSubmitButton(tokens),
+          _buildSubmitButton(tokens),
         ],
       ),
     );
@@ -886,43 +895,28 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     return Chip(label: Text(file.name));
   }
 
-  Widget _buildGradientSubmitButton(AppTokens tokens) {
+  Widget _buildSubmitButton(AppTokens tokens) {
     final disabled = currentState == AiUpdateState.generating;
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(AppRadius.xl),
-      child: Ink(
-        decoration: BoxDecoration(
-          gradient: disabled ? null : tokens.aiGradient,
-          color: disabled ? tokens.surfaceSunken : null,
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          boxShadow: [
-            BoxShadow(
-              color: tokens.primary.withValues(alpha: disabled ? 0 : .24),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: InkWell(
-          key: const Key('run-ai-button'),
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          onTap: disabled ? null : submit,
-          child: SizedBox(
-            height: 58,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.auto_awesome, color: tokens.primaryOn, size: 24),
-                SizedBox(width: AppSpacing.space3),
-                Text(
-                  disabled ? 'Generating...' : 'Update Connection',
-                  style: AppTypography.h2(color: tokens.primaryOn),
-                ),
-              ],
-            ),
+    return SizedBox(
+      height: 58,
+      width: double.infinity,
+      child: FilledButton.icon(
+        key: const Key('run-ai-button'),
+        onPressed: disabled ? null : submit,
+        style: FilledButton.styleFrom(
+          backgroundColor: tokens.primary,
+          foregroundColor: tokens.primaryOn,
+          disabledBackgroundColor: tokens.primary.withValues(alpha: .42),
+          disabledForegroundColor: tokens.primaryOn.withValues(alpha: .72),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
           ),
+          elevation: 0,
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.space5),
+          textStyle: AppTypography.h2(),
         ),
+        icon: const Icon(Icons.auto_awesome, size: 24),
+        label: Text(disabled ? 'Generating...' : 'Update Connection'),
       ),
     );
   }
@@ -988,6 +982,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
               SizedBox(height: AppSpacing.space4),
               for (int i = 0; i < previewResult!.interactions.length; i++)
                 _buildPreviewCard(tokens, person, i),
+              if (plannedEvents.isNotEmpty) _buildPlannedEventsSection(tokens),
               // Memory delta card. Rendered as the final card in the
               // stagger sequence at controller index N (==
               // interactions.length). Suppressed entirely when there is
@@ -1018,11 +1013,14 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                 child: FilledButton(
                   key: const Key('save-button'),
                   onPressed: currentState == AiUpdateState.saving ? null : save,
-                  child: Text(
-                    currentState == AiUpdateState.saving
+                  child: Text(() {
+                    final total =
+                        previewResult!.interactions.length +
+                        plannedEvents.length;
+                    return currentState == AiUpdateState.saving
                         ? 'Saving...'
-                        : 'Save these (${previewResult!.interactions.length})',
-                  ),
+                        : 'Save these ($total)';
+                  }()),
                 ),
               ),
               SizedBox(width: AppSpacing.space3),
@@ -1201,6 +1199,47 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
   }
 
   /// Small bond delta row: ▲ +N in green (positive) or ▼ −N in amber (negative).
+  Widget _buildPlannedEventsSection(AppTokens tokens) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(height: AppSpacing.space2),
+        Text('Planned Event', style: AppTypography.h2()),
+        SizedBox(height: AppSpacing.space3),
+        for (var i = 0; i < plannedEvents.length; i++)
+          CardBox(
+            key: Key('planned-event-card-$i'),
+            child: Row(
+              children: [
+                Icon(Icons.event_available_outlined, color: tokens.primary),
+                SizedBox(width: AppSpacing.space3),
+                Expanded(
+                  child: Text(
+                    '${DateFormat.yMMMd().format(plannedEvents[i].date)} - '
+                    '${plannedEvents[i].title}',
+                    style: AppTypography.body(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  key: Key('planned-event-delete-$i'),
+                  tooltip: 'Remove planned event',
+                  onPressed: currentState == AiUpdateState.saving
+                      ? null
+                      : () {
+                          setState(() => plannedEvents.removeAt(i));
+                        },
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+          ),
+        SizedBox(height: AppSpacing.space2),
+      ],
+    );
+  }
+
   Widget _buildBondDeltaRow(AppTokens tokens, int delta) {
     final isPositive = delta > 0;
     final color = isPositive ? tokens.success : tokens.secondary;

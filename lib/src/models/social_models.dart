@@ -404,6 +404,7 @@ class AiUpdateResult {
     required this.summary,
     required this.contactId,
     required this.interactions,
+    this.plannedEvents = const <PlannerEvent>[],
     this.nextStep,
     this.memoryDocument,
     this.bondScoreDelta = 0,
@@ -411,6 +412,7 @@ class AiUpdateResult {
   final String summary;
   final String contactId;
   final List<CrmInteraction> interactions;
+  final List<PlannerEvent> plannedEvents;
   final String? nextStep;
 
   /// The new memory document produced by this run, ready to be persisted

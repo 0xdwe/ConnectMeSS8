@@ -698,7 +698,7 @@ class AppController extends Notifier<AppState> {
       title: title,
       note: note,
       date: DateTime.now(),
-      bondScoreDelta: 0,  // Manual interactions carry no delta
+      bondScoreDelta: 0, // Manual interactions carry no delta
     );
     await ref.read(interactionStoreProvider).save(interaction);
   }
@@ -847,6 +847,7 @@ class AppController extends Notifier<AppState> {
         .commitAiUpdate(
           interaction: plan.interaction,
           updatedConnection: plan.updatedConnection,
+          plannedEvents: result.plannedEvents.map(normalizePlannerEvent),
         );
 
     // lastAiSummary is informational; not part of the persisted
@@ -905,7 +906,9 @@ class AppController extends Notifier<AppState> {
     try {
       interaction = state.interactions.firstWhere((i) => i.id == interactionId);
     } catch (_) {
-      interaction = await ref.read(interactionStoreProvider).load(interactionId);
+      interaction = await ref
+          .read(interactionStoreProvider)
+          .load(interactionId);
       if (interaction == null) {
         throw StateError('deleteInteraction: $interactionId not found');
       }
@@ -920,7 +923,8 @@ class AppController extends Notifier<AppState> {
     // Use the persistent store as the source of truth when available.
     final contactId = interaction.contactId;
     final connectionStore = ref.read(connectionStoreProvider);
-    final connection = await connectionStore.load(contactId) ??
+    final connection =
+        await connectionStore.load(contactId) ??
         state.connections.firstWhere(
           (c) => c.id == contactId,
           orElse: () => throw StateError(
@@ -930,12 +934,10 @@ class AppController extends Notifier<AppState> {
 
     // Compute remaining interactions for this contact from the persistent
     // store as well, to avoid races with stale snapshot state.
-    final remainingInteractions = (await ref
-            .read(interactionStoreProvider)
-            .listAll())
-        .values
-        .where((i) => i.contactId == contactId && i.id != interactionId)
-        .toList();
+    final remainingInteractions =
+        (await ref.read(interactionStoreProvider).listAll()).values
+            .where((i) => i.contactId == contactId && i.id != interactionId)
+            .toList();
 
     // Recalculate lastContact from remaining interactions
     DateTime? newLastContact;
@@ -946,8 +948,8 @@ class AppController extends Notifier<AppState> {
     }
 
     // Subtract bondScoreDelta (clamped to 0..100)
-    final newBondScore =
-        (connection.bondScore - interaction.bondScoreDelta).clamp(0, 100);
+    final newBondScore = (connection.bondScore - interaction.bondScoreDelta)
+        .clamp(0, 100);
 
     // Update connection with recalculated fields
     final updatedConnection = connection.copyWith(
@@ -956,9 +958,7 @@ class AppController extends Notifier<AppState> {
     );
 
     // Signal AiInsightsCard to show the refresh spinner during rebuild.
-    ref
-        .read(pendingMemoryRebuildProvider.notifier)
-        .setContactId(contactId);
+    ref.read(pendingMemoryRebuildProvider.notifier).setContactId(contactId);
 
     // Rebuild memory to remove references to the deleted interaction.
     // If a memory document exists, rebuild it and update nextStep on
@@ -972,12 +972,14 @@ class AppController extends Notifier<AppState> {
       final memoryStore = ref.read(memoryStoreProvider);
       final currentMemory = await memoryStore.load(contactId);
       if (currentMemory != null) {
-        final rebuildResult = await ref.read(memoryRebuilderProvider).rebuild(
-          contact: updatedConnection,
-          currentMemory: currentMemory,
-          remainingInteractions: remainingInteractions,
-          deletedInteraction: interaction,
-        );
+        final rebuildResult = await ref
+            .read(memoryRebuilderProvider)
+            .rebuild(
+              contact: updatedConnection,
+              currentMemory: currentMemory,
+              remainingInteractions: remainingInteractions,
+              deletedInteraction: interaction,
+            );
 
         await memoryStore.save(rebuildResult.memoryDocument);
 
@@ -1006,9 +1008,7 @@ class AppController extends Notifier<AppState> {
     }
 
     // Clear the rebuild spinner regardless of success/failure.
-    ref
-        .read(pendingMemoryRebuildProvider.notifier)
-        .setContactId(null);
+    ref.read(pendingMemoryRebuildProvider.notifier).setContactId(null);
 
     return rebuildSucceeded;
   }
@@ -1028,6 +1028,7 @@ class AppController extends Notifier<AppState> {
     required MemoryDocument? priorMemory,
     required Connection preUpdateConnection,
     required int bondScoreDelta,
+    List<String> plannedEventIds = const <String>[],
   }) async {
     final contactId = preUpdateConnection.id;
 
@@ -1041,6 +1042,11 @@ class AppController extends Notifier<AppState> {
       await memoryStore.save(priorMemory);
     } else {
       await memoryStore.delete(contactId);
+    }
+
+    // 2b. Remove planner events that were created by the AI Update.
+    for (final eventId in plannedEventIds) {
+      await ref.read(eventStoreProvider).delete(eventId);
     }
 
     // 3. Recalculate lastContact from remaining interactions
@@ -1098,9 +1104,7 @@ class AppController extends Notifier<AppState> {
     ref.read(memoryEpochProvider.notifier).bump(clock());
 
     // 7. Clear the AI insights refresh spinner.
-    ref
-        .read(pendingAiInsightsRefreshProvider.notifier)
-        .setContactId(null);
+    ref.read(pendingAiInsightsRefreshProvider.notifier).setContactId(null);
   }
 
   /// Clear the synchronous AI-update completion signal after the

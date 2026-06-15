@@ -78,6 +78,7 @@ abstract interface class BatchedWrites {
   Future<void> commitAiUpdate({
     required CrmInteraction interaction,
     required Connection updatedConnection,
+    Iterable<PlannerEvent> plannedEvents = const <PlannerEvent>[],
   });
 
   /// Atomically delete a set of sample connections plus every
@@ -143,6 +144,7 @@ class FirebaseBatchedWrites implements BatchedWrites {
   Future<void> commitAiUpdate({
     required CrmInteraction interaction,
     required Connection updatedConnection,
+    Iterable<PlannerEvent> plannedEvents = const <PlannerEvent>[],
   }) async {
     final batch = _firestore.batch();
     batch.set(
@@ -153,6 +155,12 @@ class FirebaseBatchedWrites implements BatchedWrites {
       _collection('connections').doc(updatedConnection.id),
       FirebaseConnectionStore.encode(updatedConnection),
     );
+    for (final event in plannedEvents) {
+      batch.set(
+        _collection('events').doc(event.id),
+        FirebaseEventStore.encode(event),
+      );
+    }
     await batch.commit();
   }
 
@@ -245,12 +253,16 @@ class InMemoryBatchedWrites implements BatchedWrites {
   Future<void> commitAiUpdate({
     required CrmInteraction interaction,
     required Connection updatedConnection,
+    Iterable<PlannerEvent> plannedEvents = const <PlannerEvent>[],
   }) async {
     if (failOnCommit) {
       throw StateError('test-injected batch commit failure');
     }
     await interactionStore.save(interaction);
     await connectionStore.save(updatedConnection);
+    for (final event in plannedEvents) {
+      await eventStore.save(event);
+    }
   }
 
   @override

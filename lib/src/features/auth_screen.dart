@@ -531,7 +531,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 // Sign Up
                 _GradientButton(
                   height: 58,
-                  gradient: tokens.aiGradient,
                   onPressed: () => _switchMode(AuthMode.signup),
                   child: Stack(
                     alignment: Alignment.center,
@@ -566,7 +565,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         width: 1.5,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
                       ),
                       elevation: 0,
                     ),
@@ -606,14 +605,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
 class _GradientButton extends StatelessWidget {
   const _GradientButton({
-    required this.gradient,
     required this.onPressed,
     required this.child,
     this.buttonKey,
     this.height = 56,
   });
 
-  final LinearGradient gradient;
   final VoidCallback? onPressed;
   final Widget child;
   final Key? buttonKey;
@@ -625,8 +622,8 @@ class _GradientButton extends StatelessWidget {
       height: height,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(18),
+          color: context.tokens.primary,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
         ),
         child: FilledButton(
           key: buttonKey,
@@ -639,7 +636,7 @@ class _GradientButton extends StatelessWidget {
             elevation: 0,
             shadowColor: Colors.transparent,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
           ),
           child: child,
@@ -839,7 +836,6 @@ class _LoginForm extends StatelessWidget {
           // Login button
           _GradientButton(
             buttonKey: const Key('sign-in-button'),
-            gradient: tokens.aiGradient,
             onPressed: busy ? null : onSubmit,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -896,7 +892,7 @@ class _LoginForm extends StatelessWidget {
                 foregroundColor: tokens.ink,
                 side: BorderSide(color: tokens.border, width: 1.2),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
               ),
               child: Row(
@@ -938,7 +934,12 @@ class _LoginForm extends StatelessWidget {
           TextButton(
             key: const Key('auth-mode-signup'),
             onPressed: busy ? null : onSwitch,
-            style: TextButton.styleFrom(foregroundColor: tokens.primary),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: tokens.primary,
+              shadowColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+            ),
             child: Text.rich(
               TextSpan(
                 children: [
@@ -1146,7 +1147,9 @@ class _SignupForm extends StatelessWidget {
             onPressed: busy ? null : onSubmit,
             style: FilledButton.styleFrom(
               backgroundColor: tokens.primary,
-              shape: const StadiumBorder(),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1203,7 +1206,9 @@ class _SignupForm extends StatelessWidget {
               backgroundColor: Colors.white,
               foregroundColor: tokens.ink,
               side: BorderSide(color: Colors.grey.shade300, width: 1.2),
-              shape: const StadiumBorder(),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1244,7 +1249,12 @@ class _SignupForm extends StatelessWidget {
         TextButton(
           key: const Key('auth-mode-login'),
           onPressed: busy ? null : onSwitch,
-          style: TextButton.styleFrom(foregroundColor: tokens.primary),
+          style: TextButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            foregroundColor: tokens.primary,
+            shadowColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+          ),
           child: Text.rich(
             TextSpan(
               children: [

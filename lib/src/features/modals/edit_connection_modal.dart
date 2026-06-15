@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/social_models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_spacing.dart';
+import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
 
 enum _AvatarMode { emoji, image }
@@ -107,7 +108,20 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(appControllerProvider).categories;
+    final tokens = context.tokens;
     final colors = Theme.of(context).colorScheme;
+    final plainPrimaryTextButton = TextButton.styleFrom(
+      backgroundColor: Colors.transparent,
+      foregroundColor: tokens.primary,
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+    );
+    final plainDangerTextButton = TextButton.styleFrom(
+      backgroundColor: Colors.transparent,
+      foregroundColor: tokens.danger,
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+    );
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -167,12 +181,21 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
             Align(
               alignment: Alignment.center,
               child: TextButton.icon(
+                style: plainPrimaryTextButton,
                 onPressed: () => setState(() {
                   avatar.text = '👤';
                   avatarMode = _AvatarMode.emoji;
                 }),
-                icon: const Icon(Icons.emoji_emotions_outlined),
-                label: const Text('Use default avatar'),
+                icon: Icon(
+                  Icons.emoji_emotions_outlined,
+                  color: tokens.primary,
+                ),
+                label: Text(
+                  'Use default avatar',
+                  style: AppTypography.body(
+                    color: tokens.primary,
+                  ).copyWith(fontWeight: FontWeight.w600),
+                ),
               ),
             ),
             if (avatarMode == _AvatarMode.emoji) ...[
@@ -199,14 +222,16 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Category'),
               items: categories
-                  .map((c) => DropdownMenuItem(
-                        value: c,
-                        child: Text(
-                          c,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ))
+                  .map(
+                    (c) => DropdownMenuItem(
+                      value: c,
+                      child: Text(
+                        c,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) => setState(() => category = v ?? category),
             ),
@@ -260,6 +285,13 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
             ),
             SizedBox(height: AppSpacing.space4),
             FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: tokens.primary,
+                foregroundColor: tokens.primaryOn,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+              ),
               onPressed: () {
                 ref
                     .read(appControllerProvider.notifier)
@@ -282,10 +314,16 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
                     );
                 Navigator.pop(context);
               },
-              child: const Text('Save'),
+              child: Text(
+                'Save',
+                style: AppTypography.body(
+                  color: tokens.primaryOn,
+                ).copyWith(fontWeight: FontWeight.w700),
+              ),
             ),
             SizedBox(height: AppSpacing.space2),
             TextButton.icon(
+              style: plainDangerTextButton,
               onPressed: () async {
                 final confirmed = await showDialog<bool>(
                   context: context,
@@ -296,6 +334,7 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
                     ),
                     actions: [
                       TextButton(
+                        style: plainPrimaryTextButton,
                         onPressed: () => Navigator.pop(context, false),
                         child: const Text('Cancel'),
                       ),
@@ -323,8 +362,13 @@ class _EditConnectionModalState extends ConsumerState<EditConnectionModal> {
                   }
                 }
               },
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Delete Connection'),
+              icon: Icon(Icons.delete_outline, color: tokens.danger),
+              label: Text(
+                'Delete Connection',
+                style: AppTypography.body(
+                  color: tokens.danger,
+                ).copyWith(fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         ),

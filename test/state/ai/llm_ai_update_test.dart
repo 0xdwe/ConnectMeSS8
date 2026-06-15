@@ -871,6 +871,14 @@ void main() {
       expect(upcoming, hasLength(1));
       expect(upcoming.single.startDate, DateTime.utc(2026, 9, 1));
       expect(upcoming.single.description, 'Kindergarten starts');
+
+      expect(result.plannedEvents, hasLength(1));
+      final event = result.plannedEvents.single;
+      expect(event.title, 'Kindergarten starts');
+      expect(event.contactId, 'sarah');
+      expect(event.category, 'Friends');
+      expect(event.date, DateTime.utc(2026, 9, 1));
+      expect(event.eventType, 'Plan');
     });
 
     test('upcomingToAdd with relativeWhen but no dateIso falls back '
@@ -1132,23 +1140,29 @@ void main() {
       );
     });
 
-    test('negative depth produces a negative delta (conflict/harmful interaction)', () {
-      // Design decision: depth = -100 at bond=60 → -(100*60/160) = -37
-      expect(debugApplyBondScoreCurve(depth: -100, currentBond: 60), -37);
-      // depth = -50 at bond=60 → -(50*60/160) = -18
-      expect(debugApplyBondScoreCurve(depth: -50, currentBond: 60), -18);
-      // depth = -100 at bond=0 → 0 (nothing to lose)
-      expect(debugApplyBondScoreCurve(depth: -100, currentBond: 0), 0);
-      // depth = -25 at bond=80 → -(25*80/160) = -12
-      expect(debugApplyBondScoreCurve(depth: -25, currentBond: 80), -12);
-    });
+    test(
+      'negative depth produces a negative delta (conflict/harmful interaction)',
+      () {
+        // Design decision: depth = -100 at bond=60 → -(100*60/160) = -37
+        expect(debugApplyBondScoreCurve(depth: -100, currentBond: 60), -37);
+        // depth = -50 at bond=60 → -(50*60/160) = -18
+        expect(debugApplyBondScoreCurve(depth: -50, currentBond: 60), -18);
+        // depth = -100 at bond=0 → 0 (nothing to lose)
+        expect(debugApplyBondScoreCurve(depth: -100, currentBond: 0), 0);
+        // depth = -25 at bond=80 → -(25*80/160) = -12
+        expect(debugApplyBondScoreCurve(depth: -25, currentBond: 80), -12);
+      },
+    );
 
-    test('depth below -100 is clamped to -100 (symmetric with positive clamp)', () {
-      expect(
-        debugApplyBondScoreCurve(depth: -200, currentBond: 60),
-        debugApplyBondScoreCurve(depth: -100, currentBond: 60),
-      );
-    });
+    test(
+      'depth below -100 is clamped to -100 (symmetric with positive clamp)',
+      () {
+        expect(
+          debugApplyBondScoreCurve(depth: -200, currentBond: 60),
+          debugApplyBondScoreCurve(depth: -100, currentBond: 60),
+        );
+      },
+    );
 
     test('currentBond outside 0..100 is clamped before the curve runs', () {
       // Defensive: AppController already clamps post-write, but the
@@ -1164,235 +1178,307 @@ void main() {
   });
 
   group('LlmAiUpdate relevance pre-classifier TDD', () {
-    test('MockAiUpdate.failOnRelevanceCheck = true throws AiUpdateRejected', () async {
-      final container = _container();
-      addTearDown(container.dispose);
-      final adapter = MockAiUpdate(
-        memoryStore: container.read(memoryStoreProvider),
-        appController: container.read(appControllerProvider.notifier),
-        failOnRelevanceCheck: true,
-      );
+    test(
+      'MockAiUpdate.failOnRelevanceCheck = true throws AiUpdateRejected',
+      () async {
+        final container = _container();
+        addTearDown(container.dispose);
+        final adapter = MockAiUpdate(
+          memoryStore: container.read(memoryStoreProvider),
+          appController: container.read(appControllerProvider.notifier),
+          failOnRelevanceCheck: true,
+        );
 
-      final sarah = _connection(container.read(appControllerProvider), 'sarah');
-      final memory = await container.read(memoryProvider('sarah').future);
+        final sarah = _connection(
+          container.read(appControllerProvider),
+          'sarah',
+        );
+        final memory = await container.read(memoryProvider('sarah').future);
 
-      await expectLater(
-        () => adapter.run(
+        await expectLater(
+          () => adapter.run(
+            contact: sarah,
+            userInput: 'anything',
+            currentMemory: memory,
+            attachments: const [],
+          ),
+          throwsA(
+            isA<AiUpdateRejected>().having(
+              (e) => e.reason,
+              'reason',
+              contains('relevance rejection'),
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'relevance classifier pass path proceeds to main Gemini call and triggers onClassifierPassed',
+      () async {
+        final container = _container();
+        addTearDown(container.dispose);
+
+        var classifierPassedCalled = false;
+        var callCount = 0;
+
+        final adapter = LlmAiUpdate(
+          firebaseAi: null,
+          memoryStore: container.read(memoryStoreProvider),
+          appController: container.read(appControllerProvider.notifier),
+          recentInteractionsLookup: (_) => const [],
+          geminiGenerateContent:
+              ({
+                required dynamic modelName,
+                required dynamic systemPrompt,
+                required dynamic responseSchema,
+                required dynamic contents,
+                required dynamic timeout,
+              }) async {
+                callCount++;
+                if (callCount == 1) {
+                  return '{"isRelevant": true, "reason": "ok"}';
+                }
+                return '{"interactionType": "interaction", "interactionTitle": "Routine conversation", "interactionNote": "Talked about weather", "interactionDepth": 25, "memoryUpdate": {"newHistoryBullet": "- 2026-06-14 \u2014 Talked about weather."}}';
+              },
+          onClassifierPassed: () {
+            classifierPassedCalled = true;
+          },
+        );
+
+        final sarah = _connection(
+          container.read(appControllerProvider),
+          'sarah',
+        );
+        final memory = await container.read(memoryProvider('sarah').future);
+
+        final result = await adapter.run(
+          contact: sarah,
+          userInput: 'good input',
+          currentMemory: memory,
+          attachments: const [],
+        );
+
+        expect(result.summary, contains('AI updated context'));
+        expect(classifierPassedCalled, isTrue);
+        expect(callCount, 2);
+      },
+    );
+
+    test(
+      'relevance classifier fail path throws AiUpdateRejected and does not call main Gemini',
+      () async {
+        final container = _container();
+        addTearDown(container.dispose);
+
+        var classifierPassedCalled = false;
+        var callCount = 0;
+
+        final adapter = LlmAiUpdate(
+          firebaseAi: null,
+          memoryStore: container.read(memoryStoreProvider),
+          appController: container.read(appControllerProvider.notifier),
+          recentInteractionsLookup: (_) => const [],
+          geminiGenerateContent:
+              ({
+                required dynamic modelName,
+                required dynamic systemPrompt,
+                required dynamic responseSchema,
+                required dynamic contents,
+                required dynamic timeout,
+              }) async {
+                callCount++;
+                if (callCount == 1) {
+                  return '{"isRelevant": false, "reason": "off topic completely"}';
+                }
+                return '{}';
+              },
+          onClassifierPassed: () {
+            classifierPassedCalled = true;
+          },
+        );
+
+        final sarah = _connection(
+          container.read(appControllerProvider),
+          'sarah',
+        );
+        final memory = await container.read(memoryProvider('sarah').future);
+
+        await expectLater(
+          () => adapter.run(
+            contact: sarah,
+            userInput: 'spam or off-topic input',
+            currentMemory: memory,
+            attachments: const [],
+          ),
+          throwsA(
+            isA<AiUpdateRejected>().having(
+              (e) => e.reason,
+              'reason',
+              'off topic completely',
+            ),
+          ),
+        );
+
+        expect(classifierPassedCalled, isFalse);
+        expect(callCount, 1);
+      },
+    );
+
+    test(
+      'relevance classifier timeout (5s) fails open, calling main Gemini',
+      () async {
+        final container = _container();
+        addTearDown(container.dispose);
+
+        var classifierPassedCalled = false;
+        var callCount = 0;
+
+        final adapter = LlmAiUpdate(
+          firebaseAi: null,
+          memoryStore: container.read(memoryStoreProvider),
+          appController: container.read(appControllerProvider.notifier),
+          recentInteractionsLookup: (_) => const [],
+          geminiGenerateContent:
+              ({
+                required dynamic modelName,
+                required dynamic systemPrompt,
+                required dynamic responseSchema,
+                required dynamic contents,
+                required dynamic timeout,
+              }) async {
+                callCount++;
+                if (callCount == 1) {
+                  // Delay 6s — longer than the 5s classifier timeout enforced
+                  // by .timeout() at the call site — so the timeout fires.
+                  await Future<void>.delayed(const Duration(seconds: 6));
+                  return '{"isRelevant": false, "reason": "not relevant but timed out"}';
+                }
+                return '{"interactionType": "interaction", "interactionTitle": "Proceeded after timeout", "interactionNote": "Proceeded", "interactionDepth": 25, "memoryUpdate": {"newHistoryBullet": "- 2026-06-14 \u2014 Proceeded after timeout."}}';
+              },
+          onClassifierPassed: () {
+            classifierPassedCalled = true;
+          },
+        );
+
+        final sarah = _connection(
+          container.read(appControllerProvider),
+          'sarah',
+        );
+        final memory = await container.read(memoryProvider('sarah').future);
+
+        final result = await adapter.run(
+          contact: sarah,
+          userInput: 'timed out input',
+          currentMemory: memory,
+          attachments: const [],
+        );
+
+        expect(result.summary, contains('AI updated context'));
+        expect(classifierPassedCalled, isFalse);
+        expect(callCount, 2);
+      },
+      timeout: const Timeout(Duration(seconds: 20)),
+    );
+
+    test(
+      'relevance classifier exception fails open, calling main Gemini',
+      () async {
+        final container = _container();
+        addTearDown(container.dispose);
+
+        var classifierPassedCalled = false;
+        var callCount = 0;
+
+        final adapter = LlmAiUpdate(
+          firebaseAi: null,
+          memoryStore: container.read(memoryStoreProvider),
+          appController: container.read(appControllerProvider.notifier),
+          recentInteractionsLookup: (_) => const [],
+          geminiGenerateContent:
+              ({
+                required dynamic modelName,
+                required dynamic systemPrompt,
+                required dynamic responseSchema,
+                required dynamic contents,
+                required dynamic timeout,
+              }) async {
+                callCount++;
+                if (callCount == 1) {
+                  throw StateError('Classifier crashed');
+                }
+                return '{"interactionType": "interaction", "interactionTitle": "Proceeded after exception", "interactionNote": "Proceeded", "interactionDepth": 25, "memoryUpdate": {"newHistoryBullet": "- 2026-06-14 \u2014 Proceeded after exception."}}';
+              },
+          onClassifierPassed: () {
+            classifierPassedCalled = true;
+          },
+        );
+
+        final sarah = _connection(
+          container.read(appControllerProvider),
+          'sarah',
+        );
+        final memory = await container.read(memoryProvider('sarah').future);
+
+        final result = await adapter.run(
+          contact: sarah,
+          userInput: 'exception input',
+          currentMemory: memory,
+          attachments: const [],
+        );
+
+        expect(result.summary, contains('AI updated context'));
+        expect(classifierPassedCalled, isFalse);
+        expect(callCount, 2);
+      },
+    );
+
+    test(
+      'relevance classifier cancellation throws AiUpdateCancelled',
+      () async {
+        final container = _container();
+        addTearDown(container.dispose);
+
+        final cancel = Completer<void>();
+
+        final adapter = LlmAiUpdate(
+          firebaseAi: null,
+          memoryStore: container.read(memoryStoreProvider),
+          appController: container.read(appControllerProvider.notifier),
+          recentInteractionsLookup: (_) => const [],
+          geminiGenerateContent:
+              ({
+                required dynamic modelName,
+                required dynamic systemPrompt,
+                required dynamic responseSchema,
+                required dynamic contents,
+                required dynamic timeout,
+              }) async {
+                // Never-completing — so the cancel token wins the race.
+                await Completer<void>().future;
+                return '{"isRelevant": true}';
+              },
+        );
+
+        final sarah = _connection(
+          container.read(appControllerProvider),
+          'sarah',
+        );
+        final memory = await container.read(memoryProvider('sarah').future);
+
+        final runFuture = adapter.run(
           contact: sarah,
           userInput: 'anything',
           currentMemory: memory,
           attachments: const [],
-        ),
-        throwsA(
-          isA<AiUpdateRejected>().having(
-            (e) => e.reason,
-            'reason',
-            contains('relevance rejection'),
-          ),
-        ),
-      );
-    });
+          cancelToken: cancel.future,
+        );
 
-    test('relevance classifier pass path proceeds to main Gemini call and triggers onClassifierPassed', () async {
-      final container = _container();
-      addTearDown(container.dispose);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        cancel.complete();
 
-      var classifierPassedCalled = false;
-      var callCount = 0;
-
-      final adapter = LlmAiUpdate(
-        firebaseAi: null,
-        memoryStore: container.read(memoryStoreProvider),
-        appController: container.read(appControllerProvider.notifier),
-        recentInteractionsLookup: (_) => const [],
-        geminiGenerateContent: ({required dynamic modelName, required dynamic systemPrompt, required dynamic responseSchema, required dynamic contents, required dynamic timeout}) async {
-          callCount++;
-          if (callCount == 1) {
-            return '{"isRelevant": true, "reason": "ok"}';
-          }
-          return '{"interactionType": "interaction", "interactionTitle": "Routine conversation", "interactionNote": "Talked about weather", "interactionDepth": 25, "memoryUpdate": {"newHistoryBullet": "- 2026-06-14 \u2014 Talked about weather."}}';
-        },
-        onClassifierPassed: () {
-          classifierPassedCalled = true;
-        },
-      );
-
-      final sarah = _connection(container.read(appControllerProvider), 'sarah');
-      final memory = await container.read(memoryProvider('sarah').future);
-
-      final result = await adapter.run(
-        contact: sarah,
-        userInput: 'good input',
-        currentMemory: memory,
-        attachments: const [],
-      );
-
-      expect(result.summary, contains('AI updated context'));
-      expect(classifierPassedCalled, isTrue);
-      expect(callCount, 2);
-    });
-
-    test('relevance classifier fail path throws AiUpdateRejected and does not call main Gemini', () async {
-      final container = _container();
-      addTearDown(container.dispose);
-
-      var classifierPassedCalled = false;
-      var callCount = 0;
-
-      final adapter = LlmAiUpdate(
-        firebaseAi: null,
-        memoryStore: container.read(memoryStoreProvider),
-        appController: container.read(appControllerProvider.notifier),
-        recentInteractionsLookup: (_) => const [],
-        geminiGenerateContent: ({required dynamic modelName, required dynamic systemPrompt, required dynamic responseSchema, required dynamic contents, required dynamic timeout}) async {
-          callCount++;
-          if (callCount == 1) {
-            return '{"isRelevant": false, "reason": "off topic completely"}';
-          }
-          return '{}';
-        },
-        onClassifierPassed: () {
-          classifierPassedCalled = true;
-        },
-      );
-
-      final sarah = _connection(container.read(appControllerProvider), 'sarah');
-      final memory = await container.read(memoryProvider('sarah').future);
-
-      await expectLater(
-        () => adapter.run(
-          contact: sarah,
-          userInput: 'spam or off-topic input',
-          currentMemory: memory,
-          attachments: const [],
-        ),
-        throwsA(
-          isA<AiUpdateRejected>().having(
-            (e) => e.reason,
-            'reason',
-            'off topic completely',
-          ),
-        ),
-      );
-
-      expect(classifierPassedCalled, isFalse);
-      expect(callCount, 1);
-    });
-
-    test('relevance classifier timeout (5s) fails open, calling main Gemini', () async {
-      final container = _container();
-      addTearDown(container.dispose);
-
-      var classifierPassedCalled = false;
-      var callCount = 0;
-
-      final adapter = LlmAiUpdate(
-        firebaseAi: null,
-        memoryStore: container.read(memoryStoreProvider),
-        appController: container.read(appControllerProvider.notifier),
-        recentInteractionsLookup: (_) => const [],
-        geminiGenerateContent: ({required dynamic modelName, required dynamic systemPrompt, required dynamic responseSchema, required dynamic contents, required dynamic timeout}) async {
-          callCount++;
-          if (callCount == 1) {
-            // Delay 6s — longer than the 5s classifier timeout enforced
-            // by .timeout() at the call site — so the timeout fires.
-            await Future<void>.delayed(const Duration(seconds: 6));
-            return '{"isRelevant": false, "reason": "not relevant but timed out"}';
-          }
-          return '{"interactionType": "interaction", "interactionTitle": "Proceeded after timeout", "interactionNote": "Proceeded", "interactionDepth": 25, "memoryUpdate": {"newHistoryBullet": "- 2026-06-14 \u2014 Proceeded after timeout."}}';
-        },
-        onClassifierPassed: () {
-          classifierPassedCalled = true;
-        },
-      );
-
-      final sarah = _connection(container.read(appControllerProvider), 'sarah');
-      final memory = await container.read(memoryProvider('sarah').future);
-
-      final result = await adapter.run(
-        contact: sarah,
-        userInput: 'timed out input',
-        currentMemory: memory,
-        attachments: const [],
-      );
-
-      expect(result.summary, contains('AI updated context'));
-      expect(classifierPassedCalled, isFalse);
-      expect(callCount, 2);
-    }, timeout: const Timeout(Duration(seconds: 20)));
-
-    test('relevance classifier exception fails open, calling main Gemini', () async {
-      final container = _container();
-      addTearDown(container.dispose);
-
-      var classifierPassedCalled = false;
-      var callCount = 0;
-
-      final adapter = LlmAiUpdate(
-        firebaseAi: null,
-        memoryStore: container.read(memoryStoreProvider),
-        appController: container.read(appControllerProvider.notifier),
-        recentInteractionsLookup: (_) => const [],
-        geminiGenerateContent: ({required dynamic modelName, required dynamic systemPrompt, required dynamic responseSchema, required dynamic contents, required dynamic timeout}) async {
-          callCount++;
-          if (callCount == 1) {
-            throw StateError('Classifier crashed');
-          }
-          return '{"interactionType": "interaction", "interactionTitle": "Proceeded after exception", "interactionNote": "Proceeded", "interactionDepth": 25, "memoryUpdate": {"newHistoryBullet": "- 2026-06-14 \u2014 Proceeded after exception."}}';
-        },
-        onClassifierPassed: () {
-          classifierPassedCalled = true;
-        },
-      );
-
-      final sarah = _connection(container.read(appControllerProvider), 'sarah');
-      final memory = await container.read(memoryProvider('sarah').future);
-
-      final result = await adapter.run(
-        contact: sarah,
-        userInput: 'exception input',
-        currentMemory: memory,
-        attachments: const [],
-      );
-
-      expect(result.summary, contains('AI updated context'));
-      expect(classifierPassedCalled, isFalse);
-      expect(callCount, 2);
-    });
-
-    test('relevance classifier cancellation throws AiUpdateCancelled', () async {
-      final container = _container();
-      addTearDown(container.dispose);
-
-      final cancel = Completer<void>();
-
-      final adapter = LlmAiUpdate(
-        firebaseAi: null,
-        memoryStore: container.read(memoryStoreProvider),
-        appController: container.read(appControllerProvider.notifier),
-        recentInteractionsLookup: (_) => const [],
-        geminiGenerateContent: ({required dynamic modelName, required dynamic systemPrompt, required dynamic responseSchema, required dynamic contents, required dynamic timeout}) async {
-          // Never-completing — so the cancel token wins the race.
-          await Completer<void>().future;
-          return '{"isRelevant": true}';
-        },
-      );
-
-      final sarah = _connection(container.read(appControllerProvider), 'sarah');
-      final memory = await container.read(memoryProvider('sarah').future);
-
-      final runFuture = adapter.run(
-        contact: sarah,
-        userInput: 'anything',
-        currentMemory: memory,
-        attachments: const [],
-        cancelToken: cancel.future,
-      );
-
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      cancel.complete();
-
-      await expectLater(runFuture, throwsA(isA<AiUpdateCancelled>()));
-    });
+        await expectLater(runFuture, throwsA(isA<AiUpdateCancelled>()));
+      },
+    );
   });
 }

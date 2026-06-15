@@ -283,23 +283,22 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       });
                     },
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: tokens.danger,
-                      side: BorderSide(
-                        color: tokens.danger.withValues(alpha: 0.25),
-                      ),
+                      backgroundColor: tokens.primary,
+                      foregroundColor: tokens.primaryOn,
+                      side: BorderSide.none,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
                         vertical: 10,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
                       ),
                     ),
                     child: Text(
                       'Remove Photo',
                       style: AppTypography.body(
-                        color: tokens.danger,
-                      ).copyWith(fontSize: 13, fontWeight: FontWeight.w600),
+                        color: tokens.primaryOn,
+                      ).copyWith(fontSize: 13, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -385,10 +384,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    foregroundColor: tokens.inkSubtle,
-                    side: BorderSide(color: tokens.border),
+                    backgroundColor: tokens.primary,
+                    foregroundColor: tokens.primaryOn,
+                    side: BorderSide.none,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
                     ),
                   ),
                   onPressed: () => Navigator.of(context).pop(),
@@ -404,7 +404,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
                     boxShadow: [
                       BoxShadow(
                         color: tokens.primary.withValues(alpha: 0.3),
@@ -418,7 +418,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       backgroundColor: tokens.primary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
                       ),
                     ),
                     key: const Key('profile-save-button'),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_tokens.dart';
+import 'app_typography.dart';
 
 class AppTheme {
   static ThemeData data(bool dark) {
@@ -17,6 +18,16 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: scheme,
       brightness: scheme.brightness,
+    );
+    final primaryButtonText = AppTypography.body(
+      color: tokens.primaryOn,
+    ).copyWith(fontWeight: FontWeight.w700);
+    final primaryButtonShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+    );
+    final primaryButtonPadding = const EdgeInsets.symmetric(
+      horizontal: 20,
+      vertical: 11,
     );
     return base.copyWith(
       scaffoldBackgroundColor: tokens.surface,
@@ -86,10 +97,11 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: tokens.primary,
           foregroundColor: tokens.primaryOn,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          disabledBackgroundColor: tokens.primary.withValues(alpha: 0.42),
+          disabledForegroundColor: tokens.primaryOn.withValues(alpha: 0.72),
+          shape: primaryButtonShape,
+          padding: primaryButtonPadding,
+          textStyle: primaryButtonText,
           elevation: 0,
         ),
       ),
@@ -97,27 +109,34 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: tokens.primary,
           foregroundColor: tokens.primaryOn,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          disabledBackgroundColor: tokens.primary.withValues(alpha: 0.42),
+          disabledForegroundColor: tokens.primaryOn.withValues(alpha: 0.72),
+          shape: primaryButtonShape,
+          padding: primaryButtonPadding,
+          textStyle: primaryButtonText,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: tokens.primary,
-          side: BorderSide(color: tokens.border),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
+          backgroundColor: tokens.primary,
+          foregroundColor: tokens.primaryOn,
+          disabledBackgroundColor: tokens.primary.withValues(alpha: 0.42),
+          disabledForegroundColor: tokens.primaryOn.withValues(alpha: 0.72),
+          side: BorderSide.none,
+          shape: primaryButtonShape,
+          padding: primaryButtonPadding,
+          textStyle: primaryButtonText,
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: tokens.primary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
+          backgroundColor: tokens.primary,
+          foregroundColor: tokens.primaryOn,
+          disabledBackgroundColor: tokens.primary.withValues(alpha: 0.42),
+          disabledForegroundColor: tokens.primaryOn.withValues(alpha: 0.72),
+          shape: primaryButtonShape,
+          padding: primaryButtonPadding,
+          textStyle: primaryButtonText,
         ),
       ),
       chipTheme: base.chipTheme.copyWith(

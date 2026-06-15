@@ -477,49 +477,52 @@ class RecommendationCard extends StatelessWidget {
         children: [
           // Top row: avatar + name + bond ring
           Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: isCompleted
-                            ? tokens.success.withValues(alpha: .12)
-                            : tokens.primaryTint,
-                        backgroundImage: connectionAvatarImage(connection.avatar),
-                        child: connectionAvatarImage(connection.avatar) == null
-                            ? Text(
-                                isCompleted ? '✓' : connection.avatar,
-                                style: AppTypography.glyph(22,
-                                    color: isCompleted ? tokens.success : tokens.primary),
-                              )
-                            : null,
-                      ),
-                      SizedBox(width: AppSpacing.space3),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              connection.name,
-                              style: AppTypography.h2(color: tokens.ink),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              connection.category,
-                              style: AppTypography.caption(color: tokens.inkMuted),
-                            ),
-                          ],
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: isCompleted
+                    ? tokens.success.withValues(alpha: .12)
+                    : tokens.primaryTint,
+                backgroundImage: connectionAvatarImage(connection.avatar),
+                child: connectionAvatarImage(connection.avatar) == null
+                    ? Text(
+                        isCompleted ? '✓' : connection.avatar,
+                        style: AppTypography.glyph(
+                          22,
+                          color: isCompleted ? tokens.success : tokens.primary,
                         ),
-                      ),
-                      SizedBox(width: AppSpacing.space3),
-                      BondRing(
-                          connection: connection,
-                          size: 52,
-                          showAvatar: false,
-                          showTrend: false),
-                    ],
-                  ),
-                  SizedBox(height: AppSpacing.space3),
+                      )
+                    : null,
+              ),
+              SizedBox(width: AppSpacing.space3),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      connection.name,
+                      style: AppTypography.h2(color: tokens.ink),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      connection.category,
+                      style: AppTypography.caption(color: tokens.inkMuted),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: AppSpacing.space3),
+              BondRing(
+                connection: connection,
+                size: 52,
+                showAvatar: false,
+                showTrend: false,
+              ),
+            ],
+          ),
+          SizedBox(height: AppSpacing.space3),
           // Reason
           Text(
             recommendation.reason,
@@ -534,37 +537,37 @@ class RecommendationCard extends StatelessWidget {
           // Optional action suggestion
           if (!isCompleted)
             if (recommendation.action case final action?) ...[
-            SizedBox(height: AppSpacing.space3),
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.space3,
-                vertical: AppSpacing.space3,
-              ),
-              decoration: BoxDecoration(
-                color: tokens.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.chat_bubble_outline,
-                    size: 16,
-                    color: tokens.primary,
-                  ),
-                  SizedBox(width: AppSpacing.space2),
-                  Expanded(
-                    child: Text(
-                      action,
-                      style: AppTypography.caption(
-                        color: tokens.ink,
-                      ).copyWith(height: 1.3),
+              SizedBox(height: AppSpacing.space3),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.space3,
+                  vertical: AppSpacing.space3,
+                ),
+                decoration: BoxDecoration(
+                  color: tokens.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 16,
+                      color: tokens.primary,
                     ),
-                  ),
-                ],
+                    SizedBox(width: AppSpacing.space2),
+                    Expanded(
+                      child: Text(
+                        action,
+                        style: AppTypography.caption(
+                          color: tokens.ink,
+                        ).copyWith(height: 1.3),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
         ],
       ),
     );
@@ -1395,7 +1398,7 @@ class DailyNudgeCard extends StatelessWidget {
                       foregroundColor: tokens.primaryOn,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -2761,10 +2764,8 @@ class _TopicPill extends StatelessWidget {
   }
 }
 
-/// Pill-shaped, gradient floating action button used for "Update with AI"
-/// on the contact profile screen (Pass 2 #035). Uses `tokens.aiGradient`
-/// from #033, with an InkWell + Container shape so the gradient renders
-/// (Flutter's FloatingActionButton.extended only accepts a single Color).
+/// Pill-shaped floating action button used for "Update with AI"
+/// on the contact profile screen.
 class AiActionFab extends StatelessWidget {
   const AiActionFab({
     super.key,
@@ -2778,14 +2779,11 @@ class AiActionFab extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    // Material > Ink (gradient surface) > InkWell (above the gradient,
-    // so the tap splash renders on top of the gradient instead of
-    // being hidden by an opaque Container above it).
     return Material(
       color: Colors.transparent,
       child: Ink(
         decoration: BoxDecoration(
-          gradient: tokens.aiGradient,
+          color: tokens.primary,
           borderRadius: BorderRadius.circular(AppRadius.pill),
           boxShadow: AppTokens.elevation2(dark),
         ),

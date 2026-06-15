@@ -116,8 +116,10 @@ class _ManageCategoriesModalState extends ConsumerState<ManageCategoriesModal> {
                     children: categories.map((item) {
                       return LayoutBuilder(
                         builder: (context, constraints) {
-                          final maxChipWidth = MediaQuery.sizeOf(context).width - 
-                              (AppSpacing.space6 * 2) - 50; // account for modal padding + close icon
+                          final maxChipWidth =
+                              MediaQuery.sizeOf(context).width -
+                              (AppSpacing.space6 * 2) -
+                              50; // account for modal padding + close icon
 
                           return Container(
                             padding: const EdgeInsets.symmetric(
@@ -135,7 +137,9 @@ class _ManageCategoriesModalState extends ConsumerState<ManageCategoriesModal> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 ConstrainedBox(
-                                  constraints: BoxConstraints(maxWidth: maxChipWidth),
+                                  constraints: BoxConstraints(
+                                    maxWidth: maxChipWidth,
+                                  ),
                                   child: FadeOverflowText(
                                     text: item,
                                     style: AppTypography.body().copyWith(
@@ -155,7 +159,9 @@ class _ManageCategoriesModalState extends ConsumerState<ManageCategoriesModal> {
                                           .deleteCategory(item);
                                     } catch (_) {
                                       if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           const SnackBar(
                                             content: Text(
                                               'Could not delete category.',
@@ -228,7 +234,7 @@ class _ManageCategoriesModalState extends ConsumerState<ManageCategoriesModal> {
                   // Add Category pilled action button with Shadow (taller height)
                   Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
                       boxShadow: [
                         BoxShadow(
                           color: tokens.primary.withValues(alpha: .3),
@@ -242,7 +248,7 @@ class _ManageCategoriesModalState extends ConsumerState<ManageCategoriesModal> {
                         backgroundColor: tokens.primary,
                         padding: const EdgeInsets.symmetric(vertical: 18),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
                         ),
                       ),
                       onPressed: () async {

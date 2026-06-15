@@ -34,6 +34,17 @@ ProviderContainer _container({InMemoryMemoryStore? store}) {
   );
 }
 
+Future<void> _tapRunAiButton(WidgetTester tester) async {
+  final button = find.byKey(const Key('run-ai-button'));
+  await tester.scrollUntilVisible(
+    button,
+    120,
+    scrollable: find.byType(Scrollable).last,
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(button);
+}
+
 void main() {
   group('AI Update Preview-and-Confirm Flow', () {
     test(
@@ -89,6 +100,7 @@ void main() {
           .read(appControllerProvider)
           .interactions
           .length;
+      final beforeEvents = container.read(appControllerProvider).events.length;
 
       final result = AiUpdateResult(
         summary: 'Test summary',
@@ -105,6 +117,17 @@ void main() {
           ),
         ],
         nextStep: 'Follow up next week',
+        plannedEvents: [
+          PlannerEvent(
+            id: 'planned-event-1',
+            title: 'Bali Trip',
+            contactId: 'mike',
+            category: 'High School',
+            date: DateTime(2026, 6, 20),
+            note: 'Created from AI Update',
+            eventType: 'Plan',
+          ),
+        ],
       );
 
       await container.read(aiUpdateProvider).commit(result);
@@ -125,6 +148,14 @@ void main() {
       final mike = afterState.connections.firstWhere((c) => c.id == 'mike');
       expect(mike.nextStep, 'Follow up next week');
       expect(mike.bondScore, 68); // No explicit bondScoreDelta supplied.
+
+      expect(afterState.events.length, beforeEvents + 1);
+      final event = afterState.events.firstWhere(
+        (e) => e.id == 'planned-event-1',
+      );
+      expect(event.title, 'Bali Trip');
+      expect(event.contactId, 'mike');
+      expect(event.date, DateTime(2026, 6, 20));
     });
 
     test(
@@ -185,6 +216,35 @@ void main() {
         expect(result.interactions.first.source, InteractionSource.aiSuggested);
       },
     );
+
+    test('run extracts exact dated trip into plannedEvents preview', () async {
+      final container = _container();
+      addTearDown(container.dispose);
+
+      final mike = container
+          .read(appControllerProvider)
+          .connections
+          .firstWhere((c) => c.id == 'mike');
+      final memory = await container.read(memoryProvider('mike').future);
+
+      final result = await container
+          .read(aiUpdateProvider)
+          .run(
+            contact: mike,
+            userInput:
+                'Had a great conversation with Mike and planning a Bali trip on 20th June.',
+            currentMemory: memory,
+            attachments: const [],
+          );
+
+      expect(result.plannedEvents, hasLength(1));
+      final event = result.plannedEvents.single;
+      expect(event.title, 'Bali Trip');
+      expect(event.contactId, 'mike');
+      expect(event.category, 'High School');
+      expect(event.eventType, 'Plan');
+      expect(event.date, DateTime(DateTime.now().year, 6, 20));
+    });
 
     test('manual interactions retain manual source', () {
       final container = _container();
@@ -311,7 +371,7 @@ void main() {
         find.byKey(const Key('ai-input-field')),
         'Caught up over coffee, talked about the new job.',
       );
-      await tester.tap(find.byKey(const Key('run-ai-button')));
+      await _tapRunAiButton(tester);
       await tester.pumpAndSettle();
 
       // Save through the preview path — this is the surface that
@@ -333,6 +393,66 @@ void main() {
             'must reflect it.',
       );
     });
+
+    testWidgets(
+      'preview shows planned event and delete excludes it from save',
+      (tester) async {
+        final store = InMemoryMemoryStore();
+        late ProviderContainer container;
+        container = ProviderContainer(
+          overrides: [
+            ...signedInDemoOverrides(),
+            memoryStoreProvider.overrideWithValue(store),
+            aiUpdateProvider.overrideWith(
+              (ref) => _PlannedEventAiUpdate(
+                appController: ref.read(appControllerProvider.notifier),
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              theme: AppTheme.data(false),
+              home: const AiUpdateScreen(
+                contactId: 'mike',
+                initialAttachments: [],
+              ),
+            ),
+          ),
+        );
+
+        await tester.enterText(
+          find.byKey(const Key('ai-input-field')),
+          'Planning Bali on 20th June.',
+        );
+        await _tapRunAiButton(tester);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Planned Event'), findsOneWidget);
+        expect(find.textContaining('Bali Trip'), findsOneWidget);
+        expect(find.byKey(const Key('planned-event-card-0')), findsOneWidget);
+
+        await tester.scrollUntilVisible(
+          find.byKey(const Key('planned-event-delete-0')),
+          120,
+          scrollable: find.byType(Scrollable).last,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('planned-event-delete-0')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('planned-event-card-0')), findsNothing);
+
+        await tester.tap(find.byKey(const Key('save-button')));
+        await tester.pumpAndSettle();
+
+        final events = container.read(appControllerProvider).events;
+        expect(events.where((event) => event.id == 'planned-event-1'), isEmpty);
+      },
+    );
   });
 
   group('AI Update Preview "About <Name>" memory delta section', () {
@@ -361,7 +481,7 @@ void main() {
       }
       await tester.pumpWidget(app);
       await tester.enterText(find.byKey(const Key('ai-input-field')), input);
-      await tester.tap(find.byKey(const Key('run-ai-button')));
+      await _tapRunAiButton(tester);
       await tester.pump(); // Start generating
       await tester.pump(const Duration(milliseconds: 100)); // AI completes
       await tester.pump(); // Render preview at t=0
@@ -533,7 +653,7 @@ void main() {
           find.byKey(const Key('ai-input-field')),
           'Anything',
         );
-        await tester.tap(find.byKey(const Key('run-ai-button')));
+        await _tapRunAiButton(tester);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pumpAndSettle();
@@ -594,7 +714,7 @@ void main() {
           find.byKey(const Key('ai-input-field')),
           'Mike got a promotion',
         );
-        await tester.tap(find.byKey(const Key('run-ai-button')));
+        await _tapRunAiButton(tester);
         await tester.pumpAndSettle();
 
         // Hit Save — commit() throws on the save step.
@@ -653,4 +773,53 @@ class _NoDeltaAiUpdate implements AiUpdate {
 
   @override
   Future<void> commit(AiUpdateResult result) async {}
+}
+
+class _PlannedEventAiUpdate implements AiUpdate {
+  _PlannedEventAiUpdate({required this.appController});
+
+  final AppController appController;
+
+  @override
+  Future<AiUpdateResult> run({
+    required Connection contact,
+    required String userInput,
+    required MemoryDocument currentMemory,
+    required List<AttachmentRef> attachments,
+    Future<void>? cancelToken,
+    Future<void> Function()? onClassifierPassed,
+  }) async {
+    return AiUpdateResult(
+      summary: 'Planned event found',
+      contactId: contact.id,
+      interactions: [
+        CrmInteraction(
+          id: 'planned-interaction-1',
+          contactId: contact.id,
+          type: InteractionType.sharedActivity,
+          title: 'Trip planning',
+          note: userInput,
+          date: DateTime(2026, 6, 16),
+          source: InteractionSource.aiSuggested,
+        ),
+      ],
+      memoryDocument: currentMemory,
+      plannedEvents: [
+        PlannerEvent(
+          id: 'planned-event-1',
+          title: 'Bali Trip',
+          contactId: contact.id,
+          category: contact.category,
+          date: DateTime(2026, 6, 20),
+          note: 'Created from AI Update',
+          eventType: 'Plan',
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<void> commit(AiUpdateResult result) async {
+    await appController.applyAiUpdateResult(result);
+  }
 }
