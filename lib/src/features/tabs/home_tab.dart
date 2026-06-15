@@ -40,7 +40,6 @@ class _HomeTabState extends ConsumerState<HomeTab> {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
     final state = ref.watch(appControllerProvider);
     final recommendations = ref.watch(recommendationsProvider);
     return ListView(
@@ -108,11 +107,11 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                   key: Key('home-recommendations-loading'),
                   count: 2,
                 ),
-                error: (_, _) => _EmptyRecommendations(tokens: tokens),
+                error: (_, _) => _SampleRecommendations(),
                 data: (allRecs) {
                   final recs = showAll ? allRecs : allRecs.take(2).toList();
                   if (recs.isEmpty) {
-                    return _EmptyRecommendations(tokens: tokens);
+                    return _SampleRecommendations();
                   }
                   return Column(
                     children: [
@@ -159,23 +158,56 @@ class _HomeTabState extends ConsumerState<HomeTab> {
   }
 }
 
-class _EmptyRecommendations extends StatelessWidget {
-  const _EmptyRecommendations({required this.tokens});
-
-  final AppTokens tokens;
+class _SampleRecommendations extends ConsumerWidget {
+  const _SampleRecommendations();
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(AppSpacing.space8),
-        child: Text(
-          'You\'re in touch with everyone right now.',
-          style: AppTypography.bodyLg(color: tokens.inkMuted),
-          textAlign: TextAlign.center,
-        ),
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tokens = context.tokens;
+    final connections = ref.watch(
+      appControllerProvider.select((state) => state.connections),
     );
+
+    // Build sample recommendations from seed contacts
+    final samples = <Widget>[];
+    for (var i = 0; i < connections.length && samples.length < 2; i++) {
+      final c = connections[i];
+      if (!c.isSample) continue;
+      final contact = ref.watch(contactByIdProvider(c.id));
+      if (contact == null) continue;
+      samples.add(
+        Padding(
+          padding: EdgeInsets.only(bottom: i < 1 ? AppSpacing.space3 : 0),
+          child: RecommendationCard(
+            connection: contact,
+            recommendation: Recommendation(
+              contactId: c.id,
+              reason: 'Curious how ${c.name} is doing?',
+              insight: 'Last chat was a few weeks ago.',
+              priority: 'medium priority',
+            ),
+            onTap: () {
+              context.push('/contact/${c.id}');
+            },
+          ),
+        ),
+      );
+    }
+
+    if (samples.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.space8),
+          child: Text(
+            "You're in touch with everyone right now.",
+            style: AppTypography.bodyLg(color: tokens.inkMuted),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return Column(children: samples);
   }
 }
 
