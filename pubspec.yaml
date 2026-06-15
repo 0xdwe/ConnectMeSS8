@@ -73,6 +73,7 @@ dependencies:
   crypto: ^3.0.7
   app_settings: ^7.0.0
   shared_preferences: ^2.5.0
+  video_player: ^2.11.1
 
 dev_dependencies:
   flutter_test:
@@ -139,6 +140,7 @@ flutter:
     - assets/images/update_budi_mascot.png
     - assets/images/welcome_back.jpg
     - assets/images/login_page.jpg
+    - assets/videos/mascot_intro.mp4
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

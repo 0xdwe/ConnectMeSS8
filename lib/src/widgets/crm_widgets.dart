@@ -1676,11 +1676,8 @@ class AiInsightsCard extends ConsumerStatefulWidget {
 class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
   bool expanded = true;
   bool _isRefreshing = false;
-<<<<<<< HEAD
   bool _autoRefreshed = false;
 
-=======
->>>>>>> 2c97a195b3f7835adf0cf741680a92d7511187d8
   /// Tracks whether a manual refresh is in progress so the rebuild
   /// provider clear does not inadvertently end the manual refresh.
   bool _manualRefreshInProgress = false;
@@ -1795,7 +1792,6 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
     final tokens = context.tokens;
     final disableAnimations = MediaQuery.of(context).disableAnimations;
 
-<<<<<<< HEAD
     // Auto-refresh after AI Update for this contact.
     final pendingRefreshId = ref.watch(pendingAiInsightsRefreshProvider);
     if (pendingRefreshId == widget.connection.id &&
@@ -1823,8 +1819,6 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
       _isRefreshing = false;
     }
 
-=======
->>>>>>> 2c97a195b3f7835adf0cf741680a92d7511187d8
     return CardBox(
       padding: EdgeInsets.zero,
       border: Border.all(color: tokens.border, width: 1),
@@ -2194,11 +2188,8 @@ Widget _buildNoRecommendationCard({
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-<<<<<<< HEAD
         Icon(Icons.favorite_outline, color: tokens.success, size: 22),
-=======
         Icon(icon, color: iconColor, size: 22),
->>>>>>> 2c97a195b3f7835adf0cf741680a92d7511187d8
         SizedBox(width: AppSpacing.space3),
         Expanded(
           child: Text(

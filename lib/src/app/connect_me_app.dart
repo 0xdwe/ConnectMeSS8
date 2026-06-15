@@ -6,6 +6,7 @@ import '../features/ai_update_screen.dart';
 import '../features/auth_screen.dart';
 import '../features/contact_profile_screen.dart';
 import '../features/edit_profile_screen.dart';
+import '../features/intro_video_screen.dart';
 import '../features/profile_screen.dart';
 import '../features/recommendations_screen.dart';
 import '../features/settings_screen.dart';
@@ -17,8 +18,12 @@ import '../theme/app_theme.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/auth',
+    initialLocation: '/intro',
     routes: [
+      GoRoute(
+        path: '/intro',
+        builder: (context, state) => const IntroVideoScreen(),
+      ),
       GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
       GoRoute(path: '/app', builder: (context, state) => const ShellScreen()),
       GoRoute(path: '/me', builder: (context, state) => const ProfileScreen()),
