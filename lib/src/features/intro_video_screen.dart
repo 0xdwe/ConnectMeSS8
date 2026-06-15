@@ -69,7 +69,7 @@ class _IntroVideoScreenState extends State<IntroVideoScreen> {
     if (_finished || !mounted) return;
     _finished = true;
     _finishTimer?.cancel();
-    context.go('/auth?mode=signup&intro=1');
+    context.go('/auth?intro=1');
   }
 
   @override
