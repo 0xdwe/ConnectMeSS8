@@ -1,5 +1,6 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
 import 'package:connect_me/src/features/contact_profile_screen.dart';
+import 'package:connect_me/src/state/app_state.dart';
 import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
@@ -222,6 +223,49 @@ void main() {
       // Update with AI button should be present
       expect(find.byKey(const Key('update-with-ai-button')), findsOneWidget);
       expect(find.text('Update with AI'), findsOneWidget);
+    });
+
+    testWidgets('profile shows newly added future plans', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...signedInDemoOverrides(),
+            memoryStoreProvider.overrideWithValue(InMemoryMemoryStore()),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.data(false),
+            home: const ContactProfileScreen(contactId: 'mike'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final contactContext = tester.element(find.byType(ContactProfileScreen));
+      final container = ProviderScope.containerOf(contactContext);
+
+      await container.read(appControllerProvider.notifier).addEvent(
+            'Weekend brunch',
+            'mike',
+            'High School',
+            DateTime.now().add(const Duration(days: 14)),
+            'Catch up over coffee',
+          );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('Upcoming Plans'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+
+      expect(find.text('Upcoming Plans'), findsOneWidget);
+      expect(find.text('Weekend brunch'), findsOneWidget);
+
+      await tester.tap(find.text('Upcoming Plans'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Weekend brunch'), findsNothing);
+      expect(find.text('Upcoming Plans'), findsOneWidget);
     });
 
     testWidgets(

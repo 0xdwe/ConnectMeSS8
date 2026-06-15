@@ -8,14 +8,53 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_topic_backfill_runner.dart';
 import 'package:connect_me/src/state/query_providers.dart';
 import 'package:connect_me/src/ai/memory_topic_enricher.dart';
+import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 
 // Builds a minimal MaterialApp wrapper with the project's theme so that
 // `context.tokens` resolves and Material-required ancestors are present.
+// Returns both the widget and the [ProviderContainer] so tests can mutate
+// providers directly.
+//
+// [contactId] is used to override [interactionsByContactProvider] for the
+// card's contact so Firebase-backed providers are not initialized.
+({Widget widget, ProviderContainer container}) _wrapWithContainer(
+  Widget child, {
+  bool disableAnimations = false,
+  String contactId = 'rebuild-spinner',
+  List<dynamic> overrides = const [],
+}) {
+  final mockAuth = MockFirebaseAuth(signedIn: false);
+  final container = ProviderContainer(
+    overrides: [
+      firebaseAuthProvider.overrideWithValue(mockAuth),
+      // _InlineTopicDetails watches this provider; give tests a default
+      // empty interaction list so they don't need Firebase AppController.
+      interactionsByContactProvider('test').overrideWithValue(const []),
+      interactionsByContactProvider(contactId).overrideWithValue(const []),
+      ...overrides,
+    ],
+  );
+  return (
+    widget: UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        theme: AppTheme.data(false),
+        home: MediaQuery(
+          data: MediaQueryData(disableAnimations: disableAnimations),
+          child: Scaffold(body: SingleChildScrollView(child: child)),
+        ),
+      ),
+    ),
+    container: container,
+  );
+}
+
 Widget _wrap(
   Widget child, {
   bool disableAnimations = false,
@@ -23,8 +62,6 @@ Widget _wrap(
 }) {
   return ProviderScope(
     overrides: [
-      // _InlineTopicDetails watches this provider; give tests a default
-      // empty interaction list so they don't need Firebase AppController.
       interactionsByContactProvider('test').overrideWithValue(const []),
       ...overrides,
     ],
@@ -1160,6 +1197,136 @@ void main() {
         expect(find.text(truncated), findsOneWidget);
       });
 
+    });
+
+    group('pendingMemoryRebuildProvider spinner', () {
+      testWidgets('shows spinner when provider matches connection id', (
+        tester,
+      ) async {
+        final wrapped = _wrapWithContainer(
+          AiInsightsCard(
+            connection: _connection(id: 'rebuild-spinner'),
+            insight: _insight(contactId: 'rebuild-spinner'),
+          ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
+        );
+        addTearDown(wrapped.container.dispose);
+        await tester.pumpWidget(wrapped.widget);
+        await tester.pump();
+
+        // Initially no spinner — refresh button is visible
+        expect(find.byIcon(Icons.refresh), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+
+        // Set the provider to trigger the spinner
+        wrapped.container
+            .read(pendingMemoryRebuildProvider.notifier)
+            .setContactId('rebuild-spinner');
+        await tester.pump();
+
+        // Spinner should be visible, refresh button gone
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.byIcon(Icons.refresh), findsNothing);
+      });
+
+      testWidgets('spinner clears when provider is set to null', (tester) async {
+        final wrapped = _wrapWithContainer(
+          AiInsightsCard(
+            connection: _connection(id: 'rebuild-spinner'),
+            insight: _insight(contactId: 'rebuild-spinner'),
+          ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
+        );
+        addTearDown(wrapped.container.dispose);
+        await tester.pumpWidget(wrapped.widget);
+        await tester.pump();
+
+        // Set provider to show spinner
+        wrapped.container
+            .read(pendingMemoryRebuildProvider.notifier)
+            .setContactId('rebuild-spinner');
+        await tester.pump();
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+        // Clear provider — spinner should disappear
+        wrapped.container
+            .read(pendingMemoryRebuildProvider.notifier)
+            .setContactId(null);
+        await tester.pump();
+
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.byIcon(Icons.refresh), findsOneWidget);
+      });
+
+      testWidgets('different contact ID does not trigger spinner', (
+        tester,
+      ) async {
+        final wrapped = _wrapWithContainer(
+          AiInsightsCard(
+            connection: _connection(id: 'rebuild-spinner'),
+            insight: _insight(contactId: 'rebuild-spinner'),
+          ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+          ],
+        );
+        addTearDown(wrapped.container.dispose);
+        await tester.pumpWidget(wrapped.widget);
+        await tester.pump();
+
+        // Set provider for a different contact
+        wrapped.container
+            .read(pendingMemoryRebuildProvider.notifier)
+            .setContactId('other-contact');
+        await tester.pump();
+
+        // Spinner should NOT appear for this card
+        expect(find.byIcon(Icons.refresh), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      });
+
+      testWidgets('manual refresh still works independently', (tester) async {
+        final mockEnricher = FakeMemoryTopicEnricher(
+          topicsToReturn: const ['pottery'],
+          suggestionsToReturn: const [],
+        );
+        final mockStore = InMemoryMemoryStore();
+
+        final wrapped = _wrapWithContainer(
+          AiInsightsCard(
+            connection: _connection(id: 'rebuild-spinner'),
+            insight: _insight(contactId: 'rebuild-spinner'),
+          ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+            memoryTopicEnricherProvider.overrideWithValue(mockEnricher),
+            memoryStoreProvider.overrideWithValue(mockStore),
+          ],
+        );
+        addTearDown(wrapped.container.dispose);
+        await tester.pumpWidget(wrapped.widget);
+        await tester.pump();
+
+        // Set provider for a different contact (should NOT affect this card)
+        wrapped.container
+            .read(pendingMemoryRebuildProvider.notifier)
+            .setContactId('other-contact');
+        await tester.pump();
+
+        // Manual refresh button should still be functional
+        expect(find.byIcon(Icons.refresh), findsOneWidget);
+
+        // Tap the refresh button
+        await tester.tap(find.byIcon(Icons.refresh));
+        await tester.pumpAndSettle();
+
+        // Manual refresh completes normally
+        expect(find.text('AI Insights refreshed.'), findsOneWidget);
+      });
     });
   });
 }

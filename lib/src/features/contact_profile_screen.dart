@@ -68,6 +68,20 @@ class ContactProfileScreen extends ConsumerWidget {
     final state = ref.watch(appControllerProvider);
     final insight = state.contactInsightFor(contactId);
     final history = ref.watch(interactionsByContactProvider(contactId));
+    final upcomingPlans = state.events
+        .where((event) {
+          if (event.contactId != person.id) return false;
+          final eventDay = DateTime(
+            event.date.year,
+            event.date.month,
+            event.date.day,
+          );
+          final today = DateTime.now();
+          final todayDay = DateTime(today.year, today.month, today.day);
+          return !eventDay.isBefore(todayDay);
+        })
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
     final lastContactLabel = _lastInteractionLabel(history);
     final memoryAsync = ref.watch(memoryProvider(contactId));
     final memory = memoryAsync.maybeWhen(
@@ -320,6 +334,9 @@ class ContactProfileScreen extends ConsumerWidget {
             initialSelectedTopic: initialSelectedTopic,
           ),
           InteractionDetailsCard(person: person, history: history),
+          SizedBox(height: AppSpacing.space4),
+          UpcomingPlansCard(person: person, plans: upcomingPlans),
+          SizedBox(height: AppSpacing.space4),
           _ActivityLogSection(
             person: person,
             history: history,
@@ -542,11 +559,24 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
 
     _deleteTimer = Timer(const Duration(seconds: 4), () async {
       if (!mounted) return;
+      // Capture ScaffoldMessenger before the await so it's available
+      // even if the widget tree rebuilds during the async chain.
+      final messenger = ScaffoldMessenger.of(context);
       try {
-        await ref
+        final rebuildSucceeded = await ref
             .read(appControllerProvider.notifier)
             .deleteInteraction(interaction.id);
+        if (!rebuildSucceeded) {
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text(
+                'AI Insights could not be refreshed. Try refreshing manually later.',
+              ),
+            ),
+          );
+        }
       } finally {
+        // ignore: use_build_context_synchronously
         if (mounted) {
           setState(() => _deletingInteractionId = null);
         }
@@ -971,6 +1001,232 @@ class _InteractionDetailsCardState extends State<InteractionDetailsCard> {
 
   String _monthKey(DateTime dt) =>
       '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
+}
+
+String _plannerEventTimeLabel(PlannerEvent event) {
+  if (event.isAllDay) return 'All day';
+
+  String formatMinutes(int minutes) {
+    final hours = minutes ~/ 60;
+    final mins = minutes % 60;
+    final period = hours >= 12 ? 'PM' : 'AM';
+    final displayHour = hours % 12 == 0 ? 12 : hours % 12;
+    final displayMinute = mins.toString().padLeft(2, '0');
+    return '$displayHour:$displayMinute $period';
+  }
+
+  final start = event.startTimeMinutes;
+  final end = event.endTimeMinutes;
+  if (start == null) return 'Scheduled';
+  if (end == null) return formatMinutes(start);
+  return '${formatMinutes(start)} - ${formatMinutes(end)}';
+}
+
+IconData _plannerEventIconForType(String eventType) {
+  final value = eventType.toLowerCase().trim();
+  if (value.contains('coffee') || value.contains('cafe')) {
+    return Icons.local_cafe_outlined;
+  }
+  if (value.contains('meeting') ||
+      value.contains('sync') ||
+      value.contains('team')) {
+    return Icons.groups_2_outlined;
+  }
+  if (value.contains('lunch') ||
+      value.contains('dinner') ||
+      value.contains('food') ||
+      value.contains('restaurant')) {
+    return Icons.restaurant_outlined;
+  }
+  if (value.contains('call') || value.contains('phone')) {
+    return Icons.call_outlined;
+  }
+  if (value.contains('party') || value.contains('celebrate')) {
+    return Icons.celebration_outlined;
+  }
+  if (value.contains('birth') || value.contains('anniversary')) {
+    return Icons.cake_outlined;
+  }
+  if (value.contains('remind') || value.contains('alert')) {
+    return Icons.notifications_none;
+  }
+  if (value.contains('workshop') ||
+      value.contains('class') ||
+      value.contains('study') ||
+      value.contains('school')) {
+    return Icons.menu_book_outlined;
+  }
+  if (value.contains('travel') ||
+      value.contains('trip') ||
+      value.contains('flight')) {
+    return Icons.flight_takeoff_outlined;
+  }
+  if (value.contains('plan') || value.contains('schedule')) {
+    return Icons.event_note_outlined;
+  }
+  if (value.contains('gift')) return Icons.card_giftcard_outlined;
+  return Icons.event_outlined;
+}
+
+class UpcomingPlansCard extends StatefulWidget {
+  const UpcomingPlansCard({
+    super.key,
+    required this.person,
+    required this.plans,
+  });
+
+  final Connection person;
+  final List<PlannerEvent> plans;
+
+  @override
+  State<UpcomingPlansCard> createState() => _UpcomingPlansCardState();
+}
+
+class _UpcomingPlansCardState extends State<UpcomingPlansCard> {
+  bool expanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    return CardBox(
+      padding: EdgeInsets.zero,
+      onTap: () => setState(() => expanded = !expanded),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.space5,
+              AppSpacing.space5,
+              AppSpacing.space5,
+              AppSpacing.space4,
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.event_available_outlined, color: tokens.primary),
+                SizedBox(width: AppSpacing.space3),
+                Expanded(
+                  child: Text('Upcoming Plans', style: AppTypography.h2()),
+                ),
+                Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: tokens.primaryTint,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  child: Text(
+                    '${widget.plans.length} plan${widget.plans.length == 1 ? '' : 's'}',
+                    style: AppTypography.caption(
+                      color: tokens.primary,
+                    ).copyWith(fontWeight: FontWeight.w700, fontSize: 11),
+                  ),
+                ),
+                Icon(
+                  expanded ? Icons.expand_less : Icons.expand_more,
+                  color: tokens.inkMuted,
+                ),
+              ],
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutQuart,
+            child: expanded
+                ? (widget.plans.isEmpty
+                      ? Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            AppSpacing.space5,
+                            0,
+                            AppSpacing.space5,
+                            AppSpacing.space5,
+                          ),
+                          child: Text(
+                            'No upcoming plans yet for ${widget.person.name.split(' ').first}.',
+                            style: AppTypography.bodyLg(color: tokens.inkMuted),
+                          ),
+                        )
+                      : Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            AppSpacing.space5,
+                            0,
+                            AppSpacing.space5,
+                            AppSpacing.space5,
+                          ),
+                          child: Column(
+                            children: [
+                              for (var index = 0; index < widget.plans.length; index++) ...[
+                                if (index > 0)
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: AppSpacing.space3,
+                                    ),
+                                    child: Divider(color: tokens.border, height: 1),
+                                  ),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 42,
+                                      height: 42,
+                                      decoration: BoxDecoration(
+                                        color: tokens.primary.withValues(alpha: 0.12),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        _plannerEventIconForType(
+                                          widget.plans[index].eventType,
+                                        ),
+                                        color: tokens.primary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    SizedBox(width: AppSpacing.space3),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            widget.plans[index].title,
+                                            style: AppTypography.bodyLg(
+                                              color: tokens.ink,
+                                            ).copyWith(fontWeight: FontWeight.w700),
+                                          ),
+                                          SizedBox(height: AppSpacing.space1),
+                                          Text(
+                                            '${DateFormat.MMMd().format(widget.plans[index].date)} • ${_plannerEventTimeLabel(widget.plans[index])}',
+                                            style: AppTypography.caption(
+                                              color: tokens.inkMuted,
+                                            ),
+                                          ),
+                                          if (widget.plans[index].note.trim().isNotEmpty) ...[
+                                            SizedBox(height: AppSpacing.space1),
+                                            Text(
+                                              widget.plans[index].note,
+                                              style: AppTypography.caption(
+                                                color: tokens.inkSubtle,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ))
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _DetailRow {

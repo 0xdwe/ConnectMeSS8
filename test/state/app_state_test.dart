@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:connect_me/src/ai/ai_update.dart';
+import 'package:connect_me/src/ai/fake_memory_rebuilder.dart';
+import 'package:connect_me/src/ai/memory_rebuilder.dart';
 import 'package:connect_me/src/models/social_models.dart';
 import 'package:connect_me/src/state/app_state.dart';
 import 'package:connect_me/src/state/connections/batched_writes.dart';
@@ -21,6 +23,7 @@ import 'package:connect_me/src/state/firebase_providers.dart';
 import 'package:connect_me/src/state/memory/in_memory_memory_store.dart';
 import 'package:connect_me/src/state/memory/memory_document.dart';
 import 'package:connect_me/src/state/memory/memory_providers.dart';
+import 'package:connect_me/src/state/memory/memory_rebuilder_providers.dart';
 import 'package:connect_me/src/state/notifications/notification_preferences.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,6 +48,10 @@ ProviderContainer _container({
   BatchedWrites? batchedWrites,
   DateTime Function()? clock,
   bool signedIn = true,
+  MemoryRebuilder? memoryRebuilder,
+  // Use dynamic because Riverpod 3's Override type is not part of the
+  // public flutter_riverpod surface.
+  List<dynamic>? overrides,
 }) {
   final memory = memoryStore ?? InMemoryMemoryStore();
   final connections = connectionStore ?? InMemoryConnectionStore();
@@ -92,6 +99,9 @@ ProviderContainer _container({
           appController: ref.read(appControllerProvider.notifier),
         ),
       ),
+      if (overrides != null) ...overrides,
+      if (memoryRebuilder != null)
+        memoryRebuilderProvider.overrideWithValue(memoryRebuilder),
     ],
   );
 }
@@ -1964,5 +1974,409 @@ void main() {
       final updated = (await connections.load('clamp-test'))!;
       expect(updated.bondScore, 0); // Clamped from 5 - 10 = -5 → 0
     });
+
+    test('after delete, memory is rebuilt via FakeMemoryRebuilder', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      await _seedConnections(connections);
+      await _seedInteractions(interactions);
+
+      // Pre-seed a memory document for sarah
+      await memory.save(MemoryDocument(
+        contactId: 'sarah',
+        displayName: 'Sarah',
+        lastUpdated: DateTime(2026, 5, 1),
+        summary: 'Original summary',
+        history: 'Original history',
+      ));
+
+      final fakeRebuilder = FakeMemoryRebuilder();
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+        overrides: [
+          memoryRebuilderProvider.overrideWithValue(fakeRebuilder),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      expect(fakeRebuilder.rebuildCallCount, 0);
+
+      await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('i1');
+      await _settle();
+
+      // FakeMemoryRebuilder should have been called once
+      expect(fakeRebuilder.rebuildCallCount, 1);
+
+      // Memory document should have been updated
+      final updatedMemory = await memory.load('sarah');
+      expect(updatedMemory, isNotNull);
+      expect(updatedMemory!.summary, contains('Sarah'));
+    });
+
+    test('after delete, nextStep is updated from rebuild result', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      await _seedConnections(connections);
+      await _seedInteractions(interactions);
+
+      await memory.save(MemoryDocument(
+        contactId: 'sarah',
+        displayName: 'Sarah',
+        lastUpdated: DateTime(2026, 5, 1),
+      ));
+
+      final fakeRebuilder = FakeMemoryRebuilder();
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+        overrides: [
+          memoryRebuilderProvider.overrideWithValue(fakeRebuilder),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('i1');
+      await _settle();
+
+      final updatedSarah = (await connections.load('sarah'))!;
+      expect(updatedSarah.nextStep, equals('Check in with Sarah Johnson'));
+    });
+
+    test('after delete, memoryEpochProvider is bumped', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      await _seedConnections(connections);
+      await _seedInteractions(interactions);
+
+      await memory.save(MemoryDocument(
+        contactId: 'sarah',
+        displayName: 'Sarah',
+        lastUpdated: DateTime(2026, 5, 1),
+      ));
+
+      final fakeRebuilder = FakeMemoryRebuilder();
+
+      final now = DateTime(2026, 6, 15);
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+        clock: () => now,
+        overrides: [
+          memoryRebuilderProvider.overrideWithValue(fakeRebuilder),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Capture epoch before delete
+      final epochBefore = container.read(memoryEpochProvider);
+
+      await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('i1');
+      await _settle();
+
+      final epochAfter = container.read(memoryEpochProvider);
+      expect(epochAfter, isNotNull);
+      expect(epochAfter, epochBefore == null ? isNotNull : greaterThan(epochBefore!));
+    });
+
+    test('after delete, recommendationsCacheProvider cache is cleared',
+        () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      await _seedConnections(connections);
+      await _seedInteractions(interactions);
+
+      await memory.save(MemoryDocument(
+        contactId: 'sarah',
+        displayName: 'Sarah',
+        lastUpdated: DateTime(2026, 5, 1),
+      ));
+
+      final fakeRebuilder = FakeMemoryRebuilder();
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+        overrides: [
+          memoryRebuilderProvider.overrideWithValue(fakeRebuilder),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Set a cache so we can verify it's cleared
+      final cacheHolder = container.read(recommendationsCacheProvider);
+      cacheHolder.cache = RecommendationsCache(
+        computedAt: DateTime(2026, 6, 1),
+        list: const [],
+        store: memory,
+        connections: container.read(appControllerProvider).connections,
+        interactions: container.read(appControllerProvider).interactions,
+      );
+      expect(cacheHolder.cache, isNotNull);
+
+      await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('i1');
+      await _settle();
+
+      expect(cacheHolder.cache, isNull);
+    });
+
+    test('if memory rebuild fails, interaction is still deleted (non-fatal)',
+        () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      await _seedConnections(connections);
+      await _seedInteractions(interactions);
+
+      // Don't pre-seed a memory document — memoryStore.load returns
+      // null, so the rebuild branch is skipped entirely. This tests
+      // the non-fatal path where memory rebuild is skipped/absent.
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Verify the interaction exists before deletion
+      final before = await interactions.load('i1');
+      expect(before, isNotNull);
+
+      final result = await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('i1');
+      await _settle();
+
+      // Returns true — rebuild was skipped (no memory doc), not failed
+      expect(result, isTrue);
+
+      // Interaction should still be deleted even without memory rebuild
+      final after = await interactions.load('i1');
+      expect(after, isNull);
+    });
+
+    test('if memory rebuild throws, interaction and connection are still updated',
+        () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      await _seedConnections(connections);
+
+      // Create an interaction with a non-zero bondScoreDelta so we can
+      // verify the connection score was recalculated even when rebuild fails.
+      await interactions.save(CrmInteraction(
+        id: 'delta-interaction',
+        contactId: 'mike',
+        type: InteractionType.interaction,
+        title: 'Big boost',
+        note: 'Huge delta',
+        date: DateTime(2026, 6, 10),
+        bondScoreDelta: 10,
+      ));
+
+      // Pre-seed a memory document so the rebuild branch is entered
+      await memory.save(MemoryDocument.empty(
+        contactId: 'mike',
+        displayName: 'Mike',
+        now: DateTime(2026),
+      ));
+
+      // Use a throwing rebuilder
+      final throwingRebuilder = _ThrowingMemoryRebuilder();
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+        memoryRebuilder: throwingRebuilder,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      final mikeBefore = (await connections.load('mike'))!;
+
+      final result = await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('delta-interaction');
+      await _settle();
+
+      // Returns false — the memory rebuild threw
+      expect(result, isFalse);
+
+      // Interaction is still deleted
+      expect(await interactions.load('delta-interaction'), isNull);
+
+      // Connection is still updated (bondScore recalculated downward)
+      final mikeAfter = (await connections.load('mike'))!;
+      expect(mikeAfter.bondScore, lessThan(mikeBefore.bondScore));
+    });
+
+    test('sets pendingMemoryRebuildProvider during rebuild and clears after',
+        () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      await _seedConnections(connections);
+      await _seedInteractions(interactions);
+
+      await memory.save(MemoryDocument(
+        contactId: 'sarah',
+        displayName: 'Sarah',
+        lastUpdated: DateTime(2026, 5, 1),
+      ));
+
+      final rebuildCompleter = Completer<MemoryRebuildResult>();
+      final delayingRebuilder = _DelayingMemoryRebuilder(rebuildCompleter.future);
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+        overrides: [
+          memoryRebuilderProvider.overrideWithValue(delayingRebuilder),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Start deleteInteraction but don't await — it will pause at the rebuild
+      final deleteFuture =
+          container.read(appControllerProvider.notifier).deleteInteraction('i1');
+
+      // Pump several times to let the method reach the rebuild step
+      for (var i = 0; i < 8; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      // The provider should be set to 'sarah' during the rebuild
+      expect(
+        container.read(pendingMemoryRebuildProvider),
+        equals('sarah'),
+      );
+
+      // Complete the rebuild
+      rebuildCompleter.complete(MemoryRebuildResult(
+        memoryDocument: MemoryDocument(
+          contactId: 'sarah',
+          displayName: 'Sarah',
+          lastUpdated: DateTime(2026, 6, 15),
+          summary: 'Rebuilt memory for Sarah',
+        ),
+        nextStep: 'Check in with Sarah',
+      ));
+
+      await deleteFuture;
+      await _settle();
+
+      // After the method completes, the provider should be cleared
+      expect(container.read(pendingMemoryRebuildProvider), isNull);
+    });
+
+    test('clears pendingMemoryRebuildProvider when rebuild fails', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      await _seedConnections(connections);
+
+      await interactions.save(CrmInteraction(
+        id: 'delta-interaction',
+        contactId: 'mike',
+        type: InteractionType.interaction,
+        title: 'Big boost',
+        note: 'Huge delta',
+        date: DateTime(2026, 6, 10),
+        bondScoreDelta: 10,
+      ));
+
+      await memory.save(MemoryDocument.empty(
+        contactId: 'mike',
+        displayName: 'Mike',
+        now: DateTime(2026),
+      ));
+
+      final throwingRebuilder = _ThrowingMemoryRebuilder();
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+        memoryRebuilder: throwingRebuilder,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      final result = await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('delta-interaction');
+      await _settle();
+
+      // Returns false — the memory rebuild threw
+      expect(result, isFalse);
+
+      // Provider should be null even though rebuild threw
+      expect(container.read(pendingMemoryRebuildProvider), isNull);
+    });
   });
+}
+
+/// A [MemoryRebuilder] that completes from a [Future], used to test
+/// intermediate state during the rebuild.
+class _DelayingMemoryRebuilder implements MemoryRebuilder {
+  _DelayingMemoryRebuilder(this.future);
+  final Future<MemoryRebuildResult> future;
+
+  @override
+  Future<MemoryRebuildResult> rebuild({
+    required Connection contact,
+    required MemoryDocument currentMemory,
+    required List<CrmInteraction> remainingInteractions,
+    required CrmInteraction deletedInteraction,
+  }) {
+    return future;
+  }
+}
+
+/// A [MemoryRebuilder] that always throws, used to test the non-fatal
+/// error path where the rebuild fails but the interaction is still deleted.
+class _ThrowingMemoryRebuilder implements MemoryRebuilder {
+  @override
+  Future<MemoryRebuildResult> rebuild({
+    required Connection contact,
+    required MemoryDocument currentMemory,
+    required List<CrmInteraction> remainingInteractions,
+    required CrmInteraction deletedInteraction,
+  }) {
+    throw Exception('Rebuild failed — simulated network error');
+  }
 }

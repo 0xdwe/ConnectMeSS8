@@ -18,6 +18,7 @@ import 'connections/connection_seeder.dart';
 import 'connections/firebase_connection_store.dart';
 import 'firebase_providers.dart';
 import 'memory/memory_providers.dart';
+import 'memory/memory_rebuilder_providers.dart';
 import 'planner_event_normalizer.dart';
 import 'relationship_maintenance_policy.dart';
 
@@ -875,7 +876,12 @@ class AppController extends Notifier<AppState> {
   ///   if no interactions remain).
   /// - [Connection.bondScore] is reduced by the deleted interaction's
   ///   [CrmInteraction.bondScoreDelta], clamped to 0..100.
-  Future<void> deleteInteraction(String interactionId) async {
+  ///
+  /// Returns `true` if the memory rebuild completed (or was skipped
+  /// because no memory document existed for the contact). Returns
+  /// `false` if the memory rebuild failed — the caller should surface
+  /// this so the user knows AI Insights may be stale.
+  Future<bool> deleteInteraction(String interactionId) async {
     // Find the interaction to delete
     final interaction = state.interactions.firstWhere(
       (i) => i.id == interactionId,
@@ -913,12 +919,68 @@ class AppController extends Notifier<AppState> {
     final newBondScore =
         (connection.bondScore - interaction.bondScoreDelta).clamp(0, 100);
 
-    // Update connection via store
+    // Update connection with recalculated fields
     final updatedConnection = connection.copyWith(
       lastContact: newLastContact ?? connection.lastContact,
       bondScore: newBondScore,
     );
-    await ref.read(connectionStoreProvider).save(updatedConnection);
+
+    // Signal AiInsightsCard to show the refresh spinner during rebuild.
+    ref
+        .read(pendingMemoryRebuildProvider.notifier)
+        .setContactId(contactId);
+
+    // Rebuild memory to remove references to the deleted interaction.
+    // If a memory document exists, rebuild it and update nextStep on
+    // the connection in a single save (avoiding a double-write that
+    // would expose an intermediate state to snapshot listeners).
+    Connection connectionToSave = updatedConnection;
+    bool memoryRebuilt = false;
+    bool rebuildSucceeded = true;
+
+    try {
+      final memoryStore = ref.read(memoryStoreProvider);
+      final currentMemory = await memoryStore.load(contactId);
+      if (currentMemory != null) {
+        final rebuildResult = await ref.read(memoryRebuilderProvider).rebuild(
+          contact: updatedConnection,
+          currentMemory: currentMemory,
+          remainingInteractions: remainingInteractions,
+          deletedInteraction: interaction,
+        );
+
+        await memoryStore.save(rebuildResult.memoryDocument);
+
+        // Merge nextStep into the connection before saving
+        connectionToSave = updatedConnection.copyWith(
+          nextStep: rebuildResult.nextStep ?? '',
+        );
+        memoryRebuilt = true;
+      }
+    } catch (_) {
+      // Memory rebuild failure is non-fatal; the interaction is already
+      // deleted and the connection fields are still updated below.
+      // Return false so the caller can inform the user about stale AI
+      // Insights.
+      rebuildSucceeded = false;
+    }
+
+    // Single connection save with all updated fields
+    await ref.read(connectionStoreProvider).save(connectionToSave);
+
+    if (memoryRebuilt) {
+      // Bump epoch and clear recommendation cache
+      final clock = ref.read(clockProvider);
+      ref.read(memoryEpochProvider.notifier).bump(clock());
+      ref.read(recommendationsCacheProvider).cache = null;
+    }
+
+    // Clear the rebuild spinner regardless of success/failure.
+    ref
+        .read(pendingMemoryRebuildProvider.notifier)
+        .setContactId(null);
+
+    return rebuildSucceeded;
   }
 
   /// Clear the synchronous AI-update completion signal after the

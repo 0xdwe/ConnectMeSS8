@@ -225,125 +225,143 @@ class _ContactListCardState extends State<ContactListCard> {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final categoryAccent = categoryColor(widget.connection.category, tokens);
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => hovering = true),
-      onExit: (_) => setState(() => hovering = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        transform: Matrix4.identity()
-          ..translateByDouble(0.0, hovering ? -3.0 : 0.0, 0.0, 1.0),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(
-                alpha: dark
-                    ? (hovering ? 0.26 : 0.16)
-                    : (hovering ? 0.10 : 0.04),
-              ),
-              blurRadius: hovering ? 18 : 10,
-              offset: Offset(0, hovering ? 8 : 4),
-            ),
-          ],
-        ),
-        child: CardBox(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.space5,
-            vertical: AppSpacing.space5,
-          ),
-          border: Border.all(
-            color: hovering
-                ? tokens.primary.withValues(alpha: 0.18)
-                : tokens.border,
-          ),
-          onTap: widget.onTap,
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: tokens.primaryTint,
-                backgroundImage: connectionAvatarImage(
-                  widget.connection.avatar,
+    return Consumer(
+      builder: (context, ref, _) {
+        // Get interactions for this connection
+        final interactions = ref.watch(interactionsByContactProvider(widget.connection.id));
+
+        // Determine the display text for last interaction
+        String lastInteractionText;
+        if (interactions.isEmpty) {
+          // No interactions - show "-"
+          lastInteractionText = '-';
+        } else {
+          // Has interactions - show the latest interaction date
+          final latestInteraction = interactions.reduce((a, b) => a.date.isAfter(b.date) ? a : b);
+          lastInteractionText = relativeLastInteraction(latestInteraction.date);
+        }
+
+        return MouseRegion(
+          onEnter: (_) => setState(() => hovering = true),
+          onExit: (_) => setState(() => hovering = false),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            transform: Matrix4.identity()
+              ..translateByDouble(0.0, hovering ? -3.0 : 0.0, 0.0, 1.0),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(
+                    alpha: dark
+                        ? (hovering ? 0.26 : 0.16)
+                        : (hovering ? 0.10 : 0.04),
+                  ),
+                  blurRadius: hovering ? 18 : 10,
+                  offset: Offset(0, hovering ? 8 : 4),
                 ),
-                child: connectionAvatarImage(widget.connection.avatar) == null
-                    ? Text(
-                        widget.connection.avatar,
-                        style: AppTypography.glyph(26),
-                      )
-                    : null,
+              ],
+            ),
+            child: CardBox(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSpacing.space5,
+                vertical: AppSpacing.space5,
               ),
-              SizedBox(width: AppSpacing.space5),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.connection.name,
-                      style: AppTypography.h2(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              border: Border.all(
+                color: hovering
+                    ? tokens.primary.withValues(alpha: 0.18)
+                    : tokens.border,
+              ),
+              onTap: widget.onTap,
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: tokens.primaryTint,
+                    backgroundImage: connectionAvatarImage(
+                      widget.connection.avatar,
                     ),
-                    Text(
-                      widget.connection.email,
-                      style: AppTypography.caption(color: tokens.inkMuted),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Container(
-                      margin: const EdgeInsets.only(top: 3),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: categoryAccent.withValues(alpha: .14),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircleAvatar(
-                            radius: 4,
-                            backgroundColor: categoryAccent,
-                          ),
-                          const SizedBox(width: 5),
-                         ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 120),
-                            child: FadeOverflowText(
-                              text: widget.connection.category,
-                              style: AppTypography.caption(
-                                color: dark ? categoryAccent : tokens.ink,
-                              ).copyWith(fontWeight: FontWeight.w700),
-                              maxWidth: 120,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
+                    child: connectionAvatarImage(widget.connection.avatar) == null
+                        ? Text(
+                            widget.connection.avatar,
+                            style: AppTypography.glyph(26),
+                          )
+                        : null,
+                  ),
+                  SizedBox(width: AppSpacing.space5),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.schedule, size: 12, color: tokens.inkSubtle),
-                        const SizedBox(width: 4),
                         Text(
-                          'Last interaction: ${relativeLastInteraction(widget.connection.lastContact)}',
-                          style: AppTypography.caption(color: tokens.inkSubtle),
+                          widget.connection.name,
+                          style: AppTypography.h2(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          widget.connection.email,
+                          style: AppTypography.caption(color: tokens.inkMuted),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Container(
+                          margin: const EdgeInsets.only(top: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: categoryAccent.withValues(alpha: .14),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircleAvatar(
+                                radius: 4,
+                                backgroundColor: categoryAccent,
+                              ),
+                              const SizedBox(width: 5),
+                             ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 120),
+                                child: FadeOverflowText(
+                                  text: widget.connection.category,
+                                  style: AppTypography.caption(
+                                    color: dark ? categoryAccent : tokens.ink,
+                                  ).copyWith(fontWeight: FontWeight.w700),
+                                  maxWidth: 120,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.schedule, size: 12, color: tokens.inkSubtle),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Last interaction: $lastInteractionText',
+                              style: AppTypography.caption(color: tokens.inkSubtle),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  ConnectionScoreRing(
+                    score: widget.connection.bondScore,
+                    size: 58,
+                    trend: widget.connection.bondTrendAt(DateTime.now()),
+                  ),
+                ],
               ),
-              ConnectionScoreRing(
-                score: widget.connection.bondScore,
-                size: 58,
-                trend: widget.connection.bondTrendAt(DateTime.now()),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -1633,9 +1651,13 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
   bool expanded = true;
   bool _isRefreshing = false;
   bool _autoRefreshed = false;
+  /// Tracks whether a manual refresh is in progress so the rebuild
+  /// provider clear does not inadvertently end the manual refresh.
+  bool _manualRefreshInProgress = false;
 
   Future<void> _handleRefresh() async {
     if (_isRefreshing) return;
+    _manualRefreshInProgress = true;
     setState(() => _isRefreshing = true);
 
     try {
@@ -1685,6 +1707,7 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
       }
     } finally {
       if (mounted) {
+        _manualRefreshInProgress = false;
         setState(() => _isRefreshing = false);
       }
     }
@@ -1707,6 +1730,19 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
             .setContactId(null);
         _handleRefresh();
       });
+    }
+
+    // Watch for pending memory rebuild (delete flow).
+    // When pendingMemoryRebuildProvider matches this contact, show the
+    // refresh spinner. The rebuild itself runs in
+    // AppController.deleteInteraction; we just need to show the spinner.
+    // When the provider clears, hide the spinner unless a manual refresh
+    // is in progress (to avoid interrupting _handleRefresh's lifecycle).
+    final pendingRebuildId = ref.watch(pendingMemoryRebuildProvider);
+    if (pendingRebuildId == widget.connection.id && !_isRefreshing) {
+      _isRefreshing = true;
+    } else if (pendingRebuildId == null && _isRefreshing && !_manualRefreshInProgress) {
+      _isRefreshing = false;
     }
 
     return CardBox(
