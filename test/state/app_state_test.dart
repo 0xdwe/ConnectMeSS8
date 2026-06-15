@@ -1917,5 +1917,52 @@ void main() {
         throwsA(isA<StateError>()),
       );
     });
+
+    test('clamps bondScore to 0 when delta exceeds current score', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final now = DateTime(2026, 6, 15);
+
+      await connections.save(Connection(
+        id: 'clamp-test',
+        name: 'Clamp',
+        email: 'clamp@example.com',
+        category: 'Friends',
+        avatar: '🧲',
+        bondScore: 5, // Low score
+        nextStep: 'Reach out',
+        lastContact: DateTime(2026, 5, 1),
+        notes: '',
+        knownSince: DateTime(2020),
+        preferredChannels: const ['Text'],
+      ));
+
+      await interactions.save(CrmInteraction(
+        id: 'big-delta',
+        contactId: 'clamp-test',
+        type: InteractionType.interaction,
+        title: 'Big boost',
+        note: 'Huge delta',
+        date: DateTime(2026, 6, 10),
+        bondScoreDelta: 10, // Delta exceeds current score
+      ));
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        clock: () => now,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('big-delta');
+      await _settle();
+
+      final updated = (await connections.load('clamp-test'))!;
+      expect(updated.bondScore, 0); // Clamped from 5 - 10 = -5 → 0
+    });
   });
 }

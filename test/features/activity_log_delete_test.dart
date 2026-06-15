@@ -151,5 +151,31 @@ void main() {
         await tester.pump(const Duration(milliseconds: 50));
       }
     });
+
+    testWidgets('row is removed after undo window expires', (tester) async {
+      await _pump(tester, 'mike');
+
+      // Find the interaction title to verify it exists before deletion
+      expect(find.text('Job application'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const Key('delete-interaction-i2')),
+      );
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      await tester.tap(find.text('Delete'));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      // Wait for the 4-second undo window to expire
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+
+      // The interaction row should be removed from the Activity Log
+      expect(find.text('Job application'), findsNothing);
+    });
   });
 }

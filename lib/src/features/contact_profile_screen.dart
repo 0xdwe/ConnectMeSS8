@@ -519,6 +519,11 @@ class _ActivityLogSectionState extends ConsumerState<_ActivityLogSection> {
   }
 
   void _startDeleteWithUndo(CrmInteraction interaction) {
+    // Cancel any in-flight timer from a previous delete attempt
+    // to prevent a silent double-delete race condition.
+    _deleteTimer?.cancel();
+    _deleteTimer = null;
+
     setState(() => _deletingInteractionId = interaction.id);
 
     ScaffoldMessenger.of(context).showSnackBar(
