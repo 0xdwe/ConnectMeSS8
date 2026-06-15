@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/social_models.dart';
@@ -31,6 +32,10 @@ final appControllerProvider = NotifierProvider<AppController, AppState>(
 enum AppThemeMode { system, light, dark }
 
 class AppState {
+  /// Set before runApp from main.dart to persist the chosen theme mode
+  /// across app restarts via SharedPreferences.
+  static AppThemeMode startupThemeMode = AppThemeMode.system;
+
   const AppState({
     required this.isAuthed,
     required this.themeMode,
@@ -151,7 +156,7 @@ class AppState {
     ];
     return AppState(
       isAuthed: false,
-      themeMode: AppThemeMode.system,
+      themeMode: startupThemeMode,
       selectedTab: 0,
       user: const AppUser(
         name: 'Alex Martinez',
@@ -543,8 +548,13 @@ class AppController extends Notifier<AppState> {
 
   void setTab(int index) => state = state.copyWith(selectedTab: index);
 
-  void setThemeMode(AppThemeMode mode) =>
-      state = state.copyWith(themeMode: mode);
+  void setThemeMode(AppThemeMode mode) {
+    state = state.copyWith(themeMode: mode);
+    // Persist the choice so it survives app restarts
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString('themeMode', mode.name);
+    });
+  }
 
   /// Deprecated shim for the old binary toggle. Maps `true` → dark,
   /// `false` → light. Prefer [setThemeMode]; this exists so any callers

@@ -44,10 +44,11 @@ import 'llm_ai_update_response.dart';
 import 'llm_ai_update_schema.dart';
 import 'llm_ai_update_user_message.dart';
 
-/// Default per-call timeout for Gemini's `generateContent` (PRD §Q6
-/// 20-second decision). Exposed as a constant so #082 integration
-/// tests can probe the timing without re-deriving the bound.
-const Duration kLlmAiUpdateDefaultTimeout = Duration(seconds: 20);
+/// Default per-call timeout for Gemini's `generateContent` (PRD §Q6).
+/// Raised from 20s to 45s after multimodal (image) requests consistently
+/// timed out — Gemini 2.5 Flash with vision + structured output needs
+/// more time than text-only calls.
+const Duration kLlmAiUpdateDefaultTimeout = Duration(seconds: 45);
 
 /// Default model. Pivoted to `gemini-2.5-flash` on 2026-06-14
 /// after previous models (e.g. `gemini-2.5-flash-lite`, `gemini-3.5-flash`)
@@ -89,7 +90,7 @@ class LlmAiUpdate implements AiUpdate {
     this.model = kLlmAiUpdateDefaultModel,
     this.timeout = kLlmAiUpdateDefaultTimeout,
     this.promptVersion = kLlmAiUpdatePromptVersion,
-    this.systemPrompt = kLlmAiUpdatePromptV4,
+    this.systemPrompt = kLlmAiUpdatePromptV6,
     this.attachmentPreparer = _defaultPrepareAttachments,
     this.clock = _systemClock,
     this.onMemoryWritten,
@@ -269,6 +270,13 @@ class LlmAiUpdate implements AiUpdate {
     }
 
     final prepared = await raceWithCancel(attachmentPreparer(attachments));
+
+    debugPrint(
+      'LlmAiUpdate: prepared ${prepared.images.length} image(s), '
+      '${prepared.nameOnly.length} name-only attachment(s). '
+      'Image sizes: ${prepared.images.map((i) => '${i.bytes.length ~/ 1024}KB').join(', ')}. '
+      'User input length: ${userInput.length} chars.',
+    );
 
     final attachmentFailure = attachmentHardFailureFor(
       userInput: userInput,

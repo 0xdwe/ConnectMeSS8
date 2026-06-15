@@ -68,7 +68,7 @@ void main() {
           ],
         ),
       );
-      expect(topics, ['promotion', 'startup', 'wedding', 'marathon']);
+      expect(topics, ['Promotion', 'Startup', 'Wedding', 'Marathon']);
     });
 
     test('returns memory.topics unchanged when fewer than 4', () {
@@ -76,7 +76,7 @@ void main() {
         _connection(category: 'Family'),
         _memory(topics: const ['baby']),
       );
-      expect(topics, ['baby']);
+      expect(topics, ['Baby']);
     });
 
     test('falls back to generic defaults for an unknown category', () {

@@ -37,7 +37,7 @@ const String kMemoryTopicEnricherPromptV3 = '''
 You are an AI relationship assistant. Your task is to analyze a contact's memory document and recent interaction history, then extract up to 8 conversation topics and prepare exactly 1 or 2 high-quality, gentle, topic-scoped conversation suggestions for every extracted topic. Do not leave the suggestions list empty for any topic.
 
 Strict Guardrails:
-1. Topics: Extracted topics must be lowercase, <= 3 words, and ranked by current relevance/importance. Do NOT include generic topics (like 'family', 'friends', 'work', 'college', 'high school') if there are more specific and useful topics available in the contact's context.
+1. Topics: Extracted topics must be properly capitalized (e.g., "SpaceX IPO", "AI Models", "Family Updates"), <= 3 words, and ranked by current relevance/importance. Do NOT include generic topics (like 'family', 'friends', 'work', 'college', 'high school') if there are more specific and useful topics available in the contact's context.
 2. Phrasing and Anti-shame Guardrail: Suggestions must be personal, context-rich, gentle, and supportive. Connect the suggestions to past discussions, notes, or upcoming events from the contact's context when possible (e.g., "Sarah mentioned she was going to Paris", "he talked about his plans for a new startup"). Prioritize retrieving and highlighting specific personal details (such as names of other people, locations, dates, and plans) that the user might otherwise forget. Avoid generic, templated, or clinical explanations like "Based on the conversation topic..." or "Associated with...". NEVER use numeric day counts (e.g., "you haven't talked in 47 days", "it has been 3 weeks") or guilt-tripping language (e.g., "neglecting", "have not", "forgot").
 3. Scoping: Each suggestion must be strictly scoped to its associated topic. Do not mix context or mention other topics in the suggestion.
 4. Suggestions: Group suggestions by topic. For every single extracted topic in the topics list, you MUST generate 1 or 2 suggestions in the suggestions list. Each suggestion must have a kind ("ask", "share", "plan", or "remember"), a text containing one gentle action idea (the conversation starter), and a context containing the specific reason/context from memory/recent interactions why this suggestion makes sense, written as a natural, detail-rich reminder.
@@ -47,11 +47,12 @@ const String kMemoryTopicEnricherPromptV4 = '''
 You are an AI relationship assistant. Your task is to analyze a contact's memory document and recent interaction history, then extract up to 8 conversation topics and prepare exactly 1 or 2 high-quality, gentle, topic-scoped conversation suggestions for every extracted topic. Do not leave the suggestions list empty for any topic.
 
 Strict Guardrails:
-1. Topics: Extracted topics must be lowercase, <= 3 words, and ranked by current relevance/importance. Do NOT include generic topics (like 'family', 'friends', 'work', 'college', 'high school') if there are more specific and useful topics available in the contact's context.
+1. Topics: Extracted topics must be properly capitalized (e.g., "SpaceX IPO", "AI Models", "Family Updates"), <= 3 words, and ranked by current relevance/importance. Do NOT include generic topics (like 'family', 'friends', 'work', 'college', 'high school') if there are more specific and useful topics available in the contact's context.
 2. Phrasing and Anti-shame Guardrail: Suggestions must be personal, context-rich, gentle, and supportive. Connect the suggestions to past discussions, notes, or upcoming events from the contact's context when possible (e.g., "Sarah mentioned she was going to Paris", "he talked about his plans for a new startup"). Prioritize retrieving and highlighting specific personal details (such as names of other people, locations, dates, and plans) that the user might otherwise forget. Avoid generic, templated, or clinical explanations like "Based on the conversation topic..." or "Associated with...". NEVER use numeric day counts (e.g., "you haven't talked in 47 days", "it has been 3 weeks") or guilt-tripping language (e.g., "neglecting", "have not", "forgot").
 3. Scoping: Each suggestion must be strictly scoped to its associated topic. Do not mix context or mention other topics in the suggestion.
 4. Suggestions: Group suggestions by topic. For every single extracted topic in the topics list, you MUST generate 1 or 2 suggestions in the suggestions list. Each suggestion must have a kind ("ask", "share", "plan", or "remember"), a text containing one gentle action idea (the conversation starter), and a context containing the specific reason/context from memory/recent interactions why this suggestion makes sense, written as a natural, detail-rich reminder.
 5. Search & News: You have access to Google Search grounding. If a topic represents a specific company, technology (e.g., a specific AI model release like Claude Model Fable 5), current event, weather, or public subject, use Google Search to find the latest news, updates, or current state. Condense this news into a single, high-quality sentence and store it in 'latestNews'. If no news is found or the topic is purely personal (e.g., 'birthday', 'vacation'), leave 'latestNews' empty. Do not hallucinate news.
+6. Summary: Generate a concise, person-focused summary (1-2 sentences) that captures who this person is in the user's life — their role, relationship dynamics, and key context. Keep it brief and personal (e.g., "Sarah is a college friend who works in marketing and loves hiking"). If the existing summary is already good, preserve it. Never use numeric day counts or guilt-tripping language.
 ''';
 
 /// Production [MemoryTopicEnricher] adapter backed by Firebase AI Logic.
@@ -148,6 +149,8 @@ We have already retrieved the latest news for some topics. If you select/suggest
 
 Here is the list of topics and their pre-fetched latest news:
 $newsListStr
+
+Also generate a concise person summary based on all available context.
 ''';
 
     final step2Generative = ai.generativeModel(
@@ -178,6 +181,7 @@ $newsListStr
     return currentMemory.copyWith(
       topics: mergedTopics,
       topicSuggestions: mergedSuggestions,
+      summary: response.summary ?? currentMemory.summary,
       lastUpdated: today,
     );
   }
@@ -444,9 +448,13 @@ $newsListStr
 final Schema kMemoryTopicEnricherResponseSchema = Schema.object(
   description: 'Structured memory topic enrichment schema.',
   properties: {
+    'summary': Schema.string(
+      description: 'Concise person-focused summary (1-2 sentences).',
+      nullable: true,
+    ),
     'topics': Schema.array(
       items: Schema.string(),
-      description: 'Extracted topics. lowercase, <=3 words, ranked.',
+      description: 'Extracted topics. Properly capitalized, <=3 words, ranked.',
     ),
     'topicSuggestions': Schema.array(
       description: 'Prepared suggestions per topic. Capped at 2.',
@@ -480,10 +488,12 @@ final Schema kMemoryTopicEnricherResponseSchema = Schema.object(
 /// Dart parser mirror for the enrichment response.
 class LlmMemoryTopicEnricherResponse {
   const LlmMemoryTopicEnricherResponse({
+    this.summary,
     required this.topics,
     required this.topicSuggestions,
   });
 
+  final String? summary;
   final List<String> topics;
   final List<LlmTopicSuggestionGroup> topicSuggestions;
 
@@ -504,6 +514,7 @@ class LlmMemoryTopicEnricherResponse {
         .toList();
 
     return LlmMemoryTopicEnricherResponse(
+      summary: json['summary'] as String?,
       topics: topics,
       topicSuggestions: topicSuggestions,
     );
@@ -547,6 +558,7 @@ class FakeMemoryTopicEnricher implements MemoryTopicEnricher {
     return currentMemory.copyWith(
       topics: mergedTopics,
       topicSuggestions: mergedSuggestions,
+      summary: currentMemory.summary,
       lastUpdated: DateTime.now(),
     );
   }

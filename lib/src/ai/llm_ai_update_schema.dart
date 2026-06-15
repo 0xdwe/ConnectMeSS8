@@ -69,8 +69,15 @@ final Schema kLlmAiUpdateResponseSchema = Schema.object(
     ),
     'interactionNote': Schema.string(
       description:
-          'One-or-two-sentence paraphrase of the user\'s input. Do '
-          'not echo verbatim; do not embellish.',
+          'Paraphrase of the user\'s input (text AND images) preserving all '
+          'important details. When images are attached, extract and include '
+          'factual details visible in the images — people, places, activities, '
+          'text, mood. Scale length to match the input — brief input '
+          'gets a concise note, detailed input gets a longer note that '
+          'captures the key facts, names, events, and nuances. Do not echo '
+          'verbatim; do not embellish beyond what they said or what is '
+          'visible in images. Do not artificially compress a rich input into '
+          'one or two sentences.',
     ),
     'memoryUpdate': Schema.object(
       description:
@@ -89,7 +96,10 @@ final Schema kLlmAiUpdateResponseSchema = Schema.object(
           description:
               'Exactly one history bullet, prefixed '
               '"- {YYYY-MM-DD} — {body}" using the date from the '
-              'prompt context. Em dash U+2014 required.',
+              'prompt context. Body length should scale with the '
+              'input — brief updates get a short bullet, detailed '
+              'updates get a longer bullet preserving key specifics. '
+              'Em dash U+2014 required.',
         ),
         'topicsToAdd': Schema.array(
           items: Schema.string(),

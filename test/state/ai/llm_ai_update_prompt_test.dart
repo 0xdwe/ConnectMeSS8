@@ -4,10 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('llm_ai_update_prompt', () {
     test('exposes a non-empty versioned system prompt', () {
-      expect(kLlmAiUpdatePromptVersion, 4);
+      expect(kLlmAiUpdatePromptVersion, 6);
       expect(kLlmAiUpdatePromptV1, isNotEmpty);
       expect(kLlmAiUpdatePromptV3, isNotEmpty);
       expect(kLlmAiUpdatePromptV4, isNotEmpty);
+      expect(kLlmAiUpdatePromptV5, isNotEmpty);
+      expect(kLlmAiUpdatePromptV6, isNotEmpty);
     });
 
     test('encodes anti-shame voice rule against numeric day counts', () {
@@ -111,6 +113,20 @@ void main() {
       expect(prompt.toLowerCase(), contains('context-rich'));
       expect(prompt, contains('Prioritize retrieving and highlighting specific personal details'));
       expect(prompt, contains('Avoid templated, generic, or clinical phrases'));
+    });
+
+    test('V5 tells the model to scale note and bullet length to input', () {
+      final prompt = kLlmAiUpdatePromptV5;
+      // V5's key change: interactionNote and newHistoryBullet should scale
+      // their length proportionally to the user's input, not compress into
+      // fixed-length summaries.
+      expect(prompt, contains('Scale the length to match the input'));
+      expect(prompt, contains('Do not artificially compress'));
+      expect(prompt, contains('Scale the body length to the input'));
+      expect(prompt, contains('terse paraphrase'));
+      // V5 should NOT contain the old fixed-length constraints from v4.
+      expect(prompt, isNot(contains('one or two clean sentences')));
+      expect(prompt, isNot(contains('≤120-char paraphrase')));
     });
 
     test('describes the upcomingToAdd kind enum', () {

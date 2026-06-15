@@ -2,9 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
 import 'src/app/connect_me_app.dart';
+import 'src/state/app_state.dart';
 import 'src/state/firebase_providers.dart';
 
 void main() async {
@@ -24,5 +26,17 @@ void main() async {
   // assigned after the first read/write, so this call sits between
   // `initializeApp` and `runApp`. See Pass 4.2 (#060 / PRD Q4).
   enableFirestoreOfflinePersistence(FirebaseFirestore.instance);
+
+  // Load saved theme preference
+  final prefs = await SharedPreferences.getInstance();
+  final savedTheme = prefs.getString('themeMode');
+  if (savedTheme != null) {
+    final parsed = AppThemeMode.values.firstWhere(
+      (e) => e.name == savedTheme,
+      orElse: () => AppThemeMode.system,
+    );
+    AppState.startupThemeMode = parsed;
+  }
+
   runApp(const ProviderScope(child: ConnectMeApp()));
 }
