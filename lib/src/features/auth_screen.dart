@@ -3,26 +3,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:math' as math;
 
 import '../state/app_state.dart';
 import '../state/firebase_providers.dart';
 import '../state/user_profile/user_profile_service.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 import '../theme/app_typography.dart';
 import '../widgets/chain_logo.dart';
 
-enum _AuthMode { login, signup }
+enum AuthMode { landing, login, signup }
 
 class AuthScreen extends ConsumerStatefulWidget {
-  const AuthScreen({super.key});
+  const AuthScreen({super.key, this.initialMode = AuthMode.landing});
+
+  final AuthMode initialMode;
 
   @override
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
-  _AuthMode _mode = _AuthMode.login;
+  late AuthMode _mode;
   bool _busy = false;
 
   final _loginEmail = TextEditingController();
@@ -38,6 +42,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String? _signupEmailError;
   String? _signupPasswordError;
   String? _signupConfirmError;
+
+  @override
+  void initState() {
+    super.initState();
+    _mode = widget.initialMode;
+  }
 
   @override
   void dispose() {
@@ -190,16 +200,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
-  void _switchMode(_AuthMode next) {
+  Future<void> _switchMode(AuthMode next) async {
     if (_mode == next) return;
-    setState(() {
-      _mode = next;
+
+    void clearErrors() {
       _loginEmailError = null;
       _loginPasswordError = null;
       _signupNameError = null;
       _signupEmailError = null;
       _signupPasswordError = null;
       _signupConfirmError = null;
+    }
+
+    setState(() {
+      _mode = next;
+      clearErrors();
     });
   }
 
@@ -232,157 +247,428 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              tokens.primaryTint,
-              tokens.surface,
-              dark ? tokens.surfaceSunken : tokens.secondaryTint,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: IntrinsicHeight(
-                    child: Padding(
-                      padding: EdgeInsets.all(AppSpacing.space5),
-                      child: Column(
-                        children: [
-                          // Spacer to push white card to center vertically
-                          Spacer(),
+    final tokens = AppTokens.light();
 
-                          // White rounded rectangle as base
-                          Container(
-                            constraints: BoxConstraints(
-                              maxWidth:
-                                  500, // Max width for better readability on larger screens
-                            ),
-                            decoration: BoxDecoration(
-                              color: tokens.surfaceRaised,
-                              borderRadius: BorderRadius.circular(AppRadius.xl),
-                              border: Border.all(color: tokens.border),
-                              boxShadow: AppTokens.elevation2(dark),
-                            ),
-                            child: Padding(
-                              padding: EdgeInsets.all(AppSpacing.space5),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  // App logo (smaller)
-                                  Container(
-                                    padding: EdgeInsets.all(AppSpacing.space3),
-                                    decoration: BoxDecoration(
-                                      color: tokens.primaryTint,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: LinkedChainLogo(
-                                      size: 48,
-                                      color: Color(
-                                        0xFF6B4EFF,
-                                      ), // ← ADD THIS: Purple color for the logo
-                                    ),
-                                  ),
+    return Theme(
+      data: AppTheme.data(false),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final w = constraints.maxWidth;
+            final h = constraints.maxHeight;
 
-                                  SizedBox(height: AppSpacing.space5),
-
-                                  // Content based on mode (no mode selector)
-                                  if (_mode == _AuthMode.login)
-                                    _LoginForm(
-                                      emailController: _loginEmail,
-                                      passwordController: _loginPassword,
-                                      emailError: _loginEmailError,
-                                      passwordError: _loginPasswordError,
-                                      busy: _busy,
-                                      onSubmit: _submitLogin,
-                                      onSwitch: () =>
-                                          _switchMode(_AuthMode.signup),
-                                      onGoogleSignIn: _signInWithGoogle,
-                                    )
-                                  else
-                                    _SignupForm(
-                                      nameController: _signupName,
-                                      emailController: _signupEmail,
-                                      passwordController: _signupPassword,
-                                      confirmController: _signupConfirm,
-                                      nameError: _signupNameError,
-                                      emailError: _signupEmailError,
-                                      passwordError: _signupPasswordError,
-                                      confirmError: _signupConfirmError,
-                                      busy: _busy,
-                                      onSubmit: _submitSignup,
-                                      onSwitch: () =>
-                                          _switchMode(_AuthMode.login),
-                                      onGoogleSignIn: _signInWithGoogle,
-                                    ),
-                                ],
-                              ),
-                            ),
+            return Stack(
+              children: [
+                // 1. Mode-specific background
+                if (_mode == AuthMode.landing) ...[
+                  const Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFFE6DBFB), Color(0xFFFAF7FC)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.topRight,
                           ),
-
-                          SizedBox(height: AppSpacing.space5),
-
-                          // Powered by text outside the white box
-                          Text(
-                            'Powered by Firebase Auth.',
-                            textAlign: TextAlign.center,
-                            style: AppTypography.caption(
-                              color: tokens.inkMuted,
-                            ),
-                          ),
-
-                          Spacer(),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            },
+                  const Positioned(
+                    top: 24,
+                    right: 0,
+                    bottom: -24,
+                    left: 0,
+                    child: IgnorePointer(
+                      child: Image(
+                        key: Key('welcome-screen-background'),
+                        image: AssetImage('assets/images/welcome_back.jpg'),
+                        fit: BoxFit.cover,
+                        alignment: Alignment.center,
+                        excludeFromSemantics: true,
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  const Positioned.fill(
+                    child: IgnorePointer(
+                      child: ColoredBox(color: Colors.white),
+                    ),
+                  ),
+                  const Positioned.fill(
+                    child: IgnorePointer(
+                      child: Image(
+                        key: Key('login-page-background'),
+                        image: AssetImage('assets/images/login_page.jpg'),
+                        fit: BoxFit.fitWidth,
+                        alignment: Alignment.topCenter,
+                        excludeFromSemantics: true,
+                      ),
+                    ),
+                  ),
+                ],
+
+                // 2. Main content layer
+                if (_mode == AuthMode.landing)
+                  SafeArea(
+                    child: LayoutBuilder(
+                      builder: (context, landingConstraints) {
+                        return SingleChildScrollView(
+                          key: const Key('landing-scroll-view'),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: landingConstraints.maxHeight,
+                            ),
+                            child: IntrinsicHeight(
+                              child: _buildLanding(context, tokens),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                else ...[
+                  if (_mode == AuthMode.login)
+                    SafeArea(
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
+                            math.max(h * 0.255, 176.0),
+                            w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
+                            AppSpacing.space5,
+                          ),
+                          child: Center(
+                            child: Container(
+                              constraints: const BoxConstraints(maxWidth: 460),
+                              child: _LoginForm(
+                                emailController: _loginEmail,
+                                passwordController: _loginPassword,
+                                emailError: _loginEmailError,
+                                passwordError: _loginPasswordError,
+                                busy: _busy,
+                                onSubmit: _submitLogin,
+                                onSwitch: () => _switchMode(AuthMode.signup),
+                                onGoogleSignIn: _signInWithGoogle,
+                                tokens: tokens,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_mode == AuthMode.signup)
+                    SafeArea(
+                      child: LayoutBuilder(
+                        builder: (context, signupConstraints) {
+                          final horizontalPadding = w <= 360
+                              ? AppSpacing.space3
+                              : AppSpacing.space5;
+                          final formWidth = math.min(
+                            460.0,
+                            signupConstraints.maxWidth -
+                                (horizontalPadding * 2),
+                          );
+
+                          return Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalPadding,
+                              math.max(h * 0.17, 128.0),
+                              horizontalPadding,
+                              AppSpacing.space2,
+                            ),
+                            child: Align(
+                              alignment: Alignment.center,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.center,
+                                child: SizedBox(
+                                  width: formWidth,
+                                  child: _SignupForm(
+                                    nameController: _signupName,
+                                    emailController: _signupEmail,
+                                    passwordController: _signupPassword,
+                                    confirmController: _signupConfirm,
+                                    nameError: _signupNameError,
+                                    emailError: _signupEmailError,
+                                    passwordError: _signupPasswordError,
+                                    confirmError: _signupConfirmError,
+                                    busy: _busy,
+                                    onSubmit: _submitSignup,
+                                    onSwitch: () => _switchMode(AuthMode.login),
+                                    onGoogleSignIn: _signInWithGoogle,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                  // Back Button to Landing Screen (placed on top for hit-testing)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: SafeArea(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: Icon(Icons.arrow_back, color: tokens.ink),
+                          onPressed: () => _switchMode(AuthMode.landing),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanding(BuildContext context, AppTokens tokens) {
+    final height = MediaQuery.sizeOf(context).height;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(height: height * 0.08),
+        // App logo & title
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LinkedChainLogo(size: 60, color: tokens.primary),
+              const SizedBox(height: 8),
+              Text(
+                'Connect Me',
+                style: AppTypography.bodyLg(
+                  color: tokens.ink,
+                ).copyWith(fontWeight: FontWeight.w700, fontSize: 19),
+              ),
+            ],
           ),
+        ),
+        SizedBox(height: height * 0.06),
+        // Welcome headline and subtext
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Welcome to\nConnect Me',
+                textAlign: TextAlign.center,
+                style: AppTypography.glyph(
+                  36,
+                  color: tokens.ink,
+                  weight: FontWeight.w700,
+                ).copyWith(height: 1.15),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Nurture the relationships\nthat matter most.',
+                textAlign: TextAlign.center,
+                style: AppTypography.body(
+                  color: tokens.inkMuted,
+                ).copyWith(height: 1.3, fontSize: 14.5),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: height * 0.065),
+        // Actions
+        Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 310),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Sign Up
+                _GradientButton(
+                  height: 58,
+                  gradient: tokens.aiGradient,
+                  onPressed: () => _switchMode(AuthMode.signup),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Sign Up',
+                          style: AppTypography.bodyLg(
+                            color: Colors.white,
+                          ).copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const Align(
+                        alignment: Alignment.centerRight,
+                        child: Icon(Icons.arrow_forward, size: 18),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Log In
+                SizedBox(
+                  height: 58,
+                  child: OutlinedButton(
+                    onPressed: () => _switchMode(AuthMode.login),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: tokens.primary,
+                      side: BorderSide(
+                        color: tokens.primary.withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Align(
+                          alignment: Alignment.center,
+                          child: Text(
+                            'Log In',
+                            style: AppTypography.bodyLg(
+                              color: tokens.primary,
+                            ).copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Icon(
+                            Icons.arrow_forward,
+                            size: 18,
+                            color: tokens.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const Spacer(),
+      ],
+    );
+  }
+}
+
+class _GradientButton extends StatelessWidget {
+  const _GradientButton({
+    required this.gradient,
+    required this.onPressed,
+    required this.child,
+    this.buttonKey,
+    this.height = 56,
+  });
+
+  final LinearGradient gradient;
+  final VoidCallback? onPressed;
+  final Widget child;
+  final Key? buttonKey;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: FilledButton(
+          key: buttonKey,
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            disabledBackgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            disabledForegroundColor: Colors.white,
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+          ),
+          child: child,
         ),
       ),
     );
   }
 }
 
-InputDecorationTheme _authInputDecoration(BuildContext context) {
-  final tokens = context.tokens;
+InputDecorationTheme _authInputDecoration(
+  BuildContext context, {
+  AppTokens? tokensOverride,
+  Color? fillColor,
+  double borderRadius = 30,
+  double? minHeight,
+  EdgeInsetsGeometry contentPadding = const EdgeInsets.symmetric(
+    horizontal: 24,
+    vertical: 15,
+  ),
+}) {
+  final tokens = tokensOverride ?? context.tokens;
+  final radius = BorderRadius.circular(borderRadius);
   return InputDecorationTheme(
     filled: true,
-    fillColor: tokens.surfaceSunken,
+    fillColor: fillColor ?? const Color(0xFFF3F2FF).withValues(alpha: 0.6),
     labelStyle: AppTypography.body(color: tokens.inkMuted),
     hintStyle: AppTypography.body(color: tokens.inkSubtle),
     errorStyle: AppTypography.caption(color: tokens.danger),
+    contentPadding: contentPadding,
+    constraints: minHeight == null
+        ? null
+        : BoxConstraints(minHeight: minHeight),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      borderSide: BorderSide(color: tokens.border),
+      borderRadius: radius,
+      borderSide: BorderSide.none,
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      borderSide: BorderSide(color: tokens.border),
+      borderRadius: radius,
+      borderSide: BorderSide.none,
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderRadius: radius,
       borderSide: BorderSide(color: tokens.primary, width: 1.4),
     ),
     errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      borderSide: BorderSide(color: tokens.danger),
+      borderRadius: radius,
+      borderSide: BorderSide(color: tokens.danger, width: 1),
     ),
     focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderRadius: radius,
       borderSide: BorderSide(color: tokens.danger, width: 1.4),
     ),
+  );
+}
+
+InputDecorationTheme _compactSignupInputDecoration(BuildContext context) {
+  return _authInputDecoration(
+    context,
+    borderRadius: 24,
+    minHeight: 48,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
   );
 }
 
@@ -396,7 +682,9 @@ class _LoginForm extends StatelessWidget {
     required this.onSubmit,
     required this.onSwitch,
     required this.onGoogleSignIn,
+    required this.tokens,
   });
+
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final String? emailError;
@@ -405,72 +693,125 @@ class _LoginForm extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback onSwitch;
   final VoidCallback onGoogleSignIn;
+  final AppTokens tokens;
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Welcome back text
+        _AuthBrandLockup(tokens: tokens),
+        const SizedBox(height: 36),
         Text(
           'Welcome back.',
-          style: AppTypography.display(color: tokens.ink),
+          style: AppTypography.display(
+            color: tokens.ink,
+          ).copyWith(fontWeight: FontWeight.w700, fontSize: 32),
           textAlign: TextAlign.center,
         ),
-
-        SizedBox(height: AppSpacing.space2),
-
-        // Subtitle text
+        const SizedBox(height: 6),
         Text(
           'Log in to keep your connections close.',
           style: AppTypography.body(color: tokens.inkMuted),
           textAlign: TextAlign.center,
         ),
+        const SizedBox(height: 34),
 
-        SizedBox(height: AppSpacing.space5),
-
-        // Email field - no outline, light grey background
+        // Email field
         TextField(
           key: const Key('login-email-field'),
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
-          decoration: InputDecoration(
-            labelText: 'Email',
-            hintText: 'you@example.com',
-            errorText: emailError,
-          ).applyDefaults(_authInputDecoration(context)),
+          style: AppTypography.body(color: tokens.ink),
+          decoration:
+              InputDecoration(
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 18, right: 10),
+                  child: Icon(
+                    Icons.email_outlined,
+                    color: tokens.inkMuted,
+                    size: 18,
+                  ),
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 0,
+                ),
+                labelText: 'Email',
+                errorText: emailError,
+              ).applyDefaults(
+                _authInputDecoration(
+                  context,
+                  tokensOverride: tokens,
+                  fillColor: const Color(0xFFF3F2FF),
+                  borderRadius: 18,
+                  minHeight: 56,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                ),
+              ),
         ),
+        const SizedBox(height: 16),
 
-        SizedBox(height: AppSpacing.space4),
-
-        // Password field - no outline, light grey background
+        // Password field
         TextField(
           key: const Key('login-password-field'),
           controller: passwordController,
           obscureText: true,
-          decoration: InputDecoration(
-            labelText: 'Password',
-            errorText: passwordError,
-          ).applyDefaults(_authInputDecoration(context)),
+          style: AppTypography.body(color: tokens.ink),
+          decoration:
+              InputDecoration(
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 18, right: 10),
+                  child: Icon(
+                    Icons.lock_outline,
+                    color: tokens.inkMuted,
+                    size: 18,
+                  ),
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 0,
+                ),
+                suffixIcon: Padding(
+                  padding: const EdgeInsets.only(right: 18),
+                  child: Icon(
+                    Icons.visibility_outlined,
+                    color: tokens.inkSubtle,
+                    size: 18,
+                  ),
+                ),
+                labelText: 'Password',
+                errorText: passwordError,
+              ).applyDefaults(
+                _authInputDecoration(
+                  context,
+                  tokensOverride: tokens,
+                  fillColor: const Color(0xFFF3F2FF),
+                  borderRadius: 18,
+                  minHeight: 56,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                ),
+              ),
         ),
-
-        SizedBox(height: AppSpacing.space5),
+        const SizedBox(height: 24),
 
         // Login button
-        FilledButton.icon(
-          key: const Key('sign-in-button'),
+        _GradientButton(
+          buttonKey: const Key('sign-in-button'),
+          gradient: tokens.aiGradient,
           onPressed: busy ? null : onSubmit,
-          style: FilledButton.styleFrom(
-            backgroundColor: tokens.primary,
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-          ),
-          icon: busy
-              ? const SizedBox(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (busy)
+                const SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
@@ -478,11 +819,22 @@ class _LoginForm extends StatelessWidget {
                     color: Colors.white,
                   ),
                 )
-              : const Icon(Icons.arrow_forward),
-          label: Text(busy ? 'Signing in…' : 'Log in'),
+              else ...[
+                const Icon(Icons.arrow_forward, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Log in',
+                  style: AppTypography.bodyLg().copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
-
-        SizedBox(height: AppSpacing.space3),
+        const SizedBox(height: 20),
 
         Row(
           children: [
@@ -497,43 +849,113 @@ class _LoginForm extends StatelessWidget {
             Expanded(child: Divider(color: Colors.grey.shade300)),
           ],
         ),
+        const SizedBox(height: 20),
 
-        SizedBox(height: AppSpacing.space3),
-
-        OutlinedButton.icon(
-          key: const Key('google-sign-in-button'),
-          onPressed: busy ? null : onGoogleSignIn,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.grey.shade800,
-            side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
+        // Google button
+        SizedBox(
+          height: 56,
+          child: OutlinedButton(
+            key: const Key('google-sign-in-button'),
+            onPressed: busy ? null : onGoogleSignIn,
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: tokens.ink,
+              side: BorderSide(color: tokens.border, width: 1.2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (busy)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.grey,
+                    ),
+                  )
+                else ...[
+                  const _GoogleIcon(),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      'Continue with Google',
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                      style: AppTypography.body().copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: tokens.ink,
+                        fontSize: 14.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          icon: busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.grey,
-                  ),
-                )
-              : const _GoogleIcon(),
-          label: const Text('Continue with Google'),
         ),
+        const SizedBox(height: 16),
 
-        SizedBox(height: AppSpacing.space3),
-
-        // Sign up option
+        // Switch to Signup
         TextButton(
           key: const Key('auth-mode-signup'),
           onPressed: busy ? null : onSwitch,
           style: TextButton.styleFrom(foregroundColor: tokens.primary),
-          child: const Text("Don't have an account? Sign up"),
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: "Don't have an account? ",
+                  style: TextStyle(
+                    color: tokens.inkMuted,
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
+                const TextSpan(
+                  text: "Sign up",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            textAlign: TextAlign.center,
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _AuthBrandLockup extends StatelessWidget {
+  const _AuthBrandLockup({
+    required this.tokens,
+    this.logoSize = 47,
+    this.textSize = 20,
+  });
+
+  final AppTokens tokens;
+  final double logoSize;
+  final double textSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LinkedChainLogo(size: logoSize, color: tokens.primary),
+          const SizedBox(height: 6),
+          Text(
+            'Connect Me',
+            style: AppTypography.bodyLg(
+              color: tokens.ink,
+            ).copyWith(fontSize: textSize, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -553,6 +975,7 @@ class _SignupForm extends StatelessWidget {
     required this.onSwitch,
     required this.onGoogleSignIn,
   });
+
   final TextEditingController nameController;
   final TextEditingController emailController;
   final TextEditingController passwordController;
@@ -572,189 +995,153 @@ class _SignupForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _AuthBrandLockup(tokens: tokens, logoSize: 40, textSize: 18),
+        const SizedBox(height: 16),
         Text(
           'Join Connect Me.',
-          style: AppTypography.display(color: tokens.ink),
+          style: AppTypography.display(
+            color: tokens.ink,
+          ).copyWith(fontWeight: FontWeight.w700, fontSize: 26),
           textAlign: TextAlign.center,
         ),
-
-        SizedBox(height: AppSpacing.space2),
-
+        const SizedBox(height: 4),
         Text(
-          'Join ConnectMe today', // Updated text
-          style: AppTypography.body(color: tokens.inkMuted),
+          'Create an account to keep connections close.',
+          style: AppTypography.body(
+            color: tokens.inkMuted,
+          ).copyWith(fontSize: 14),
           textAlign: TextAlign.center,
         ),
+        const SizedBox(height: 16),
 
-        SizedBox(height: AppSpacing.space5),
-
-        // Name field - no outline, light grey background
+        // Name
         TextField(
           key: const Key('signup-name-field'),
           controller: nameController,
           textCapitalization: TextCapitalization.words,
           decoration: InputDecoration(
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 18, right: 10),
+              child: Icon(
+                Icons.person_outline,
+                color: tokens.inkMuted,
+                size: 18,
+              ),
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 0,
+            ),
             labelText: 'Full name',
             errorText: nameError,
-            filled: true,
-            fillColor: tokens.surfaceSunken,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.primary, width: 1.4),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-          ),
+          ).applyDefaults(_compactSignupInputDecoration(context)),
         ),
+        const SizedBox(height: 10),
 
-        SizedBox(height: AppSpacing.space4),
-
-        // Email field - no outline, light grey background
+        // Email
         TextField(
           key: const Key('signup-email-field'),
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
           decoration: InputDecoration(
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 18, right: 10),
+              child: Icon(
+                Icons.email_outlined,
+                color: tokens.inkMuted,
+                size: 18,
+              ),
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 0,
+            ),
             labelText: 'Email',
-            hintText: 'you@example.com',
             errorText: emailError,
-            filled: true,
-            fillColor: tokens.surfaceSunken,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.primary, width: 1.4),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-          ),
+          ).applyDefaults(_compactSignupInputDecoration(context)),
         ),
+        const SizedBox(height: 10),
 
-        SizedBox(height: AppSpacing.space4),
-
-        // Password field - no outline, light grey background
+        // Password
         TextField(
           key: const Key('signup-password-field'),
           controller: passwordController,
           obscureText: true,
           decoration: InputDecoration(
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 18, right: 10),
+              child: Icon(Icons.lock_outline, color: tokens.inkMuted, size: 18),
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 0,
+            ),
             labelText: 'Password',
             errorText: passwordError,
-            filled: true,
-            fillColor: tokens.surfaceSunken,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.primary, width: 1.4),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-          ),
+          ).applyDefaults(_compactSignupInputDecoration(context)),
         ),
+        const SizedBox(height: 10),
 
-        SizedBox(height: AppSpacing.space4),
-
-        // Confirm password field - no outline, light grey background
+        // Confirm Password
         TextField(
           key: const Key('signup-confirm-field'),
           controller: confirmController,
           obscureText: true,
           decoration: InputDecoration(
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 18, right: 10),
+              child: Icon(Icons.lock_outline, color: tokens.inkMuted, size: 18),
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 40,
+              minHeight: 0,
+            ),
             labelText: 'Confirm password',
             errorText: confirmError,
-            filled: true,
-            fillColor: tokens.surfaceSunken,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.primary, width: 1.4),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: BorderSide(color: tokens.danger, width: 1),
-            ),
-          ),
+          ).applyDefaults(_compactSignupInputDecoration(context)),
         ),
+        const SizedBox(height: 16),
 
-        SizedBox(height: AppSpacing.space5),
-
-        // Sign up button
-        FilledButton.icon(
-          key: const Key('sign-up-button'),
-          onPressed: busy ? null : onSubmit,
-          style: FilledButton.styleFrom(
-            backgroundColor: tokens.primary,
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+        // Signup Button
+        SizedBox(
+          height: 48,
+          child: FilledButton(
+            key: const Key('sign-up-button'),
+            onPressed: busy ? null : onSubmit,
+            style: FilledButton.styleFrom(
+              backgroundColor: tokens.primary,
+              shape: const StadiumBorder(),
             ),
-          ),
-          icon: busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (busy)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                else ...[
+                  const Icon(Icons.check, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Create account',
+                    style: AppTypography.bodyLg().copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      fontSize: 15,
+                    ),
                   ),
-                )
-              : const Icon(Icons.check),
-          label: Text(busy ? 'Creating account…' : 'Create account'),
+                ],
+              ],
+            ),
+          ),
         ),
-
-        SizedBox(height: AppSpacing.space3),
+        const SizedBox(height: 12),
 
         Row(
           children: [
@@ -769,41 +1156,78 @@ class _SignupForm extends StatelessWidget {
             Expanded(child: Divider(color: Colors.grey.shade300)),
           ],
         ),
+        const SizedBox(height: 12),
 
-        SizedBox(height: AppSpacing.space3),
-
-        OutlinedButton.icon(
-          key: const Key('google-sign-in-button'),
-          onPressed: busy ? null : onGoogleSignIn,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.grey.shade800,
-            side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
+        // Google sign in
+        SizedBox(
+          height: 48,
+          child: OutlinedButton(
+            key: const Key('google-sign-in-button'),
+            onPressed: busy ? null : onGoogleSignIn,
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: tokens.ink,
+              side: BorderSide(color: Colors.grey.shade300, width: 1.2),
+              shape: const StadiumBorder(),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (busy)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.grey,
+                    ),
+                  )
+                else ...[
+                  const _GoogleIcon(),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      'Continue with Google',
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                      style: AppTypography.body().copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: tokens.ink,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          icon: busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.grey,
-                  ),
-                )
-              : const _GoogleIcon(),
-          label: const Text('Continue with Google'),
         ),
+        const SizedBox(height: 6),
 
-        SizedBox(height: AppSpacing.space3),
-
-        // Login option
+        // Switch to Login
         TextButton(
           key: const Key('auth-mode-login'),
           onPressed: busy ? null : onSwitch,
           style: TextButton.styleFrom(foregroundColor: tokens.primary),
-          child: const Text('Already have an account? Log in'),
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Already have an account? ',
+                  style: TextStyle(
+                    color: tokens.inkMuted,
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
+                const TextSpan(
+                  text: 'Log in',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            textAlign: TextAlign.center,
+          ),
         ),
       ],
     );
@@ -819,10 +1243,6 @@ class _GoogleIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SvgPicture.string(
-      _svgString,
-      width: 20.0,
-      height: 20.0,
-    );
+    return SvgPicture.string(_svgString, width: 20.0, height: 20.0);
   }
 }

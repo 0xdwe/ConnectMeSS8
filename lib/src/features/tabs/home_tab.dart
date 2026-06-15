@@ -53,6 +53,17 @@ class _HomeTabState extends ConsumerState<HomeTab> {
       children: [
         ConnectionScoreHero(score: state.averageConnectionScore),
         SizedBox(height: AppSpacing.space4),
+        DailyNudgeCard(
+          onTap: () {
+            final recs = ref.read(recommendationsProvider).value ?? [];
+            if (recs.isNotEmpty) {
+              context.push(_contactRouteForRecommendation(recs.first));
+            } else {
+              context.push('/recommendations');
+            }
+          },
+        ),
+        SizedBox(height: AppSpacing.space4),
         CardBox(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.space3,

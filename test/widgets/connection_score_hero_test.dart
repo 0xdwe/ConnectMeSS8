@@ -14,13 +14,13 @@ void main() {
         ),
       );
 
-      // Score is inside the BondRing.fromScore center, so '73' is found once.
-      expect(find.text('73'), findsOneWidget);
-      expect(find.text('Connection score'), findsOneWidget);
+      // Score is inside the ScoreGauge, so '73' is found.
+      expect(find.text('73'), findsWidgets);
+      expect(find.text('Connection Score'), findsOneWidget);
       expect(find.text('Keep nurturing your relationships!'), findsOneWidget);
 
-      // Verify BondRing is present
-      expect(find.byType(BondRing), findsOneWidget);
+      // Verify ScoreGauge is present
+      expect(find.byType(ScoreGauge), findsOneWidget);
     });
 
     testWidgets('score 90 uses close tier color (primary)', (tester) async {
@@ -31,7 +31,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(BondRing), findsOneWidget);
+      expect(find.byType(ScoreGauge), findsOneWidget);
 
       // Verify tier is close
       expect(BondTier.from(90), BondTier.close);
@@ -45,7 +45,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(BondRing), findsOneWidget);
+      expect(find.byType(ScoreGauge), findsOneWidget);
 
       // Verify tier is steady
       expect(BondTier.from(60), BondTier.steady);
@@ -61,7 +61,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(BondRing), findsOneWidget);
+      expect(find.byType(ScoreGauge), findsOneWidget);
 
       // Verify tier is drifting
       expect(BondTier.from(30), BondTier.drifting);

@@ -50,7 +50,7 @@ void main() {
           theme: AppTheme.data(false),
           routerConfig: GoRouter(
             routes: [
-              GoRoute(path: '/', builder: (_, _) => const AuthScreen()),
+              GoRoute(path: '/', builder: (_, _) => const AuthScreen(initialMode: AuthMode.signup)),
               GoRoute(path: '/app', builder: (_, _) => const Text('App')),
             ],
           ),
@@ -58,8 +58,6 @@ void main() {
       ),
     );
     await tester.pump();
-    await tester.tap(find.text("Don't have an account? Sign up"));
-    await tester.pumpAndSettle();
     return auth;
   }
 
@@ -220,7 +218,7 @@ Future<MockFirebaseAuth> pumpLogin(
         theme: AppTheme.data(false),
         routerConfig: GoRouter(
           routes: [
-            GoRoute(path: '/', builder: (_, _) => const AuthScreen()),
+            GoRoute(path: '/', builder: (_, _) => const AuthScreen(initialMode: AuthMode.login)),
             GoRoute(path: '/app', builder: (_, _) => const Text('App')),
           ],
         ),

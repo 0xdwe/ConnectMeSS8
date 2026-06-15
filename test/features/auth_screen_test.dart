@@ -1,16 +1,48 @@
 import 'package:connect_me/src/app/connect_me_app.dart';
+import 'package:connect_me/src/features/auth_screen.dart';
+import 'package:connect_me/src/widgets/chain_logo.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../test_overrides.dart';
 
-Future<void> pumpConnectMe(WidgetTester tester) async {
-  await tester.binding.setSurfaceSize(const Size(800, 1000));
+Future<void> pumpConnectMe(
+  WidgetTester tester, {
+  Size surfaceSize = const Size(800, 1000),
+  double textScaleFactor = 1,
+  Brightness platformBrightness = Brightness.light,
+  AuthMode initialMode = AuthMode.login,
+}) async {
+  await tester.binding.setSurfaceSize(surfaceSize);
   addTearDown(() => tester.binding.setSurfaceSize(null));
+  tester.platformDispatcher.textScaleFactorTestValue = textScaleFactor;
+  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+  tester.platformDispatcher.platformBrightnessTestValue = platformBrightness;
+  addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: signedOutDemoOverrides().cast(),
+      overrides: [
+        ...signedOutDemoOverrides(),
+        routerProvider.overrideWith(
+          (ref) => GoRouter(
+            initialLocation: '/auth',
+            routes: [
+              GoRoute(
+                path: '/auth',
+                builder: (context, state) =>
+                    AuthScreen(initialMode: initialMode),
+              ),
+              GoRoute(
+                path: '/app',
+                builder: (context, state) =>
+                    const Scaffold(body: SizedBox(key: Key('home-tab'))),
+              ),
+            ],
+          ),
+        ),
+      ],
       child: const ConnectMeApp(),
     ),
   );
@@ -18,6 +50,198 @@ Future<void> pumpConnectMe(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('login shows the Connect Me lockup above the heading', (
+    tester,
+  ) async {
+    await pumpConnectMe(tester, surfaceSize: const Size(390, 844));
+
+    expect(find.byType(LinkedChainLogo), findsOneWidget);
+    expect(find.text('Connect Me'), findsOneWidget);
+
+    final lockupTop = tester.getTopLeft(find.byType(LinkedChainLogo)).dy;
+    final brandTop = tester.getTopLeft(find.text('Connect Me')).dy;
+    final headingTop = tester.getTopLeft(find.text('Welcome back.')).dy;
+
+    expect(lockupTop, lessThan(brandTop));
+    expect(brandTop, lessThan(headingTop));
+  });
+
+  testWidgets('login renders the login page image background', (tester) async {
+    await pumpConnectMe(tester);
+
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor,
+      Colors.white,
+    );
+
+    final background = tester.widget<Image>(
+      find.byKey(const Key('login-page-background')),
+    );
+
+    expect(background.image, isA<AssetImage>());
+    expect(
+      (background.image as AssetImage).assetName,
+      'assets/images/login_page.jpg',
+    );
+    expect(find.byKey(const Key('welcome-screen-background')), findsNothing);
+  });
+
+  testWidgets('back from login shows only the welcome screen background', (
+    tester,
+  ) async {
+    await pumpConnectMe(tester);
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+
+    final background = tester.widget<Image>(
+      find.byKey(const Key('welcome-screen-background')),
+    );
+
+    expect(background.image, isA<AssetImage>());
+    expect(
+      (background.image as AssetImage).assetName,
+      'assets/images/welcome_back.jpg',
+    );
+    expect(find.byKey(const Key('login-page-background')), findsNothing);
+    expect(
+      tester.getSize(find.byKey(const Key('landing-scroll-view'))).height,
+      1000,
+    );
+  });
+
+  testWidgets('signup reuses the login page image background', (tester) async {
+    await pumpConnectMe(tester);
+
+    await tester.tap(find.byKey(const Key('auth-mode-signup')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('welcome-screen-background')), findsNothing);
+    final background = tester.widget<Image>(
+      find.byKey(const Key('login-page-background')),
+    );
+    expect(background.image, isA<AssetImage>());
+    expect(
+      (background.image as AssetImage).assetName,
+      'assets/images/login_page.jpg',
+    );
+  });
+
+  testWidgets('signup shows the Connect Me lockup above the heading', (
+    tester,
+  ) async {
+    await pumpConnectMe(tester, surfaceSize: const Size(390, 844));
+
+    await tester.ensureVisible(find.byKey(const Key('auth-mode-signup')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('auth-mode-signup')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LinkedChainLogo), findsOneWidget);
+    expect(find.text('Connect Me'), findsOneWidget);
+
+    final lockupTop = tester.getTopLeft(find.byType(LinkedChainLogo)).dy;
+    final brandTop = tester.getTopLeft(find.text('Connect Me')).dy;
+    final headingTop = tester.getTopLeft(find.text('Join Connect Me.')).dy;
+
+    expect(lockupTop, lessThan(brandTop));
+    expect(brandTop, lessThan(headingTop));
+  });
+
+  testWidgets('signup keeps the light auth theme on a dark device', (
+    tester,
+  ) async {
+    await pumpConnectMe(tester, platformBrightness: Brightness.dark);
+
+    await tester.tap(find.byKey(const Key('auth-mode-signup')));
+    await tester.pumpAndSettle();
+
+    final fieldContext = tester.element(
+      find.byKey(const Key('signup-name-field')),
+    );
+    expect(Theme.of(fieldContext).brightness, Brightness.light);
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor,
+      Colors.white,
+    );
+  });
+
+  testWidgets('compact scaled landing remains scrollable without overflow', (
+    tester,
+  ) async {
+    await pumpConnectMe(
+      tester,
+      surfaceSize: const Size(320, 700),
+      textScaleFactor: 2,
+    );
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Log In'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Welcome to\nConnect Me'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact scaled login remains scrollable without overflow', (
+    tester,
+  ) async {
+    await pumpConnectMe(
+      tester,
+      surfaceSize: const Size(320, 700),
+      textScaleFactor: 1.3,
+    );
+
+    expect(find.byKey(const Key('login-email-field')), findsOneWidget);
+    expect(find.byKey(const Key('login-password-field')), findsOneWidget);
+    expect(find.byKey(const Key('sign-in-button')), findsOneWidget);
+    expect(find.byKey(const Key('google-sign-in-button')), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const Key('google-sign-in-button')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('signup fits a phone viewport without scrolling', (tester) async {
+    await pumpConnectMe(
+      tester,
+      surfaceSize: const Size(360, 800),
+      initialMode: AuthMode.signup,
+    );
+
+    expect(find.byType(LinkedChainLogo), findsOneWidget);
+    expect(find.byKey(const Key('signup-name-field')), findsOneWidget);
+    expect(
+      find.ancestor(
+        of: find.byKey(const Key('signup-name-field')),
+        matching: find.byType(SingleChildScrollView),
+      ),
+      findsNothing,
+    );
+
+    for (final finder in [
+      find.byType(LinkedChainLogo),
+      find.byKey(const Key('signup-name-field')),
+      find.byKey(const Key('signup-confirm-field')),
+      find.byKey(const Key('sign-up-button')),
+      find.byKey(const Key('google-sign-in-button')),
+      find.byKey(const Key('auth-mode-login')),
+    ]) {
+      final rect = tester.getRect(finder);
+      expect(rect.top, greaterThanOrEqualTo(0));
+      expect(rect.bottom, lessThanOrEqualTo(800));
+    }
+    final logoTop = tester.getRect(find.byType(LinkedChainLogo)).top;
+    final footerBottom = tester
+        .getRect(find.byKey(const Key('auth-mode-login')))
+        .bottom;
+    final contentCenter = (logoTop + footerBottom) / 2;
+    expect(contentCenter, closeTo(464, 8));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('valid login enters the main app', (tester) async {
     await pumpConnectMe(tester);
 
