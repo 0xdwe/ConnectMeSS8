@@ -52,6 +52,8 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
       appControllerProvider.select((state) => state.connections),
     );
     final contactById = {for (final contact in contacts) contact.id: contact};
+    final monthStart = DateTime(month.year, month.month, 1);
+    final monthEnd = DateTime(month.year, month.month + 1, 0);
 
     // Expand recurring events into individual occurrences for the display window.
     // "Today & upcoming" shows occurrences in [today, today+365d].
@@ -65,6 +67,11 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
           _hasExplicitDateSelection ? selected : windowEnd,
         ),
     ]..sort((a, b) => a.date.compareTo(b.date));
+
+    final monthEvents = [
+      for (final event in allEvents)
+        ..._occurrencesInRange(event, monthStart, monthEnd),
+    ];
     final nextEvent = _nextUpcomingEvent(filteredEvents, now);
     final nextEventContact = nextEvent?.contactId != null
       ? contactById[nextEvent!.contactId!]
@@ -82,6 +89,35 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
     }
     final sortedDates = groupedEvents.keys.toList()..sort();
 
+    final selectedDayEvents = _hasExplicitDateSelection
+        ? groupedEvents[DateTime(selected.year, selected.month, selected.day)] ??
+            <PlannerEvent>[]
+        : <PlannerEvent>[];
+    final selectedDayMidnight = DateTime(selected.year, selected.month, selected.day);
+    late final List<PlannerEvent> upcomingEvents;
+    if (_hasExplicitDateSelection) {
+      upcomingEvents = [
+        for (final e in allEvents)
+          ..._occurrencesInRange(
+            e,
+            selectedDayMidnight.add(const Duration(days: 1)),
+            windowEnd,
+          ),
+      ]..sort((a, b) => a.date.compareTo(b.date));
+    } else {
+      upcomingEvents = filteredEvents;
+    }
+    final upcomingGroupedEvents = <DateTime, List<PlannerEvent>>{};
+    for (final event in upcomingEvents) {
+      final dateMidnight = DateTime(
+        event.date.year,
+        event.date.month,
+        event.date.day,
+      );
+      upcomingGroupedEvents.putIfAbsent(dateMidnight, () => []).add(event);
+    }
+    final upcomingSortedDates = upcomingGroupedEvents.keys.toList()..sort();
+
     return Container(
       key: const Key('planner-tab'),
       child: ListView(
@@ -93,7 +129,7 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
         ),
         children: [
           _PlanTogetherBanner(
-            upcomingCount: filteredEvents.length,
+            upcomingCount: monthEvents.length,
             month: month,
           ),
           SizedBox(height: AppSpacing.space4),
@@ -294,18 +330,7 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
           ],
 
           // Event List
-          if (_hasExplicitDateSelection && filteredEvents.isEmpty)
-            Center(
-              child: Padding(
-                padding: EdgeInsets.all(AppSpacing.space8),
-                child: Text(
-                  'No events planned for this date.',
-                  style: AppTypography.body(color: tokens.inkMuted),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            )
-          else if (allEvents.isEmpty)
+          if (allEvents.isEmpty)
             Center(
               child: Padding(
                 padding: EdgeInsets.all(AppSpacing.space8),
@@ -316,6 +341,63 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
                 ),
               ),
             )
+          else if (_hasExplicitDateSelection) ...[
+            _SectionTitle(
+              title: DateFormat('EEEE, MMMM d').format(selected),
+              count: selectedDayEvents.length,
+            ),
+            SizedBox(height: AppSpacing.space2),
+            if (selectedDayEvents.isEmpty)
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
+                child: Text(
+                  'No events planned for this date.',
+                  style: AppTypography.body(color: tokens.inkMuted),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else ...[
+              for (final event in selectedDayEvents)
+                _RedesignedEventCard(
+                  key: ValueKey('selected-${event.id}'),
+                  event: event,
+                  onTap: () => _editEvent(context, event),
+                  onDelete: () => _deleteWithUndo(context, event.id),
+                ),
+            ],
+            SizedBox(height: AppSpacing.space4),
+            _SectionTitle(
+              title: 'Upcoming',
+              count: upcomingEvents.length,
+            ),
+            SizedBox(height: AppSpacing.space2),
+            if (upcomingEvents.isEmpty)
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
+                child: Text(
+                  'No upcoming events.',
+                  style: AppTypography.body(color: tokens.inkMuted),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else ...[
+              for (final date in upcomingSortedDates) ...[
+                _DateGroupHeader(
+                  date: date,
+                  eventCount: upcomingGroupedEvents[date]?.length ?? 0,
+                ),
+                SizedBox(height: AppSpacing.space2),
+                for (final event in upcomingGroupedEvents[date]!)
+                  _RedesignedEventCard(
+                    key: ValueKey('upcoming-${event.id}-${event.date.toIso8601String()}'),
+                    event: event,
+                    onTap: () => _editEvent(context, event),
+                    onDelete: () => _deleteWithUndo(context, event.id),
+                  ),
+                SizedBox(height: AppSpacing.space4),
+              ],
+            ],
+          ]
           else if (filteredEvents.isEmpty)
             Center(
               child: Padding(
@@ -818,6 +900,44 @@ class _DateGroupHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title, required this.count});
+
+  final String title;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: AppTypography.h2(color: tokens.ink),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+          decoration: BoxDecoration(
+            color: tokens.primaryTint,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          child: Text(
+            '$count event${count == 1 ? '' : 's'}',
+            style: AppTypography.caption(
+              color: tokens.primary,
+            ).copyWith(fontWeight: FontWeight.w700, fontSize: 11),
+          ),
+        ),
+      ],
     );
   }
 }
