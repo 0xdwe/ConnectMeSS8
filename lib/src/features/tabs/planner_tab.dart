@@ -42,11 +42,16 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final today = _today();
+    final now = (widget.now ?? DateTime.now)();
     final selectedIsPast =
         _hasExplicitDateSelection && selected.isBefore(today);
     final allEvents = ref.watch(
       appControllerProvider.select((state) => state.events),
     );
+    final contacts = ref.watch(
+      appControllerProvider.select((state) => state.connections),
+    );
+    final contactById = {for (final contact in contacts) contact.id: contact};
 
     // Expand recurring events into individual occurrences for the display window.
     // "Today & upcoming" shows occurrences in [today, today+365d].
@@ -60,6 +65,10 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
           _hasExplicitDateSelection ? selected : windowEnd,
         ),
     ]..sort((a, b) => a.date.compareTo(b.date));
+    final nextEvent = _nextUpcomingEvent(filteredEvents, now);
+    final nextEventContact = nextEvent?.contactId != null
+      ? contactById[nextEvent!.contactId!]
+      : null;
 
     // Group events by day
     final groupedEvents = <DateTime, List<PlannerEvent>>{};
@@ -83,96 +92,157 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
           AppSpacing.pageBottomPadding,
         ),
         children: [
-          // Redesigned Top Bar Header
-          Row(
-            children: [
-              IconButton(
-                onPressed: () => setState(
-                  () => month = DateTime(month.year, month.month - 1),
-                ),
-                icon: Icon(Icons.chevron_left, color: tokens.primary, size: 28),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                key: const Key('planner-month-label'),
-                width: 112,
-                child: Text(
-                  DateFormat.MMMM().format(month),
-                  style: AppTypography.h2(color: tokens.ink),
-                  maxLines: 1,
-                  softWrap: false,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: () => setState(
-                  () => month = DateTime(month.year, month.month + 1),
-                ),
-                icon: Icon(
-                  Icons.chevron_right,
-                  color: tokens.primary,
-                  size: 28,
-                ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const Spacer(),
-              // Search Action Button
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: tokens.primary.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: Icon(Icons.search, color: tokens.primary, size: 20),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => const _PlannerSearchDialog(),
-                    );
-                  },
-                ),
-              ),
-              SizedBox(width: AppSpacing.space2),
-              // Add Action Button
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: tokens.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: Icon(Icons.add, color: tokens.primaryOn, size: 20),
-                  onPressed: () =>
-                      showAddEventModal(context, initialDate: selected),
-                ),
-              ),
-            ],
+          _PlanTogetherBanner(
+            upcomingCount: filteredEvents.length,
+            month: month,
           ),
           SizedBox(height: AppSpacing.space4),
 
-          // Calendar Card Container
           CardBox(
-            padding: const EdgeInsets.all(20),
-            child: _CalendarGrid(
-              month: month,
-              selected: selected,
-              selectedIsPast: selectedIsPast,
-              events: allEvents,
-              onSelect: (day) => setState(() {
-                selected = day;
-                _hasExplicitDateSelection = true;
-                // Sync month if they select prev/next month day
-                if (day.year != month.year || day.month != month.month) {
-                  month = DateTime(day.year, day.month);
-                }
-              }),
+            padding: EdgeInsets.all(AppSpacing.space5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 420;
+                    final monthControls = Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          onPressed: () => setState(
+                            () => month = DateTime(month.year, month.month - 1),
+                          ),
+                          icon: Icon(
+                            Icons.chevron_left,
+                            color: tokens.primary,
+                            size: 28,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            DateFormat.MMMM().format(month),
+                            key: const Key('planner-month-label'),
+                            style: AppTypography.h2(color: tokens.ink),
+                            maxLines: 1,
+                            softWrap: false,
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () => setState(
+                            () => month = DateTime(month.year, month.month + 1),
+                          ),
+                          icon: Icon(
+                            Icons.chevron_right,
+                            color: tokens.primary,
+                            size: 28,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    );
+
+                    final actionButtons = Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: tokens.primary.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.search,
+                              color: tokens.primary,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => const _PlannerSearchDialog(),
+                              );
+                            },
+                          ),
+                        ),
+                        SizedBox(width: AppSpacing.space2),
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: tokens.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.add,
+                              color: tokens.primaryOn,
+                              size: 20,
+                            ),
+                            onPressed: () => showAddEventModal(
+                              context,
+                              initialDate: selected,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+
+                    if (!compact) {
+                      return Row(
+                        children: [
+                          monthControls,
+                          const Spacer(),
+                          actionButtons,
+                        ],
+                      );
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(child: monthControls),
+                        SizedBox(height: AppSpacing.space3),
+                        Align(alignment: Alignment.centerRight, child: actionButtons),
+                      ],
+                    );
+                  },
+                ),
+                SizedBox(height: AppSpacing.space4),
+                _CalendarGrid(
+                  month: month,
+                  selected: selected,
+                  selectedIsPast: selectedIsPast,
+                  events: allEvents,
+                  contacts: contacts,
+                  onSelect: (day) => setState(() {
+                    selected = day;
+                    _hasExplicitDateSelection = true;
+                    if (day.year != month.year || day.month != month.month) {
+                      month = DateTime(day.year, day.month);
+                    }
+                  }),
+                ),
+                SizedBox(height: AppSpacing.space3),
+                // Wrap(
+                //   spacing: AppSpacing.space4,
+                //   runSpacing: AppSpacing.space2,
+                //   children: const [
+                //     _LegendDot(color: Color(0xFF4F46E5), label: 'Personal'),
+                //     _LegendDot(color: Color(0xFF2563EB), label: 'Family'),
+                //     _LegendDot(color: Colors.pink, label: 'Partner'),
+                //     _LegendDot(color: Color(0xFF10B981), label: 'Friends'),
+                //   ],
+                // ),
+              ],
             ),
           ),
           SizedBox(height: AppSpacing.space4),
@@ -217,6 +287,11 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
             ],
           ),
           SizedBox(height: AppSpacing.space3),
+
+          if (nextEvent != null) ...[
+            _NextUpCard(event: nextEvent, contact: nextEventContact),
+            SizedBox(height: AppSpacing.space4),
+          ],
 
           // Event List
           if (_hasExplicitDateSelection && filteredEvents.isEmpty)
@@ -502,6 +577,7 @@ class _CalendarGrid extends StatelessWidget {
     required this.selected,
     required this.selectedIsPast,
     required this.events,
+    required this.contacts,
     required this.onSelect,
   });
 
@@ -509,11 +585,13 @@ class _CalendarGrid extends StatelessWidget {
   final DateTime selected;
   final bool selectedIsPast;
   final List<PlannerEvent> events;
+  final List<Connection> contacts;
   final ValueChanged<DateTime> onSelect;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final contactById = {for (final contact in contacts) contact.id: contact};
 
     // Calculate grid dates (42 days continuous grid)
     final firstOfMonth = DateTime(month.year, month.month, 1);
@@ -562,7 +640,7 @@ class _CalendarGrid extends StatelessWidget {
           itemCount: 42,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 7,
-            childAspectRatio: 1.0,
+            childAspectRatio: 0.95,
             crossAxisSpacing: 4,
             mainAxisSpacing: 8,
           ),
@@ -576,6 +654,16 @@ class _CalendarGrid extends StatelessWidget {
                 .where((event) => DateUtils.isSameDay(event.date, day))
                 .toList();
             final hasEvent = eventsOnDay.isNotEmpty;
+            final uniqueContacts = <Connection>[];
+            for (final event in eventsOnDay) {
+              final contactId = event.contactId;
+              if (contactId == null) continue;
+              final contact = contactById[contactId];
+              if (contact == null) continue;
+              if (!uniqueContacts.any((item) => item.id == contact.id)) {
+                uniqueContacts.add(contact);
+              }
+            }
 
             // Highlight & text color selection
             Color? backgroundColor;
@@ -612,6 +700,7 @@ class _CalendarGrid extends StatelessWidget {
                   border: border,
                 ),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
@@ -620,24 +709,45 @@ class _CalendarGrid extends StatelessWidget {
                         fontWeight: isSelected || isToday
                             ? FontWeight.w700
                             : FontWeight.w600,
-                        fontSize: 14,
+                        fontSize: 13,
+                        height: 1,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    // Centered event dot
-                    Container(
-                      width: 4,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: hasEvent
-                            ? (isSelected
-                                  ? (selectedIsPast
-                                        ? tokens.inkMuted
-                                        : tokens.primaryOn)
-                                  : tokens.primary)
-                            : Colors.transparent,
-                        shape: BoxShape.circle,
-                      ),
+                    const SizedBox(height: 1),
+                    SizedBox(
+                      height: 14,
+                      child: uniqueContacts.isNotEmpty
+                          ? Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                for (
+                                  var i = 0;
+                                  i < uniqueContacts.length && i < 3;
+                                  i++
+                                )
+                                  Positioned(
+                                    left: i * 6,
+                                    child: _CalendarDayAvatar(
+                                      contact: uniqueContacts[i],
+                                      size: 12,
+                                    ),
+                                  ),
+                              ],
+                            )
+                          : Container(
+                              width: 4,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: hasEvent
+                                    ? (isSelected
+                                          ? (selectedIsPast
+                                                ? tokens.inkMuted
+                                                : tokens.primaryOn)
+                                          : tokens.primary)
+                                    : Colors.transparent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -712,6 +822,213 @@ class _DateGroupHeader extends StatelessWidget {
   }
 }
 
+class _PlanTogetherBanner extends StatelessWidget {
+  const _PlanTogetherBanner({required this.upcomingCount, required this.month});
+
+  final int upcomingCount;
+  final DateTime month;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: dark
+              ? [tokens.surfaceRaised, tokens.surfaceSunken]
+              : const [Color(0xFFEDEBFF), Color(0xFFFDF2F8)],
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: tokens.border),
+        boxShadow: AppTokens.elevation1(dark),
+      ),
+      padding: EdgeInsets.all(AppSpacing.space4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.auto_awesome, size: 14, color: tokens.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Plan Together',
+                      style: AppTypography.caption(
+                        color: tokens.primary,
+                      ).copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+                SizedBox(height: AppSpacing.space2),
+                Text(
+                  '${DateFormat.MMMM().format(month)} at a glance',
+                  style: AppTypography.h1(color: tokens.ink),
+                ),
+                SizedBox(height: AppSpacing.space2),
+                Text(
+                  'You have $upcomingCount upcoming plans this month. 💜',
+                  style: AppTypography.body(color: tokens.inkMuted),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 110,
+            height: 110,
+            child: Image.asset(
+              'assets/images/nudge_character.png',
+              fit: BoxFit.contain,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: AppTypography.caption(color: tokens.inkMuted)),
+      ],
+    );
+  }
+}
+
+class _CalendarDayAvatar extends StatelessWidget {
+  const _CalendarDayAvatar({required this.contact, required this.size});
+
+  final Connection contact;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: tokens.surface, width: 1.2),
+      ),
+      child: CircleAvatar(
+        radius: size / 2,
+        backgroundColor: tokens.surface,
+        backgroundImage: connectionAvatarImage(contact.avatar),
+        child: connectionAvatarImage(contact.avatar) == null
+            ? Text(contact.avatar, style: AppTypography.glyph(size * 0.7))
+            : null,
+      ),
+    );
+  }
+}
+
+class _NextUpCard extends StatelessWidget {
+  const _NextUpCard({required this.event, required this.contact});
+
+  final PlannerEvent event;
+  final Connection? contact;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final location = event.note.trim().isEmpty ? null : event.note.trim();
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [tokens.primary, tokens.primary.withValues(alpha: 0.7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      padding: EdgeInsets.all(AppSpacing.space4),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _plannerEventIconForType(event.eventType),
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(width: AppSpacing.space3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.auto_awesome,
+                      size: 12,
+                      color: Colors.white70,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Next up',
+                      style: AppTypography.caption(color: Colors.white70),
+                    ),
+                  ],
+                ),
+                Text(event.title, style: AppTypography.h2(color: Colors.white)),
+                Text(
+                  '${DateFormat.MMMd().format(event.date)} • ${_formatTimeRange(event)}',
+                  style: AppTypography.caption(color: Colors.white70),
+                ),
+                if (location != null)
+                  Text(
+                    location,
+                    style: AppTypography.caption(color: Colors.white70),
+                  ),
+              ],
+            ),
+          ),
+          if (contact != null) ...[
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
+              backgroundImage: connectionAvatarImage(contact!.avatar),
+              child: connectionAvatarImage(contact!.avatar) == null
+                  ? Text(contact!.avatar, style: AppTypography.glyph(20))
+                  : null,
+            ),
+            const SizedBox(width: 8),
+          ],
+          const Icon(Icons.chevron_right, color: Colors.white),
+        ],
+      ),
+    );
+  }
+}
+
 class _RedesignedEventCard extends ConsumerWidget {
   const _RedesignedEventCard({
     super.key,
@@ -774,12 +1091,19 @@ class _RedesignedEventCard extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            event.title,
-                            style: AppTypography.h2(color: tokens.ink).copyWith(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  event.title,
+                                  style: AppTypography.h2(color: tokens.ink)
+                                      .copyWith(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -1011,6 +1335,94 @@ class _RedesignedEventCard extends ConsumerWidget {
     final minStr = min.toString().padLeft(2, '0');
     return '$hour12:$minStr $amPm';
   }
+}
+
+IconData _plannerEventIconForType(String eventType) {
+  final value = eventType.toLowerCase().trim();
+  if (value.contains('coffee') || value.contains('cafe')) {
+    return Icons.local_cafe_outlined;
+  }
+  if (value.contains('meeting') ||
+      value.contains('sync') ||
+      value.contains('team')) {
+    return Icons.groups_2_outlined;
+  }
+  if (value.contains('lunch') ||
+      value.contains('dinner') ||
+      value.contains('food') ||
+      value.contains('restaurant')) {
+    return Icons.restaurant_outlined;
+  }
+  if (value.contains('call') || value.contains('phone')) {
+    return Icons.call_outlined;
+  }
+  if (value.contains('party') || value.contains('celebrate')) {
+    return Icons.celebration_outlined;
+  }
+  if (value.contains('birth') || value.contains('anniversary')) {
+    return Icons.cake_outlined;
+  }
+  if (value.contains('remind') || value.contains('alert')) {
+    return Icons.notifications_none;
+  }
+  if (value.contains('workshop') ||
+      value.contains('class') ||
+      value.contains('study') ||
+      value.contains('school')) {
+    return Icons.menu_book_outlined;
+  }
+  if (value.contains('travel') ||
+      value.contains('trip') ||
+      value.contains('flight')) {
+    return Icons.flight_takeoff_outlined;
+  }
+  if (value.contains('plan') || value.contains('schedule')) {
+    return Icons.event_note_outlined;
+  }
+  if (value.contains('gift')) return Icons.card_giftcard_outlined;
+  return Icons.event_outlined;
+}
+
+PlannerEvent? _nextUpcomingEvent(List<PlannerEvent> events, DateTime now) {
+  final ordered = [...events]
+    ..sort((a, b) => _eventMoment(a).compareTo(_eventMoment(b)));
+  for (final event in ordered) {
+    if (!_isPastEvent(event, now)) return event;
+  }
+  return null;
+}
+
+DateTime _eventMoment(PlannerEvent event) {
+  final startMinutes = event.startTimeMinutes;
+  if (event.isAllDay || startMinutes == null) {
+    return DateTime(event.date.year, event.date.month, event.date.day);
+  }
+  return DateTime(
+    event.date.year,
+    event.date.month,
+    event.date.day,
+    startMinutes ~/ 60,
+    startMinutes % 60,
+  );
+}
+
+bool _isPastEvent(PlannerEvent event, DateTime now) {
+  return _eventMoment(event).isBefore(now);
+}
+
+String _formatTimeRange(PlannerEvent event) {
+  if (event.isAllDay) return 'All day';
+  return '${_formatMinutes(event.startTimeMinutes)} - ${_formatMinutes(event.endTimeMinutes)}';
+}
+
+String _formatMinutes(int? minutes) {
+  if (minutes == null) return '';
+  final hour24 = minutes ~/ 60;
+  final min = minutes % 60;
+  final amPm = hour24 >= 12 ? 'PM' : 'AM';
+  final hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
+  final minStr = min.toString().padLeft(2, '0');
+  return '$hour12:$minStr $amPm';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
