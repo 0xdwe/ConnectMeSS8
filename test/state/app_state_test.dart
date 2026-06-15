@@ -1804,6 +1804,63 @@ void main() {
       expect(updated.bondScore, 50);
     });
 
+    test(
+      'deleteInteraction can remove a recently committed AI interaction before the snapshot listener updates',
+      () async {
+        final connections = InMemoryConnectionStore();
+        final interactions = InMemoryInteractionStore();
+        await _seedConnections(connections);
+        await _seedInteractions(interactions);
+
+        final container = _container(
+          connectionStore: connections,
+          interactionStore: interactions,
+        );
+        addTearDown(container.dispose);
+        container.read(appControllerProvider);
+        await _settle();
+
+        final originalMike = (await connections.load('mike'))!;
+        final aiInteraction = CrmInteraction(
+          id: 'ai-save',
+          contactId: 'mike',
+          type: InteractionType.interaction,
+          title: 'AI saved interaction',
+          note: 'Test undo race',
+          date: DateTime(2026, 6, 16),
+          source: InteractionSource.aiSuggested,
+          bondScoreDelta: 10,
+        );
+        await interactions.save(aiInteraction);
+        await connections.save(
+          originalMike.copyWith(
+            bondScore: originalMike.bondScore + 10,
+            lastContact: aiInteraction.date,
+            previousBondScore: originalMike.bondScore,
+            lastBondDriftAppliedAt: aiInteraction.date,
+          ),
+        );
+
+        // Simulate the undo tap before the controller's state snapshots
+        // have had a chance to reflect the newly committed write.
+        await container.read(appControllerProvider.notifier).deleteInteraction(
+              aiInteraction.id,
+            );
+        await _settle();
+
+        final deleted = await interactions.load(aiInteraction.id);
+        final restoredMike = (await connections.load('mike'))!;
+        final expectedLastContact = (await interactions.listAll())
+            .values
+            .where((i) => i.contactId == 'mike' && i.id != aiInteraction.id)
+            .map((i) => i.date)
+            .reduce((a, b) => a.isAfter(b) ? a : b);
+
+        expect(deleted, isNull);
+        expect(restoredMike.bondScore, originalMike.bondScore);
+        expect(restoredMike.lastContact, expectedLastContact);
+      });
+
     test('falls back to connection lastContact when no interactions remain', () async {
       final connections = InMemoryConnectionStore();
       final interactions = InMemoryInteractionStore();

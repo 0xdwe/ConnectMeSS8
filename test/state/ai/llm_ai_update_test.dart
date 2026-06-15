@@ -534,8 +534,8 @@ void main() {
       expect(kLlmAiUpdateDefaultModel, 'gemini-2.5-flash');
     });
 
-    test('default timeout matches PRD §Q6 (20s)', () {
-      expect(kLlmAiUpdateDefaultTimeout, const Duration(seconds: 20));
+    test('default timeout matches PRD §Q6 (45s)', () {
+      expect(kLlmAiUpdateDefaultTimeout, const Duration(seconds: 45));
     });
   });
 

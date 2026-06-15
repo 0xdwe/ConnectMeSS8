@@ -154,7 +154,7 @@ class AppTheme {
         backgroundColor: tokens.ink,
         contentTextStyle: TextStyle(color: tokens.surfaceRaised),
         actionTextColor: tokens.primaryTint,
-        behavior: SnackBarBehavior.floating,
+        behavior: SnackBarBehavior.fixed,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),

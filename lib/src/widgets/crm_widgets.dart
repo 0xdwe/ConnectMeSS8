@@ -1676,17 +1676,67 @@ class AiInsightsCard extends ConsumerStatefulWidget {
 class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
   bool expanded = true;
   bool _isRefreshing = false;
+<<<<<<< HEAD
   bool _autoRefreshed = false;
 
+=======
+>>>>>>> 2c97a195b3f7835adf0cf741680a92d7511187d8
   /// Tracks whether a manual refresh is in progress so the rebuild
   /// provider clear does not inadvertently end the manual refresh.
   bool _manualRefreshInProgress = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-refresh after AI Update: listen for the signal that this
+    // contact's insights need refreshing.
+    ref.listenManual<String?>(
+      pendingAiInsightsRefreshProvider,
+      (previous, next) {
+        if (next == widget.connection.id && !_isRefreshing) {
+          // Clear the signal immediately to prevent re-triggering.
+          ref
+              .read(pendingAiInsightsRefreshProvider.notifier)
+              .setContactId(null);
+          setState(() {
+            _isRefreshing = true;
+            _manualRefreshInProgress = true;
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _performRefresh(showSnackBar: false);
+            }
+          });
+        }
+      },
+    );
+
+    // Watch for pending memory rebuild (delete flow).
+    // When pendingMemoryRebuildProvider matches this contact, show the
+    // refresh spinner. The rebuild itself runs in
+    // AppController.deleteInteraction; we just need to show the spinner.
+    // When the provider clears, hide the spinner unless a manual refresh
+    // is in progress (to avoid interrupting _handleRefresh's lifecycle).
+    ref.listenManual<String?>(
+      pendingMemoryRebuildProvider,
+      (previous, next) {
+        if (next == widget.connection.id && !_isRefreshing) {
+          setState(() => _isRefreshing = true);
+        } else if (next == null && _isRefreshing && !_manualRefreshInProgress) {
+          setState(() => _isRefreshing = false);
+        }
+      },
+    );
+  }
 
   Future<void> _handleRefresh() async {
     if (_isRefreshing) return;
     _manualRefreshInProgress = true;
     setState(() => _isRefreshing = true);
+    await _performRefresh();
+  }
 
+  Future<void> _performRefresh({bool showSnackBar = true}) async {
     try {
       final enricher = ref.read(memoryTopicEnricherProvider);
       final store = ref.read(memoryStoreProvider);
@@ -1719,7 +1769,7 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
       // Bump memory epoch so downstream caches/providers refresh
       ref.read(memoryEpochProvider.notifier).bump(clock());
 
-      if (mounted) {
+      if (mounted && showSnackBar) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('AI Insights refreshed.')));
@@ -1745,6 +1795,7 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
     final tokens = context.tokens;
     final disableAnimations = MediaQuery.of(context).disableAnimations;
 
+<<<<<<< HEAD
     // Auto-refresh after AI Update for this contact.
     final pendingRefreshId = ref.watch(pendingAiInsightsRefreshProvider);
     if (pendingRefreshId == widget.connection.id &&
@@ -1772,6 +1823,8 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
       _isRefreshing = false;
     }
 
+=======
+>>>>>>> 2c97a195b3f7835adf0cf741680a92d7511187d8
     return CardBox(
       padding: EdgeInsets.zero,
       border: Border.all(color: tokens.border, width: 1),
@@ -1910,6 +1963,14 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
   late String? _selectedTopic = widget.initialSelectedTopic;
 
   @override
+  void didUpdateWidget(covariant _AiInsightsBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialSelectedTopic != oldWidget.initialSelectedTopic) {
+      _selectedTopic = widget.initialSelectedTopic;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final topics = topicsForContact(widget.connection, widget.memory);
     final tokens = widget.tokens;
@@ -1932,10 +1993,9 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
                 interactionsByContactProvider(widget.connection.id),
               );
               final now = ref.read(clockProvider)();
-              return _buildRelationshipHealthCard(
+              return _buildNoRecommendationCard(
                 connection: widget.connection,
                 interactions: interactions,
-                memorySummary: widget.memorySummary,
                 now: now,
                 tokens: tokens,
               );
@@ -2094,83 +2154,60 @@ class _AiInsightsBodyState extends State<_AiInsightsBody> {
   }
 }
 
-String _qualitativeRecencyLabel({
+Widget _buildNoRecommendationCard({
   required Connection connection,
   required List<CrmInteraction> interactions,
-  required DateTime now,
-}) {
-  var latest = connection.lastContact;
-  for (final interaction in interactions) {
-    if (interaction.contactId != connection.id) continue;
-    if (interaction.date.isAfter(latest)) latest = interaction.date;
-  }
-  final days = now.difference(latest).inDays;
-  if (days <= 3) return 'You two connected very recently.';
-  if (days <= 14) return 'You\'ve been in touch recently.';
-  return 'You\'ve kept in touch regularly.';
-}
-
-String _truncateRelationshipHealthSummary(String? summary) {
-  final trimmed = summary?.trim() ?? '';
-  if (trimmed.isEmpty) return '';
-  if (trimmed.length <= 120) return trimmed;
-  return '${trimmed.substring(0, 120)}...';
-}
-
-Widget _buildRelationshipHealthCard({
-  required Connection connection,
-  required List<CrmInteraction> interactions,
-  required String? memorySummary,
   required DateTime now,
   required AppTokens tokens,
 }) {
-  final summary = _truncateRelationshipHealthSummary(memorySummary);
-  if (summary.isEmpty) return const SizedBox.shrink();
+  final hasInteractions = interactions.isNotEmpty;
 
-  final recency = _qualitativeRecencyLabel(
-    connection: connection,
-    interactions: interactions,
-    now: now,
-  );
+  final String message;
+  final IconData icon;
+  final Color iconColor;
+
+  if (!hasInteractions) {
+    message =
+        'No activity logged yet. Log an interaction or update with AI to get personalized suggestions.';
+    icon = Icons.info_outline;
+    iconColor = tokens.inkMuted;
+  } else {
+    message = "You're doing great keeping up with ${connection.name}!";
+    icon = Icons.check_circle_outline;
+    iconColor = tokens.success;
+  }
 
   return Container(
     padding: EdgeInsets.all(AppSpacing.space4),
     decoration: BoxDecoration(
-      color: tokens.success.withValues(alpha: 0.08),
+      color: hasInteractions
+          ? tokens.success.withValues(alpha: 0.06)
+          : tokens.surfaceRaised,
       border: Border.all(
-        color: tokens.success.withValues(alpha: 0.25),
-        width: 1.5,
+        color: hasInteractions
+            ? tokens.success.withValues(alpha: 0.2)
+            : tokens.border,
+        width: 1,
       ),
       borderRadius: BorderRadius.circular(AppRadius.lg),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+<<<<<<< HEAD
         Icon(Icons.favorite_outline, color: tokens.success, size: 22),
+=======
+        Icon(icon, color: iconColor, size: 22),
+>>>>>>> 2c97a195b3f7835adf0cf741680a92d7511187d8
         SizedBox(width: AppSpacing.space3),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Relationship healthy',
-                style: AppTypography.h2(color: tokens.success),
-              ),
-              SizedBox(height: AppSpacing.space1),
-              Text(
-                recency,
-                style: AppTypography.body(
-                  color: tokens.success.withValues(alpha: 0.85),
-                ),
-              ),
-              SizedBox(height: AppSpacing.space1),
-              Text(
-                summary,
-                style: AppTypography.body(
-                  color: tokens.success.withValues(alpha: 0.8),
-                ),
-              ),
-            ],
+          child: Text(
+            message,
+            style: AppTypography.body(
+              color: hasInteractions
+                  ? tokens.success.withValues(alpha: 0.85)
+                  : tokens.inkMuted,
+            ),
           ),
         ),
       ],
