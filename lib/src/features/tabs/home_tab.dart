@@ -6,6 +6,7 @@ import '../../models/social_models.dart';
 import '../../state/app_state.dart';
 import '../../state/memory/memory_providers.dart';
 import '../../state/query_providers.dart';
+import '../modals/update_person_picker_modal.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_tokens.dart';
 import '../../theme/app_typography.dart';
@@ -55,12 +56,7 @@ class _HomeTabState extends ConsumerState<HomeTab> {
         SizedBox(height: AppSpacing.space4),
         DailyNudgeCard(
           onTap: () {
-            final recs = ref.read(recommendationsProvider).value ?? [];
-            if (recs.isNotEmpty) {
-              context.push(_contactRouteForRecommendation(recs.first));
-            } else {
-              context.push('/recommendations');
-            }
+            showUpdatePersonPickerModal(context);
           },
         ),
         SizedBox(height: AppSpacing.space4),
