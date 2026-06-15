@@ -48,6 +48,7 @@ ProviderContainer _container({
   BatchedWrites? batchedWrites,
   DateTime Function()? clock,
   bool signedIn = true,
+  MemoryRebuilder? memoryRebuilder,
   // Use dynamic because Riverpod 3's Override type is not part of the
   // public flutter_riverpod surface.
   List<dynamic>? overrides,
@@ -99,6 +100,8 @@ ProviderContainer _container({
         ),
       ),
       if (overrides != null) ...overrides,
+      if (memoryRebuilder != null)
+        memoryRebuilderProvider.overrideWithValue(memoryRebuilder),
     ],
   );
 }
@@ -2178,5 +2181,72 @@ void main() {
       final after = await interactions.load('i1');
       expect(after, isNull);
     });
+
+    test('if memory rebuild throws, interaction and connection are still updated',
+        () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      await _seedConnections(connections);
+
+      // Create an interaction with a non-zero bondScoreDelta so we can
+      // verify the connection score was recalculated even when rebuild fails.
+      await interactions.save(CrmInteraction(
+        id: 'delta-interaction',
+        contactId: 'mike',
+        type: InteractionType.interaction,
+        title: 'Big boost',
+        note: 'Huge delta',
+        date: DateTime(2026, 6, 10),
+        bondScoreDelta: 10,
+      ));
+
+      // Pre-seed a memory document so the rebuild branch is entered
+      await memory.save(MemoryDocument.empty(
+        contactId: 'mike',
+        displayName: 'Mike',
+        now: DateTime(2026),
+      ));
+
+      // Use a throwing rebuilder
+      final throwingRebuilder = _ThrowingMemoryRebuilder();
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+        memoryRebuilder: throwingRebuilder,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      final mikeBefore = (await connections.load('mike'))!;
+
+      await container
+          .read(appControllerProvider.notifier)
+          .deleteInteraction('delta-interaction');
+      await _settle();
+
+      // Interaction is still deleted
+      expect(await interactions.load('delta-interaction'), isNull);
+
+      // Connection is still updated (bondScore recalculated downward)
+      final mikeAfter = (await connections.load('mike'))!;
+      expect(mikeAfter.bondScore, lessThan(mikeBefore.bondScore));
+    });
   });
+}
+
+/// A [MemoryRebuilder] that always throws, used to test the non-fatal
+/// error path where the rebuild fails but the interaction is still deleted.
+class _ThrowingMemoryRebuilder implements MemoryRebuilder {
+  @override
+  Future<MemoryRebuildResult> rebuild({
+    required Connection contact,
+    required MemoryDocument currentMemory,
+    required List<CrmInteraction> remainingInteractions,
+    required CrmInteraction deletedInteraction,
+  }) {
+    throw Exception('Rebuild failed — simulated network error');
+  }
 }

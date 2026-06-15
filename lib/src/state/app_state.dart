@@ -914,14 +914,19 @@ class AppController extends Notifier<AppState> {
     final newBondScore =
         (connection.bondScore - interaction.bondScoreDelta).clamp(0, 100);
 
-    // Update connection via store
+    // Update connection with recalculated fields
     final updatedConnection = connection.copyWith(
       lastContact: newLastContact ?? connection.lastContact,
       bondScore: newBondScore,
     );
-    await ref.read(connectionStoreProvider).save(updatedConnection);
 
-    // Rebuild memory to remove references to the deleted interaction
+    // Rebuild memory to remove references to the deleted interaction.
+    // If a memory document exists, rebuild it and update nextStep on
+    // the connection in a single save (avoiding a double-write that
+    // would expose an intermediate state to snapshot listeners).
+    Connection connectionToSave = updatedConnection;
+    bool memoryRebuilt = false;
+
     try {
       final memoryStore = ref.read(memoryStoreProvider);
       final currentMemory = await memoryStore.load(contactId);
@@ -935,25 +940,28 @@ class AppController extends Notifier<AppState> {
 
         await memoryStore.save(rebuildResult.memoryDocument);
 
-        // Update nextStep from rebuild result
-        final connectionWithNextStep = updatedConnection.copyWith(
+        // Merge nextStep into the connection before saving
+        connectionToSave = updatedConnection.copyWith(
           nextStep: rebuildResult.nextStep ?? '',
         );
-        await ref
-            .read(connectionStoreProvider)
-            .save(connectionWithNextStep);
-
-        // Bump epoch and clear recommendation cache
-        final clock = ref.read(clockProvider);
-        ref.read(memoryEpochProvider.notifier).bump(clock());
-        ref.read(recommendationsCacheProvider).cache = null;
-        ref
-            .read(pendingAiInsightsRefreshProvider.notifier)
-            .setContactId(contactId);
+        memoryRebuilt = true;
       }
     } catch (_) {
       // Memory rebuild failure is non-fatal; the interaction is already
-      // deleted. The user can manually refresh AI Insights later.
+      // deleted and the connection fields are still updated below.
+    }
+
+    // Single connection save with all updated fields
+    await ref.read(connectionStoreProvider).save(connectionToSave);
+
+    if (memoryRebuilt) {
+      // Bump epoch and clear recommendation cache
+      final clock = ref.read(clockProvider);
+      ref.read(memoryEpochProvider.notifier).bump(clock());
+      ref.read(recommendationsCacheProvider).cache = null;
+      ref
+          .read(pendingAiInsightsRefreshProvider.notifier)
+          .setContactId(contactId);
     }
   }
 
