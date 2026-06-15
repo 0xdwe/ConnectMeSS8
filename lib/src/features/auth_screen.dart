@@ -329,38 +329,63 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     ),
                   )
                 else ...[
-                  // Curved card inputs (Scrollable to prevent keyboard overflows)
-                  SafeArea(
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
-                          math.max(h * 0.255, 176.0),
-                          w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
-                          AppSpacing.space5,
+                  if (_mode == AuthMode.login)
+                    SafeArea(
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
+                            math.max(h * 0.255, 176.0),
+                            w <= 360 ? AppSpacing.space4 : AppSpacing.space5,
+                            AppSpacing.space5,
+                          ),
+                          child: Center(
+                            child: Container(
+                              constraints: const BoxConstraints(maxWidth: 460),
+                              child: _LoginForm(
+                                emailController: _loginEmail,
+                                passwordController: _loginPassword,
+                                emailError: _loginEmailError,
+                                passwordError: _loginPasswordError,
+                                busy: _busy,
+                                onSubmit: _submitLogin,
+                                onSwitch: () => _switchMode(AuthMode.signup),
+                                onGoogleSignIn: _signInWithGoogle,
+                                tokens: tokens,
+                              ),
+                            ),
+                          ),
                         ),
-                        child: Center(
-                          child: Container(
-                            constraints: const BoxConstraints(maxWidth: 460),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                // Form content
-                                if (_mode == AuthMode.login)
-                                  _LoginForm(
-                                    emailController: _loginEmail,
-                                    passwordController: _loginPassword,
-                                    emailError: _loginEmailError,
-                                    passwordError: _loginPasswordError,
-                                    busy: _busy,
-                                    onSubmit: _submitLogin,
-                                    onSwitch: () =>
-                                        _switchMode(AuthMode.signup),
-                                    onGoogleSignIn: _signInWithGoogle,
-                                    tokens: tokens,
-                                  )
-                                else
-                                  _SignupForm(
+                      ),
+                    ),
+                  if (_mode == AuthMode.signup)
+                    SafeArea(
+                      child: LayoutBuilder(
+                        builder: (context, signupConstraints) {
+                          final horizontalPadding = w <= 360
+                              ? AppSpacing.space3
+                              : AppSpacing.space5;
+                          final formWidth = math.min(
+                            460.0,
+                            signupConstraints.maxWidth -
+                                (horizontalPadding * 2),
+                          );
+
+                          return Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalPadding,
+                              math.max(h * 0.17, 128.0),
+                              horizontalPadding,
+                              AppSpacing.space2,
+                            ),
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.topCenter,
+                                child: SizedBox(
+                                  width: formWidth,
+                                  child: _SignupForm(
                                     nameController: _signupName,
                                     emailController: _signupEmail,
                                     passwordController: _signupPassword,
@@ -374,13 +399,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                     onSwitch: () => _switchMode(AuthMode.login),
                                     onGoogleSignIn: _signInWithGoogle,
                                   ),
-                              ],
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
                     ),
-                  ),
 
                   // Back Button to Landing Screen (placed on top for hit-testing)
                   Positioned(
@@ -635,6 +660,15 @@ InputDecorationTheme _authInputDecoration(
       borderRadius: radius,
       borderSide: BorderSide(color: tokens.danger, width: 1.4),
     ),
+  );
+}
+
+InputDecorationTheme _compactSignupInputDecoration(BuildContext context) {
+  return _authInputDecoration(
+    context,
+    borderRadius: 24,
+    minHeight: 48,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
   );
 }
 
@@ -896,9 +930,15 @@ class _LoginForm extends StatelessWidget {
 }
 
 class _AuthBrandLockup extends StatelessWidget {
-  const _AuthBrandLockup({required this.tokens});
+  const _AuthBrandLockup({
+    required this.tokens,
+    this.logoSize = 47,
+    this.textSize = 20,
+  });
 
   final AppTokens tokens;
+  final double logoSize;
+  final double textSize;
 
   @override
   Widget build(BuildContext context) {
@@ -906,13 +946,13 @@ class _AuthBrandLockup extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          LinkedChainLogo(size: 47, color: tokens.primary),
+          LinkedChainLogo(size: logoSize, color: tokens.primary),
           const SizedBox(height: 6),
           Text(
             'Connect Me',
             style: AppTypography.bodyLg(
               color: tokens.ink,
-            ).copyWith(fontSize: 20, fontWeight: FontWeight.w700),
+            ).copyWith(fontSize: textSize, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -955,22 +995,24 @@ class _SignupForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _AuthBrandLockup(tokens: tokens),
-        const SizedBox(height: 28),
+        _AuthBrandLockup(tokens: tokens, logoSize: 40, textSize: 18),
+        const SizedBox(height: 16),
         Text(
           'Join Connect Me.',
           style: AppTypography.display(
             color: tokens.ink,
-          ).copyWith(fontWeight: FontWeight.w700, fontSize: 28),
+          ).copyWith(fontWeight: FontWeight.w700, fontSize: 26),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Text(
           'Create an account to keep connections close.',
-          style: AppTypography.body(color: tokens.inkMuted),
+          style: AppTypography.body(
+            color: tokens.inkMuted,
+          ).copyWith(fontSize: 14),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 16),
 
         // Name
         TextField(
@@ -992,9 +1034,9 @@ class _SignupForm extends StatelessWidget {
             ),
             labelText: 'Full name',
             errorText: nameError,
-          ).applyDefaults(_authInputDecoration(context)),
+          ).applyDefaults(_compactSignupInputDecoration(context)),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
 
         // Email
         TextField(
@@ -1017,9 +1059,9 @@ class _SignupForm extends StatelessWidget {
             ),
             labelText: 'Email',
             errorText: emailError,
-          ).applyDefaults(_authInputDecoration(context)),
+          ).applyDefaults(_compactSignupInputDecoration(context)),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
 
         // Password
         TextField(
@@ -1037,9 +1079,9 @@ class _SignupForm extends StatelessWidget {
             ),
             labelText: 'Password',
             errorText: passwordError,
-          ).applyDefaults(_authInputDecoration(context)),
+          ).applyDefaults(_compactSignupInputDecoration(context)),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
 
         // Confirm Password
         TextField(
@@ -1057,13 +1099,13 @@ class _SignupForm extends StatelessWidget {
             ),
             labelText: 'Confirm password',
             errorText: confirmError,
-          ).applyDefaults(_authInputDecoration(context)),
+          ).applyDefaults(_compactSignupInputDecoration(context)),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
 
         // Signup Button
         SizedBox(
-          height: 52,
+          height: 48,
           child: FilledButton(
             key: const Key('sign-up-button'),
             onPressed: busy ? null : onSubmit,
@@ -1099,7 +1141,7 @@ class _SignupForm extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
 
         Row(
           children: [
@@ -1114,11 +1156,11 @@ class _SignupForm extends StatelessWidget {
             Expanded(child: Divider(color: Colors.grey.shade300)),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
 
         // Google sign in
         SizedBox(
-          height: 52,
+          height: 48,
           child: OutlinedButton(
             key: const Key('google-sign-in-button'),
             onPressed: busy ? null : onGoogleSignIn,
@@ -1142,13 +1184,18 @@ class _SignupForm extends StatelessWidget {
                   )
                 else ...[
                   const _GoogleIcon(),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Continue with Google',
-                    style: AppTypography.body().copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: tokens.ink,
-                      fontSize: 14.5,
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      'Continue with Google',
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                      style: AppTypography.body().copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: tokens.ink,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ],
@@ -1156,7 +1203,7 @@ class _SignupForm extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 6),
 
         // Switch to Login
         TextButton(

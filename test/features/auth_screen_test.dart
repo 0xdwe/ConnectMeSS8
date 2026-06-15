@@ -13,6 +13,7 @@ Future<void> pumpConnectMe(
   Size surfaceSize = const Size(800, 1000),
   double textScaleFactor = 1,
   Brightness platformBrightness = Brightness.light,
+  AuthMode initialMode = AuthMode.login,
 }) async {
   await tester.binding.setSurfaceSize(surfaceSize);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -31,7 +32,7 @@ Future<void> pumpConnectMe(
               GoRoute(
                 path: '/auth',
                 builder: (context, state) =>
-                    const AuthScreen(initialMode: AuthMode.login),
+                    AuthScreen(initialMode: initialMode),
               ),
               GoRoute(
                 path: '/app',
@@ -203,25 +204,35 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('compact scaled signup remains scrollable without overflow', (
-    tester,
-  ) async {
+  testWidgets('signup fits a phone viewport without scrolling', (tester) async {
     await pumpConnectMe(
       tester,
-      surfaceSize: const Size(320, 700),
-      textScaleFactor: 1.3,
+      surfaceSize: const Size(360, 800),
+      initialMode: AuthMode.signup,
     );
-
-    await tester.ensureVisible(find.byKey(const Key('auth-mode-signup')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('auth-mode-signup')));
-    await tester.pumpAndSettle();
 
     expect(find.byType(LinkedChainLogo), findsOneWidget);
     expect(find.byKey(const Key('signup-name-field')), findsOneWidget);
-    await tester.ensureVisible(find.byKey(const Key('google-sign-in-button')));
-    await tester.pumpAndSettle();
+    expect(
+      find.ancestor(
+        of: find.byKey(const Key('signup-name-field')),
+        matching: find.byType(SingleChildScrollView),
+      ),
+      findsNothing,
+    );
 
+    for (final finder in [
+      find.byType(LinkedChainLogo),
+      find.byKey(const Key('signup-name-field')),
+      find.byKey(const Key('signup-confirm-field')),
+      find.byKey(const Key('sign-up-button')),
+      find.byKey(const Key('google-sign-in-button')),
+      find.byKey(const Key('auth-mode-login')),
+    ]) {
+      final rect = tester.getRect(finder);
+      expect(rect.top, greaterThanOrEqualTo(0));
+      expect(rect.bottom, lessThanOrEqualTo(800));
+    }
     expect(tester.takeException(), isNull);
   });
 
