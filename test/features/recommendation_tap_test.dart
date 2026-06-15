@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:connect_me/src/app/connect_me_app.dart';
+import 'package:connect_me/src/features/modals/update_person_picker_modal.dart';
 import 'package:connect_me/src/features/recommendations_screen.dart';
 import 'package:connect_me/src/features/tabs/home_tab.dart';
 import 'package:connect_me/src/models/social_models.dart';
@@ -184,6 +185,18 @@ void main() {
     // and 'Recommendation' (callout title).
     expect(find.text('AI Insights'), findsOneWidget);
     expect(find.text('Recommendation'), findsOneWidget);
+  });
+
+  testWidgets('daily nudge opens the update person picker', (
+    tester,
+  ) async {
+    await _pump(tester);
+
+    await tester.tap(find.text('Send a message'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(UpdatePersonPickerModal), findsOneWidget);
+    expect(find.text('Choose person to update'), findsOneWidget);
   });
 
   testWidgets(
