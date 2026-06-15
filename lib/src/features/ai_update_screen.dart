@@ -21,6 +21,17 @@ import '../widgets/crm_widgets.dart';
 
 enum AiUpdateState { inputting, generating, previewing, saving }
 
+bool get _isRunningFlutterTest {
+  var running = false;
+  assert(() {
+    running = WidgetsBinding.instance.runtimeType.toString().contains(
+      'TestWidgetsFlutterBinding',
+    );
+    return true;
+  }());
+  return running;
+}
+
 class AiUpdateScreen extends ConsumerStatefulWidget {
   const AiUpdateScreen({
     super.key,
@@ -66,12 +77,40 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
   // shown. Total length is therefore `interactions.length` or
   // `interactions.length + 1`.
   List<AnimationController> cardAnimationControllers = [];
+  late final AnimationController _mascotPulseController;
+  late final Animation<double> _mascotPulseAnimation;
 
   @override
   void initState() {
     super.initState();
+    _mascotPulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
+    );
+    _mascotPulseAnimation = Tween<double>(begin: .94, end: 1.06).animate(
+      CurvedAnimation(
+        parent: _mascotPulseController,
+        curve: Curves.easeInOutCubic,
+      ),
+    );
     if (widget.initialAttachments != null) {
       attachments.addAll(widget.initialAttachments!);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduceMotion || _isRunningFlutterTest) {
+      _mascotPulseController
+        ..stop()
+        ..value = .5;
+      return;
+    }
+    if (!_mascotPulseController.isAnimating) {
+      _mascotPulseController.repeat(reverse: true);
     }
   }
 
@@ -441,6 +480,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     for (final controller in cardAnimationControllers) {
       controller.dispose();
     }
+    _mascotPulseController.dispose();
     super.dispose();
   }
 
@@ -481,113 +521,386 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       );
     }
 
+    final inputFlow = currentState != AiUpdateState.previewing;
+
     return Scaffold(
-      backgroundColor: tokens.surface,
-      appBar: AppBar(
-        title: Text('Update with AI', style: AppTypography.h2()),
-        elevation: 0,
-        backgroundColor: tokens.surface,
-        foregroundColor: tokens.ink,
-      ),
+      backgroundColor: inputFlow ? Colors.transparent : tokens.surface,
+      appBar: inputFlow
+          ? null
+          : AppBar(
+              title: Text('Update with AI', style: AppTypography.h2()),
+              elevation: 0,
+              backgroundColor: tokens.surface,
+              foregroundColor: tokens.ink,
+            ),
       body: currentState == AiUpdateState.previewing
           ? _buildPreviewView(tokens, person)
-          : currentState == AiUpdateState.generating
-          ? _buildLoadingView(tokens, person)
-          : _buildInputView(tokens, person),
+          : _buildAiUpdateShell(
+              tokens,
+              currentState == AiUpdateState.generating
+                  ? _buildLoadingView(tokens, person)
+                  : _buildInputView(tokens, person),
+            ),
+    );
+  }
+
+  Widget _buildAiUpdateShell(AppTokens tokens, Widget child) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFFDFBFF),
+            Color(0xFFF2ECFF),
+            Color(0xFFE6DCFF),
+            Color(0xFFFFFAFF),
+          ],
+          stops: [0, .38, .74, 1],
+        ),
+      ),
+      child: Column(
+        children: [
+          _buildGradientHeader(tokens),
+          Expanded(child: child),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGradientHeader(AppTokens tokens) {
+    final topInset = MediaQuery.paddingOf(context).top;
+    return Container(
+      height: topInset + 112,
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.space5,
+        topInset,
+        AppSpacing.space5,
+        0,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .72),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(34)),
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: .82)),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: tokens.primary.withValues(alpha: .10),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Material(
+              color: Colors.white,
+              shape: const CircleBorder(),
+              child: IconButton(
+                tooltip: 'Back',
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: Icon(
+                  Icons.arrow_back_rounded,
+                  color: tokens.primary,
+                  size: 30,
+                ),
+              ),
+            ),
+          ),
+          Text(
+            'Update with AI',
+            style: AppTypography.display(color: const Color(0xFF282451)),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildInputView(AppTokens tokens, Connection person) {
-    return ListView(
-      padding: EdgeInsets.all(AppSpacing.space6),
-      children: [
-        CardBox(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = constraints.maxWidth < 420
+            ? AppSpacing.space5
+            : AppSpacing.space6;
+        final mascotSize = (constraints.maxWidth * .66)
+            .clamp(236.0, 380.0)
+            .toDouble();
+
+        return ListView(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            AppSpacing.space5,
+            horizontalPadding,
+            AppSpacing.space8,
+          ),
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 620),
+                child: Column(
+                  children: [
+                    _buildMascotHero(tokens, mascotSize),
+                    SizedBox(height: AppSpacing.space2),
+                    Text(
+                      'Update ${person.name}',
+                      style: AppTypography.display(
+                        color: const Color(0xFF2E2868),
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: AppSpacing.space2),
+                    Text(
+                      'Tell AI anything',
+                      style: AppTypography.h1(color: tokens.primary),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: AppSpacing.space3),
+                    Text(
+                      'Text, images, files. AI organizes info into the right basket and updates history/dashboard.',
+                      style: AppTypography.bodyLg(
+                        color: const Color(0xFF5B5790),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: AppSpacing.space5),
+                    _buildUpdatePanel(tokens),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMascotHero(AppTokens tokens, double mascotSize) {
+    return SizedBox(
+      height: mascotSize + AppSpacing.space8,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            top: mascotSize * .18,
+            left: mascotSize * .10,
+            child: Icon(
+              Icons.auto_awesome,
+              color: const Color(0xFFC7A5FF).withValues(alpha: .82),
+              size: 26,
+            ),
+          ),
+          Positioned(
+            top: mascotSize * .02,
+            right: mascotSize * .12,
+            child: Icon(
+              Icons.auto_awesome,
+              color: const Color(0xFF9DB8FF).withValues(alpha: .74),
+              size: 24,
+            ),
+          ),
+          Positioned(
+            right: mascotSize * .03,
+            bottom: mascotSize * .12,
+            child: Icon(
+              Icons.star_rounded,
+              color: Colors.white.withValues(alpha: .88),
+              size: 18,
+            ),
+          ),
+          ScaleTransition(
+            scale: _mascotPulseAnimation,
+            child: Container(
+              width: mascotSize * .82,
+              height: mascotSize * .82,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    Colors.white.withValues(alpha: .78),
+                    tokens.primary.withValues(alpha: .15),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          ScaleTransition(
+            scale: _mascotPulseAnimation,
+            child: Image.asset(
+              'assets/images/update_budi_mascot.png',
+              key: const Key('update-budi-mascot'),
+              width: mascotSize,
+              height: mascotSize,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpdatePanel(AppTokens tokens) {
+    return Container(
+      padding: EdgeInsets.all(AppSpacing.space5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .92),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: Colors.white.withValues(alpha: .86)),
+        boxShadow: [
+          BoxShadow(
+            color: tokens.primary.withValues(alpha: .11),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildInputBox(tokens),
+          SizedBox(height: AppSpacing.space4),
+          _buildGradientSubmitButton(tokens),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputBox(AppTokens tokens) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 196),
+      padding: EdgeInsets.all(AppSpacing.space4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFCFAFF).withValues(alpha: .95),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: const Color(0xFFDCD4F5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            key: const Key('ai-input-field'),
+            controller: input,
+            minLines: 4,
+            maxLines: 12,
+            style: AppTypography.bodyLg(color: tokens.ink),
+            decoration: InputDecoration(
+              hintText:
+                  'Example: Sam said today is first day at job.\nAsk how it went tomorrow.',
+              hintStyle: AppTypography.bodyLg(color: const Color(0xFF8580AA)),
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          SizedBox(height: AppSpacing.space3),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Text('Update ${person.name}', style: AppTypography.h1()),
-              SizedBox(height: AppSpacing.space2),
-              Text('Tell AI anything', style: AppTypography.h2()),
-              SizedBox(height: AppSpacing.space2),
-              Text(
-                'Text, images, files. AI categorizes info into the right basket and updates history/dashboard.',
-                style: AppTypography.body(color: tokens.inkMuted),
-              ),
-              SizedBox(height: AppSpacing.space4),
-              TextField(
-                key: const Key('ai-input-field'),
-                controller: input,
-                minLines: 4,
-                maxLines: 12,
-                decoration: const InputDecoration(
-                  hintText:
-                      'Example: Sam said today is first day at job. Ask how it went tomorrow.',
+              ActionChip(
+                key: const Key('add-image-chip'),
+                avatar: Icon(Icons.image, color: tokens.primary),
+                label: const Text('Add image'),
+                labelStyle: AppTypography.bodyLg(color: tokens.primary),
+                backgroundColor: Colors.white,
+                side: BorderSide(color: tokens.primary.withValues(alpha: .32)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
+                onPressed: pickImage,
               ),
-              SizedBox(height: AppSpacing.space3),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ActionChip(
-                    key: const Key('add-image-chip'),
-                    avatar: const Icon(Icons.image),
-                    label: const Text('Add image'),
-                    onPressed: pickImage,
-                  ),
-                  for (final file in attachments)
-                    if (file.path != null || _isImage(file.name))
-                      ClipRRect(
-                        key: Key('attachment-preview-${file.name}'),
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                        child: file.path != null
-                            ? Image.file(
-                                File(file.path!),
-                                width: 64,
-                                height: 64,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(
-                                      width: 64,
-                                      height: 64,
-                                      color: tokens.surfaceSunken,
-                                      child: Icon(
-                                        Icons.image_outlined,
-                                        color: tokens.inkSubtle,
-                                      ),
-                                    ),
-                              )
-                            : Container(
-                                width: 64,
-                                height: 64,
-                                color: tokens.surfaceSunken,
-                                child: Icon(
-                                  Icons.image_outlined,
-                                  color: tokens.inkSubtle,
-                                ),
-                              ),
-                      )
-                    else
-                      Chip(label: Text(file.name)),
-                ],
-              ),
-              SizedBox(height: AppSpacing.space5),
-              FilledButton.icon(
-                key: const Key('run-ai-button'),
-                onPressed: currentState == AiUpdateState.generating
-                    ? null
-                    : submit,
-                icon: const Icon(Icons.auto_awesome),
-                label: Text(
-                  currentState == AiUpdateState.generating
-                      ? 'Generating...'
-                      : 'Update Connection',
-                ),
-              ),
+              for (final file in attachments)
+                _buildAttachmentChip(tokens, file),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAttachmentChip(AppTokens tokens, AttachmentRef file) {
+    if (file.path != null || _isImage(file.name)) {
+      return ClipRRect(
+        key: Key('attachment-preview-${file.name}'),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: file.path != null
+            ? Image.file(
+                File(file.path!),
+                width: 64,
+                height: 64,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 64,
+                  height: 64,
+                  color: tokens.surfaceSunken,
+                  child: Icon(Icons.image_outlined, color: tokens.inkSubtle),
+                ),
+              )
+            : Container(
+                width: 64,
+                height: 64,
+                color: tokens.surfaceSunken,
+                child: Icon(Icons.image_outlined, color: tokens.inkSubtle),
+              ),
+      );
+    }
+
+    return Chip(label: Text(file.name));
+  }
+
+  Widget _buildGradientSubmitButton(AppTokens tokens) {
+    final disabled = currentState == AiUpdateState.generating;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadius.xl),
+      child: Ink(
+        decoration: BoxDecoration(
+          gradient: disabled
+              ? null
+              : const LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Color(0xFF675BFF), Color(0xFF7B3DFF)],
+                ),
+          color: disabled ? tokens.surfaceSunken : null,
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          boxShadow: [
+            BoxShadow(
+              color: tokens.primary.withValues(alpha: disabled ? 0 : .24),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
-      ],
+        child: InkWell(
+          key: const Key('run-ai-button'),
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          onTap: disabled ? null : submit,
+          child: SizedBox(
+            height: 64,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.auto_awesome, color: tokens.primaryOn, size: 28),
+                SizedBox(width: AppSpacing.space3),
+                Text(
+                  disabled ? 'Generating...' : 'Update Connection',
+                  style: AppTypography.h2(color: tokens.primaryOn),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -836,11 +1149,12 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                     SizedBox(width: AppSpacing.space2),
                     Text(
                       DateFormat.yMMMd().format(interactionDates[index]),
-                      style: AppTypography.caption(color: tokens.primary)
-                          .copyWith(fontWeight: FontWeight.w600),
+                      style: AppTypography.caption(
+                        color: tokens.primary,
+                      ).copyWith(fontWeight: FontWeight.w600),
                     ),
                     SizedBox(width: AppSpacing.space1),
-                     Icon(Icons.edit_outlined, size: 13, color: tokens.primary),
+                    Icon(Icons.edit_outlined, size: 13, color: tokens.primary),
                   ],
                 ),
               ),
@@ -871,9 +1185,9 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
         SizedBox(width: AppSpacing.space1),
         Text(
           label,
-          style: AppTypography.caption(color: color).copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTypography.caption(
+            color: color,
+          ).copyWith(fontWeight: FontWeight.w600),
         ),
       ],
     );
