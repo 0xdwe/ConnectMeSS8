@@ -272,7 +272,7 @@ void main() {
           AiInsightsCard(
             connection: _connection(category: 'Friends'),
             insight: _insight(),
-            initialSelectedTopic: 'Paris trip',
+            initialSelectedTopic: 'Paris Trip',
             memory: MemoryDocument(
               contactId: 'test',
               displayName: 'Test Person',
@@ -298,7 +298,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Paris trip'), findsWidgets);
+      expect(find.text('Paris Trip'), findsWidgets);
       expect(
         find.text('Ask how the Paris plans are coming together.'),
         findsOneWidget,
@@ -337,7 +337,7 @@ void main() {
         ),
       );
       await tester.pump();
-      await tester.tap(find.text('Paris trip'));
+      await tester.tap(find.text('Paris Trip'));
       await tester.pumpAndSettle();
 
       expect(
@@ -387,7 +387,7 @@ void main() {
         ),
       );
       await tester.pump();
-      await tester.tap(find.text('Paris trip'));
+      await tester.tap(find.text('Paris Trip'));
       await tester.pumpAndSettle();
 
       expect(
@@ -439,7 +439,7 @@ void main() {
         ),
       );
       await tester.pump();
-      await tester.tap(find.text('Paris trip'));
+      await tester.tap(find.text('Paris Trip'));
       await tester.pumpAndSettle();
 
       expect(
@@ -483,7 +483,7 @@ void main() {
         ),
       );
       await tester.pump();
-      await tester.tap(find.text('Paris trip'));
+      await tester.tap(find.text('Paris Trip'));
       await tester.pumpAndSettle();
 
       expect(find.text('Conversation Starter :'), findsWidgets);
@@ -532,7 +532,7 @@ void main() {
           ),
         );
         await tester.pump();
-        await tester.tap(find.text('Paris trip'));
+        await tester.tap(find.text('Paris Trip'));
         await tester.pumpAndSettle();
 
         expect(find.text('Conversation Starter :'), findsWidgets);
@@ -571,10 +571,10 @@ void main() {
           ),
         );
         await tester.pump();
-        await tester.tap(find.text('Paris trip'));
+        await tester.tap(find.text('Paris Trip'));
         await tester.pumpAndSettle();
 
-        expect(find.text("How's the Paris trip going?"), findsOneWidget);
+        expect(find.text("How's the Paris Trip going?"), findsOneWidget);
         expect(find.text('Context :'), findsNothing);
       },
     );
@@ -612,10 +612,10 @@ void main() {
           ),
         );
         await tester.pump();
-        await tester.tap(find.text('Paris trip'));
+        await tester.tap(find.text('Paris Trip'));
         await tester.pumpAndSettle();
 
-        expect(find.text("How's the Paris trip going?"), findsOneWidget);
+        expect(find.text("How's the Paris Trip going?"), findsOneWidget);
         expect(
           find.text('Ask how the Paris plans are coming together.'),
           findsNothing,

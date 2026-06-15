@@ -264,7 +264,7 @@ class MockAiUpdate implements AiUpdate {
     final bulletBody = userInput.isEmpty
         ? 'AI reviewed ${attachments.length} attachment(s).'
         : userInput;
-    final bullet = '- ${_isoDate(now)} — ${_truncate(bulletBody, 120)}';
+    final bullet = '- ${_isoDate(now)} — ${_truncate(bulletBody, 500)}';
     final newHistory = currentMemory.history.isEmpty
         ? bullet
         : '${currentMemory.history}\n$bullet';
