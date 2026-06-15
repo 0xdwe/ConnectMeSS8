@@ -4,11 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('llm_ai_update_prompt', () {
     test('exposes a non-empty versioned system prompt', () {
-      expect(kLlmAiUpdatePromptVersion, 5);
+      expect(kLlmAiUpdatePromptVersion, 6);
       expect(kLlmAiUpdatePromptV1, isNotEmpty);
       expect(kLlmAiUpdatePromptV3, isNotEmpty);
       expect(kLlmAiUpdatePromptV4, isNotEmpty);
       expect(kLlmAiUpdatePromptV5, isNotEmpty);
+      expect(kLlmAiUpdatePromptV6, isNotEmpty);
     });
 
     test('encodes anti-shame voice rule against numeric day counts', () {

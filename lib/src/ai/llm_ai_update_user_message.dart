@@ -216,6 +216,20 @@ String buildLlmAiUpdateUserMessage({
   }
   buffer.writeln();
 
+  if (prepared != null && prepared.images.isNotEmpty) {
+    buffer.writeln(
+      'The attached images are part of this update — examine them '
+      'for relevant context about the interaction.',
+    );
+    buffer.writeln();
+  } else if (attachments.isNotEmpty && _splitAttachments(attachments).images.isNotEmpty) {
+    buffer.writeln(
+      'The attached images are part of this update — examine them '
+      'for relevant context about the interaction.',
+    );
+    buffer.writeln();
+  }
+
   buffer.writeln('User input:');
   buffer.writeln(userInput.isEmpty ? '(empty)' : userInput);
 
