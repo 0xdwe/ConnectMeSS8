@@ -167,6 +167,35 @@ void main() {
       }
     });
 
+    testWidgets('undo restores the activity when pressed before timeout', (
+      tester,
+    ) async {
+      await _pump(tester, 'mike');
+
+      expect(find.text('Job application'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const Key('delete-interaction-i2')),
+      );
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      await tester.tap(find.text('Delete'));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      await tester.tap(find.text('Undo'));
+      await tester.pump();
+
+      // Wait past the original undo window to confirm the deletion was cancelled.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Job application'), findsOneWidget);
+    });
+
     testWidgets('row is removed after undo window expires', (tester) async {
       await _pump(tester, 'mike');
 

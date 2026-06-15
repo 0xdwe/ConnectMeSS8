@@ -735,6 +735,10 @@ class AppController extends Notifier<AppState> {
     await ref.read(eventStoreProvider).save(normalizePlannerEvent(event));
   }
 
+  Future<void> restoreInteraction(CrmInteraction interaction) async {
+    await ref.read(interactionStoreProvider).save(interaction);
+  }
+
   Future<void> addCategory(String category) async {
     final clean = category.trim();
     if (clean.isEmpty || state.categories.contains(clean)) {
@@ -882,28 +886,43 @@ class AppController extends Notifier<AppState> {
   /// `false` if the memory rebuild failed — the caller should surface
   /// this so the user knows AI Insights may be stale.
   Future<bool> deleteInteraction(String interactionId) async {
-    // Find the interaction to delete
-    final interaction = state.interactions.firstWhere(
-      (i) => i.id == interactionId,
-      orElse: () => throw StateError(
-        'deleteInteraction: $interactionId not found',
-      ),
-    );
+    // Find the interaction to delete. If it's not yet present in the
+    // in-memory `state.interactions` (race after a recent commit),
+    // load it from the persistent store so we can still delete and
+    // reconcile connection fields and memory.
+    CrmInteraction? interaction;
+    try {
+      interaction = state.interactions.firstWhere((i) => i.id == interactionId);
+    } catch (_) {
+      interaction = await ref.read(interactionStoreProvider).load(interactionId);
+      if (interaction == null) {
+        throw StateError('deleteInteraction: $interactionId not found');
+      }
+    }
 
     // Delete from store
     await ref.read(interactionStoreProvider).delete(interactionId);
 
-    // Find the associated connection
+    // Find the associated connection. The app state may still be stale
+    // after a recent write (for example a saved AI update that has
+    // persisted to the store but not yet arrived on the snapshot listener).
+    // Use the persistent store as the source of truth when available.
     final contactId = interaction.contactId;
-    final connection = state.connections.firstWhere(
-      (c) => c.id == contactId,
-      orElse: () => throw StateError(
-        'deleteInteraction: connection $contactId not found',
-      ),
-    );
+    final connectionStore = ref.read(connectionStoreProvider);
+    final connection = await connectionStore.load(contactId) ??
+        state.connections.firstWhere(
+          (c) => c.id == contactId,
+          orElse: () => throw StateError(
+            'deleteInteraction: connection $contactId not found',
+          ),
+        );
 
-    // Compute remaining interactions for this contact
-    final remainingInteractions = state.interactions
+    // Compute remaining interactions for this contact from the persistent
+    // store as well, to avoid races with stale snapshot state.
+    final remainingInteractions = (await ref
+            .read(interactionStoreProvider)
+            .listAll())
+        .values
         .where((i) => i.contactId == contactId && i.id != interactionId)
         .toList();
 
