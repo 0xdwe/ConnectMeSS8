@@ -562,7 +562,8 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       );
     }
 
-    final inputFlow = currentState != AiUpdateState.previewing;
+    final inputFlow = currentState == AiUpdateState.inputting ||
+        currentState == AiUpdateState.generating;
 
     return Scaffold(
       backgroundColor: inputFlow ? Colors.transparent : tokens.surface,
@@ -574,7 +575,8 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
               backgroundColor: tokens.surface,
               foregroundColor: tokens.ink,
             ),
-      body: currentState == AiUpdateState.previewing
+      body: (currentState == AiUpdateState.previewing ||
+              currentState == AiUpdateState.saving)
           ? _buildPreviewView(tokens, person)
           : _buildAiUpdateShell(
               tokens,
@@ -1017,7 +1019,9 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                   key: const Key('save-button'),
                   onPressed: currentState == AiUpdateState.saving ? null : save,
                   child: Text(
-                    'Save these (${previewResult!.interactions.length})',
+                    currentState == AiUpdateState.saving
+                        ? 'Saving...'
+                        : 'Save these (${previewResult!.interactions.length})',
                   ),
                 ),
               ),
@@ -1130,6 +1134,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
             TextField(
               key: Key('preview-title-$index'),
               controller: titleControllers[index],
+              enabled: currentState != AiUpdateState.saving,
               decoration: const InputDecoration(
                 labelText: 'Title',
                 border: OutlineInputBorder(),
@@ -1140,6 +1145,7 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
             TextField(
               key: Key('preview-note-$index'),
               controller: noteControllers[index],
+              enabled: currentState != AiUpdateState.saving,
               decoration: const InputDecoration(
                 labelText: 'Note',
                 border: OutlineInputBorder(),
@@ -1151,17 +1157,19 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
             // Editable date row
             InkWell(
               borderRadius: BorderRadius.circular(8),
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: interactionDates[index],
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime.now(),
-                );
-                if (picked != null) {
-                  setState(() => interactionDates[index] = picked);
-                }
-              },
+              onTap: currentState == AiUpdateState.saving
+                  ? null
+                  : () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: interactionDates[index],
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        setState(() => interactionDates[index] = picked);
+                      }
+                    },
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
