@@ -2405,6 +2405,491 @@ void main() {
       expect(container.read(pendingMemoryRebuildProvider), isNull);
     });
   });
+
+  group('undoAiUpdate', () {
+    test('deletes the AI-created interaction and restores connection fields',
+        () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      final now = DateTime(2026, 6, 15);
+
+      // Set up a connection with known pre-update state.
+      // Use a recent lastBondDriftAppliedAt so bond drift doesn't
+      // interfere with the undo assertion.
+      final preUpdate = Connection(
+        id: 'undo-target',
+        name: 'Undo Target',
+        email: 'undo@example.com',
+        category: 'Friends',
+        avatar: '😊',
+        bondScore: 40,
+        nextStep: 'Call about weekend plans',
+        lastContact: DateTime(2026, 5, 1),
+        notes: '',
+        knownSince: DateTime(2025, 1, 1),
+        preferredChannels: const ['Text'],
+        lastBondDriftAppliedAt: now,
+      );
+      await connections.save(preUpdate);
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+        clock: () => now,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Apply an AI update that bumps bondScore and changes nextStep.
+      final result = AiUpdateResult(
+        summary: 'Undo test',
+        contactId: 'undo-target',
+        interactions: [
+          CrmInteraction(
+            id: 'undo-interaction',
+            contactId: 'undo-target',
+            type: InteractionType.interaction,
+            title: 'AI Update',
+            note: 'Undo test.',
+            date: now,
+            bondScoreDelta: 10,
+            source: InteractionSource.aiSuggested,
+          ),
+        ],
+        nextStep: 'Follow up next week',
+        bondScoreDelta: 10,
+      );
+      await container
+          .read(appControllerProvider.notifier)
+          .applyAiUpdateResult(result);
+      await _settle();
+
+      // Verify the update took effect.
+      final afterUpdate = (await connections.load('undo-target'))!;
+      expect(afterUpdate.bondScore, 50); // 40 + 10
+      expect(afterUpdate.nextStep, 'Follow up next week');
+      expect(afterUpdate.lastContact, now);
+      final interactionExists = await interactions.load('undo-interaction');
+      expect(interactionExists, isNotNull);
+
+      // Now undo the update.
+      await container.read(appControllerProvider.notifier).undoAiUpdate(
+            interactionId: 'undo-interaction',
+            priorMemory: null,
+            preUpdateConnection: preUpdate,
+            bondScoreDelta: 10,
+          );
+      await _settle();
+
+      // Interaction should be deleted.
+      final interactionGone = await interactions.load('undo-interaction');
+      expect(interactionGone, isNull);
+
+      // Connection fields should be restored.
+      final afterUndo = (await connections.load('undo-target'))!;
+      expect(afterUndo.bondScore, 40);
+      expect(afterUndo.nextStep, 'Call about weekend plans');
+      // lastContact reverts to pre-update value since no other interactions.
+      expect(afterUndo.lastContact, DateTime(2026, 5, 1));
+    });
+
+    test('restores prior memory document when one existed', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      final now = DateTime(2026, 6, 15);
+
+      await connections.save(Connection(
+        id: 'mem-undo',
+        name: 'Memory Undo',
+        email: 'mem@example.com',
+        category: 'Friends',
+        avatar: '😊',
+        bondScore: 50,
+        nextStep: '',
+        lastContact: now.subtract(const Duration(days: 1)),
+        notes: '',
+        knownSince: DateTime(2025, 1, 1),
+        preferredChannels: const ['Text'],
+        lastBondDriftAppliedAt: now,
+      ));
+
+      // Save a prior memory document.
+      final priorMemory = MemoryDocument(
+        contactId: 'mem-undo',
+        displayName: 'Memory Undo',
+        history: 'Prior history content',
+        topics: const ['hobbies'],
+        lastUpdated: now.subtract(const Duration(days: 1)),
+      );
+      await memory.save(priorMemory);
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+        clock: () => now,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Apply an AI update that replaces the memory.
+      // applyAiUpdateResult doesn't save memory; we must save it
+      // manually to simulate what commit() does.
+      final newMemory = MemoryDocument(
+        contactId: 'mem-undo',
+        displayName: 'Memory Undo',
+        history: 'Updated history content',
+        topics: const ['hobbies', 'travel'],
+        lastUpdated: now,
+      );
+      await memory.save(newMemory);
+
+      final result = AiUpdateResult(
+        summary: 'Memory undo test',
+        contactId: 'mem-undo',
+        interactions: [
+          CrmInteraction(
+            id: 'mem-undo-interaction',
+            contactId: 'mem-undo',
+            type: InteractionType.interaction,
+            title: 'AI Update',
+            note: 'Memory undo test.',
+            date: now,
+            bondScoreDelta: 5,
+            source: InteractionSource.aiSuggested,
+          ),
+        ],
+        memoryDocument: newMemory,
+        bondScoreDelta: 5,
+      );
+      await container
+          .read(appControllerProvider.notifier)
+          .applyAiUpdateResult(result);
+      await _settle();
+
+      // Verify memory was updated.
+      final afterUpdateMemory = await memory.load('mem-undo');
+      expect(afterUpdateMemory!.history, 'Updated history content');
+
+      // Undo with the prior memory.
+      final preUpdateConnection = Connection(
+        id: 'mem-undo',
+        name: 'Memory Undo',
+        email: 'mem@example.com',
+        category: 'Friends',
+        avatar: '😊',
+        bondScore: 50,
+        nextStep: '',
+        lastContact: now.subtract(const Duration(days: 1)),
+        notes: '',
+        knownSince: DateTime(2025, 1, 1),
+        preferredChannels: const ['Text'],
+        lastBondDriftAppliedAt: now,
+      );
+      await container.read(appControllerProvider.notifier).undoAiUpdate(
+            interactionId: 'mem-undo-interaction',
+            priorMemory: priorMemory,
+            preUpdateConnection: preUpdateConnection,
+            bondScoreDelta: 5,
+          );
+      await _settle();
+
+      // Memory should be restored to prior state.
+      final restoredMemory = await memory.load('mem-undo');
+      expect(restoredMemory, isNotNull);
+      expect(restoredMemory!.history, 'Prior history content');
+      expect(restoredMemory.topics, ['hobbies']);
+    });
+
+    test('deletes memory document when priorMemory was null (update created it)',
+        () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final memory = InMemoryMemoryStore();
+      final now = DateTime(2026, 6, 15);
+
+      await connections.save(Connection(
+        id: 'mem-del',
+        name: 'Memory Delete',
+        email: 'mdel@example.com',
+        category: 'Friends',
+        avatar: '😊',
+        bondScore: 50,
+        nextStep: '',
+        lastContact: now.subtract(const Duration(days: 1)),
+        notes: '',
+        knownSince: DateTime(2025, 1, 1),
+        preferredChannels: const ['Text'],
+        lastBondDriftAppliedAt: now,
+      ));
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        memoryStore: memory,
+        clock: () => now,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Verify no memory exists yet.
+      expect(await memory.load('mem-del'), isNull);
+
+      // Apply an AI update that creates a memory document from scratch.
+      // applyAiUpdateResult doesn't save memory; we must save it
+      // manually to simulate what commit() does.
+      final newMemory = MemoryDocument(
+        contactId: 'mem-del',
+        displayName: 'Memory Delete',
+        history: 'New memory from AI',
+        topics: const ['interests'],
+        lastUpdated: now,
+      );
+      await memory.save(newMemory);
+
+      final result = AiUpdateResult(
+        summary: 'Memory delete test',
+        contactId: 'mem-del',
+        interactions: [
+          CrmInteraction(
+            id: 'mem-del-interaction',
+            contactId: 'mem-del',
+            type: InteractionType.interaction,
+            title: 'AI Update',
+            note: 'Memory delete test.',
+            date: now,
+            bondScoreDelta: 5,
+            source: InteractionSource.aiSuggested,
+          ),
+        ],
+        memoryDocument: newMemory,
+        bondScoreDelta: 5,
+      );
+      await container
+          .read(appControllerProvider.notifier)
+          .applyAiUpdateResult(result);
+      await _settle();
+
+      // Verify memory was created.
+      expect(await memory.load('mem-del'), isNotNull);
+
+      // Undo with null priorMemory — should delete the created memory.
+      final preUpdateConnection = Connection(
+        id: 'mem-del',
+        name: 'Memory Delete',
+        email: 'mdel@example.com',
+        category: 'Friends',
+        avatar: '😊',
+        bondScore: 50,
+        nextStep: '',
+        lastContact: now.subtract(const Duration(days: 1)),
+        notes: '',
+        knownSince: DateTime(2025, 1, 1),
+        preferredChannels: const ['Text'],
+        lastBondDriftAppliedAt: now,
+      );
+      await container.read(appControllerProvider.notifier).undoAiUpdate(
+            interactionId: 'mem-del-interaction',
+            priorMemory: null,
+            preUpdateConnection: preUpdateConnection,
+            bondScoreDelta: 5,
+          );
+      await _settle();
+
+      // Memory should be deleted.
+      expect(await memory.load('mem-del'), isNull);
+    });
+
+    test('clears lastAiUpdatedContactId and lastAiSummary', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final now = DateTime(2026, 6, 15);
+
+      await connections.save(Connection(
+        id: 'signal-clear',
+        name: 'Signal Clear',
+        email: 'sc@example.com',
+        category: 'Friends',
+        avatar: '😊',
+        bondScore: 50,
+        nextStep: '',
+        lastContact: now.subtract(const Duration(days: 1)),
+        notes: '',
+        knownSince: DateTime(2025, 1, 1),
+        preferredChannels: const ['Text'],
+        lastBondDriftAppliedAt: now,
+      ));
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        clock: () => now,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Apply an AI update to set the completion signals.
+      final result = AiUpdateResult(
+        summary: 'Signal clear test',
+        contactId: 'signal-clear',
+        interactions: [
+          CrmInteraction(
+            id: 'signal-clear-int',
+            contactId: 'signal-clear',
+            type: InteractionType.interaction,
+            title: 'AI Update',
+            note: 'Signal clear test.',
+            date: now,
+            bondScoreDelta: 5,
+            source: InteractionSource.aiSuggested,
+          ),
+        ],
+        bondScoreDelta: 5,
+      );
+      await container
+          .read(appControllerProvider.notifier)
+          .applyAiUpdateResult(result);
+      await _settle();
+
+      // Verify signals are set.
+      expect(container.read(appControllerProvider).lastAiUpdatedContactId,
+          'signal-clear');
+      expect(container.read(appControllerProvider).lastAiSummary, isNotNull);
+
+      // Undo the update.
+      final preUpdateConnection = Connection(
+        id: 'signal-clear',
+        name: 'Signal Clear',
+        email: 'sc@example.com',
+        category: 'Friends',
+        avatar: '😊',
+        bondScore: 50,
+        nextStep: '',
+        lastContact: now.subtract(const Duration(days: 1)),
+        notes: '',
+        knownSince: DateTime(2025, 1, 1),
+        preferredChannels: const ['Text'],
+        lastBondDriftAppliedAt: now,
+      );
+      await container.read(appControllerProvider.notifier).undoAiUpdate(
+            interactionId: 'signal-clear-int',
+            priorMemory: null,
+            preUpdateConnection: preUpdateConnection,
+            bondScoreDelta: 5,
+          );
+      await _settle();
+
+      // Signals should be cleared.
+      expect(
+        container.read(appControllerProvider).lastAiUpdatedContactId,
+        isNull,
+      );
+      expect(container.read(appControllerProvider).lastAiSummary, isNull);
+    });
+
+    test('recalculates lastContact from remaining interactions', () async {
+      final connections = InMemoryConnectionStore();
+      final interactions = InMemoryInteractionStore();
+      final now = DateTime(2026, 6, 15);
+
+      await connections.save(Connection(
+        id: 'last-contact',
+        name: 'Last Contact',
+        email: 'lc@example.com',
+        category: 'Friends',
+        avatar: '😊',
+        bondScore: 50,
+        nextStep: '',
+        lastContact: DateTime(2026, 4, 1),
+        notes: '',
+        knownSince: DateTime(2025, 1, 1),
+        preferredChannels: const ['Text'],
+        lastBondDriftAppliedAt: now,
+      ));
+
+      // Add a pre-existing manual interaction.
+      await interactions.save(CrmInteraction(
+        id: 'existing-int',
+        contactId: 'last-contact',
+        type: InteractionType.reminder,
+        title: 'Existing check-in',
+        note: '',
+        date: DateTime(2026, 5, 10),
+        source: InteractionSource.manual,
+      ));
+
+      final container = _container(
+        connectionStore: connections,
+        interactionStore: interactions,
+        clock: () => now,
+      );
+      addTearDown(container.dispose);
+      container.read(appControllerProvider);
+      await _settle();
+
+      // Apply an AI update (date = now = 2026-06-15).
+      final result = AiUpdateResult(
+        summary: 'Last contact test',
+        contactId: 'last-contact',
+        interactions: [
+          CrmInteraction(
+            id: 'ai-int',
+            contactId: 'last-contact',
+            type: InteractionType.interaction,
+            title: 'AI Update',
+            note: 'Last contact test.',
+            date: now,
+            bondScoreDelta: 5,
+            source: InteractionSource.aiSuggested,
+          ),
+        ],
+        bondScoreDelta: 5,
+      );
+      await container
+          .read(appControllerProvider.notifier)
+          .applyAiUpdateResult(result);
+      await _settle();
+
+      // After update, lastContact should be now (2026-06-15).
+      var conn = (await connections.load('last-contact'))!;
+      expect(conn.lastContact, now);
+
+      // Undo — lastContact should fall back to the existing interaction's date.
+      final preUpdateConnection = Connection(
+        id: 'last-contact',
+        name: 'Last Contact',
+        email: 'lc@example.com',
+        category: 'Friends',
+        avatar: '😊',
+        bondScore: 50,
+        nextStep: '',
+        lastContact: DateTime(2026, 4, 1),
+        notes: '',
+        knownSince: DateTime(2025, 1, 1),
+        preferredChannels: const ['Text'],
+        lastBondDriftAppliedAt: now,
+      );
+      await container.read(appControllerProvider.notifier).undoAiUpdate(
+            interactionId: 'ai-int',
+            priorMemory: null,
+            preUpdateConnection: preUpdateConnection,
+            bondScoreDelta: 5,
+          );
+      await _settle();
+
+      conn = (await connections.load('last-contact'))!;
+      // lastContact should be recalculated from remaining interactions
+      // (the existing manual interaction at 2026-05-10).
+      expect(conn.lastContact, DateTime(2026, 5, 10));
+    });
+  });
 }
 
 /// A [MemoryRebuilder] that completes from a [Future], used to test

@@ -406,6 +406,11 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       return;
     }
 
+    // Capture pre-update state for undo before committing.
+    final preUpdateConnection =
+        ref.read(contactByIdProvider(widget.contactId));
+    final savedPriorMemory = priorMemory;
+
     // Build edited result with user changes
     final editedInteractions = <CrmInteraction>[];
     for (int i = 0; i < previewResult!.interactions.length; i++) {
@@ -442,6 +447,10 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       bondScoreDelta: previewResult!.bondScoreDelta,
     );
 
+    // Capture undo data from the edited result.
+    final interactionId = editedResult.interactions.single.id;
+    final savedBondScoreDelta = editedResult.bondScoreDelta;
+
     try {
       await ref.read(aiUpdateProvider).commit(editedResult);
     } catch (e) {
@@ -460,17 +469,18 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
       return;
     }
     // Drop the captured pre-run memory once committed; the next run
-    // will recapture it from `memoryProvider`.
+    // will recapture it from `memoryProvider`. The value was already
+    // saved into savedPriorMemory above for the undo callback.
     priorMemory = null;
 
     if (mounted) {
       final count = editedInteractions.length;
       final plural = count == 1 ? '' : 's';
       final message = 'Logged $count update$plural with ${person.name}';
+      // Capture before popping: the widget may be disposed after
+      // Navigator.pop, but the AppController and ScaffoldMessenger
+      // remain valid.
       final appController = ref.read(appControllerProvider.notifier);
-      final savedInteractions = List<CrmInteraction>.unmodifiable(
-        persistedInteractions,
-      );
       final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
       messenger.showSnackBar(
@@ -479,12 +489,19 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
           content: Text(message),
           action: SnackBarAction(
             label: 'Undo',
-            onPressed: () {
-              for (final interaction in savedInteractions) {
-                // Fire-and-forget: deletion triggers memory rebuilds
-                // and connection updates via AppController.
-                unawaited(appController.deleteInteraction(interaction.id));
-              }
+            onPressed: () async {
+              await appController.undoAiUpdate(
+                interactionId: interactionId,
+                priorMemory: savedPriorMemory,
+                preUpdateConnection: preUpdateConnection!,
+                bondScoreDelta: savedBondScoreDelta,
+              );
+              messenger.showSnackBar(
+                const SnackBar(
+                  behavior: SnackBarBehavior.fixed,
+                  content: Text('Update undone'),
+                ),
+              );
             },
           ),
         ),
