@@ -866,6 +866,61 @@ class AppController extends Notifier<AppState> {
         .setContactId(result.contactId);
   }
 
+  /// Delete a single interaction and recalculate the dependent
+  /// connection fields.
+  ///
+  /// After the interaction is removed:
+  /// - [Connection.lastContact] is recalculated from the remaining
+  ///   interactions (falling back to the connection's existing value
+  ///   if no interactions remain).
+  /// - [Connection.bondScore] is reduced by the deleted interaction's
+  ///   [CrmInteraction.bondScoreDelta], clamped to 0..100.
+  Future<void> deleteInteraction(String interactionId) async {
+    // Find the interaction to delete
+    final interaction = state.interactions.firstWhere(
+      (i) => i.id == interactionId,
+      orElse: () => throw StateError(
+        'deleteInteraction: $interactionId not found',
+      ),
+    );
+
+    // Delete from store
+    await ref.read(interactionStoreProvider).delete(interactionId);
+
+    // Find the associated connection
+    final contactId = interaction.contactId;
+    final connection = state.connections.firstWhere(
+      (c) => c.id == contactId,
+      orElse: () => throw StateError(
+        'deleteInteraction: connection $contactId not found',
+      ),
+    );
+
+    // Compute remaining interactions for this contact
+    final remainingInteractions = state.interactions
+        .where((i) => i.contactId == contactId && i.id != interactionId)
+        .toList();
+
+    // Recalculate lastContact from remaining interactions
+    DateTime? newLastContact;
+    if (remainingInteractions.isNotEmpty) {
+      newLastContact = remainingInteractions
+          .map((i) => i.date)
+          .reduce((a, b) => a.isAfter(b) ? a : b);
+    }
+
+    // Subtract bondScoreDelta (clamped to 0..100)
+    final newBondScore =
+        (connection.bondScore - interaction.bondScoreDelta).clamp(0, 100);
+
+    // Update connection via store
+    final updatedConnection = connection.copyWith(
+      lastContact: newLastContact ?? connection.lastContact,
+      bondScore: newBondScore,
+    );
+    await ref.read(connectionStoreProvider).save(updatedConnection);
+  }
+
   /// Clear the synchronous AI-update completion signal after the
   /// [recommendationsProvider] has consumed it (#117).
   ///
