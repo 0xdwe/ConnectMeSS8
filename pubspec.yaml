@@ -72,6 +72,7 @@ dependencies:
   timezone: ^0.11.0
   crypto: ^3.0.7
   app_settings: ^7.0.0
+  shared_preferences: ^2.5.0
 
 dev_dependencies:
   flutter_test:
