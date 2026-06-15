@@ -16,7 +16,8 @@ final memoryRebuilderProvider = Provider<MemoryRebuilder>((ref) {
   final auth = ref.watch(firebaseAuthProvider);
   final user = auth.currentUser;
   if (user == null) return _SignedOutMemoryRebuilder();
-  return const LlmMemoryRebuilder();
+  final firebaseAi = ref.watch(firebaseAiProvider);
+  return LlmMemoryRebuilder(firebaseAi: firebaseAi);
 });
 
 /// Sentinel returned by [memoryRebuilderProvider] while signed out.
