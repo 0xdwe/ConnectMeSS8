@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../models/social_models.dart';
 import '../ai/ai_update_commit_plan.dart';
 import 'connections/batched_writes.dart';
+import 'memory/memory_document.dart';
 import 'connections/batched_writes_providers.dart';
 import 'connections/connection_providers.dart';
 import 'connections/connection_store.dart';
@@ -1010,6 +1011,96 @@ class AppController extends Notifier<AppState> {
         .setContactId(null);
 
     return rebuildSucceeded;
+  }
+
+  /// Reverse an AI Update by deleting the created interaction,
+  /// restoring the prior memory document, and reverting connection
+  /// fields to their pre-update values.
+  ///
+  /// This is the inverse of [applyAiUpdateResult]: it removes the
+  /// interaction the update created, rolls back the memory document
+  /// to [priorMemory] (or deletes it if the update created it from
+  /// scratch), and restores [Connection] fields that the update
+  /// changed ([bondScore], [nextStep], [previousBondScore],
+  /// [lastBondDriftAppliedAt], [lastContact]).
+  Future<void> undoAiUpdate({
+    required String interactionId,
+    required MemoryDocument? priorMemory,
+    required Connection preUpdateConnection,
+    required int bondScoreDelta,
+  }) async {
+    final contactId = preUpdateConnection.id;
+
+    // 1. Delete the interaction from the store.
+    await ref.read(interactionStoreProvider).delete(interactionId);
+
+    // 2. Restore the prior memory document. If there was no prior
+    //    memory (the AI update created it from scratch), delete it.
+    final memoryStore = ref.read(memoryStoreProvider);
+    if (priorMemory != null) {
+      await memoryStore.save(priorMemory);
+    } else {
+      await memoryStore.delete(contactId);
+    }
+
+    // 3. Recalculate lastContact from remaining interactions
+    //    (excluding the one we just deleted).
+    final remainingInteractions = state.interactions
+        .where((i) => i.contactId == contactId && i.id != interactionId)
+        .toList();
+    DateTime? newLastContact;
+    if (remainingInteractions.isNotEmpty) {
+      newLastContact = remainingInteractions
+          .map((i) => i.date)
+          .reduce((a, b) => a.isAfter(b) ? a : b);
+    }
+
+    // 4. Restore connection fields to their pre-update values,
+    //    except lastContact which we recalculate from remaining
+    //    interactions. Keep lastBondDriftAppliedAt set to now
+    //    (set by the AI update) so bond drift doesn't re-apply
+    //    on the restored connection.
+    final currentConnection = state.connections.firstWhere(
+      (c) => c.id == contactId,
+    );
+    final now = DateTime.now();
+    final restoredConnection = currentConnection.copyWith(
+      lastContact: newLastContact ?? preUpdateConnection.lastContact,
+      bondScore: preUpdateConnection.bondScore,
+      nextStep: preUpdateConnection.nextStep,
+      previousBondScore: preUpdateConnection.previousBondScore,
+      lastBondDriftAppliedAt: currentConnection.lastBondDriftAppliedAt ?? now,
+    );
+    await ref.read(connectionStoreProvider).save(restoredConnection);
+
+    // 5. Clear AI update completion signals. Cannot use copyWith
+    //    for nullable fields (see clearLastAiUpdate for rationale).
+    state = AppState(
+      isAuthed: state.isAuthed,
+      themeMode: state.themeMode,
+      selectedTab: state.selectedTab,
+      user: state.user,
+      connections: state.connections,
+      interactions: state.interactions,
+      events: state.events,
+      categories: state.categories,
+      eventTypes: state.eventTypes,
+      googleCalendarLinked: state.googleCalendarLinked,
+      lastAiSummary: null,
+      lastAiUpdatedContactId: null,
+      lastAiUpdatedAt: null,
+    );
+
+    // 6. Bump memory epoch and clear recommendation cache so
+    //    downstream providers recompute with the restored state.
+    ref.read(recommendationsCacheProvider).cache = null;
+    final clock = ref.read(clockProvider);
+    ref.read(memoryEpochProvider.notifier).bump(clock());
+
+    // 7. Clear the AI insights refresh spinner.
+    ref
+        .read(pendingAiInsightsRefreshProvider.notifier)
+        .setContactId(null);
   }
 
   /// Clear the synchronous AI-update completion signal after the
