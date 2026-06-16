@@ -327,6 +327,15 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
                   ),
                 ),
               ],
+              if (_hasExplicitDateSelection && selectedDayEvents.isNotEmpty) ...[
+                SizedBox(width: AppSpacing.space2),
+                Text(
+                  '${selectedDayEvents.length} event${selectedDayEvents.length == 1 ? '' : 's'}',
+                  style: AppTypography.caption(color: tokens.primary).copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
               SizedBox(width: AppSpacing.space2),
               Icon(Icons.calendar_month, color: tokens.primary, size: 22),
             ],
@@ -355,11 +364,6 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
               ),
             )
           else if (_hasExplicitDateSelection) ...[
-            _SectionTitle(
-              title: DateFormat('EEEE, MMMM d').format(selected),
-              count: selectedDayEvents.length,
-            ),
-            SizedBox(height: AppSpacing.space2),
             if (selectedDayEvents.isEmpty)
               Padding(
                 padding: EdgeInsets.symmetric(vertical: AppSpacing.space4),
