@@ -1014,9 +1014,11 @@ class _PlanTogetherBanner extends StatelessWidget {
           SizedBox(
             width: 110,
             height: 110,
-            child: Image.asset(
-              'assets/images/planner_mascot.png',
-              fit: BoxFit.contain,
+            child: LoopingMascotMotion(
+              child: Image.asset(
+                'assets/images/planner_mascot.png',
+                fit: BoxFit.contain,
+              ),
             ),
           ),
         ],
