@@ -1011,7 +1011,7 @@ class _PlanTogetherBanner extends StatelessWidget {
             width: 110,
             height: 110,
             child: Image.asset(
-              'assets/images/nudge_character.png',
+              'assets/images/planner_mascot.png',
               fit: BoxFit.contain,
             ),
           ),
