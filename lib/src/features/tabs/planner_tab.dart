@@ -1190,6 +1190,9 @@ class _RedesignedEventCard extends ConsumerWidget {
         ? ref.watch(contactByIdProvider(event.contactId!))
         : null;
     final iconColor = _iconTintForEventType(event.eventType, tokens);
+    final contactAvatarImage = contact == null
+        ? null
+        : connectionAvatarImage(contact.avatar);
 
     return Container(
       decoration: BoxDecoration(
@@ -1299,10 +1302,13 @@ class _RedesignedEventCard extends ConsumerWidget {
                           CircleAvatar(
                             radius: 12,
                             backgroundColor: tokens.primaryTint,
-                            child: Text(
-                              contact.avatar,
-                              style: AppTypography.glyph(12),
-                            ),
+                            backgroundImage: contactAvatarImage,
+                            child: contactAvatarImage == null
+                                ? Text(
+                                    contact.avatar,
+                                    style: AppTypography.glyph(12),
+                                  )
+                                : null,
                           ),
                           const SizedBox(width: 8),
                           Text(
