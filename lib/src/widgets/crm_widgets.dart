@@ -30,12 +30,20 @@ class AppSurface extends StatelessWidget {
 
 ImageProvider<Object>? connectionAvatarImage(String avatar) {
   final trimmed = avatar.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return NetworkImage(trimmed);
+  }
+
   if (!trimmed.startsWith('data:image/')) return null;
 
   final parts = trimmed.split(',');
   if (parts.length != 2) return null;
 
-  return MemoryImage(base64Decode(parts[1]));
+  try {
+    return MemoryImage(base64Decode(parts[1]));
+  } catch (_) {
+    return null;
+  }
 }
 
 class AppHeader extends StatelessWidget {

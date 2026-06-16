@@ -334,7 +334,11 @@ class _PlannerTabState extends ConsumerState<PlannerTab> {
           SizedBox(height: AppSpacing.space3),
 
           if (nextEvent != null) ...[
-            _NextUpCard(event: nextEvent, contact: nextEventContact),
+            _NextUpCard(
+              event: nextEvent,
+              contact: nextEventContact,
+              onTap: () => _editEvent(context, nextEvent),
+            ),
             SizedBox(height: AppSpacing.space4),
           ],
 
@@ -1075,81 +1079,93 @@ class _CalendarDayAvatar extends StatelessWidget {
 }
 
 class _NextUpCard extends StatelessWidget {
-  const _NextUpCard({required this.event, required this.contact});
+  const _NextUpCard({
+    required this.event,
+    required this.contact,
+    required this.onTap,
+  });
 
   final PlannerEvent event;
   final Connection? contact;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final location = event.note.trim().isEmpty ? null : event.note.trim();
 
-    return Container(
-      decoration: BoxDecoration(
-        color: tokens.primary,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-      ),
-      padding: EdgeInsets.all(AppSpacing.space4),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: tokens.primary,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        padding: EdgeInsets.all(AppSpacing.space4),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _plannerEventIconForType(event.eventType),
+                color: Colors.white,
+              ),
             ),
-            child: Icon(
-              _plannerEventIconForType(event.eventType),
-              color: Colors.white,
-            ),
-          ),
-          SizedBox(width: AppSpacing.space3),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.auto_awesome,
-                      size: 12,
-                      color: Colors.white70,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Next up',
-                      style: AppTypography.caption(color: Colors.white70),
-                    ),
-                  ],
-                ),
-                Text(event.title, style: AppTypography.h2(color: Colors.white)),
-                Text(
-                  '${DateFormat.MMMd().format(event.date)} • ${_formatTimeRange(event)}',
-                  style: AppTypography.caption(color: Colors.white70),
-                ),
-                if (location != null)
+            SizedBox(width: AppSpacing.space3),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome,
+                        size: 12,
+                        color: Colors.white70,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Next up',
+                        style: AppTypography.caption(color: Colors.white70),
+                      ),
+                    ],
+                  ),
                   Text(
-                    location,
+                    event.title,
+                    style: AppTypography.h2(color: Colors.white),
+                  ),
+                  Text(
+                    '${DateFormat.MMMd().format(event.date)} • ${_formatTimeRange(event)}',
                     style: AppTypography.caption(color: Colors.white70),
                   ),
-              ],
+                  if (location != null)
+                    Text(
+                      location,
+                      style: AppTypography.caption(color: Colors.white70),
+                    ),
+                ],
+              ),
             ),
-          ),
-          if (contact != null) ...[
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: Colors.white.withValues(alpha: 0.2),
-              backgroundImage: connectionAvatarImage(contact!.avatar),
-              child: connectionAvatarImage(contact!.avatar) == null
-                  ? Text(contact!.avatar, style: AppTypography.glyph(20))
-                  : null,
-            ),
-            const SizedBox(width: 8),
+            if (contact != null) ...[
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                backgroundImage: connectionAvatarImage(contact!.avatar),
+                child: connectionAvatarImage(contact!.avatar) == null
+                    ? Text(contact!.avatar, style: AppTypography.glyph(20))
+                    : null,
+              ),
+              const SizedBox(width: 8),
+            ],
+            //const Icon(Icons.chevron_right, color: Colors.white),
           ],
-          //const Icon(Icons.chevron_right, color: Colors.white),
-        ],
+        ),
       ),
     );
   }
@@ -1174,6 +1190,9 @@ class _RedesignedEventCard extends ConsumerWidget {
         ? ref.watch(contactByIdProvider(event.contactId!))
         : null;
     final iconColor = _iconTintForEventType(event.eventType, tokens);
+    final contactAvatarImage = contact == null
+        ? null
+        : connectionAvatarImage(contact.avatar);
 
     return Container(
       decoration: BoxDecoration(
@@ -1283,10 +1302,13 @@ class _RedesignedEventCard extends ConsumerWidget {
                           CircleAvatar(
                             radius: 12,
                             backgroundColor: tokens.primaryTint,
-                            child: Text(
-                              contact.avatar,
-                              style: AppTypography.glyph(12),
-                            ),
+                            backgroundImage: contactAvatarImage,
+                            child: contactAvatarImage == null
+                                ? Text(
+                                    contact.avatar,
+                                    style: AppTypography.glyph(12),
+                                  )
+                                : null,
                           ),
                           const SizedBox(width: 8),
                           Text(
