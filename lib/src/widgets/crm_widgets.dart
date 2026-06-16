@@ -1702,7 +1702,7 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
       final limitedInteractions = sortedInteractions.take(10).toList();
 
       final currentMemory =
-          widget.memory ??
+          await store.load(widget.connection.id) ??
           MemoryDocument.empty(
             contactId: widget.connection.id,
             displayName: widget.connection.name,
@@ -1748,9 +1748,9 @@ class _AiInsightsCardState extends ConsumerState<AiInsightsCard> {
 
     // Auto-refresh after AI Update for this contact.
     final pendingRefreshId = ref.watch(pendingAiInsightsRefreshProvider);
-    if (pendingRefreshId == widget.connection.id &&
-        !_isRefreshing &&
-        !_autoRefreshed) {
+    if (pendingRefreshId != widget.connection.id) {
+      _autoRefreshed = false;
+    } else if (!_isRefreshing && !_autoRefreshed) {
       _autoRefreshed = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(pendingAiInsightsRefreshProvider.notifier).setContactId(null);

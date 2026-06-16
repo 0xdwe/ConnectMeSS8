@@ -1259,6 +1259,59 @@ void main() {
         expect(find.text('AI Insights refreshed.'), findsOneWidget);
       });
     });
+
+    group('pendingAiInsightsRefreshProvider auto-refresh', () {
+      testWidgets('triggers enrichment and clears provider on change', (tester) async {
+        final mockEnricher = FakeMemoryTopicEnricher(
+          topicsToReturn: const ['hiking'],
+          suggestionsToReturn: const [],
+        );
+        final mockStore = InMemoryMemoryStore();
+        // Seed an empty/initial memory
+        await mockStore.save(
+          MemoryDocument(
+            contactId: 'rebuild-spinner',
+            displayName: 'Test Person',
+            lastUpdated: DateTime.utc(2026, 6, 1),
+            topics: const ['oldtopic'],
+          ),
+        );
+
+        final wrapped = _wrapWithContainer(
+          AiInsightsCard(
+            connection: _connection(id: 'rebuild-spinner'),
+            insight: _insight(contactId: 'rebuild-spinner'),
+          ),
+          overrides: [
+            recommendationsProvider.overrideWith((ref) async => const []),
+            memoryTopicEnricherProvider.overrideWithValue(mockEnricher),
+            memoryStoreProvider.overrideWithValue(mockStore),
+          ],
+          contactId: 'rebuild-spinner',
+        );
+        addTearDown(wrapped.container.dispose);
+        await tester.pumpWidget(wrapped.widget);
+        await tester.pump();
+
+        // Trigger auto-refresh by setting the provider
+        wrapped.container
+            .read(pendingAiInsightsRefreshProvider.notifier)
+            .setContactId('rebuild-spinner');
+
+        // Let the post-frame callback run and enrich complete
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        // Check that the provider is cleared
+        final pendingId = wrapped.container.read(pendingAiInsightsRefreshProvider);
+        expect(pendingId, isNull);
+
+        // Check that the document was updated in the memory store
+        final doc = await mockStore.load('rebuild-spinner');
+        expect(doc, isNotNull);
+        expect(doc!.topics, contains('hiking'));
+      });
+    });
   });
 }
 
