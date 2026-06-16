@@ -91,7 +91,7 @@ class LlmAiUpdate implements AiUpdate {
     this.model = kLlmAiUpdateDefaultModel,
     this.timeout = kLlmAiUpdateDefaultTimeout,
     this.promptVersion = kLlmAiUpdatePromptVersion,
-    this.systemPrompt = kLlmAiUpdatePromptV6,
+    this.systemPrompt = kLlmAiUpdatePromptV7,
     this.attachmentPreparer = _defaultPrepareAttachments,
     this.clock = _systemClock,
     this.onMemoryWritten,

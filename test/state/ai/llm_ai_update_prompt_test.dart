@@ -4,12 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('llm_ai_update_prompt', () {
     test('exposes a non-empty versioned system prompt', () {
-      expect(kLlmAiUpdatePromptVersion, 6);
+      expect(kLlmAiUpdatePromptVersion, 7);
       expect(kLlmAiUpdatePromptV1, isNotEmpty);
       expect(kLlmAiUpdatePromptV3, isNotEmpty);
       expect(kLlmAiUpdatePromptV4, isNotEmpty);
       expect(kLlmAiUpdatePromptV5, isNotEmpty);
       expect(kLlmAiUpdatePromptV6, isNotEmpty);
+      expect(kLlmAiUpdatePromptV7, isNotEmpty);
     });
 
     test('encodes anti-shame voice rule against numeric day counts', () {
@@ -162,6 +163,14 @@ void main() {
       expect(lowered, contains('hi'));
       expect(lowered, contains('test'));
       expect(lowered, contains('when in doubt, demand actual substance'));
+    });
+
+    test('V7 guides the model to translate image attachments to active log entries and avoid passive clinical descriptions', () {
+      final prompt = kLlmAiUpdatePromptV7;
+      expect(prompt, contains('Avoid passive, clinical alt-text style descriptions'));
+      expect(prompt, contains('translate visual cues into active, natural log entries'));
+      expect(prompt, contains('Met up at the office'));
+      expect(prompt, contains('to work on a laptop'));
     });
   });
 }

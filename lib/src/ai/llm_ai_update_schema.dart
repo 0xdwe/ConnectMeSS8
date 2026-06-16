@@ -70,14 +70,13 @@ final Schema kLlmAiUpdateResponseSchema = Schema.object(
     'interactionNote': Schema.string(
       description:
           'Paraphrase of the user\'s input (text AND images) preserving all '
-          'important details. When images are attached, extract and include '
-          'factual details visible in the images — people, places, activities, '
-          'text, mood. Scale length to match the input — brief input '
-          'gets a concise note, detailed input gets a longer note that '
-          'captures the key facts, names, events, and nuances. Do not echo '
-          'verbatim; do not embellish beyond what they said or what is '
-          'visible in images. Do not artificially compress a rich input into '
-          'one or two sentences.',
+          'important details. When images are attached, translate the visual cues '
+          'into active, natural journal log entries (e.g., "Worked together on a laptop '
+          'at the office" instead of describing physical background objects or using passive '
+          'descriptions like "image shows a laptop"). Scale length to match the input — '
+          'brief input gets a concise note, detailed input gets a longer note capturing '
+          'key facts. Do not echo verbatim; do not embellish beyond what was shared or is '
+          'visible in images.',
     ),
     'memoryUpdate': Schema.object(
       description:
