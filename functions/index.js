@@ -6,7 +6,10 @@ const {getMessaging} = require("firebase-admin/messaging");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {logger} = require("firebase-functions");
 
-const {chooseSuggestedConnection} = require("./maintenance_policy");
+const {
+  chooseSuggestedConnection,
+  evaluateRelationshipMaintenance,
+} = require("./maintenance_policy");
 const {
   buildNotificationCopy,
   dailyDeliveryId,
@@ -100,5 +103,76 @@ exports.sendSuggestedCheckIns = onSchedule(
         });
       }
     }
+  },
+);
+
+async function runScheduledBondDrift(firestore, nowMillis) {
+  const users = await firestore.collection("users").get();
+  let totalUpdated = 0;
+
+  for (const userDoc of users.docs) {
+    const uid = userDoc.id;
+    const [connectionsSnapshot, interactionsSnapshot] = await Promise.all([
+      userDoc.ref.collection("connections").get(),
+      userDoc.ref.collection("interactions").get(),
+    ]);
+
+    const connections = connectionsSnapshot.docs;
+    const interactions = interactionsSnapshot.docs.map((doc) => doc.data());
+
+    const batch = firestore.batch();
+    let hasChanges = false;
+
+    for (const connDoc of connections) {
+      const connection = connDoc.data();
+      connection.id = connDoc.id;
+
+      const evalResult = evaluateRelationshipMaintenance(
+        connection,
+        interactions,
+        nowMillis,
+      );
+
+      if (evalResult.isBondDriftApplicationEligible && evalResult.candidateBondDrift < 0) {
+        const newBondScore = connection.bondScore + evalResult.candidateBondDrift;
+
+        batch.update(connDoc.ref, {
+          bondScore: newBondScore,
+          lastBondDriftAppliedAt: FieldValue.serverTimestamp(),
+        });
+        hasChanges = true;
+        totalUpdated++;
+
+        logger.info("Bond Drift applied to contact", {
+          uid,
+          contactId: connection.id,
+          previousScore: connection.bondScore,
+          newScore: newBondScore,
+          drift: evalResult.candidateBondDrift,
+        });
+      }
+    }
+
+    if (hasChanges) {
+      await batch.commit();
+    }
+  }
+
+  return totalUpdated;
+}
+
+exports.runScheduledBondDrift = runScheduledBondDrift;
+
+exports.applyScheduledBondDrift = onSchedule(
+  {
+    schedule: "0 2 * * *", // Daily at 2 AM
+    region: "us-central1",
+    timeZone: "UTC",
+    retryCount: 0,
+  },
+  async () => {
+    const firestore = getFirestore();
+    const now = new Date();
+    await runScheduledBondDrift(firestore, now.getTime());
   },
 );
