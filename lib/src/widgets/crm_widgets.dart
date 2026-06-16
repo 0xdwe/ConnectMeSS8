@@ -1366,6 +1366,7 @@ class DailyNudgeCard extends StatelessWidget {
           vertical: AppSpacing.space4,
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: Column(
@@ -1486,9 +1487,9 @@ class _LoopingMascotMotionState extends State<LoopingMascotMotion>
       child: widget.child,
       builder: (context, child) {
         final wave = math.sin(_curve.value * math.pi * 2);
-        final lift = -4.5 + wave * 4.5;
-        final tilt = wave * 0.035;
-        final scale = 1 + wave.abs() * 0.018;
+        final lift = wave * 1.5;
+        final tilt = wave * 0.012;
+        final scale = 1 + wave.abs() * 0.005;
 
         return Transform.translate(
           offset: Offset(0, lift),
