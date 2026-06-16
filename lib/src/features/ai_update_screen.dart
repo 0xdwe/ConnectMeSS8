@@ -856,8 +856,8 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
                 ),
                 onPressed: pickImage,
               ),
-              for (final file in attachments)
-                _buildAttachmentChip(tokens, file),
+              for (var i = 0; i < attachments.length; i++)
+                _buildAttachmentChip(tokens, attachments[i], i),
             ],
           ),
         ],
@@ -865,30 +865,63 @@ class _AiUpdateScreenState extends ConsumerState<AiUpdateScreen>
     );
   }
 
-  Widget _buildAttachmentChip(AppTokens tokens, AttachmentRef file) {
+  Widget _buildAttachmentChip(AppTokens tokens, AttachmentRef file, int index) {
     if (file.path != null || _isImage(file.name)) {
-      return ClipRRect(
+      return Stack(
         key: Key('attachment-preview-${file.name}'),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: file.path != null
-            ? Image.file(
-                File(file.path!),
-                width: 64,
-                height: 64,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  width: 64,
-                  height: 64,
-                  color: tokens.surfaceSunken,
-                  child: Icon(Icons.image_outlined, color: tokens.inkSubtle),
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: file.path != null
+                ? Image.file(
+                    File(file.path!),
+                    width: 64,
+                    height: 64,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 64,
+                      height: 64,
+                      color: tokens.surfaceSunken,
+                      child: Icon(Icons.image_outlined, color: tokens.inkSubtle),
+                    ),
+                  )
+                : Container(
+                    width: 64,
+                    height: 64,
+                    color: tokens.surfaceSunken,
+                    child: Icon(Icons.image_outlined, color: tokens.inkSubtle),
+                  ),
+          ),
+          Positioned(
+            top: -6,
+            right: -6,
+            child: Material(
+              color: tokens.surfaceRaised,
+              shape: const CircleBorder(),
+              elevation: 0,
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: IconButton(
+                  key: Key('attachment-delete-${file.name}'),
+                  padding: const EdgeInsets.all(2),
+                  constraints: const BoxConstraints(
+                    minHeight: 24,
+                    minWidth: 24,
+                  ),
+                  iconSize: 14,
+                  icon: Icon(Icons.close, color: tokens.inkMuted),
+                  tooltip: 'Remove attachment',
+                  onPressed: currentState == AiUpdateState.saving
+                      ? null
+                      : () {
+                          setState(() => attachments.removeAt(index));
+                        },
                 ),
-              )
-            : Container(
-                width: 64,
-                height: 64,
-                color: tokens.surfaceSunken,
-                child: Icon(Icons.image_outlined, color: tokens.inkSubtle),
               ),
+            ),
+          ),
+        ],
       );
     }
 

@@ -272,4 +272,33 @@ void main() {
       expect(find.widgetWithText(Chip, 'photo.jpg'), findsNothing);
     },
   );
+
+  testWidgets('image attachment can be removed before AI run', (tester) async {
+    await tester.pumpWidget(
+      _wrapScreen(
+        contactId: 'mike',
+        initialAttachments: const [
+          AttachmentRef(name: 'photo.jpg', path: '/tmp/missing.jpg'),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('attachment-preview-photo.jpg')),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(
+      find.byKey(const Key('attachment-preview-photo.jpg')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('attachment-delete-photo.jpg')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('attachment-preview-photo.jpg')),
+      findsNothing,
+    );
+  });
 }
