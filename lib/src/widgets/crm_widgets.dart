@@ -30,12 +30,20 @@ class AppSurface extends StatelessWidget {
 
 ImageProvider<Object>? connectionAvatarImage(String avatar) {
   final trimmed = avatar.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return NetworkImage(trimmed);
+  }
+
   if (!trimmed.startsWith('data:image/')) return null;
 
   final parts = trimmed.split(',');
   if (parts.length != 2) return null;
 
-  return MemoryImage(base64Decode(parts[1]));
+  try {
+    return MemoryImage(base64Decode(parts[1]));
+  } catch (_) {
+    return null;
+  }
 }
 
 class AppHeader extends StatelessWidget {
@@ -1412,9 +1420,11 @@ class DailyNudgeCard extends StatelessWidget {
             SizedBox(
               width: 110,
               height: 110,
-              child: Image.asset(
-                'assets/images/nudge_character.png',
-                fit: BoxFit.contain,
+              child: LoopingMascotMotion(
+                child: Image.asset(
+                  'assets/images/nudge_character.png',
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
           ],
@@ -1423,6 +1433,75 @@ class DailyNudgeCard extends StatelessWidget {
     );
   }
 }
+
+class LoopingMascotMotion extends StatefulWidget {
+  const LoopingMascotMotion({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<LoopingMascotMotion> createState() => _LoopingMascotMotionState();
+}
+
+class _LoopingMascotMotionState extends State<LoopingMascotMotion>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _curve;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    );
+    _curve = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+      _controller.value = 0;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return widget.child;
+    }
+
+    return AnimatedBuilder(
+      animation: _curve,
+      child: widget.child,
+      builder: (context, child) {
+        final wave = math.sin(_curve.value * math.pi * 2);
+        final lift = -4.5 + wave * 4.5;
+        final tilt = wave * 0.035;
+        final scale = 1 + wave.abs() * 0.018;
+
+        return Transform.translate(
+          offset: Offset(0, lift),
+          child: Transform.rotate(
+            angle: tilt,
+            child: Transform.scale(scale: scale, child: child),
+          ),
+        );
+      },
+    );
+  }
+}
+
 
 // ignore: unused_element
 class _CuteGhostPainter extends CustomPainter {

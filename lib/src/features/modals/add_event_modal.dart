@@ -537,13 +537,12 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
             ),
             if (widget.event != null) ...[
               const SizedBox(height: 8),
-              TextButton.icon(
+              TextButton(
                 style: TextButton.styleFrom(
-                  backgroundColor: tokens.danger,
-                  foregroundColor: tokens.primaryOn,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: tokens.danger,
+                  shadowColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
                 ),
                 onPressed: () async {
                   try {
@@ -561,11 +560,10 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                     }
                   }
                 },
-                icon: Icon(Icons.delete_outline, color: tokens.primaryOn),
-                label: Text(
+                child: Text(
                   'Delete Event',
                   style: AppTypography.body(
-                    color: tokens.primaryOn,
+                    color: tokens.danger,
                   ).copyWith(fontWeight: FontWeight.w700),
                 ),
               ),

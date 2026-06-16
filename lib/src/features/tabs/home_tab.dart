@@ -152,8 +152,20 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                       if (!showAll)
                         Center(
                           child: TextButton(
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: tokens.primary,
+                              shadowColor: Colors.transparent,
+                              surfaceTintColor: Colors.transparent,
+                            ),
                             onPressed: () => setState(() => showAll = true),
-                            child: const Text('Expand recommendations'),
+                            child: Text(
+                              'Expand recommendations',
+                              style: AppTypography.body().copyWith(
+                                color: tokens.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
                         ),
                     ],

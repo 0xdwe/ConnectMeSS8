@@ -200,6 +200,21 @@ void main() {
       expect(find.text('Past event should stay hidden'), findsNothing);
     });
 
+    testWidgets('tapping next up event opens edit modal', (tester) async {
+      final today = DateTime(2026, 6, 12);
+      await _pumpPlanner(
+        tester,
+        now: today,
+        events: [_event('today', 'Today event', today)],
+      );
+
+      await tester.tap(find.text('Next up'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit Event'), findsOneWidget);
+      expect(find.text('Today event'), findsWidgets);
+    });
+
     testWidgets('tapping a date shows only events on that date', (
       tester,
     ) async {
