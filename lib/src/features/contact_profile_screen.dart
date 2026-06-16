@@ -99,6 +99,20 @@ class ContactProfileScreen extends ConsumerWidget {
         elevation: 0,
         backgroundColor: tokens.surface,
         foregroundColor: tokens.ink,
+        actions: [
+          IconButton(
+            key: const Key('edit-connection-button'),
+            tooltip: 'Edit',
+            onPressed: () => showEditConnectionModal(context, person),
+            icon: Icon(
+              Icons.edit,
+              size: 20,
+              color: tokens.primary,
+            ),
+            splashRadius: 20,
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
       ),
       floatingActionButton: AiActionFab(
         key: const Key('update-with-ai-button'),
@@ -176,41 +190,7 @@ class ContactProfileScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 SizedBox(width: AppSpacing.space3),
-                                OutlinedButton.icon(
-                                  key: const Key('edit-connection-button'),
-                                  onPressed: () =>
-                                      showEditConnectionModal(context, person),
-                                  icon: Icon(
-                                    Icons.edit,
-                                    size: 16,
-                                    color: tokens.primaryOn,
-                                  ),
-                                  label: Text(
-                                    'Edit',
-                                    style: TextStyle(
-                                      color: tokens.primaryOn,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  style: OutlinedButton.styleFrom(
-                                    backgroundColor: tokens.primary,
-                                    foregroundColor: tokens.primaryOn,
-                                    side: BorderSide.none,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                        AppRadius.pill,
-                                      ),
-                                    ),
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.space3,
-                                      vertical: AppSpacing.space2,
-                                    ),
-                                    minimumSize: const Size(0, 36),
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    visualDensity: VisualDensity.compact,
-                                  ),
-                                ),
+                                SizedBox.shrink(),
                               ],
                             ),
                             SizedBox(height: AppSpacing.space2),
