@@ -81,11 +81,10 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                     padding: EdgeInsets.only(left: AppSpacing.space3),
                     child: TextButton.icon(
                       style: TextButton.styleFrom(
-                        backgroundColor: tokens.primary,
-                        foregroundColor: tokens.primaryOn,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                        ),
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: tokens.primary,
+                        shadowColor: Colors.transparent,
+                        surfaceTintColor: Colors.transparent,
                         padding: EdgeInsets.symmetric(
                           horizontal: AppSpacing.space2,
                           vertical: AppSpacing.space1,
@@ -94,10 +93,15 @@ class _HomeTabState extends ConsumerState<HomeTab> {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       onPressed: () => context.push('/recommendations'),
-                      icon: const Icon(Icons.arrow_forward, size: 18),
+                      icon: Icon(
+                        Icons.arrow_forward,
+                        size: 18,
+                        color: tokens.primary,
+                      ),
                       label: Text(
                         'View All',
                         style: AppTypography.bodyLg().copyWith(
+                          color: tokens.primary,
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),

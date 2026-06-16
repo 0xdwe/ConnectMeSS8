@@ -214,6 +214,13 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                       ),
                       const Spacer(),
                       TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor: tokens.primary,
+                          foregroundColor: tokens.primaryOn,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
+                          ),
+                        ),
                         onPressed: () async {
                           final picked = await showDialog<DateTime>(
                             context: context,
@@ -225,7 +232,7 @@ class _AddEventModalState extends ConsumerState<AddEventModal> {
                         child: Text(
                           'Change',
                           style: TextStyle(
-                            color: tokens.primary,
+                            color: tokens.primaryOn,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
