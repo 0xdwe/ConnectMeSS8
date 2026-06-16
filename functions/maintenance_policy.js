@@ -69,10 +69,67 @@ function chooseSuggestedConnection(connections, interactions, nowMillis) {
     })[0]?.connection ?? null;
 }
 
+function bondTier(bondScore) {
+  if (bondScore >= 80) return "close";
+  if (bondScore >= 50) return "steady";
+  return "drifting";
+}
+
+function baseDriftFor(ratio) {
+  if (ratio < 1.0) return 0;
+  if (ratio < 1.5) return -3;
+  if (ratio <= 2.5) return -5;
+  return -8;
+}
+
+function capDrift(baseDrift, tier, category) {
+  const tierCaps = {
+    close: -3,
+    steady: -5,
+    drifting: -8,
+  };
+  const tierCap = tierCaps[tier] ?? -8;
+  const cap = (category === "Work" && tierCap < -2) ? -2 : tierCap;
+  return baseDrift < cap ? cap : baseDrift;
+}
+
+function isBondDriftEligible(lastAppliedMillis, nowMillis) {
+  if (lastAppliedMillis == null || lastAppliedMillis === 0) return true;
+  const threeDaysMillis = 3 * 24 * 60 * 60 * 1000;
+  return (nowMillis - lastAppliedMillis) >= threeDaysMillis;
+}
+
+function evaluateRelationshipMaintenance(connection, interactions, nowMillis) {
+  const tier = bondTier(connection.bondScore);
+  const ratio = maintenanceRatio(connection, interactions, nowMillis);
+  const need = maintenanceNeedForRatio(ratio);
+  const baseDrift = baseDriftFor(ratio);
+  const cappedDrift = capDrift(baseDrift, tier, connection.category);
+  const clampedDrift = cappedDrift < -connection.bondScore
+    ? -connection.bondScore
+    : cappedDrift;
+
+  const lastApplied = timestampMillis(connection.lastBondDriftAppliedAt);
+  const eligible = isBondDriftEligible(lastApplied, nowMillis);
+
+  return {
+    bondTier: tier,
+    maintenanceNeed: need,
+    candidateBondDrift: clampedDrift,
+    isBondDriftApplicationEligible: eligible,
+  };
+}
+
 module.exports = {
   adjustedCadenceDays,
   chooseSuggestedConnection,
   latestTouchMillis,
   maintenanceNeedForRatio,
   maintenanceRatio,
+  bondTier,
+  baseDriftFor,
+  capDrift,
+  isBondDriftEligible,
+  evaluateRelationshipMaintenance,
+  timestampMillis,
 };
