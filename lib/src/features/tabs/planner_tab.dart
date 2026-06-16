@@ -981,6 +981,7 @@ class _PlanTogetherBanner extends StatelessWidget {
       ),
       padding: EdgeInsets.all(AppSpacing.space4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
